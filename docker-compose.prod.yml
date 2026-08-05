@@ -1,0 +1,78 @@
+# ── Production stack for cms.oluxstudio.com ─────────────────────────────────
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Env comes from the server-side .env (never commit it). The app image serves
+# HTTP/HTTPS itself (FrankenPHP/Caddy) — no separate web server needed.
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        FLUX_USERNAME: '${FLUX_USERNAME:-}'
+        FLUX_LICENSE_KEY: '${FLUX_LICENSE_KEY:-}'
+    image: olux-cms
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'   # HTTP/3
+    env_file: .env
+    volumes:
+      - caddy_data:/data          # TLS certificates
+      - caddy_config:/config
+      - app_storage:/app/storage  # uploads, backups, logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  queue:
+    image: olux-cms
+    restart: unless-stopped
+    command: php artisan queue:work --tries=1 --timeout=620 --memory=512
+    env_file: .env
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  scheduler:
+    image: olux-cms
+    restart: unless-stopped
+    command: php artisan schedule:work
+    env_file: .env
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_DATABASE: '${DB_DATABASE}'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-p${DB_PASSWORD}']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+volumes:
+  caddy_data:
+  caddy_config:
+  app_storage:
+  mysql_data:
+  redis_data:

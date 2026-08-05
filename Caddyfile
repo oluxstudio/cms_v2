@@ -1,0 +1,42 @@
+# ── Production Caddy config (used by the FrankenPHP image) ───────────────────
+# Two surfaces, one server:
+#   1. The platform admin app on cms.oluxstudio.com
+#   2. ANY client custom domain (go-live feature) — certs are issued on demand,
+#      but only after Laravel approves the domain via /caddy/ask.
+
+{
+	frankenphp
+	email admin@oluxstudio.com
+
+	# Before minting a cert for an unknown domain, Caddy asks the app
+	# (?domain=… → 200 only for live client sites / platform hosts).
+	on_demand_tls {
+		ask http://localhost/caddy/ask
+	}
+}
+
+# The platform subdomain — explicit cert.
+cms.oluxstudio.com {
+	root * /app/public
+	encode zstd gzip
+	php_server
+}
+
+# Every live client site domain — cert on demand, same Laravel app
+# (ServeLiveSite middleware resolves the Host header to the right Site).
+https:// {
+	tls {
+		on_demand
+	}
+	root * /app/public
+	encode zstd gzip
+	php_server
+}
+
+# Plain HTTP: ACME challenges pass through automatically; everything else
+# (including client domains before certs exist) still reaches the app.
+http:// {
+	root * /app/public
+	encode zstd gzip
+	php_server
+}

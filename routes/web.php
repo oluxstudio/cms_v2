@@ -28,6 +28,30 @@ Route::post('/stripe/subscription/webhook', function (\Illuminate\Http\Request $
     return response()->json(['received' => true]);
 })->name('subscription.webhook');
 
+// Caddy on-demand TLS gate: 200 = mint a cert for ?domain=, 403 = refuse.
+// Approves the platform's own hosts and LIVE client sites only.
+Route::get('/caddy/ask', function (\Illuminate\Http\Request $request) {
+    $host = strtolower(trim((string) $request->query('domain')));
+    if ($host === '') {
+        return response('', 403);
+    }
+
+    $platform = array_filter(array_merge(
+        [parse_url((string) config('app.url'), PHP_URL_HOST)],
+        (array) config('publishing.platform_hosts', []),
+    ));
+    if (in_array($host, array_map('strtolower', $platform), true)) {
+        return response('', 200);
+    }
+
+    $bare = preg_replace('/^www\./', '', $host);
+    $live = \App\Models\Site::where('live', true)
+        ->where(fn ($q) => $q->where('domain', $bare)->orWhere('domain', $host))
+        ->exists();
+
+    return response('', $live ? 200 : 403);
+})->name('caddy.ask');
+
 // Team invitation acceptance (guest-reachable; the emailed token IS the
 // email verification). Declared before the auth group so it beats /{siteID}.
 Route::get('/invite/{token}', function (string $token) {
