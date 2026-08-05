@@ -1,0 +1,226 @@
+{
+    "name": "Contact Us",
+    "url": "/contact-us",
+    "layout": "default",
+    "keywords": "contact us",
+    "attributes": {
+        "title": "Contact Us \u2014 Hair Co."
+    },
+    "blocks": [
+        {
+            "type": "app:hairco:contact",
+            "name": "Contact",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Contact us",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "We'd love to hear from you",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Send a message",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline B",
+                    "type": "text",
+                    "value": "Message sent",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline C",
+                    "type": "text",
+                    "value": "Your message",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption",
+                    "type": "text",
+                    "value": "Name",
+                    "order": 5,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption B",
+                    "type": "text",
+                    "value": "Email",
+                    "order": 6,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption C",
+                    "type": "text",
+                    "value": "Message",
+                    "order": 7,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "We usually reply within one business day to the email above.\n            Need us sooner? Call <b>+1 589 625 3256</b> during opening hours.",
+                    "order": 8,
+                    "description": "html"
+                },
+                {
+                    "label": "Text C",
+                    "type": "text",
+                    "value": "Send another message",
+                    "order": 9,
+                    "description": "text"
+                },
+                {
+                    "label": "Text D",
+                    "type": "text",
+                    "value": "Send message",
+                    "order": 10,
+                    "description": "text"
+                },
+                {
+                    "label": "Card 1 Title",
+                    "type": "text",
+                    "value": "Visit the salon",
+                    "order": 11,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Card 1 Text",
+                    "type": "text",
+                    "value": "14 Rosewood Avenue, Suite 2, Portland OR",
+                    "order": 12,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Card 2 Title",
+                    "type": "text",
+                    "value": "Call us",
+                    "order": 13,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Card 2 Text",
+                    "type": "text",
+                    "value": "+1 589 625 3256",
+                    "order": 14,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Card 3 Title",
+                    "type": "text",
+                    "value": "Email",
+                    "order": 15,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Card 3 Text",
+                    "type": "text",
+                    "value": "hello@{site_name}.salon",
+                    "order": 16,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Card 4 Title",
+                    "type": "text",
+                    "value": "Open",
+                    "order": 17,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Card 4 Text",
+                    "type": "text",
+                    "value": "Mon\u2013Fri 9:00\u201320:00 \u00b7 Sat 10:00\u201318:00",
+                    "order": 18,
+                    "description": "item:text"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:stats",
+            "name": "Stats",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Hair Co. in numbers",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Trusted well beyond our own chairs",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Stat 1 Title",
+                    "type": "text",
+                    "value": "30+",
+                    "order": 2,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Stat 1 Text",
+                    "type": "text",
+                    "value": "International Branches",
+                    "order": 3,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Stat 2 Title",
+                    "type": "text",
+                    "value": "12k",
+                    "order": 4,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Stat 2 Text",
+                    "type": "text",
+                    "value": "Happy Clients World Wide",
+                    "order": 5,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Stat 3 Title",
+                    "type": "text",
+                    "value": "15",
+                    "order": 6,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Stat 3 Text",
+                    "type": "text",
+                    "value": "Years of In-Field Experience",
+                    "order": 7,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Stat 4 Title",
+                    "type": "text",
+                    "value": "98%",
+                    "order": 8,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Stat 4 Text",
+                    "type": "text",
+                    "value": "Positive Client Reviews",
+                    "order": 9,
+                    "description": "item:text"
+                }
+            ]
+        }
+    ]
+}

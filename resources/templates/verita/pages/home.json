@@ -1,0 +1,245 @@
+{
+    "name": "Home",
+    "url": "/",
+    "layout": "default",
+    "keywords": "home",
+    "attributes": {
+        "title": "{site_name} \u2014 Clarity in Consulting"
+    },
+    "blocks": [
+        {
+            "type": "app:verita:hero",
+            "name": "Hero",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Consulting that delivers",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Clarity for every business decision",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "{site_name} helps growing companies untangle strategy, operations and finance with advice you can act on the same week.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Start a Project",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/contact",
+                    "order": 4,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "CTA B Label",
+                    "type": "text",
+                    "value": "Meet the Team",
+                    "order": 5,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA B Link",
+                    "type": "url",
+                    "value": "/about",
+                    "order": 6,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/hero.svg",
+                    "order": 7,
+                    "description": "attr:src"
+                }
+            ]
+        },
+        {
+            "type": "app:verita:services",
+            "name": "Services",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "What we do",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Services built around outcomes",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Every engagement ends with a deliverable you own \u2014 no decks that gather dust.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Service 1 Title",
+                    "type": "text",
+                    "value": "Strategy Sprints",
+                    "order": 3,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 1 Text",
+                    "type": "text",
+                    "value": "Two-week engagements that turn a fuzzy goal into a costed, sequenced plan.",
+                    "order": 4,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Service 2 Title",
+                    "type": "text",
+                    "value": "Operations Review",
+                    "order": 5,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 2 Text",
+                    "type": "text",
+                    "value": "We map your processes, find the bottlenecks and fix the three that matter.",
+                    "order": 6,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Service 3 Title",
+                    "type": "text",
+                    "value": "Finance Foundations",
+                    "order": 7,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 3 Text",
+                    "type": "text",
+                    "value": "Budgets, forecasts and reporting your board will actually read.",
+                    "order": 8,
+                    "description": "item:text"
+                }
+            ]
+        },
+        {
+            "type": "app:verita:faq",
+            "name": "Faq",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Questions",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Frequently asked questions",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Faq 1 Question",
+                    "type": "text",
+                    "value": "How do engagements start?",
+                    "order": 2,
+                    "description": "item:question"
+                },
+                {
+                    "label": "Faq 1 Answer",
+                    "type": "text",
+                    "value": "With a free 45-minute scoping call. You leave with a written brief whether or not we work together.",
+                    "order": 3,
+                    "description": "item:answer"
+                },
+                {
+                    "label": "Faq 2 Question",
+                    "type": "text",
+                    "value": "Do you work with early-stage companies?",
+                    "order": 4,
+                    "description": "item:question"
+                },
+                {
+                    "label": "Faq 2 Answer",
+                    "type": "text",
+                    "value": "Yes \u2014 about half our clients are pre-Series A. Pricing scales with company size.",
+                    "order": 5,
+                    "description": "item:answer"
+                },
+                {
+                    "label": "Faq 3 Question",
+                    "type": "text",
+                    "value": "What does an engagement cost?",
+                    "order": 6,
+                    "description": "item:question"
+                },
+                {
+                    "label": "Faq 3 Answer",
+                    "type": "text",
+                    "value": "Strategy sprints are fixed-fee. Reviews and retainers are quoted after the scoping call.",
+                    "order": 7,
+                    "description": "item:answer"
+                }
+            ]
+        },
+        {
+            "type": "app:verita:contact",
+            "name": "Contact",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Get in touch",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Tell us where it hurts",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Send a short note about your situation and we will reply within one business day with next steps.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Email",
+                    "type": "text",
+                    "value": "hello@{site_name}.example",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Email Link",
+                    "type": "url",
+                    "value": "mailto:hello@verita.example",
+                    "order": 4,
+                    "description": "attr:href"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,35 @@
+.header-child {
+   @apply flex flex-col;
+   .label {
+      @apply font-bold;
+   }
+   .content {
+      @apply text-base;
+   }
+}
+
+
+.menu-box{
+   @apply   flex flex-col gap-4 text-base leading-normal text-accent-foreground p-8;
+   .menu-item{
+      @apply flex gap-3 items-center;
+      &:hover{
+         .icon{
+            @apply text-zinc-50 size-7;
+         }
+         .menu-text{
+            @apply text-zinc-300;
+         }
+      }
+   }
+   .icon{
+      @apply size-5 text-zinc-300;
+   }
+   .menu-text{
+      @apply py-1;
+   }
+}
+
+.main-body{
+	@apply max-w-[90rem] mx-auto;
+}

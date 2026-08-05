@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acme Family Law — booking embed demo</title>
+<style>
+  body { font: 16px/1.6 Georgia, serif; margin: 0; background: #faf8f4; color: #222; }
+  header { background: #1f2937; color: #fff; padding: 28px 24px; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; opacity: .7; font-size: 14px; }
+  main { max-width: 720px; margin: 32px auto; padding: 0 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Acme Family Law</h1>
+  <p>An EXTERNAL website — the booking below is loaded from the Olux API via one script tag.</p>
+</header>
+<main>
+  <h2>Book an appointment</h2>
+  <div id="olux-booking"></div>
+</main>
+<script src="/booking-embed.js" data-site="law-matters" data-target="#olux-booking"></script>
+</body>
+</html>

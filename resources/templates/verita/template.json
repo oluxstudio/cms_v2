@@ -1,0 +1,24 @@
+{
+    "key": "verita",
+    "name": "Verita",
+    "description": "Marketplace template \u2014 replicates the Verita app exactly, with editable content.",
+    "category": "Marketplace",
+    "accentColor": "#0e7c66",
+    "author": "Olux Marketplace",
+    "version": "1.0.0",
+    "createdAt": "2026-07-08",
+    "tags": [
+        "App"
+    ],
+    "features": [
+        "3 page(s) \u00b7 15 content blocks",
+        "Pixel-exact replica of the original app",
+        "Content, order and visibility editable in Configure"
+    ],
+    "renderer": "verita",
+    "pages": [
+        "about",
+        "contact",
+        "home"
+    ]
+}

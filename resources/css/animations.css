@@ -1,0 +1,159 @@
+/* ──────────────────────────────────────────────────────────────
+   Olux reusable animation utilities
+   Apply `.fx` to any interactive element for hover-lift + press feedback.
+   Apply `.fx-in` / `.fx-pop` / `.fx-fade` / `.fx-slide-*` for entrances.
+   Wrap a list in `.fx-stagger` to cascade children in.
+   ────────────────────────────────────────────────────────────── */
+
+@keyframes fx-pop      { 0% { transform: scale(.94); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+@keyframes fx-fade     { from { opacity: 0 } to { opacity: 1 } }
+@keyframes fx-slide-up { from { transform: translateY(12px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes fx-slide-dn { from { transform: translateY(-12px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes fx-slide-rt { from { transform: translateX(16px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+@keyframes fx-pulse    { 0%,100% { transform: scale(1) } 50% { transform: scale(1.08) } }
+@keyframes fx-spin     { to { transform: rotate(360deg) } }
+
+/* Base interactive feedback — hover lifts, click presses. */
+.fx {
+    transition: transform .18s cubic-bezier(.2,.7,.3,1),
+                box-shadow .18s ease,
+                background-color .18s ease,
+                color .18s ease,
+                opacity .18s ease,
+                border-color .18s ease;
+    will-change: transform;
+}
+.fx:hover  { transform: translateY(-2px); }
+.fx:active { transform: translateY(0) scale(.96); }
+
+/* Entrance animations */
+.fx-in       { animation: fx-slide-up .38s cubic-bezier(.2,.7,.3,1) both; }
+.fx-pop      { animation: fx-pop      .26s cubic-bezier(.2,.7,.3,1) both; }
+.fx-fade     { animation: fx-fade     .32s ease both; }
+.fx-slide-up { animation: fx-slide-up .38s cubic-bezier(.2,.7,.3,1) both; }
+.fx-slide-dn { animation: fx-slide-dn .38s cubic-bezier(.2,.7,.3,1) both; }
+.fx-slide-rt { animation: fx-slide-rt .38s cubic-bezier(.2,.7,.3,1) both; }
+.fx-pulse    { animation: fx-pulse 1.6s ease-in-out infinite; }
+.fx-spin     { animation: fx-spin .8s linear infinite; }
+
+/* Cascade direct children in (up to 10). */
+.fx-stagger > * { animation: fx-slide-up .4s cubic-bezier(.2,.7,.3,1) both; }
+.fx-stagger > *:nth-child(1) { animation-delay: .03s }
+.fx-stagger > *:nth-child(2) { animation-delay: .06s }
+.fx-stagger > *:nth-child(3) { animation-delay: .09s }
+.fx-stagger > *:nth-child(4) { animation-delay: .12s }
+.fx-stagger > *:nth-child(5) { animation-delay: .15s }
+.fx-stagger > *:nth-child(6) { animation-delay: .18s }
+.fx-stagger > *:nth-child(7) { animation-delay: .21s }
+.fx-stagger > *:nth-child(8) { animation-delay: .24s }
+.fx-stagger > *:nth-child(9) { animation-delay: .27s }
+.fx-stagger > *:nth-child(10){ animation-delay: .30s }
+
+/* Global, subtle press feedback for every action on the site.
+   Buttons, links and Livewire/Alpine click handlers get a tactile press. */
+button:not(:disabled),
+a[href],
+[wire\:click],
+[x-on\:click],
+[\@click] {
+    transition: transform .15s ease, box-shadow .15s ease,
+                background-color .15s ease, color .15s ease, opacity .15s ease;
+}
+button:not(:disabled):active,
+a[href]:active,
+[wire\:click]:active,
+[x-on\:click]:active,
+[\@click]:active {
+    transform: scale(.96);
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+    .fx, .fx-in, .fx-pop, .fx-fade, .fx-slide-up, .fx-slide-dn, .fx-slide-rt,
+    .fx-pulse, .fx-spin, .fx-stagger > *,
+    button, a[href], [wire\:click], [x-on\:click], [\@click] {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* hide scrollbars on the dashboard rails */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Animated gradient border (moves around the element) ──
+   Wrap content in .fx-gradient-border and give the inner panel a solid bg. */
+@keyframes fx-border-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* Toast auto-dismiss progress bar (width shrinks over the toast's lifetime) */
+@keyframes toast-bar { from { width: 100%; } to { width: 0%; } }
+
+.fx-gradient-border {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+.fx-gradient-border::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 260%;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    background: conic-gradient(
+        from 0deg,
+        #ec4899, var(--primary-2), var(--primary), #22d3ee, #a3e635, #f59e0b, #ec4899
+    );
+    animation: fx-border-spin 5s linear infinite;
+}
+.fx-gradient-border > * { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+    .fx-gradient-border::before { animation: none; }
+}
+
+/* ── Route loading indicator (full-page navigations) ── */
+#route-progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    width: 0;
+    z-index: 9999;
+    background: linear-gradient(90deg, var(--primary), #ec4899, #f59e0b);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+    opacity: 0;
+    transition: opacity .2s ease;
+    pointer-events: none;
+}
+#route-progress.on {
+    opacity: 1;
+    width: 92%;
+    transition: width 8s cubic-bezier(.1, .9, .2, 1), opacity .2s ease;
+}
+
+#route-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9990;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(247, 243, 238, 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease, visibility .2s ease;
+}
+.dark #route-overlay { background: rgba(22, 23, 29, 0.55); }
+#route-overlay.on { opacity: 1; visibility: visible; }
+#route-overlay .spinner {
+    width: 40px; height: 40px;
+    border-radius: 999px;
+    border: 3px solid rgba(99, 102, 241, 0.25);
+    border-top-color: var(--primary);
+    animation: fx-spin .7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    #route-overlay .spinner { animation-duration: 1.4s; }
+}

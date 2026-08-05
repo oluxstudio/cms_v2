@@ -1,0 +1,300 @@
+{
+    "name": "Tekstack layout",
+    "blocks": [
+        {
+            "type": "app:tekstack:header",
+            "name": "Header",
+            "nodes": [
+                {
+                    "label": "Email",
+                    "type": "text",
+                    "value": "contact@example.com",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Email Link",
+                    "type": "url",
+                    "value": "mailto:contact@example.com",
+                    "order": 1,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "Caption",
+                    "type": "text",
+                    "value": "+1 1234 56 789",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "{site_name}<span>.</span>",
+                    "order": 3,
+                    "description": "html"
+                },
+                {
+                    "label": "Nav 1 Label",
+                    "type": "text",
+                    "value": "Home",
+                    "order": 4,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 1 Href",
+                    "type": "text",
+                    "value": "#hero",
+                    "order": 5,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 2 Label",
+                    "type": "text",
+                    "value": "Services",
+                    "order": 6,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 2 Href",
+                    "type": "text",
+                    "value": "#services",
+                    "order": 7,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 3 Label",
+                    "type": "text",
+                    "value": "Projects",
+                    "order": 8,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 3 Href",
+                    "type": "text",
+                    "value": "#portfolio",
+                    "order": 9,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 4 Label",
+                    "type": "text",
+                    "value": "About",
+                    "order": 10,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 4 Href",
+                    "type": "text",
+                    "value": "#about",
+                    "order": 11,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 5 Label",
+                    "type": "text",
+                    "value": "Pricing",
+                    "order": 12,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 5 Href",
+                    "type": "text",
+                    "value": "#pricing",
+                    "order": 13,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 6 Label",
+                    "type": "text",
+                    "value": "Testimonials",
+                    "order": 14,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 6 Href",
+                    "type": "text",
+                    "value": "#testimonials",
+                    "order": 15,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 7 Label",
+                    "type": "text",
+                    "value": "All Pages",
+                    "order": 16,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 7 Href",
+                    "type": "text",
+                    "value": "#",
+                    "order": 17,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 8 Label",
+                    "type": "text",
+                    "value": "Blogs",
+                    "order": 18,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 8 Href",
+                    "type": "text",
+                    "value": "#recent-posts",
+                    "order": 19,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 9 Label",
+                    "type": "text",
+                    "value": "Contact",
+                    "order": 20,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 9 Href",
+                    "type": "text",
+                    "value": "#contact",
+                    "order": 21,
+                    "description": "item:href"
+                }
+            ]
+        },
+        {
+            "type": "content"
+        },
+        {
+            "type": "app:tekstack:footer",
+            "name": "Footer",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "{site_name}<span>.</span>",
+                    "order": 0,
+                    "description": "html"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor amet consectetur adi pisicing elit sed eiusm tempor incididunt ut labore dolore magna aliqua enim ad minim veniam quis.nostrud exercita.laboris nisi ut aliquip ea commodo conse quatuis aute irure.",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "{site_name}",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "#",
+                    "order": 3,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "CTA B Label",
+                    "type": "text",
+                    "value": "Terms of Service",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA B Link",
+                    "type": "url",
+                    "value": "#",
+                    "order": 5,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "CTA C Label",
+                    "type": "text",
+                    "value": "Privacy Policy",
+                    "order": 6,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA C Link",
+                    "type": "url",
+                    "value": "#",
+                    "order": 7,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "Service 1",
+                    "type": "text",
+                    "value": "Web Design",
+                    "order": 8,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Service 2",
+                    "type": "text",
+                    "value": "App Developemnt",
+                    "order": 9,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Service 3",
+                    "type": "text",
+                    "value": "Cloud Services",
+                    "order": 10,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Service 4",
+                    "type": "text",
+                    "value": "Domain adn Hosting",
+                    "order": 11,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Service 5",
+                    "type": "text",
+                    "value": "Seo Optimization",
+                    "order": 12,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Service 6",
+                    "type": "text",
+                    "value": "Social Media",
+                    "order": 13,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Contact 1",
+                    "type": "text",
+                    "value": "101 West Town",
+                    "order": 14,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Contact 2",
+                    "type": "text",
+                    "value": "PBo 12345, United States",
+                    "order": 15,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Contact 3",
+                    "type": "text",
+                    "value": "+1 1234 56 789",
+                    "order": 16,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Contact 4",
+                    "type": "text",
+                    "value": "contact@example.com",
+                    "order": 17,
+                    "description": "item:_value"
+                }
+            ]
+        }
+    ]
+}

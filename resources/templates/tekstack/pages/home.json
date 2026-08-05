@@ -1,0 +1,1348 @@
+{
+    "name": "Home",
+    "url": "/",
+    "layout": "default",
+    "keywords": "home",
+    "attributes": {
+        "title": "{site_name} - IT Solutions & Software Solutions"
+    },
+    "blocks": [
+        {
+            "type": "app:tekstack:hero",
+            "name": "Hero",
+            "nodes": [
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/hero.png",
+                    "order": 0,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Project Solutions with <span class=\"circle\">{site_name}.</span>",
+                    "order": 1,
+                    "description": "html"
+                },
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Our business is helping you grow your business",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Top Web & Applications Solutions",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Get Started",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "#about",
+                    "order": 5,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "Caption",
+                    "type": "text",
+                    "value": "Watch My Video",
+                    "order": 6,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:services",
+            "name": "Services",
+            "nodes": [
+                {
+                    "label": "Body",
+                    "type": "text",
+                    "value": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+                    "order": 0,
+                    "description": "const:body"
+                },
+                {
+                    "label": "Service 1 Icon",
+                    "type": "text",
+                    "value": "fa fa-pencil",
+                    "order": 1,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 1 Title",
+                    "type": "text",
+                    "value": "Project creation",
+                    "order": 2,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 2 Icon",
+                    "type": "text",
+                    "value": "fa fa-pie-chart",
+                    "order": 3,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 2 Title",
+                    "type": "text",
+                    "value": "Software Development",
+                    "order": 4,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 3 Icon",
+                    "type": "text",
+                    "value": "fa fa-tasks",
+                    "order": 5,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 3 Title",
+                    "type": "text",
+                    "value": "Project Management",
+                    "order": 6,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 4 Icon",
+                    "type": "text",
+                    "value": "fa fa-tachometer",
+                    "order": 7,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 4 Title",
+                    "type": "text",
+                    "value": "Project Impliment",
+                    "order": 8,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 5 Icon",
+                    "type": "text",
+                    "value": "fa fa-recycle",
+                    "order": 9,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 5 Title",
+                    "type": "text",
+                    "value": "Software Update",
+                    "order": 10,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 6 Icon",
+                    "type": "text",
+                    "value": "fa fa-handshake-o",
+                    "order": 11,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 6 Title",
+                    "type": "text",
+                    "value": "24/7 Support",
+                    "order": 12,
+                    "description": "item:title"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:about",
+            "name": "About",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "About Us",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/aboutus.png",
+                    "order": 2,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Bar 1 Cls",
+                    "type": "text",
+                    "value": "bar learning",
+                    "order": 3,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 1 Skill",
+                    "type": "text",
+                    "value": "TDD",
+                    "order": 4,
+                    "description": "item:skill"
+                },
+                {
+                    "label": "Bar 2 Cls",
+                    "type": "text",
+                    "value": "bar back basic",
+                    "order": 5,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 2 Skill",
+                    "type": "text",
+                    "value": "Python",
+                    "order": 6,
+                    "description": "item:skill"
+                },
+                {
+                    "label": "Bar 3 Cls",
+                    "type": "text",
+                    "value": "bar back intermediate",
+                    "order": 7,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 3 Skill",
+                    "type": "text",
+                    "value": "C#",
+                    "order": 8,
+                    "description": "item:skill"
+                },
+                {
+                    "label": "Bar 4 Cls",
+                    "type": "text",
+                    "value": "bar front advanced",
+                    "order": 9,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 4 Skill",
+                    "type": "text",
+                    "value": "CSS3",
+                    "order": 10,
+                    "description": "item:skill"
+                },
+                {
+                    "label": "Bar 5 Cls",
+                    "type": "text",
+                    "value": "bar front expert",
+                    "order": 11,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 5 Skill",
+                    "type": "text",
+                    "value": "HTML5",
+                    "order": 12,
+                    "description": "item:skill"
+                },
+                {
+                    "label": "Bar 6 Cls",
+                    "type": "text",
+                    "value": "bar front expert",
+                    "order": 13,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 6 Skill",
+                    "type": "text",
+                    "value": "JQuery",
+                    "order": 14,
+                    "description": "item:skill"
+                },
+                {
+                    "label": "Bar 7 Cls",
+                    "type": "text",
+                    "value": "bar front advanced",
+                    "order": 15,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 7 Skill",
+                    "type": "text",
+                    "value": "React",
+                    "order": 16,
+                    "description": "item:skill"
+                },
+                {
+                    "label": "Bar 8 Cls",
+                    "type": "text",
+                    "value": "bar front basic",
+                    "order": 17,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 8 Skill",
+                    "type": "text",
+                    "value": "Javascripts",
+                    "order": 18,
+                    "description": "item:skill"
+                },
+                {
+                    "label": "Bar 9 Cls",
+                    "type": "text",
+                    "value": "bar front intermediate",
+                    "order": 19,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Bar 9 Skill",
+                    "type": "text",
+                    "value": "Angular Js",
+                    "order": 20,
+                    "description": "item:skill"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:why-us",
+            "name": "Why Us",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Why Us",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/whyus.jpg",
+                    "order": 2,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et\n              dolore magna aliqua. Xonsectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore\n              magna aliqua.",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Point 1",
+                    "type": "text",
+                    "value": "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.",
+                    "order": 4,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 2",
+                    "type": "text",
+                    "value": "Sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.",
+                    "order": 5,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 3",
+                    "type": "text",
+                    "value": "Nemo enim ipsam voluptatem quia voluptas sit aspernatur",
+                    "order": 6,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 4",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 7,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 5",
+                    "type": "text",
+                    "value": "Sed quia consequuntur magni dolores eos qui ratione",
+                    "order": 8,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 6",
+                    "type": "text",
+                    "value": "Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.",
+                    "order": 9,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 7",
+                    "type": "text",
+                    "value": "Consectetur, adipisci velit, sed quia non numquam eius.",
+                    "order": 10,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 8",
+                    "type": "text",
+                    "value": "Rempora incidunt ut labore et dolore magnam aliquam",
+                    "order": 11,
+                    "description": "item:_value"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:portfolio",
+            "name": "Portfolio",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Our Portfolio",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Quote",
+                    "type": "text",
+                    "value": "Export tempor illum tamen malis malis eram quae irure esse labore quem cillum quid cillum eram malis quorum velit fore eram velit sunt aliqua noster fugiat irure amet legam anim culpa.",
+                    "order": 2,
+                    "description": "const:quote"
+                },
+                {
+                    "label": "Filter 1 F",
+                    "type": "text",
+                    "value": "*",
+                    "order": 3,
+                    "description": "item:f"
+                },
+                {
+                    "label": "Filter 1 Label",
+                    "type": "text",
+                    "value": "All",
+                    "order": 4,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Filter 1 Active",
+                    "type": "text",
+                    "value": "true",
+                    "order": 5,
+                    "description": "item:active"
+                },
+                {
+                    "label": "Filter 2 F",
+                    "type": "text",
+                    "value": ".filter-app",
+                    "order": 6,
+                    "description": "item:f"
+                },
+                {
+                    "label": "Filter 2 Label",
+                    "type": "text",
+                    "value": "App Design",
+                    "order": 7,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Filter 3 F",
+                    "type": "text",
+                    "value": ".filter-product",
+                    "order": 8,
+                    "description": "item:f"
+                },
+                {
+                    "label": "Filter 3 Label",
+                    "type": "text",
+                    "value": "App Development",
+                    "order": 9,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Filter 4 F",
+                    "type": "text",
+                    "value": ".filter-branding",
+                    "order": 10,
+                    "description": "item:f"
+                },
+                {
+                    "label": "Filter 4 Label",
+                    "type": "text",
+                    "value": "Branding",
+                    "order": 11,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Filter 5 F",
+                    "type": "text",
+                    "value": ".filter-books",
+                    "order": 12,
+                    "description": "item:f"
+                },
+                {
+                    "label": "Filter 5 Label",
+                    "type": "text",
+                    "value": "It Solutions",
+                    "order": 13,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Portfolio 1 Image",
+                    "type": "image",
+                    "value": "/assets/images/portfolio/app-1.jpg",
+                    "order": 14,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Portfolio 1 Cls",
+                    "type": "text",
+                    "value": "filter-app",
+                    "order": 15,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Portfolio 1 Title",
+                    "type": "text",
+                    "value": "App 1",
+                    "order": 16,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Portfolio 1 T Img",
+                    "type": "text",
+                    "value": "testimonials/testimonial-1.jpg",
+                    "order": 17,
+                    "description": "item:tImg"
+                },
+                {
+                    "label": "Portfolio 2 Image",
+                    "type": "image",
+                    "value": "/assets/images/portfolio/product-1.jpg",
+                    "order": 18,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Portfolio 2 Cls",
+                    "type": "text",
+                    "value": "filter-product",
+                    "order": 19,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Portfolio 2 Title",
+                    "type": "text",
+                    "value": "Product 1",
+                    "order": 20,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Portfolio 2 T Img",
+                    "type": "text",
+                    "value": "testimonials/testimonial-2.jpg",
+                    "order": 21,
+                    "description": "item:tImg"
+                },
+                {
+                    "label": "Portfolio 3 Image",
+                    "type": "image",
+                    "value": "/assets/images/portfolio/branding-1.jpg",
+                    "order": 22,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Portfolio 3 Cls",
+                    "type": "text",
+                    "value": "filter-branding",
+                    "order": 23,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Portfolio 3 Title",
+                    "type": "text",
+                    "value": "Branding 1",
+                    "order": 24,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Portfolio 3 T Img",
+                    "type": "text",
+                    "value": "testimonials/testimonial-3.jpg",
+                    "order": 25,
+                    "description": "item:tImg"
+                },
+                {
+                    "label": "Portfolio 4 Image",
+                    "type": "image",
+                    "value": "/assets/images/portfolio/books-1.jpg",
+                    "order": 26,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Portfolio 4 Cls",
+                    "type": "text",
+                    "value": "filter-books",
+                    "order": 27,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Portfolio 4 Title",
+                    "type": "text",
+                    "value": "Books 1",
+                    "order": 28,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Portfolio 4 T Img",
+                    "type": "text",
+                    "value": "testimonials/testimonial-4.jpg",
+                    "order": 29,
+                    "description": "item:tImg"
+                },
+                {
+                    "label": "Portfolio 5 Image",
+                    "type": "image",
+                    "value": "/assets/images/portfolio/app-2.jpg",
+                    "order": 30,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Portfolio 5 Cls",
+                    "type": "text",
+                    "value": "filter-app",
+                    "order": 31,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Portfolio 5 Title",
+                    "type": "text",
+                    "value": "App 2",
+                    "order": 32,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Portfolio 5 T Img",
+                    "type": "text",
+                    "value": "testimonials/testimonial-1.jpg",
+                    "order": 33,
+                    "description": "item:tImg"
+                },
+                {
+                    "label": "Portfolio 6 Image",
+                    "type": "image",
+                    "value": "/assets/images/portfolio/product-2.jpg",
+                    "order": 34,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Portfolio 6 Cls",
+                    "type": "text",
+                    "value": "filter-product",
+                    "order": 35,
+                    "description": "item:cls"
+                },
+                {
+                    "label": "Portfolio 6 Title",
+                    "type": "text",
+                    "value": "Product 2",
+                    "order": 36,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Portfolio 6 T Img",
+                    "type": "text",
+                    "value": "testimonials/testimonial-2.jpg",
+                    "order": 37,
+                    "description": "item:tImg"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:cta",
+            "name": "Cta",
+            "nodes": [
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Read to start something great?",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Email",
+                    "type": "text",
+                    "value": "Conatct Us",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Email Link",
+                    "type": "url",
+                    "value": "mailto:info@example.com",
+                    "order": 3,
+                    "description": "attr:href"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:testimonials",
+            "name": "Testimonials",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Testimonials",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Testimonial 1 Image",
+                    "type": "image",
+                    "value": "/assets/images/testimonials/testimonial-1.jpg",
+                    "order": 2,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Testimonial 1 Name",
+                    "type": "text",
+                    "value": "Jhone Doe",
+                    "order": 3,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Testimonial 1 Role",
+                    "type": "text",
+                    "value": "CFO",
+                    "order": 4,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Testimonial 1 Text",
+                    "type": "text",
+                    "value": "Proin iaculis purus consequat sem cure digni ssim donec porttitora entum suscipit rhoncus. Accusantium quam, ultricies eget id, aliquam eget nibh et. Maecen aliquam.",
+                    "order": 5,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Testimonial 2 Image",
+                    "type": "image",
+                    "value": "/assets/images/testimonials/testimonial-2.jpg",
+                    "order": 6,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Testimonial 2 Name",
+                    "type": "text",
+                    "value": "Afa Rose",
+                    "order": 7,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Testimonial 2 Role",
+                    "type": "text",
+                    "value": "Web Designer",
+                    "order": 8,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Testimonial 2 Text",
+                    "type": "text",
+                    "value": "Export tempor illum tamen malis malis eram quae irure esse labore quem cillum quid cillum eram malis quorum velit fore eram velit sunt aliqua noster fugiat irure amet.",
+                    "order": 9,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Testimonial 3 Image",
+                    "type": "image",
+                    "value": "/assets/images/testimonials/testimonial-3.jpg",
+                    "order": 10,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Testimonial 3 Name",
+                    "type": "text",
+                    "value": "Keena Lara",
+                    "order": 11,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Testimonial 3 Role",
+                    "type": "text",
+                    "value": "Store Owner",
+                    "order": 12,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Testimonial 3 Text",
+                    "type": "text",
+                    "value": "Enim nisi quem export duis labore cillum quae magna enim sint quorum nulla quem veniam duis minim tempor labore quem eram duis noster aute amet eram fore quis minim.",
+                    "order": 13,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Testimonial 4 Image",
+                    "type": "image",
+                    "value": "/assets/images/testimonials/testimonial-4.jpg",
+                    "order": 14,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Testimonial 4 Name",
+                    "type": "text",
+                    "value": "Fizzi Brandon",
+                    "order": 15,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Testimonial 4 Role",
+                    "type": "text",
+                    "value": "Freelancer",
+                    "order": 16,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Testimonial 4 Text",
+                    "type": "text",
+                    "value": "Fugiat enim eram quae cillum dolore dolor amet nulla culpa multos export minim fugiat minim velit minim dolor enim duis veniam ipsum anim magna sunt elit dolore.",
+                    "order": 17,
+                    "description": "item:text"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:team",
+            "name": "Team",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Our Team",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Member 1 Image",
+                    "type": "image",
+                    "value": "/assets/images/team/team-1.jpg",
+                    "order": 2,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 1 Name",
+                    "type": "text",
+                    "value": "Jhone Bi",
+                    "order": 3,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 1 Role",
+                    "type": "text",
+                    "value": "Application Manager",
+                    "order": 4,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 1 Delay",
+                    "type": "text",
+                    "value": "100",
+                    "order": 5,
+                    "description": "item:delay"
+                },
+                {
+                    "label": "Member 2 Image",
+                    "type": "image",
+                    "value": "/assets/images/team/team-2.jpg",
+                    "order": 6,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 2 Name",
+                    "type": "text",
+                    "value": "Sani Awesome",
+                    "order": 7,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 2 Role",
+                    "type": "text",
+                    "value": "Social Media",
+                    "order": 8,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 2 Delay",
+                    "type": "text",
+                    "value": "200",
+                    "order": 9,
+                    "description": "item:delay"
+                },
+                {
+                    "label": "Member 3 Image",
+                    "type": "image",
+                    "value": "/assets/images/team/team-3.jpg",
+                    "order": 10,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 3 Name",
+                    "type": "text",
+                    "value": "Andrio Willi",
+                    "order": 11,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 3 Role",
+                    "type": "text",
+                    "value": "Content Writer",
+                    "order": 12,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 3 Delay",
+                    "type": "text",
+                    "value": "300",
+                    "order": 13,
+                    "description": "item:delay"
+                },
+                {
+                    "label": "Member 4 Image",
+                    "type": "image",
+                    "value": "/assets/images/team/team-4.jpg",
+                    "order": 14,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 4 Name",
+                    "type": "text",
+                    "value": "Afa Jonson",
+                    "order": 15,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 4 Role",
+                    "type": "text",
+                    "value": "Business Manager",
+                    "order": 16,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 4 Delay",
+                    "type": "text",
+                    "value": "400",
+                    "order": 17,
+                    "description": "item:delay"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:pricing",
+            "name": "Pricing",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Our Pricing",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Feature 1",
+                    "type": "text",
+                    "value": "<b>Free</b> Security Service",
+                    "order": 2,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Feature 2",
+                    "type": "text",
+                    "value": "<b>1x</b> Security Service",
+                    "order": 3,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Feature 3",
+                    "type": "text",
+                    "value": "<b>Unlimited</b> Security Service",
+                    "order": 4,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Feature 4",
+                    "type": "text",
+                    "value": "<b>1x</b> Dashboard Access",
+                    "order": 5,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Feature 5",
+                    "type": "text",
+                    "value": "<b>3x</b> Job Listings",
+                    "order": 6,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Plan 1 Title",
+                    "type": "text",
+                    "value": "Personal",
+                    "order": 7,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Plan 1 Price",
+                    "type": "text",
+                    "value": "10",
+                    "order": 8,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Plan 1 Featured",
+                    "type": "text",
+                    "value": "false",
+                    "order": 9,
+                    "description": "item:featured"
+                },
+                {
+                    "label": "Plan 2 Title",
+                    "type": "text",
+                    "value": "Business",
+                    "order": 10,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Plan 2 Price",
+                    "type": "text",
+                    "value": "40",
+                    "order": 11,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Plan 2 Featured",
+                    "type": "text",
+                    "value": "true",
+                    "order": 12,
+                    "description": "item:featured"
+                },
+                {
+                    "label": "Plan 3 Title",
+                    "type": "text",
+                    "value": "Enterprise",
+                    "order": 13,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Plan 3 Price",
+                    "type": "text",
+                    "value": "77",
+                    "order": 14,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Plan 3 Featured",
+                    "type": "text",
+                    "value": "false",
+                    "order": 15,
+                    "description": "item:featured"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:faq",
+            "name": "Faq",
+            "nodes": [
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Frequently Asked <strong>Questions</strong>",
+                    "order": 0,
+                    "description": "html"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Answer",
+                    "type": "text",
+                    "value": "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.",
+                    "order": 2,
+                    "description": "const:answer"
+                },
+                {
+                    "label": "Faq 1",
+                    "type": "text",
+                    "value": "What is web domain and hosting?",
+                    "order": 3,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Faq 2",
+                    "type": "text",
+                    "value": "Which server is best for websites linux or windows?",
+                    "order": 4,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Faq 3",
+                    "type": "text",
+                    "value": "Google cloud or Amazon server which one is best and fast?",
+                    "order": 5,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Faq 4",
+                    "type": "text",
+                    "value": "Why Organic SEO is important for all businesses?",
+                    "order": 6,
+                    "description": "item:_value"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:blog",
+            "name": "Blog",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Recent Blog Posts",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Post 1 Image",
+                    "type": "image",
+                    "value": "/assets/images/blog/blog-1.jpg",
+                    "order": 2,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Post 1 Category",
+                    "type": "text",
+                    "value": "Domain & Hosting",
+                    "order": 3,
+                    "description": "item:category"
+                },
+                {
+                    "label": "Post 1 Title",
+                    "type": "text",
+                    "value": "How to host website on any hosting provider?",
+                    "order": 4,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Post 1 Author",
+                    "type": "text",
+                    "value": "William Bla",
+                    "order": 5,
+                    "description": "item:author"
+                },
+                {
+                    "label": "Post 1 Date",
+                    "type": "text",
+                    "value": "Feb 1, 2022",
+                    "order": 6,
+                    "description": "item:date"
+                },
+                {
+                    "label": "Post 1 Datetime",
+                    "type": "text",
+                    "value": "2022-02-01",
+                    "order": 7,
+                    "description": "item:datetime"
+                },
+                {
+                    "label": "Post 2 Image",
+                    "type": "image",
+                    "value": "/assets/images/blog/blog-2.jpg",
+                    "order": 8,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Post 2 Category",
+                    "type": "text",
+                    "value": "Advertisement",
+                    "order": 9,
+                    "description": "item:category"
+                },
+                {
+                    "label": "Post 2 Title",
+                    "type": "text",
+                    "value": "How to create add on google adwords?",
+                    "order": 10,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Post 2 Author",
+                    "type": "text",
+                    "value": "Jobi Ret",
+                    "order": 11,
+                    "description": "item:author"
+                },
+                {
+                    "label": "Post 2 Date",
+                    "type": "text",
+                    "value": "Oct 5, 2022",
+                    "order": 12,
+                    "description": "item:date"
+                },
+                {
+                    "label": "Post 2 Datetime",
+                    "type": "text",
+                    "value": "2022-10-05",
+                    "order": 13,
+                    "description": "item:datetime"
+                },
+                {
+                    "label": "Post 3 Image",
+                    "type": "image",
+                    "value": "/assets/images/blog/blog-3.jpg",
+                    "order": 14,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Post 3 Category",
+                    "type": "text",
+                    "value": "Marketing",
+                    "order": 15,
+                    "description": "item:category"
+                },
+                {
+                    "label": "Post 3 Title",
+                    "type": "text",
+                    "value": "What is digital marketing and why is important?",
+                    "order": 16,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Post 3 Author",
+                    "type": "text",
+                    "value": "Main Dow",
+                    "order": 17,
+                    "description": "item:author"
+                },
+                {
+                    "label": "Post 3 Date",
+                    "type": "text",
+                    "value": "Dec 22, 2022",
+                    "order": 18,
+                    "description": "item:date"
+                },
+                {
+                    "label": "Post 3 Datetime",
+                    "type": "text",
+                    "value": "2022-12-22",
+                    "order": 19,
+                    "description": "item:datetime"
+                }
+            ]
+        },
+        {
+            "type": "app:tekstack:clients",
+            "name": "Clients",
+            "nodes": []
+        },
+        {
+            "type": "app:tekstack:contact",
+            "name": "Contact",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Contact Us",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Send Message",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Info 1 Title",
+                    "type": "text",
+                    "value": "Address:",
+                    "order": 3,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Info 2 Title",
+                    "type": "text",
+                    "value": "Phone:",
+                    "order": 4,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Info 3 Title",
+                    "type": "text",
+                    "value": "Email:",
+                    "order": 5,
+                    "description": "item:title"
+                }
+            ]
+        }
+    ]
+}

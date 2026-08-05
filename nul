@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>404 · Olux CMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* theme tokens (light default → orange/cream; dark → navy/baby blue) */
+        :root{ --primary:#f97316; --primary-2:#fdba74; }
+        @media (prefers-color-scheme: dark){ :root{ --primary:#1e3a8a; --primary-2:#7dd3fc; } }
+        *{box-sizing:border-box;margin:0;padding:0}
+        html,body{height:100%}
+        body{
+            font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#475569;
+            position:relative;overflow:hidden;
+            /* clean light canvas + faint dotted texture — no gray frame */
+            background:
+                radial-gradient(rgba(148,163,184,.18) 1px, transparent 1px) 0 0 / 18px 18px,
+                linear-gradient(180deg,#fbfbfd 0%,#f6f7fb 100%);
+        }
+
+        /* ── floating gradient balls (rise upward, loop forever) ── */
+        .balls{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+        .ball{
+            position:absolute;bottom:-260px;border-radius:50%;
+            background:radial-gradient(circle at 35% 28%, var(--primary-2) 0%, var(--primary) 78%);
+            box-shadow:0 24px 60px rgba(15,23,42,.16);
+            opacity:.92;will-change:transform;
+            animation:floatUp linear infinite;
+        }
+        @keyframes floatUp{
+            0%   {transform:translateY(0)        translateX(0)}
+            50%  {transform:translateY(-65vh)    translateX(var(--drift,0))}
+            100% {transform:translateY(-135vh)   translateX(0)}
+        }
+
+        /* ── content ── */
+        .stage{position:relative;z-index:2;height:100%;display:flex;align-items:center}
+        .inner{width:100%;max-width:1100px;margin:0 auto;padding:0 clamp(24px,6vw,72px)}
+        .watermark{
+            position:absolute;top:50%;left:clamp(16px,5vw,64px);transform:translateY(-62%);
+            font-size:clamp(9rem,34vw,26rem);font-weight:800;line-height:.8;letter-spacing:-.05em;
+            color:color-mix(in srgb, var(--primary) 13%, #ffffff);z-index:1;user-select:none;pointer-events:none;
+        }
+        .copy{position:relative;z-index:3;max-width:520px}
+        .copy h1{font-size:clamp(2.4rem,6vw,3.6rem);font-weight:800;color:#3f4754;letter-spacing:-.02em}
+        .copy p{font-size:clamp(.95rem,2.4vw,1.15rem);color:#94a3b8;margin-top:.4rem}
+        .copy .home{
+            display:inline-flex;align-items:center;gap:.55rem;margin-top:1.8rem;
+            font-weight:700;font-size:.95rem;color:var(--primary);text-decoration:none;
+        }
+        .copy .home svg{transition:transform .2s}
+        .copy .home:hover svg{transform:translateX(6px)}
+
+        @media (prefers-color-scheme: dark){
+            body{color:#cbd5e1;background:
+                radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 18px 18px,
+                linear-gradient(180deg,#0c0e16 0%,#11131c 100%)}
+            .watermark{color:color-mix(in srgb, var(--primary-2) 14%, transparent)}
+            .copy h1{color:#e2e8f0}.copy p{color:#64748b}
+            /* navy is too dark on a dark bg — use the baby-blue secondary for the link */
+            .copy .home{color:var(--primary-2)}
+        }
+    </style>
+</head>
+<body>
+    
+        <div class="balls">
+                    <span class="ball" style="
+                left:4%;
+                width:120px;height:120px;
+                animation-duration:16s;animation-delay:-2s;
+                --drift:30px;
+                "></span>
+                    <span class="ball" style="
+                left:16%;
+                width:70px;height:70px;
+                animation-duration:13s;animation-delay:-8s;
+                --drift:-20px;
+                "></span>
+                    <span class="ball" style="
+                left:30%;
+                width:180px;height:180px;
+                animation-duration:22s;animation-delay:-14s;
+                --drift:40px;
+                 filter:blur(2px);opacity:.8; "></span>
+                    <span class="ball" style="
+                left:44%;
+                width:90px;height:90px;
+                animation-duration:15s;animation-delay:-4s;
+                --drift:-30px;
+                "></span>
+                    <span class="ball" style="
+                left:55%;
+                width:150px;height:150px;
+                animation-duration:19s;animation-delay:-11s;
+                --drift:25px;
+                "></span>
+                    <span class="ball" style="
+                left:68%;
+                width:110px;height:110px;
+                animation-duration:17s;animation-delay:-6s;
+                --drift:-35px;
+                "></span>
+                    <span class="ball" style="
+                left:80%;
+                width:220px;height:220px;
+                animation-duration:24s;animation-delay:-18s;
+                --drift:30px;
+                 filter:blur(2px);opacity:.8; "></span>
+                    <span class="ball" style="
+                left:90%;
+                width:80px;height:80px;
+                animation-duration:14s;animation-delay:-3s;
+                --drift:-15px;
+                "></span>
+                    <span class="ball" style="
+                left:-2%;
+                width:160px;height:160px;
+                animation-duration:21s;animation-delay:-9s;
+                --drift:20px;
+                "></span>
+            </div>
+
+    <div class="stage">
+        <div class="inner">
+            <div class="watermark">404</div>
+            <div class="copy">
+                <h1>Ooops!</h1>
+                <p>The page seems to have evaporated.</p>
+                <a class="home" href="http://localhost">
+                    home page
+                    <svg width="22" height="14" viewBox="0 0 24 14" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2 7h19m0 0l-6-5m6 5l-6 5"/></svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

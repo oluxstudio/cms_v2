@@ -1,0 +1,385 @@
+{
+    "name": "Services",
+    "url": "/services",
+    "layout": "default",
+    "keywords": "services",
+    "attributes": {
+        "title": "Services \u2014 Hair Co."
+    },
+    "blocks": [
+        {
+            "type": "app:hairco:services",
+            "name": "Services",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Our services",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "What we provide to our customers",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Every treatment starts with a consultation \u2014 your hair, your goals, our craft.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Service 1 Icon",
+                    "type": "text",
+                    "value": "\u2702",
+                    "order": 3,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 1 Title",
+                    "type": "text",
+                    "value": "Hairstyles",
+                    "order": 4,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 1 Text",
+                    "type": "text",
+                    "value": "Signature cuts and styling shaped to your face, texture and daily routine.",
+                    "order": 5,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Service 2 Icon",
+                    "type": "text",
+                    "value": "\ud83c\udfa8",
+                    "order": 6,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 2 Title",
+                    "type": "text",
+                    "value": "Coloring",
+                    "order": 7,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 2 Text",
+                    "type": "text",
+                    "value": "Balayage, gloss and full color with gentle, salon-grade pigments.",
+                    "order": 8,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Service 3 Icon",
+                    "type": "text",
+                    "value": "\ud83c\udf00",
+                    "order": 9,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 3 Title",
+                    "type": "text",
+                    "value": "Hair Curly",
+                    "order": 10,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 3 Text",
+                    "type": "text",
+                    "value": "Curl definition, perms and care plans that keep every coil bouncy.",
+                    "order": 11,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Service 4 Icon",
+                    "type": "text",
+                    "value": "\u2728",
+                    "order": 12,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Service 4 Title",
+                    "type": "text",
+                    "value": "Lamination",
+                    "order": 13,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Service 4 Text",
+                    "type": "text",
+                    "value": "Glass-shine lamination that seals, smooths and protects for weeks.",
+                    "order": 14,
+                    "description": "item:text"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:about",
+            "name": "About",
+            "nodes": [
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/about.svg",
+                    "order": 0,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "About Hair Co.",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Healthy hair begins with a healthy routine",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "For over fifteen years our collective has cared for hair the slow way \u2014 honest consultations, gentle products and techniques that respect what grows naturally.",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Read our story",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/about",
+                    "order": 5,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "Point 1",
+                    "type": "text",
+                    "value": "Long-Lasting Hold",
+                    "order": 6,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 2",
+                    "type": "text",
+                    "value": "Effective Ingredients",
+                    "order": 7,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 3",
+                    "type": "text",
+                    "value": "Gentle Formulas",
+                    "order": 8,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 4",
+                    "type": "text",
+                    "value": "Deep Hydration",
+                    "order": 9,
+                    "description": "item:_value"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:pricing",
+            "name": "Pricing",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "The best pricing",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "A menu for every hair day",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Transparent prices, no surprise add-ons \u2014 longer or thicker hair may add a little time, never stress.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Price 1 Title",
+                    "type": "text",
+                    "value": "Signature Cut & Style",
+                    "order": 3,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Price 1 Description",
+                    "type": "text",
+                    "value": "Consultation, wash, precision cut and finish.",
+                    "order": 4,
+                    "description": "item:desc"
+                },
+                {
+                    "label": "Price 1 Price",
+                    "type": "text",
+                    "value": "$45",
+                    "order": 5,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Price 2 Title",
+                    "type": "text",
+                    "value": "Full Color",
+                    "order": 6,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Price 2 Description",
+                    "type": "text",
+                    "value": "Single-process color with gloss and blowout.",
+                    "order": 7,
+                    "description": "item:desc"
+                },
+                {
+                    "label": "Price 2 Price",
+                    "type": "text",
+                    "value": "$66",
+                    "order": 8,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Price 3 Title",
+                    "type": "text",
+                    "value": "Balayage / Highlights",
+                    "order": 9,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Price 3 Description",
+                    "type": "text",
+                    "value": "Hand-painted dimension with toner.",
+                    "order": 10,
+                    "description": "item:desc"
+                },
+                {
+                    "label": "Price 3 Price",
+                    "type": "text",
+                    "value": "$58",
+                    "order": 11,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Price 4 Title",
+                    "type": "text",
+                    "value": "Curl Definition",
+                    "order": 12,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Price 4 Description",
+                    "type": "text",
+                    "value": "Hydration, shaping and diffuse styling for curls.",
+                    "order": 13,
+                    "description": "item:desc"
+                },
+                {
+                    "label": "Price 4 Price",
+                    "type": "text",
+                    "value": "$49",
+                    "order": 14,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Price 5 Title",
+                    "type": "text",
+                    "value": "Lamination",
+                    "order": 15,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Price 5 Description",
+                    "type": "text",
+                    "value": "Glass-shine treatment that smooths for weeks.",
+                    "order": 16,
+                    "description": "item:desc"
+                },
+                {
+                    "label": "Price 5 Price",
+                    "type": "text",
+                    "value": "$52",
+                    "order": 17,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Price 6 Title",
+                    "type": "text",
+                    "value": "Express Blowout",
+                    "order": 18,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Price 6 Description",
+                    "type": "text",
+                    "value": "Wash, blow-dry and quick finish.",
+                    "order": 19,
+                    "description": "item:desc"
+                },
+                {
+                    "label": "Price 6 Price",
+                    "type": "text",
+                    "value": "$35",
+                    "order": 20,
+                    "description": "item:price"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:cta",
+            "name": "Cta",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Ready for a fresh look?",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Chairs fill fast on weekends \u2014 reserve yours in under a minute.",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Book an appointment",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/appointment",
+                    "order": 3,
+                    "description": "attr:href"
+                }
+            ]
+        }
+    ]
+}

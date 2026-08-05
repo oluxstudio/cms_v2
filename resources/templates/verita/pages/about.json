@@ -1,0 +1,169 @@
+{
+    "name": "About",
+    "url": "/about",
+    "layout": "default",
+    "keywords": "about",
+    "attributes": {
+        "title": "About \u2014 {site_name}"
+    },
+    "blocks": [
+        {
+            "type": "app:verita:about",
+            "name": "About",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Our story",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Advice without the agency overhead",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "{site_name} was founded on a simple observation: most companies don't need a hundred-page strategy, they need three good decisions made quickly. We keep teams small, senior and accountable.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/hero.svg",
+                    "order": 3,
+                    "description": "attr:src"
+                }
+            ]
+        },
+        {
+            "type": "app:verita:team",
+            "name": "Team",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Who you work with",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Senior people on every engagement",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Member 1 Name",
+                    "type": "text",
+                    "value": "Amara Osei",
+                    "order": 2,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 1 Role",
+                    "type": "text",
+                    "value": "Managing Partner",
+                    "order": 3,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 1 Image",
+                    "type": "image",
+                    "value": "/assets/images/avatar1.svg",
+                    "order": 4,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 2 Name",
+                    "type": "text",
+                    "value": "Jonas Keller",
+                    "order": 5,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 2 Role",
+                    "type": "text",
+                    "value": "Head of Strategy",
+                    "order": 6,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 2 Image",
+                    "type": "image",
+                    "value": "/assets/images/avatar2.svg",
+                    "order": 7,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 3 Name",
+                    "type": "text",
+                    "value": "Priya Nair",
+                    "order": 8,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 3 Role",
+                    "type": "text",
+                    "value": "Finance Lead",
+                    "order": 9,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 3 Image",
+                    "type": "image",
+                    "value": "/assets/images/avatar3.svg",
+                    "order": 10,
+                    "description": "item:img"
+                }
+            ]
+        },
+        {
+            "type": "app:verita:contact",
+            "name": "Contact",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Get in touch",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Tell us where it hurts",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Send a short note about your situation and we will reply within one business day with next steps.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Email",
+                    "type": "text",
+                    "value": "hello@{site_name}.example",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Email Link",
+                    "type": "url",
+                    "value": "mailto:hello@verita.example",
+                    "order": 4,
+                    "description": "attr:href"
+                }
+            ]
+        }
+    ]
+}

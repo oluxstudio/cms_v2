@@ -1,0 +1,118 @@
+{
+    "name": "Verita layout",
+    "blocks": [
+        {
+            "type": "app:verita:site-header",
+            "name": "Site Header",
+            "nodes": [
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Book a Call",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/contact",
+                    "order": 1,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "Nav 1 Label",
+                    "type": "text",
+                    "value": "Home",
+                    "order": 2,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 1 Href",
+                    "type": "text",
+                    "value": "/",
+                    "order": 3,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 2 Label",
+                    "type": "text",
+                    "value": "About",
+                    "order": 4,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 2 Href",
+                    "type": "text",
+                    "value": "/about",
+                    "order": 5,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 3 Label",
+                    "type": "text",
+                    "value": "Contact",
+                    "order": 6,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 3 Href",
+                    "type": "text",
+                    "value": "/contact",
+                    "order": 7,
+                    "description": "item:href"
+                }
+            ]
+        },
+        {
+            "type": "content"
+        },
+        {
+            "type": "app:verita:site-footer",
+            "name": "Site Footer",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Clear advice for growing companies.",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "\u00a9 {site_name} Consulting. All rights reserved.",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Link 1 Label",
+                    "type": "text",
+                    "value": "Privacy",
+                    "order": 2,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Link 1 Href",
+                    "type": "text",
+                    "value": "/privacy",
+                    "order": 3,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Link 2 Label",
+                    "type": "text",
+                    "value": "Terms",
+                    "order": 4,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Link 2 Href",
+                    "type": "text",
+                    "value": "/terms",
+                    "order": 5,
+                    "description": "item:href"
+                }
+            ]
+        }
+    ]
+}

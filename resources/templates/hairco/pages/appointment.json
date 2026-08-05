@@ -1,0 +1,408 @@
+{
+    "name": "Appointment",
+    "url": "/appointment",
+    "layout": "default",
+    "keywords": "appointment",
+    "attributes": {
+        "title": "Book an Appointment \u2014 Hair Co."
+    },
+    "blocks": [
+        {
+            "type": "app:hairco:appointment",
+            "name": "Appointment",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Appointments",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Reserve your chair",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Pick a service and a time \u2014 we confirm every booking personally.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Working Hours",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Text C",
+                    "type": "text",
+                    "value": "Prefer to talk? Call us any time during opening hours.<b>+1 589 625 3256</b>",
+                    "order": 4,
+                    "description": "html"
+                },
+                {
+                    "label": "Text D",
+                    "type": "text",
+                    "value": "Or write to us.<b>hello@{site_name}.salon</b>",
+                    "order": 5,
+                    "description": "html"
+                },
+                {
+                    "label": "Subheadline B",
+                    "type": "text",
+                    "value": "Book an appointment",
+                    "order": 6,
+                    "description": "text"
+                },
+                {
+                    "label": "Text E",
+                    "type": "text",
+                    "value": "Loading services\u2026",
+                    "order": 7,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline C",
+                    "type": "text",
+                    "value": "Appointment",
+                    "order": 8,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption",
+                    "type": "text",
+                    "value": "Service",
+                    "order": 9,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption B",
+                    "type": "text",
+                    "value": "Date & time",
+                    "order": 10,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption C",
+                    "type": "text",
+                    "value": "Duration",
+                    "order": 11,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption D",
+                    "type": "text",
+                    "value": "Total",
+                    "order": 12,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline D",
+                    "type": "text",
+                    "value": "Your details",
+                    "order": 13,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption E",
+                    "type": "text",
+                    "value": "Name",
+                    "order": 14,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption F",
+                    "type": "text",
+                    "value": "Phone",
+                    "order": 15,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption G",
+                    "type": "text",
+                    "value": "Email",
+                    "order": 16,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption H",
+                    "type": "text",
+                    "value": "Notes",
+                    "order": 17,
+                    "description": "text"
+                },
+                {
+                    "label": "Text F",
+                    "type": "text",
+                    "value": "Please keep your reference handy \u2014 you'll need it for any changes.\n            To reschedule or cancel, call us at <b>+1 589 625 3256</b> during opening hours.",
+                    "order": 18,
+                    "description": "html"
+                },
+                {
+                    "label": "Text G",
+                    "type": "text",
+                    "value": "Add to calendar",
+                    "order": 19,
+                    "description": "text"
+                },
+                {
+                    "label": "Text H",
+                    "type": "text",
+                    "value": "Book another appointment",
+                    "order": 20,
+                    "description": "text"
+                },
+                {
+                    "label": "Text I",
+                    "type": "text",
+                    "value": "Checking the calendar\u2026",
+                    "order": 21,
+                    "description": "text"
+                },
+                {
+                    "label": "Text J",
+                    "type": "text",
+                    "value": "No open days in the next few weeks \u2014 call us instead.",
+                    "order": 22,
+                    "description": "text"
+                },
+                {
+                    "label": "Text K",
+                    "type": "text",
+                    "value": "Checking free times\u2026",
+                    "order": 23,
+                    "description": "text"
+                },
+                {
+                    "label": "Text L",
+                    "type": "text",
+                    "value": "Fully booked that day \u2014 pick another.",
+                    "order": 24,
+                    "description": "text"
+                },
+                {
+                    "label": "Booking Site",
+                    "type": "text",
+                    "value": "law-matters",
+                    "order": 25,
+                    "description": "const:bookingSite"
+                },
+                {
+                    "label": "Hour 1 Title",
+                    "type": "text",
+                    "value": "Monday \u2014 Friday",
+                    "order": 26,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Hour 1 Text",
+                    "type": "text",
+                    "value": "9:00 \u2014 20:00",
+                    "order": 27,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Hour 2 Title",
+                    "type": "text",
+                    "value": "Saturday",
+                    "order": 28,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Hour 2 Text",
+                    "type": "text",
+                    "value": "10:00 \u2014 18:00",
+                    "order": 29,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Hour 3 Title",
+                    "type": "text",
+                    "value": "Sunday",
+                    "order": 30,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Hour 3 Text",
+                    "type": "text",
+                    "value": "Closed",
+                    "order": 31,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Ics Item 1",
+                    "type": "text",
+                    "value": "BEGIN:VCALENDAR",
+                    "order": 32,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 2",
+                    "type": "text",
+                    "value": "VERSION:2.0",
+                    "order": 33,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 3",
+                    "type": "text",
+                    "value": "PRODID:-//Hair Co.//Booking//EN",
+                    "order": 34,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 4",
+                    "type": "text",
+                    "value": "BEGIN:VEVENT",
+                    "order": 35,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 5",
+                    "type": "text",
+                    "value": "UID:${c.reference || fmt(start)}@{site_name}.salon",
+                    "order": 36,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 6",
+                    "type": "text",
+                    "value": "DTSTART:${fmt(start)}",
+                    "order": 37,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 7",
+                    "type": "text",
+                    "value": "DTEND:${fmt(end)}",
+                    "order": 38,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 8",
+                    "type": "text",
+                    "value": "SUMMARY:${c.service} \u2014 Hair Co.",
+                    "order": 39,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 9",
+                    "type": "text",
+                    "value": "DESCRIPTION:Booking reference ${c.reference}",
+                    "order": 40,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 10",
+                    "type": "text",
+                    "value": "LOCATION:14 Rosewood Avenue\\, Suite 2\\, Portland OR",
+                    "order": 41,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 11",
+                    "type": "text",
+                    "value": "END:VEVENT",
+                    "order": 42,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Ics Item 12",
+                    "type": "text",
+                    "value": "END:VCALENDAR",
+                    "order": 43,
+                    "description": "item:_value"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:testimonials",
+            "name": "Testimonials",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Client review",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Loved by the people in our chairs",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Review 1 Quote",
+                    "type": "text",
+                    "value": "The consultation alone was worth the visit \u2014 my color has never looked this natural.",
+                    "order": 2,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Review 1 Name",
+                    "type": "text",
+                    "value": "Priya N.",
+                    "order": 3,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Review 1 Role",
+                    "type": "text",
+                    "value": "Coloring client",
+                    "order": 4,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Review 2 Quote",
+                    "type": "text",
+                    "value": "Three salons gave up on my curls. Hair Co. gave me a routine that actually works.",
+                    "order": 5,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Review 2 Name",
+                    "type": "text",
+                    "value": "Dana W.",
+                    "order": 6,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Review 2 Role",
+                    "type": "text",
+                    "value": "Curl care client",
+                    "order": 7,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Review 3 Quote",
+                    "type": "text",
+                    "value": "Booked at noon, transformed by three. Effortless from start to finish.",
+                    "order": 8,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Review 3 Name",
+                    "type": "text",
+                    "value": "Elena M.",
+                    "order": 9,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Review 3 Role",
+                    "type": "text",
+                    "value": "Styling client",
+                    "order": 10,
+                    "description": "item:role"
+                }
+            ]
+        }
+    ]
+}

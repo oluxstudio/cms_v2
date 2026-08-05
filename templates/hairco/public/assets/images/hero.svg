@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 560" width="640" height="560">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e3d5c9"/><stop offset=".55" stop-color="#c9a98c"/><stop offset="1" stop-color="#8a6a4f"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="560" fill="url(#g)"/>
+  <circle cx="480" cy="150" r="170" fill="#fdf2e9" opacity=".28"/>
+  <circle cx="140" cy="450" r="220" fill="#171412" opacity=".12"/>
+  <path d="M180 420 C 260 300, 300 300, 340 380 S 460 480, 520 380" stroke="#fdf2e9" stroke-width="14" fill="none" stroke-linecap="round" opacity=".65"/>
+  <path d="M160 470 C 250 360, 320 370, 360 430 S 470 520, 540 430" stroke="#171412" stroke-width="10" fill="none" stroke-linecap="round" opacity=".35"/>
+  <text x="52" y="96" font-family="Georgia, serif" font-size="46" fill="#171412" opacity=".55" font-style="italic">Hair Co.</text>
+</svg>

@@ -1,0 +1,26 @@
+{
+    "key": "tekstack",
+    "name": "Tekstack",
+    "description": "Marketplace template \u2014 replicates the Tekstack app exactly, with editable content.",
+    "category": "Marketplace",
+    "accentColor": "#f8830f",
+    "author": "Olux Marketplace",
+    "version": "1.0.0",
+    "createdAt": "2026-07-08",
+    "tags": [
+        "App",
+        "carousel",
+        "scroll-animations",
+        "lightbox",
+        "bootstrap"
+    ],
+    "features": [
+        "1 page(s) \u00b7 15 content blocks",
+        "Pixel-exact replica of the original app",
+        "Content, order and visibility editable in Configure"
+    ],
+    "renderer": "tekstack",
+    "pages": [
+        "home"
+    ]
+}

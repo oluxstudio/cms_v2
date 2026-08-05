@@ -1,0 +1,1246 @@
+{
+    "key": "verita",
+    "name": "Verita",
+    "fonts": [
+        {
+            "role": "heading",
+            "family": "Sora"
+        },
+        {
+            "role": "body",
+            "family": "Inter"
+        }
+    ],
+    "pages": [
+        {
+            "url": "/about",
+            "file": "app/pages/about.vue",
+            "name": "About",
+            "title": "About \u2014 Verita",
+            "blocks": [
+                {
+                    "name": "Site Header",
+                    "items": [
+                        {
+                            "var": "nav",
+                            "count": 3,
+                            "fields": [
+                                {
+                                    "key": "label",
+                                    "label": "Label"
+                                },
+                                {
+                                    "key": "href",
+                                    "label": "Href"
+                                }
+                            ],
+                            "prefix": "Nav",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "href": "/",
+                                    "label": "Home"
+                                },
+                                {
+                                    "href": "/about",
+                                    "label": "About"
+                                },
+                                {
+                                    "href": "/contact",
+                                    "label": "Contact"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "CTA Label",
+                            "order": 0,
+                            "value": "Book a Call"
+                        },
+                        {
+                            "kind": "attr:href",
+                            "type": "url",
+                            "label": "CTA Link",
+                            "order": 1,
+                            "value": "/contact"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 1 Label",
+                            "order": 2,
+                            "value": "Home"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 1 Href",
+                            "order": 3,
+                            "value": "/"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 2 Label",
+                            "order": 4,
+                            "value": "About"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 2 Href",
+                            "order": 5,
+                            "value": "/about"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 3 Label",
+                            "order": 6,
+                            "value": "Contact"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 3 Href",
+                            "order": 7,
+                            "value": "/contact"
+                        }
+                    ],
+                    "blockKey": "site-header",
+                    "component": "SiteHeader"
+                },
+                {
+                    "name": "About",
+                    "items": null,
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Our story"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Advice without the agency overhead"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 2,
+                            "value": "Verita was founded on a simple observation: most companies don't need a hundred-page strategy, they need three good decisions made quickly. We keep teams small, senior and accountable."
+                        },
+                        {
+                            "kind": "attr:src",
+                            "type": "image",
+                            "label": "Image",
+                            "order": 3,
+                            "value": "/assets/images/hero.svg"
+                        }
+                    ],
+                    "blockKey": "about",
+                    "component": "AboutBlock"
+                },
+                {
+                    "name": "Team",
+                    "items": [
+                        {
+                            "var": "members",
+                            "count": 3,
+                            "fields": [
+                                {
+                                    "key": "name",
+                                    "label": "Name"
+                                },
+                                {
+                                    "key": "role",
+                                    "label": "Role"
+                                },
+                                {
+                                    "key": "img",
+                                    "label": "Image"
+                                }
+                            ],
+                            "prefix": "Member",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "img": "/assets/images/avatar1.svg",
+                                    "name": "Amara Osei",
+                                    "role": "Managing Partner"
+                                },
+                                {
+                                    "img": "/assets/images/avatar2.svg",
+                                    "name": "Jonas Keller",
+                                    "role": "Head of Strategy"
+                                },
+                                {
+                                    "img": "/assets/images/avatar3.svg",
+                                    "name": "Priya Nair",
+                                    "role": "Finance Lead"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Who you work with"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Senior people on every engagement"
+                        },
+                        {
+                            "kind": "item:name",
+                            "type": "text",
+                            "label": "Member 1 Name",
+                            "order": 2,
+                            "value": "Amara Osei"
+                        },
+                        {
+                            "kind": "item:role",
+                            "type": "text",
+                            "label": "Member 1 Role",
+                            "order": 3,
+                            "value": "Managing Partner"
+                        },
+                        {
+                            "kind": "item:img",
+                            "type": "image",
+                            "label": "Member 1 Image",
+                            "order": 4,
+                            "value": "/assets/images/avatar1.svg"
+                        },
+                        {
+                            "kind": "item:name",
+                            "type": "text",
+                            "label": "Member 2 Name",
+                            "order": 5,
+                            "value": "Jonas Keller"
+                        },
+                        {
+                            "kind": "item:role",
+                            "type": "text",
+                            "label": "Member 2 Role",
+                            "order": 6,
+                            "value": "Head of Strategy"
+                        },
+                        {
+                            "kind": "item:img",
+                            "type": "image",
+                            "label": "Member 2 Image",
+                            "order": 7,
+                            "value": "/assets/images/avatar2.svg"
+                        },
+                        {
+                            "kind": "item:name",
+                            "type": "text",
+                            "label": "Member 3 Name",
+                            "order": 8,
+                            "value": "Priya Nair"
+                        },
+                        {
+                            "kind": "item:role",
+                            "type": "text",
+                            "label": "Member 3 Role",
+                            "order": 9,
+                            "value": "Finance Lead"
+                        },
+                        {
+                            "kind": "item:img",
+                            "type": "image",
+                            "label": "Member 3 Image",
+                            "order": 10,
+                            "value": "/assets/images/avatar3.svg"
+                        }
+                    ],
+                    "blockKey": "team",
+                    "component": "TeamBlock"
+                },
+                {
+                    "name": "Contact",
+                    "items": null,
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Get in touch"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Tell us where it hurts"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 2,
+                            "value": "Send a short note about your situation and we will reply within one business day with next steps."
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Email",
+                            "order": 3,
+                            "value": "hello@verita.example"
+                        },
+                        {
+                            "kind": "attr:href",
+                            "type": "url",
+                            "label": "Email Link",
+                            "order": 4,
+                            "value": "mailto:hello@verita.example"
+                        }
+                    ],
+                    "blockKey": "contact",
+                    "component": "ContactBlock"
+                },
+                {
+                    "name": "Site Footer",
+                    "items": [
+                        {
+                            "var": "links",
+                            "count": 2,
+                            "fields": [
+                                {
+                                    "key": "label",
+                                    "label": "Label"
+                                },
+                                {
+                                    "key": "href",
+                                    "label": "Href"
+                                }
+                            ],
+                            "prefix": "Link",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "href": "/privacy",
+                                    "label": "Privacy"
+                                },
+                                {
+                                    "href": "/terms",
+                                    "label": "Terms"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Clear advice for growing companies."
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 1,
+                            "value": "\u00a9 Verita Consulting. All rights reserved."
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Link 1 Label",
+                            "order": 2,
+                            "value": "Privacy"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Link 1 Href",
+                            "order": 3,
+                            "value": "/privacy"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Link 2 Label",
+                            "order": 4,
+                            "value": "Terms"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Link 2 Href",
+                            "order": 5,
+                            "value": "/terms"
+                        }
+                    ],
+                    "blockKey": "site-footer",
+                    "component": "SiteFooter"
+                }
+            ],
+            "layout": {
+                "footer": "SiteFooter",
+                "header": null
+            }
+        },
+        {
+            "url": "/contact",
+            "file": "app/pages/contact.vue",
+            "name": "Contact",
+            "title": "Contact \u2014 Verita",
+            "blocks": [
+                {
+                    "name": "Site Header",
+                    "items": [
+                        {
+                            "var": "nav",
+                            "count": 3,
+                            "fields": [
+                                {
+                                    "key": "label",
+                                    "label": "Label"
+                                },
+                                {
+                                    "key": "href",
+                                    "label": "Href"
+                                }
+                            ],
+                            "prefix": "Nav",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "href": "/",
+                                    "label": "Home"
+                                },
+                                {
+                                    "href": "/about",
+                                    "label": "About"
+                                },
+                                {
+                                    "href": "/contact",
+                                    "label": "Contact"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "CTA Label",
+                            "order": 0,
+                            "value": "Book a Call"
+                        },
+                        {
+                            "kind": "attr:href",
+                            "type": "url",
+                            "label": "CTA Link",
+                            "order": 1,
+                            "value": "/contact"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 1 Label",
+                            "order": 2,
+                            "value": "Home"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 1 Href",
+                            "order": 3,
+                            "value": "/"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 2 Label",
+                            "order": 4,
+                            "value": "About"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 2 Href",
+                            "order": 5,
+                            "value": "/about"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 3 Label",
+                            "order": 6,
+                            "value": "Contact"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 3 Href",
+                            "order": 7,
+                            "value": "/contact"
+                        }
+                    ],
+                    "blockKey": "site-header",
+                    "component": "SiteHeader"
+                },
+                {
+                    "name": "Contact",
+                    "items": null,
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Get in touch"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Tell us where it hurts"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 2,
+                            "value": "Send a short note about your situation and we will reply within one business day with next steps."
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Email",
+                            "order": 3,
+                            "value": "hello@verita.example"
+                        },
+                        {
+                            "kind": "attr:href",
+                            "type": "url",
+                            "label": "Email Link",
+                            "order": 4,
+                            "value": "mailto:hello@verita.example"
+                        }
+                    ],
+                    "blockKey": "contact",
+                    "component": "ContactBlock"
+                },
+                {
+                    "name": "Faq",
+                    "items": [
+                        {
+                            "var": "faqs",
+                            "count": 3,
+                            "fields": [
+                                {
+                                    "key": "question",
+                                    "label": "Question"
+                                },
+                                {
+                                    "key": "answer",
+                                    "label": "Answer"
+                                }
+                            ],
+                            "prefix": "Faq",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "answer": "With a free 45-minute scoping call. You leave with a written brief whether or not we work together.",
+                                    "question": "How do engagements start?"
+                                },
+                                {
+                                    "answer": "Yes \u2014 about half our clients are pre-Series A. Pricing scales with company size.",
+                                    "question": "Do you work with early-stage companies?"
+                                },
+                                {
+                                    "answer": "Strategy sprints are fixed-fee. Reviews and retainers are quoted after the scoping call.",
+                                    "question": "What does an engagement cost?"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Questions"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Frequently asked questions"
+                        },
+                        {
+                            "kind": "item:question",
+                            "type": "text",
+                            "label": "Faq 1 Question",
+                            "order": 2,
+                            "value": "How do engagements start?"
+                        },
+                        {
+                            "kind": "item:answer",
+                            "type": "text",
+                            "label": "Faq 1 Answer",
+                            "order": 3,
+                            "value": "With a free 45-minute scoping call. You leave with a written brief whether or not we work together."
+                        },
+                        {
+                            "kind": "item:question",
+                            "type": "text",
+                            "label": "Faq 2 Question",
+                            "order": 4,
+                            "value": "Do you work with early-stage companies?"
+                        },
+                        {
+                            "kind": "item:answer",
+                            "type": "text",
+                            "label": "Faq 2 Answer",
+                            "order": 5,
+                            "value": "Yes \u2014 about half our clients are pre-Series A. Pricing scales with company size."
+                        },
+                        {
+                            "kind": "item:question",
+                            "type": "text",
+                            "label": "Faq 3 Question",
+                            "order": 6,
+                            "value": "What does an engagement cost?"
+                        },
+                        {
+                            "kind": "item:answer",
+                            "type": "text",
+                            "label": "Faq 3 Answer",
+                            "order": 7,
+                            "value": "Strategy sprints are fixed-fee. Reviews and retainers are quoted after the scoping call."
+                        }
+                    ],
+                    "blockKey": "faq",
+                    "component": "FaqBlock"
+                },
+                {
+                    "name": "Site Footer",
+                    "items": [
+                        {
+                            "var": "links",
+                            "count": 2,
+                            "fields": [
+                                {
+                                    "key": "label",
+                                    "label": "Label"
+                                },
+                                {
+                                    "key": "href",
+                                    "label": "Href"
+                                }
+                            ],
+                            "prefix": "Link",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "href": "/privacy",
+                                    "label": "Privacy"
+                                },
+                                {
+                                    "href": "/terms",
+                                    "label": "Terms"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Clear advice for growing companies."
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 1,
+                            "value": "\u00a9 Verita Consulting. All rights reserved."
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Link 1 Label",
+                            "order": 2,
+                            "value": "Privacy"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Link 1 Href",
+                            "order": 3,
+                            "value": "/privacy"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Link 2 Label",
+                            "order": 4,
+                            "value": "Terms"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Link 2 Href",
+                            "order": 5,
+                            "value": "/terms"
+                        }
+                    ],
+                    "blockKey": "site-footer",
+                    "component": "SiteFooter"
+                }
+            ],
+            "layout": {
+                "footer": "SiteFooter",
+                "header": null
+            }
+        },
+        {
+            "url": "/",
+            "file": "app/pages/index.vue",
+            "name": "Home",
+            "title": "Verita \u2014 Clarity in Consulting",
+            "blocks": [
+                {
+                    "name": "Site Header",
+                    "items": [
+                        {
+                            "var": "nav",
+                            "count": 3,
+                            "fields": [
+                                {
+                                    "key": "label",
+                                    "label": "Label"
+                                },
+                                {
+                                    "key": "href",
+                                    "label": "Href"
+                                }
+                            ],
+                            "prefix": "Nav",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "href": "/",
+                                    "label": "Home"
+                                },
+                                {
+                                    "href": "/about",
+                                    "label": "About"
+                                },
+                                {
+                                    "href": "/contact",
+                                    "label": "Contact"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "CTA Label",
+                            "order": 0,
+                            "value": "Book a Call"
+                        },
+                        {
+                            "kind": "attr:href",
+                            "type": "url",
+                            "label": "CTA Link",
+                            "order": 1,
+                            "value": "/contact"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 1 Label",
+                            "order": 2,
+                            "value": "Home"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 1 Href",
+                            "order": 3,
+                            "value": "/"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 2 Label",
+                            "order": 4,
+                            "value": "About"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 2 Href",
+                            "order": 5,
+                            "value": "/about"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Nav 3 Label",
+                            "order": 6,
+                            "value": "Contact"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Nav 3 Href",
+                            "order": 7,
+                            "value": "/contact"
+                        }
+                    ],
+                    "blockKey": "site-header",
+                    "component": "SiteHeader"
+                },
+                {
+                    "name": "Hero",
+                    "items": null,
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Consulting that delivers"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Clarity for every business decision"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 2,
+                            "value": "Verita helps growing companies untangle strategy, operations and finance with advice you can act on the same week."
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "CTA Label",
+                            "order": 3,
+                            "value": "Start a Project"
+                        },
+                        {
+                            "kind": "attr:href",
+                            "type": "url",
+                            "label": "CTA Link",
+                            "order": 4,
+                            "value": "/contact"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "CTA B Label",
+                            "order": 5,
+                            "value": "Meet the Team"
+                        },
+                        {
+                            "kind": "attr:href",
+                            "type": "url",
+                            "label": "CTA B Link",
+                            "order": 6,
+                            "value": "/about"
+                        },
+                        {
+                            "kind": "attr:src",
+                            "type": "image",
+                            "label": "Image",
+                            "order": 7,
+                            "value": "/assets/images/hero.svg"
+                        }
+                    ],
+                    "blockKey": "hero",
+                    "component": "HeroBlock"
+                },
+                {
+                    "name": "Services",
+                    "items": [
+                        {
+                            "var": "services",
+                            "count": 3,
+                            "fields": [
+                                {
+                                    "key": "title",
+                                    "label": "Title"
+                                },
+                                {
+                                    "key": "text",
+                                    "label": "Text"
+                                }
+                            ],
+                            "prefix": "Service",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "text": "Two-week engagements that turn a fuzzy goal into a costed, sequenced plan.",
+                                    "title": "Strategy Sprints"
+                                },
+                                {
+                                    "text": "We map your processes, find the bottlenecks and fix the three that matter.",
+                                    "title": "Operations Review"
+                                },
+                                {
+                                    "text": "Budgets, forecasts and reporting your board will actually read.",
+                                    "title": "Finance Foundations"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "What we do"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Services built around outcomes"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 2,
+                            "value": "Every engagement ends with a deliverable you own \u2014 no decks that gather dust."
+                        },
+                        {
+                            "kind": "item:title",
+                            "type": "text",
+                            "label": "Service 1 Title",
+                            "order": 3,
+                            "value": "Strategy Sprints"
+                        },
+                        {
+                            "kind": "item:text",
+                            "type": "text",
+                            "label": "Service 1 Text",
+                            "order": 4,
+                            "value": "Two-week engagements that turn a fuzzy goal into a costed, sequenced plan."
+                        },
+                        {
+                            "kind": "item:title",
+                            "type": "text",
+                            "label": "Service 2 Title",
+                            "order": 5,
+                            "value": "Operations Review"
+                        },
+                        {
+                            "kind": "item:text",
+                            "type": "text",
+                            "label": "Service 2 Text",
+                            "order": 6,
+                            "value": "We map your processes, find the bottlenecks and fix the three that matter."
+                        },
+                        {
+                            "kind": "item:title",
+                            "type": "text",
+                            "label": "Service 3 Title",
+                            "order": 7,
+                            "value": "Finance Foundations"
+                        },
+                        {
+                            "kind": "item:text",
+                            "type": "text",
+                            "label": "Service 3 Text",
+                            "order": 8,
+                            "value": "Budgets, forecasts and reporting your board will actually read."
+                        }
+                    ],
+                    "blockKey": "services",
+                    "component": "ServicesBlock"
+                },
+                {
+                    "name": "Faq",
+                    "items": [
+                        {
+                            "var": "faqs",
+                            "count": 3,
+                            "fields": [
+                                {
+                                    "key": "question",
+                                    "label": "Question"
+                                },
+                                {
+                                    "key": "answer",
+                                    "label": "Answer"
+                                }
+                            ],
+                            "prefix": "Faq",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "answer": "With a free 45-minute scoping call. You leave with a written brief whether or not we work together.",
+                                    "question": "How do engagements start?"
+                                },
+                                {
+                                    "answer": "Yes \u2014 about half our clients are pre-Series A. Pricing scales with company size.",
+                                    "question": "Do you work with early-stage companies?"
+                                },
+                                {
+                                    "answer": "Strategy sprints are fixed-fee. Reviews and retainers are quoted after the scoping call.",
+                                    "question": "What does an engagement cost?"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Questions"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Frequently asked questions"
+                        },
+                        {
+                            "kind": "item:question",
+                            "type": "text",
+                            "label": "Faq 1 Question",
+                            "order": 2,
+                            "value": "How do engagements start?"
+                        },
+                        {
+                            "kind": "item:answer",
+                            "type": "text",
+                            "label": "Faq 1 Answer",
+                            "order": 3,
+                            "value": "With a free 45-minute scoping call. You leave with a written brief whether or not we work together."
+                        },
+                        {
+                            "kind": "item:question",
+                            "type": "text",
+                            "label": "Faq 2 Question",
+                            "order": 4,
+                            "value": "Do you work with early-stage companies?"
+                        },
+                        {
+                            "kind": "item:answer",
+                            "type": "text",
+                            "label": "Faq 2 Answer",
+                            "order": 5,
+                            "value": "Yes \u2014 about half our clients are pre-Series A. Pricing scales with company size."
+                        },
+                        {
+                            "kind": "item:question",
+                            "type": "text",
+                            "label": "Faq 3 Question",
+                            "order": 6,
+                            "value": "What does an engagement cost?"
+                        },
+                        {
+                            "kind": "item:answer",
+                            "type": "text",
+                            "label": "Faq 3 Answer",
+                            "order": 7,
+                            "value": "Strategy sprints are fixed-fee. Reviews and retainers are quoted after the scoping call."
+                        }
+                    ],
+                    "blockKey": "faq",
+                    "component": "FaqBlock"
+                },
+                {
+                    "name": "Contact",
+                    "items": null,
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Get in touch"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Headline",
+                            "order": 1,
+                            "value": "Tell us where it hurts"
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 2,
+                            "value": "Send a short note about your situation and we will reply within one business day with next steps."
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Email",
+                            "order": 3,
+                            "value": "hello@verita.example"
+                        },
+                        {
+                            "kind": "attr:href",
+                            "type": "url",
+                            "label": "Email Link",
+                            "order": 4,
+                            "value": "mailto:hello@verita.example"
+                        }
+                    ],
+                    "blockKey": "contact",
+                    "component": "ContactBlock"
+                },
+                {
+                    "name": "Site Footer",
+                    "items": [
+                        {
+                            "var": "links",
+                            "count": 2,
+                            "fields": [
+                                {
+                                    "key": "label",
+                                    "label": "Label"
+                                },
+                                {
+                                    "key": "href",
+                                    "label": "Href"
+                                }
+                            ],
+                            "prefix": "Link",
+                            "scalar": false,
+                            "values": [
+                                {
+                                    "href": "/privacy",
+                                    "label": "Privacy"
+                                },
+                                {
+                                    "href": "/terms",
+                                    "label": "Terms"
+                                }
+                            ],
+                            "imagePrefix": null
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text",
+                            "order": 0,
+                            "value": "Clear advice for growing companies."
+                        },
+                        {
+                            "kind": "text",
+                            "type": "text",
+                            "label": "Text B",
+                            "order": 1,
+                            "value": "\u00a9 Verita Consulting. All rights reserved."
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Link 1 Label",
+                            "order": 2,
+                            "value": "Privacy"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Link 1 Href",
+                            "order": 3,
+                            "value": "/privacy"
+                        },
+                        {
+                            "kind": "item:label",
+                            "type": "text",
+                            "label": "Link 2 Label",
+                            "order": 4,
+                            "value": "Terms"
+                        },
+                        {
+                            "kind": "item:href",
+                            "type": "text",
+                            "label": "Link 2 Href",
+                            "order": 5,
+                            "value": "/terms"
+                        }
+                    ],
+                    "blockKey": "site-footer",
+                    "component": "SiteFooter"
+                }
+            ],
+            "layout": {
+                "footer": "SiteFooter",
+                "header": null
+            }
+        }
+    ],
+    "theme": {
+        "radius": "14px",
+        "base-size": "16px",
+        "font-default": "'Inter', sans-serif",
+        "font-heading": "'Sora', sans-serif",
+        "font-primary": "'Inter', sans-serif",
+        "color-default": "#1f2933",
+        "color-primary": "#0e7c66",
+        "section-pad-y": "72px",
+        "color-secondary": "#123047",
+        "section-max-width": "1080px"
+    },
+    "assets": {
+        "bytes": 5276,
+        "count": 5,
+        "images": [
+            "/assets/images/avatar1.svg",
+            "/assets/images/avatar2.svg",
+            "/assets/images/avatar3.svg",
+            "/assets/images/hero.svg"
+        ]
+    },
+    "behaviours": [],
+    "extracted_at": "2026-07-06T01:55:56+00:00"
+}

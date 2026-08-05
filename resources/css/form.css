@@ -1,0 +1,80 @@
+.search-control{
+   input{
+       @apply w-full
+               bg-gray-200
+               px-6
+               py-1
+               border
+               rounded-l-2xl;
+   }
+   .btn-search{
+      @apply py-1
+               px-4
+               rounded-r-2xl;
+     
+   }
+   
+}
+
+.input-control{
+   @apply relative my-6;
+   label{
+       @apply text-base font-bold pl-3;
+   }
+   input,textarea,select{
+       @apply  w-full
+               bg-zinc-50
+               px-6
+               py-2
+               border
+               rounded-lg;
+   }
+}
+
+.inline-control{
+   input,textarea,select{
+      @apply w-full
+              bg-gray-200
+              px-3
+              py-1
+              border
+              rounded-l-xl;
+   }
+   button{
+       @apply py-2
+               px-4
+               rounded-r-xl;
+   }
+}
+
+.btn{
+   @apply py-2
+            px-4
+            rounded-lg
+            cursor-pointer;
+}
+
+.btn-amber{
+      @apply 
+            bg-amber-500
+            text-white
+            hover:bg-amber-600;
+}
+.btn-red{
+      @apply 
+            bg-red-500
+            text-white
+            hover:bg-red-600;
+}
+.btn-green{
+      @apply 
+            bg-green-500
+            text-white
+            hover:bg-green-600;
+}
+.btn-blue{
+      @apply 
+            bg-indigo-500
+            text-white
+            hover:bg-indigo-600;
+}

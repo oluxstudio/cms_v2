@@ -1,0 +1,258 @@
+{
+    "name": "Hairco layout",
+    "blocks": [
+        {
+            "type": "app:hairco:site-header",
+            "name": "Site Header",
+            "nodes": [
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Book an appointment",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/appointment",
+                    "order": 1,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "Nav 1 Label",
+                    "type": "text",
+                    "value": "Home",
+                    "order": 2,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 1 Href",
+                    "type": "text",
+                    "value": "/",
+                    "order": 3,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 2 Label",
+                    "type": "text",
+                    "value": "About",
+                    "order": 4,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 2 Href",
+                    "type": "text",
+                    "value": "/about",
+                    "order": 5,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 3 Label",
+                    "type": "text",
+                    "value": "Services",
+                    "order": 6,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 3 Href",
+                    "type": "text",
+                    "value": "/services",
+                    "order": 7,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 4 Label",
+                    "type": "text",
+                    "value": "Appointment",
+                    "order": 8,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 4 Href",
+                    "type": "text",
+                    "value": "/appointment",
+                    "order": 9,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Nav 5 Label",
+                    "type": "text",
+                    "value": "Contact Us",
+                    "order": 10,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Nav 5 Href",
+                    "type": "text",
+                    "value": "/contact-us",
+                    "order": 11,
+                    "description": "item:href"
+                }
+            ]
+        },
+        {
+            "type": "content"
+        },
+        {
+            "type": "app:hairco:site-footer",
+            "name": "Site Footer",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "A salon collective devoted to healthy hair \u2014 honest advice, gentle products and finishes that last.",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Explore",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline B",
+                    "type": "text",
+                    "value": "Services",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline C",
+                    "type": "text",
+                    "value": "Contact",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption",
+                    "type": "text",
+                    "value": "\u00a9 Hair Co. All rights reserved.",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption B",
+                    "type": "text",
+                    "value": "Built with Olux Studio",
+                    "order": 5,
+                    "description": "text"
+                },
+                {
+                    "label": "Link 1 Label",
+                    "type": "text",
+                    "value": "About Us",
+                    "order": 6,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Link 1 Href",
+                    "type": "text",
+                    "value": "/about",
+                    "order": 7,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Link 2 Label",
+                    "type": "text",
+                    "value": "Services",
+                    "order": 8,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Link 2 Href",
+                    "type": "text",
+                    "value": "/services",
+                    "order": 9,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Link 3 Label",
+                    "type": "text",
+                    "value": "Appointment",
+                    "order": 10,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Link 3 Href",
+                    "type": "text",
+                    "value": "/appointment",
+                    "order": 11,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Link 4 Label",
+                    "type": "text",
+                    "value": "Contact Us",
+                    "order": 12,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Link 4 Href",
+                    "type": "text",
+                    "value": "/contact-us",
+                    "order": 13,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Service 1 Label",
+                    "type": "text",
+                    "value": "Hairstyles",
+                    "order": 14,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Service 1 Href",
+                    "type": "text",
+                    "value": "/services",
+                    "order": 15,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Service 2 Label",
+                    "type": "text",
+                    "value": "Coloring",
+                    "order": 16,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Service 2 Href",
+                    "type": "text",
+                    "value": "/services",
+                    "order": 17,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Service 3 Label",
+                    "type": "text",
+                    "value": "Hair Curly",
+                    "order": 18,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Service 3 Href",
+                    "type": "text",
+                    "value": "/services",
+                    "order": 19,
+                    "description": "item:href"
+                },
+                {
+                    "label": "Service 4 Label",
+                    "type": "text",
+                    "value": "Lamination",
+                    "order": 20,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Service 4 Href",
+                    "type": "text",
+                    "value": "/services",
+                    "order": 21,
+                    "description": "item:href"
+                }
+            ]
+        }
+    ]
+}

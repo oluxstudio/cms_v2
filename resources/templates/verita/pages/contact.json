@@ -1,0 +1,114 @@
+{
+    "name": "Contact",
+    "url": "/contact",
+    "layout": "default",
+    "keywords": "contact",
+    "attributes": {
+        "title": "Contact \u2014 {site_name}"
+    },
+    "blocks": [
+        {
+            "type": "app:verita:contact",
+            "name": "Contact",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Get in touch",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Tell us where it hurts",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Send a short note about your situation and we will reply within one business day with next steps.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Email",
+                    "type": "text",
+                    "value": "hello@{site_name}.example",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Email Link",
+                    "type": "url",
+                    "value": "mailto:hello@verita.example",
+                    "order": 4,
+                    "description": "attr:href"
+                }
+            ]
+        },
+        {
+            "type": "app:verita:faq",
+            "name": "Faq",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Questions",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Frequently asked questions",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Faq 1 Question",
+                    "type": "text",
+                    "value": "How do engagements start?",
+                    "order": 2,
+                    "description": "item:question"
+                },
+                {
+                    "label": "Faq 1 Answer",
+                    "type": "text",
+                    "value": "With a free 45-minute scoping call. You leave with a written brief whether or not we work together.",
+                    "order": 3,
+                    "description": "item:answer"
+                },
+                {
+                    "label": "Faq 2 Question",
+                    "type": "text",
+                    "value": "Do you work with early-stage companies?",
+                    "order": 4,
+                    "description": "item:question"
+                },
+                {
+                    "label": "Faq 2 Answer",
+                    "type": "text",
+                    "value": "Yes \u2014 about half our clients are pre-Series A. Pricing scales with company size.",
+                    "order": 5,
+                    "description": "item:answer"
+                },
+                {
+                    "label": "Faq 3 Question",
+                    "type": "text",
+                    "value": "What does an engagement cost?",
+                    "order": 6,
+                    "description": "item:question"
+                },
+                {
+                    "label": "Faq 3 Answer",
+                    "type": "text",
+                    "value": "Strategy sprints are fixed-fee. Reviews and retainers are quoted after the scoping call.",
+                    "order": 7,
+                    "description": "item:answer"
+                }
+            ]
+        }
+    ]
+}

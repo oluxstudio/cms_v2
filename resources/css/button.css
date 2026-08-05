@@ -1,0 +1,44 @@
+.btn-small{
+   @apply   py-1
+            px-4
+            rounded-md
+            cursor-pointer;
+}
+.btn-main{
+   @apply   py-2
+            px-5
+            rounded-lg
+            cursor-pointer;
+}  
+.btn-small{
+   @apply   py-1
+            px-4
+            rounded-lg
+            cursor-pointer;
+}  
+
+
+.btn-pri{
+   @apply   
+            bg-indigo-500 
+            text-white 
+            hover:bg-indigo-700;
+}  
+.btn-go{
+   @apply   
+            bg-lime-500 
+            text-white 
+            hover:bg-lime-700;
+} 
+.btn-warning{
+   @apply   
+            bg-amber-500
+            text-white 
+            hover:bg-amber-700;
+} 
+.btn-danger{
+   @apply   
+            bg-red-500
+            text-white 
+            hover:bg-red-700;
+} 

@@ -1,0 +1,21 @@
+.header-1{
+   @apply text-4xl font-bold;
+}
+.header-2{
+   @apply text-3xl font-bold;
+}
+.header-3{
+   @apply text-2xl font-bold;
+}
+
+.header-4{
+   @apply text-xl font-bold;
+}
+
+.header-5{
+   @apply text-lg font-bold;
+}
+
+.title{
+   @apply text-base font-bold;
+}

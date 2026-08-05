@@ -1,0 +1,258 @@
+@import './button.css';
+@import './form.css';
+@import './layout.css';
+@import './typo.css';
+
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+@import './animations.css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-zinc-50: #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    --color-accent: var(--color-neutral-800);
+    --color-accent-content: var(--color-neutral-800);
+    --color-accent-foreground: var(--color-white);
+}
+
+@layer theme {
+    .dark {
+        --color-accent: var(--color-white);
+        --color-accent-content: var(--color-white);
+        --color-accent-foreground: var(--color-neutral-800);
+    }
+}
+
+@layer base {
+
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
+
+[data-flux-field]:not(ui-radio, ui-checkbox) {
+    @apply grid gap-2;
+}
+
+[data-flux-label] {
+    @apply  !mb-0 !leading-tight;
+}
+
+input:focus[data-flux-control],
+textarea:focus[data-flux-control],
+select:focus[data-flux-control] {
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+/* \[:where(&)\]:size-4 {
+    @apply size-4;
+} */
+
+/* ═══════════════════════════════════════════════════════════════════
+   THEME TOKENS  (light = default)
+   Light : primary=orange · secondary=lighter orange · tertiary=darker orange
+           background=cream · foreground=black
+   Dark  : primary=sky blue · secondary=lighter blue · tertiary=darker blue
+           background=navy · foreground=white
+   Aliases (--primary-2 / --primary-strong / --primary-soft) are kept so the
+   class-remap below and existing inline var() usages keep working.
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+    --primary:        #f97316;  /* orange */
+    --secondary:      #fdba74;  /* lighter orange */
+    --tertiary:       #c2410c;  /* darker orange */
+    --background:     #fdf6ea;  /* cream */
+    --foreground:     #1a1a1a;  /* near-black */
+    --on-primary:     #ffffff;
+
+    /* aliases for existing references */
+    --primary-2:      var(--secondary);   /* gradient end */
+    --primary-strong: var(--tertiary);    /* hover / strong */
+    --primary-soft:   #fff3e6;             /* soft tinted surface */
+}
+.dark {
+    --primary:        #38bdf8;  /* sky blue */
+    --secondary:      #7dd3fc;  /* lighter blue */
+    --tertiary:       #0284c7;  /* darker blue */
+    --background:     #0b1b3a;  /* navy */
+    --foreground:     #f8fafc;  /* white */
+    --on-primary:     #06223f;
+
+    --primary-2:      var(--secondary);
+    --primary-strong: var(--tertiary);
+    --primary-soft:   #16213f;
+}
+
+/* App background — a gradient blending the background color into the tertiary. */
+.app-bg {
+    /* Isolated stacking context so a z-index:-1 .bg-ambient CHILD paints
+       above this gradient but below every other child (the content). */
+    position: relative;
+    isolation: isolate;
+    background:
+        radial-gradient(120% 90% at 50% 0%,
+            color-mix(in srgb, var(--tertiary) 16%, var(--background)) 0%, transparent 55%),
+        linear-gradient(180deg,
+            var(--background) 0%,
+            color-mix(in srgb, var(--tertiary) 10%, var(--background)) 100%);
+}
+
+/* ── Dashboard group tiles: vertical timeline rail ────────────────────────
+   New statuses always enter at the TOP; when a tile is expanded the icon
+   bubbles become nodes on this connecting line. */
+.activity-timeline { position: relative; }
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: calc(1.25rem + 1.375rem - 1px); /* px-5 + half of the w-11 icon */
+    top: 2.6rem;
+    bottom: 2.6rem;
+    width: 2px;
+    border-radius: 1px;
+    background: linear-gradient(180deg, #d9f068 0%, #d7c3f5 60%, transparent 100%);
+}
+.dark .activity-timeline::before { opacity: .45; }
+
+/* ── Ambient background elements ──────────────────────────────────────────
+   5 soft squares — unique color + unique size each — at .6 opacity behind
+   the content (z-index -1). Every 9s the component JS hands each one a new
+   random position anywhere in the frame; these transitions make the move a
+   slow, gentle 8s glide. */
+/* Place as a DIRECT CHILD of an .app-bg surface — it fills that surface,
+   sitting on top of the gradient and under the content. */
+.bg-ambient { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.bg-ambient span {
+    position: absolute;
+    transform: translate(-50%, -50%); /* top/left address the element's CENTER */
+    border-radius: 90%;               /* soft-cornered square */
+    opacity: .21;
+    filter: blur(78px);
+    transition:
+        top 8s cubic-bezier(.45, .05, .35, 1),
+        left 8s cubic-bezier(.45, .05, .35, 1),
+        width 8s cubic-bezier(.45, .05, .35, 1),
+        height 8s cubic-bezier(.45, .05, .35, 1),
+        background-color 8s ease-in-out;
+    will-change: top, left, width, height, background-color;
+}
+.dark .bg-ambient span { filter: blur(34px); opacity: .6; }
+
+@layer utilities {
+    /* primary fills */
+    .bg-indigo-600, .bg-indigo-500            { background-color: var(--primary) !important; }
+    .hover\:bg-indigo-700:hover,
+    .hover\:bg-indigo-600:hover               { background-color: var(--primary-strong) !important; }
+    /* primary text / icons / links */
+    .text-indigo-600, .text-indigo-500,
+    .text-indigo-400, .text-indigo-300        { color: var(--primary) !important; }
+    .text-indigo-700                          { color: var(--primary-strong) !important; }
+    .hover\:text-indigo-600:hover,
+    .hover\:text-indigo-700:hover,
+    .hover\:text-indigo-200:hover             { color: var(--primary-strong) !important; }
+    /* in dark mode, accent text uses the lighter baby-blue */
+    .dark .dark\:text-indigo-300,
+    .dark .dark\:text-indigo-400              { color: var(--primary-2) !important; }
+    /* borders + focus rings */
+    .border-indigo-500, .border-indigo-600    { border-color: var(--primary) !important; }
+    .ring-indigo-500,
+    .focus\:ring-indigo-500:focus             { --tw-ring-color: var(--primary) !important; }
+    /* gradients (primary → secondary accent) */
+    .from-indigo-500, .from-indigo-600        { --tw-gradient-from: var(--primary) var(--tw-gradient-from-position) !important; }
+    .to-indigo-500, .to-indigo-600            { --tw-gradient-to:   var(--primary-2) var(--tw-gradient-to-position) !important; }
+    /* soft accent surfaces */
+    .bg-indigo-50, .bg-indigo-100,
+    .hover\:bg-indigo-50:hover                { background-color: var(--primary-soft) !important; }
+    .from-indigo-50                           { --tw-gradient-from: var(--primary-soft) var(--tw-gradient-from-position) !important; }
+}
+
+/* ── x-field.* foundation form components (resources/views/components/field) ──
+   Global so they style correctly even when a field first renders inside an
+   inert Alpine <template> (tab panes). One design, every page. */
+.bkf-label{display:block;font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;letter-spacing:.01em}
+.dark .bkf-label{color:#9ca3af}
+.bkf-input{display:block;width:100%;font-size:13px;line-height:1.4;border-radius:9px;background:#f9fafb;border:1px solid #e5e7eb;padding:7px 10px;color:#1f2937;transition:border-color .12s, box-shadow .12s}
+.bkf-input:focus{outline:none;border-color:#818cf8;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.dark .bkf-input{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09);color:#f3f4f6}
+.bkf-hint{font-size:10px;color:#9ca3af;margin-top:3px}
+.bkf-mono{font-family:ui-monospace,monospace;font-size:12px}
+.bkf-affix{position:relative}
+.bkf-affix .bkf-input{padding-right:34px}
+.bkf-icon{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:26px;height:26px;display:grid;place-items:center;border-radius:7px;border:0;background:transparent;color:#6b7280;cursor:pointer}
+.bkf-icon:hover{background:#eef2ff;color:#4f46e5}
+.dark .bkf-icon:hover{background:rgba(99,102,241,.15);color:#a5b4fc}
+.bkf-check{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#374151;cursor:pointer}
+.dark .bkf-check{color:#e5e7eb}
+.bkf-check input{width:15px;height:15px;border-radius:4px;accent-color:#6366f1}
+.bkf-seg{display:flex;gap:2px;padding:2px;border-radius:9px;background:#f3f4f6;border:1px solid #e5e7eb}
+.dark .bkf-seg{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08)}
+.bkf-seg label{flex:1}
+.bkf-seg input{position:absolute;opacity:0;pointer-events:none}
+.bkf-seg span{display:block;text-align:center;font-size:11.5px;font-weight:600;padding:5px 4px;border-radius:7px;color:#6b7280;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkf-seg input:checked + span{background:#fff;color:#4f46e5;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.dark .bkf-seg input:checked + span{background:rgba(255,255,255,.12);color:#a5b4fc}
+.bkf-modal-backdrop{position:fixed;inset:0;z-index:2147483200;background:rgba(15,17,26,.5);backdrop-filter:blur(2px);display:grid;place-items:center;padding:24px}
+.bkf-modal{width:min(560px,94vw);max-height:80vh;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 30px 80px -20px rgba(0,0,0,.45);padding:14px}
+.dark .bkf-modal{background:#171a23;color:#e5e7eb}
+.bkf-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.bkf-modal-head h3{font-size:13px;font-weight:700}
+.bkf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.bkf-tile{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid transparent;cursor:pointer;padding:0;background:#f3f4f6}
+.bkf-tile:hover{border-color:#a5b4fc}
+.bkf-tile.bkf-on{border-color:#6366f1;box-shadow:0 0 0 1px #6366f1}
+.bkf-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.bkf-row{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid transparent;border-radius:8px;padding:6px 8px;background:transparent;cursor:pointer;color:inherit}
+.bkf-row:hover{background:#f3f4f6}.dark .bkf-row:hover{background:rgba(255,255,255,.06)}
+.bkf-row.bkf-on{border-color:#6366f1;background:#eef2ff}.dark .bkf-row.bkf-on{background:rgba(99,102,241,.12)}
+.bkf-grad-swatch{display:flex;align-items:center;gap:8px;cursor:pointer}
+.bkf-grad-swatch .bkf-grad-chip{flex:none;width:34px;height:24px;border-radius:6px;border:1px solid rgba(0,0,0,.12);background-size:cover}
+.bkf-panel{border:1px solid #e5e7eb;border-radius:10px;padding:8px;margin-top:6px;display:flex;flex-direction:column;gap:6px}
+.dark .bkf-panel{border-color:rgba(255,255,255,.09)}
+.bkf-btn{border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:4px 9px;font-size:10.5px;font-weight:700;color:#4b5563;cursor:pointer}
+.bkf-btn:hover{background:#f9fafb}
+.dark .bkf-btn{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:#d1d5db}
+.bkf-btn.bkf-primary{background:#4f46e5;border-color:#4f46e5;color:#fff}
+.bkf-btn.bkf-primary:hover{background:#4338ca}
+.bkf-color{display:flex;align-items:center;gap:6px}
+.bkf-color-swatch{flex:none;width:34px;height:32px;padding:2px;border:1px solid #e5e7eb;border-radius:8px;background:transparent;cursor:pointer}
+.dark .bkf-color-swatch{border-color:rgba(255,255,255,.09)}
+.bkf-color-vars{flex:none;width:74px;padding:7px 4px;font-size:11px;cursor:pointer;color:#4f46e5;font-family:ui-monospace,monospace}
+.dark .bkf-color-vars{color:#a5b4fc}
+.bkf-range{display:flex;align-items:center;gap:10px}
+.bkf-range input[type=range]{flex:1;accent-color:#6366f1;height:20px;cursor:pointer}
+.bkf-range-val{flex:none;min-width:38px;text-align:right;font-family:ui-monospace,monospace;font-size:11px;color:#6b7280}
+.dark .bkf-range-val{color:#9ca3af}
+.bkf-group{border:1px solid #e5e7eb;border-radius:11px;overflow:hidden;background:#fff}
+.dark .bkf-group{border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.02)}
+.bkf-group + .bkf-group{margin-top:6px}
+.bkf-group > summary{list-style:none;display:flex;align-items:center;gap:7px;padding:8px 10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;cursor:pointer;user-select:none}
+.bkf-group > summary::-webkit-details-marker{display:none}
+.bkf-group > summary::after{content:"\25be";margin-left:auto;font-size:9px;opacity:.5;transition:transform .15s}
+.bkf-group:not([open]) > summary::after{transform:rotate(-90deg)}
+.bkf-group > summary:hover{color:#4f46e5;background:#f8faff}
+.dark .bkf-group > summary:hover{color:#a5b4fc;background:rgba(99,102,241,.06)}
+.dark .bkf-group > summary{color:#9ca3af}
+.bkf-group-body{padding:4px 10px 10px;display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f3f9}
+.dark .bkf-group-body{border-top-color:rgba(255,255,255,.05)}

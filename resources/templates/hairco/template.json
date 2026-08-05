@@ -1,0 +1,26 @@
+{
+    "key": "hairco",
+    "name": "Hairco",
+    "description": "Marketplace template \u2014 replicates the Hairco app exactly, with editable content.",
+    "category": "Marketplace",
+    "accentColor": "#b08968",
+    "author": "Olux Marketplace",
+    "version": "1.0.0",
+    "createdAt": "2026-08-02",
+    "tags": [
+        "App"
+    ],
+    "features": [
+        "5 page(s) \u00b7 31 content blocks",
+        "Pixel-exact replica of the original app",
+        "Content, order and visibility editable in Configure"
+    ],
+    "renderer": "hairco",
+    "pages": [
+        "about",
+        "appointment",
+        "contact-us",
+        "home",
+        "services"
+    ]
+}

@@ -1,0 +1,391 @@
+{
+    "name": "About",
+    "url": "/about",
+    "layout": "default",
+    "keywords": "about",
+    "attributes": {
+        "title": "About Us \u2014 Hair Co."
+    },
+    "blocks": [
+        {
+            "type": "app:hairco:about",
+            "name": "About",
+            "nodes": [
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/about.svg",
+                    "order": 0,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "About Hair Co.",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Healthy hair begins with a healthy routine",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "For over fifteen years our collective has cared for hair the slow way \u2014 honest consultations, gentle products and techniques that respect what grows naturally.",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Read our story",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/about",
+                    "order": 5,
+                    "description": "attr:href"
+                },
+                {
+                    "label": "Point 1",
+                    "type": "text",
+                    "value": "Long-Lasting Hold",
+                    "order": 6,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 2",
+                    "type": "text",
+                    "value": "Effective Ingredients",
+                    "order": 7,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 3",
+                    "type": "text",
+                    "value": "Gentle Formulas",
+                    "order": 8,
+                    "description": "item:_value"
+                },
+                {
+                    "label": "Point 4",
+                    "type": "text",
+                    "value": "Deep Hydration",
+                    "order": 9,
+                    "description": "item:_value"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:stats",
+            "name": "Stats",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Hair Co. in numbers",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Trusted well beyond our own chairs",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Stat 1 Title",
+                    "type": "text",
+                    "value": "30+",
+                    "order": 2,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Stat 1 Text",
+                    "type": "text",
+                    "value": "International Branches",
+                    "order": 3,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Stat 2 Title",
+                    "type": "text",
+                    "value": "12k",
+                    "order": 4,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Stat 2 Text",
+                    "type": "text",
+                    "value": "Happy Clients World Wide",
+                    "order": 5,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Stat 3 Title",
+                    "type": "text",
+                    "value": "15",
+                    "order": 6,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Stat 3 Text",
+                    "type": "text",
+                    "value": "Years of In-Field Experience",
+                    "order": 7,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Stat 4 Title",
+                    "type": "text",
+                    "value": "98%",
+                    "order": 8,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Stat 4 Text",
+                    "type": "text",
+                    "value": "Positive Client Reviews",
+                    "order": 9,
+                    "description": "item:text"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:team",
+            "name": "Team",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Meet the stylists",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Our Collective",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Four specialists, one standard \u2014 hair that leaves the chair healthier than it arrived.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Member 1 Image",
+                    "type": "image",
+                    "value": "/assets/images/team-1.svg",
+                    "order": 3,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 1 Name",
+                    "type": "text",
+                    "value": "Amara Ellis",
+                    "order": 4,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 1 Role",
+                    "type": "text",
+                    "value": "Creative Director",
+                    "order": 5,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 2 Image",
+                    "type": "image",
+                    "value": "/assets/images/team-2.svg",
+                    "order": 6,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 2 Name",
+                    "type": "text",
+                    "value": "Rosa Delgado",
+                    "order": 7,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 2 Role",
+                    "type": "text",
+                    "value": "Color Specialist",
+                    "order": 8,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 3 Image",
+                    "type": "image",
+                    "value": "/assets/images/team-3.svg",
+                    "order": 9,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 3 Name",
+                    "type": "text",
+                    "value": "Maya Chen",
+                    "order": 10,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 3 Role",
+                    "type": "text",
+                    "value": "Curl Expert",
+                    "order": 11,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Member 4 Image",
+                    "type": "image",
+                    "value": "/assets/images/team-4.svg",
+                    "order": 12,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Member 4 Name",
+                    "type": "text",
+                    "value": "Jules Baptiste",
+                    "order": 13,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Member 4 Role",
+                    "type": "text",
+                    "value": "Senior Stylist",
+                    "order": 14,
+                    "description": "item:role"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:testimonials",
+            "name": "Testimonials",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Client review",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Loved by the people in our chairs",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Review 1 Quote",
+                    "type": "text",
+                    "value": "The consultation alone was worth the visit \u2014 my color has never looked this natural.",
+                    "order": 2,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Review 1 Name",
+                    "type": "text",
+                    "value": "Priya N.",
+                    "order": 3,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Review 1 Role",
+                    "type": "text",
+                    "value": "Coloring client",
+                    "order": 4,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Review 2 Quote",
+                    "type": "text",
+                    "value": "Three salons gave up on my curls. Hair Co. gave me a routine that actually works.",
+                    "order": 5,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Review 2 Name",
+                    "type": "text",
+                    "value": "Dana W.",
+                    "order": 6,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Review 2 Role",
+                    "type": "text",
+                    "value": "Curl care client",
+                    "order": 7,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Review 3 Quote",
+                    "type": "text",
+                    "value": "Booked at noon, transformed by three. Effortless from start to finish.",
+                    "order": 8,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Review 3 Name",
+                    "type": "text",
+                    "value": "Elena M.",
+                    "order": 9,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Review 3 Role",
+                    "type": "text",
+                    "value": "Styling client",
+                    "order": 10,
+                    "description": "item:role"
+                }
+            ]
+        },
+        {
+            "type": "app:hairco:cta",
+            "name": "Cta",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Ready for a fresh look?",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Chairs fill fast on weekends \u2014 reserve yours in under a minute.",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Book an appointment",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/appointment",
+                    "order": 3,
+                    "description": "attr:href"
+                }
+            ]
+        }
+    ]
+}

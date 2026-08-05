@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="780" viewBox="0 0 390 780" fill="none" role="img" aria-label="Neso — IT Solutions hero preview">
+  <!-- Background -->
+  <rect width="390" height="780" fill="#ea8a1c"/>
+  <path d="M0,694 C90,664 150,716 232,704 C300,694 352,722 390,702 L390,780 L0,780 Z" fill="#f0a23f" opacity="0.55"/>
+
+  <!-- Brand + menu -->
+  <text x="22" y="54" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="30" font-weight="800" fill="#ffffff">Neso<tspan>.</tspan></text>
+  <g stroke="#ffffff" stroke-width="3" stroke-linecap="round">
+    <line x1="320" y1="38" x2="352" y2="38"/>
+    <line x1="320" y1="48" x2="352" y2="48"/>
+    <line x1="320" y1="58" x2="352" y2="58"/>
+  </g>
+
+  <!-- Headline -->
+  <text x="20" y="222" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="50" font-weight="800" fill="#ffffff" letter-spacing="1.5">IT SOLUTIONS</text>
+
+  <!-- Subtitle -->
+  <text x="22" y="272" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="26" font-weight="600" fill="#ffffff">Our business is helping you</text>
+  <text x="22" y="304" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="26" font-weight="600" fill="#ffffff">grow your business</text>
+
+  <!-- Kicker -->
+  <text x="22" y="356" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="15" font-weight="600" fill="#ffffff">Top Web &amp; Applications Solutions</text>
+
+  <!-- CTAs -->
+  <rect x="22" y="392" width="184" height="54" rx="27" fill="#ffffff"/>
+  <text x="114" y="425" text-anchor="middle" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="17" font-weight="700" fill="#ea8a1c">Get Started</text>
+  <circle cx="236" cy="419" r="18" stroke="#ffffff" stroke-width="2.5"/>
+  <path d="M231 411 L245 419 L231 427 Z" fill="#ffffff"/>
+  <text x="262" y="425" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" fill="#ffffff">Watch Video</text>
+
+  <!-- Illustration: desk · monitor · person -->
+  <g>
+    <!-- soft shadow -->
+    <ellipse cx="200" cy="724" rx="150" ry="14" fill="#d97a18" opacity="0.5"/>
+
+    <!-- monitor (code) -->
+    <rect x="262" y="520" width="84" height="64" rx="4" fill="#eef2f6"/>
+    <rect x="262" y="520" width="84" height="64" rx="4" stroke="#d9d9e0" stroke-width="1"/>
+    <text x="304" y="560" text-anchor="middle" font-family="monospace" font-size="20" font-weight="700" fill="#ea8a1c">&lt;/&gt;</text>
+    <rect x="300" y="584" width="8" height="14" fill="#cfd4dc"/>
+    <rect x="288" y="598" width="32" height="5" rx="2" fill="#cfd4dc"/>
+
+    <!-- desk lamp -->
+    <rect x="58" y="556" width="44" height="30" rx="6" fill="#e7eaf0"/>
+    <rect x="76" y="586" width="8" height="40" fill="#cdd2db"/>
+    <rect x="62" y="624" width="36" height="6" rx="3" fill="#cdd2db"/>
+
+    <!-- laptop -->
+    <rect x="150" y="606" width="70" height="42" rx="3" fill="#f3f5f9"/>
+    <rect x="150" y="606" width="70" height="42" rx="3" stroke="#d9d9e0" stroke-width="1"/>
+    <rect x="142" y="648" width="86" height="8" rx="3" fill="#d7dbe3"/>
+
+    <!-- chair back -->
+    <rect x="150" y="556" width="96" height="116" rx="18" fill="#2e2017"/>
+
+    <!-- person (back view) -->
+    <path d="M168 672 q34 -70 60 0 Z" fill="#cf7a26"/>
+    <rect x="168" y="600" width="60" height="76" rx="22" fill="#cf7a26"/>
+    <circle cx="198" cy="582" r="22" fill="#f0b486"/>
+    <path d="M177 578 a22 22 0 0 1 42 0 q-21 -16 -42 0 Z" fill="#3a2a1e"/>
+    <!-- arm to laptop -->
+    <path d="M176 624 q-18 6 -22 24" stroke="#cf7a26" stroke-width="12" stroke-linecap="round"/>
+
+    <!-- desk top -->
+    <rect x="40" y="656" width="320" height="12" rx="4" fill="#d9772f"/>
+    <rect x="70" y="668" width="10" height="48" fill="#c66a22"/>
+    <rect x="320" y="668" width="10" height="48" fill="#c66a22"/>
+  </g>
+</svg>

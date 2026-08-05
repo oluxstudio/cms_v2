@@ -1,0 +1,3 @@
+[ZoneTransfer]
+ZoneId=3
+HostUrl=https://eu-central.storage.cloudconvert.com/tasks/c5b97cf1-afff-4acf-9870-cc99f8a2d7d6/olux.ico?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=cloudconvert-production%2F20260606%2Ffra%2Fs3%2Faws4_request&X-Amz-Date=20260606T222302Z&X-Amz-Expires=86400&X-Amz-Signature=114081e0c684a770ac54dd9071acacdb1b815e19227dc04b29642198daf2ce33&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3D%22olux.ico%22&response-content-type=image%2Fvnd.microsoft.icon&x-id=GetObject
