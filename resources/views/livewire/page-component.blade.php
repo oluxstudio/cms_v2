@@ -75,6 +75,12 @@
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
                                 </a>
                                 <div class="ml-auto flex items-center gap-1">
+                                    <button wire:click="openPicker({{ $page->id }})"
+                                            class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Components ({{ $page->components()->count() }})">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 4a1 1 0 112 0v1h3a1 1 0 011 1v3h1a1 1 0 110 2h-1v3a1 1 0 01-1 1h-3v1a1 1 0 11-2 0v-1H8a1 1 0 01-1-1v-3H6a1 1 0 110-2h1V6a1 1 0 011-1h3V4z"/>
+                                        </svg>
+                                    </button>
                                     <button wire:click="openEdit({{ $page->id }})" class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Edit metadata">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     </button>
@@ -133,6 +139,12 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
                                             </svg>
                                         </a>
+                                        <button wire:click="openPicker({{ $page->id }})"
+                                                class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Components ({{ $page->components()->count() }})">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 4a1 1 0 112 0v1h3a1 1 0 011 1v3h1a1 1 0 110 2h-1v3a1 1 0 01-1 1h-3v1a1 1 0 11-2 0v-1H8a1 1 0 01-1-1v-3H6a1 1 0 110-2h1V6a1 1 0 011-1h3V4z"/>
+                                            </svg>
+                                        </button>
                                         <button wire:click="openEdit({{ $page->id }})"
                                                 class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Edit metadata">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -229,4 +241,70 @@
     @endif
 
     
+
+    {{-- ═══ COMPONENT PICKER — attach components to a page, filter by tag ═══ --}}
+    @if ($pickerPageId !== null && $this->pickerPage)
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40" wire:click="closePicker"></div>
+        <div class="relative bg-white dark:bg-[#1d1e2a] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6">
+            <div class="flex items-start justify-between gap-3 mb-1">
+                <div>
+                    <h2 class="text-base font-bold text-gray-900 dark:text-white">Components on “{{ $this->pickerPage->name }}”</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Tick to attach, untick to remove — new attachments append at the end of the page.</p>
+                </div>
+                <button wire:click="closePicker" class="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 shrink-0">✕ Close</button>
+            </div>
+
+            {{-- Search + tag filter --}}
+            <div class="flex flex-wrap items-center gap-2 mt-4 mb-3">
+                <div class="relative flex-1 min-w-[180px]">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input wire:model.live.debounce.250ms="pickerSearch" type="text" placeholder="Search components…"
+                           class="w-full pl-9 pr-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                </div>
+            </div>
+            @if (count($this->componentTags))
+            <div class="flex flex-wrap gap-1.5 mb-4">
+                <button wire:click="$set('pickerTag', '')"
+                        class="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors {{ $pickerTag === '' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 hover:text-indigo-500' }}">All</button>
+                @foreach ($this->componentTags as $tag)
+                    <button wire:click="$set('pickerTag', '{{ $tag }}')"
+                            class="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors {{ $pickerTag === $tag ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 hover:text-indigo-500' }}">#{{ $tag }}</button>
+                @endforeach
+            </div>
+            @endif
+
+            {{-- Component list --}}
+            <div class="space-y-2">
+                @forelse ($this->pickerComponents as $comp)
+                @php $attached = $this->pickerPage->components()->where('components.id', $comp->id)->exists(); @endphp
+                <label class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer transition-colors
+                              {{ $attached ? 'border-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10' : 'border-gray-100 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.03] hover:border-indigo-300' }}">
+                    <input type="checkbox" @checked($attached) wire:click="toggleComponent({{ $comp->id }})"
+                           class="w-4 h-4 rounded border-gray-300 text-indigo-600 shrink-0">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">🧩 {{ $comp->name }}</p>
+                        <p class="text-[11px] text-gray-400 truncate">
+                            {{ $comp->nodes->count() }} {{ Str::plural('node', $comp->nodes->count()) }}
+                            @if ($comp->description) · {{ Str::limit($comp->description, 60) }} @endif
+                        </p>
+                    </div>
+                    @if ($comp->tags)
+                    <div class="hidden sm:flex flex-wrap gap-1 justify-end max-w-[40%]">
+                        @foreach (array_slice($comp->tags, 0, 3) as $tag)
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-300 shrink-0">#{{ $tag }}</span>
+                        @endforeach
+                    </div>
+                    @endif
+                </label>
+                @empty
+                <div class="py-10 text-center">
+                    <p class="text-sm text-gray-400">No components match{{ $pickerTag !== '' ? ' the #'.$pickerTag.' tag' : '' }}.</p>
+                    <a href="{{ url($site->name.'/components') }}" class="mt-2 inline-block text-xs font-semibold text-indigo-500 hover:underline">Create components →</a>
+                </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+    @endif
 </x-page-layout>

@@ -260,6 +260,12 @@ class Site extends Model
         return $this->hasMany(BlockLayout::class)->where('kind', 'component');
     }
 
+    /** Classic CONTENT components (named node bags — the Components page). */
+    public function contentComponents(): HasMany
+    {
+        return $this->hasMany(Component::class)->latest('id');
+    }
+
     /**
      * Pages that are part of the live site — excludes pages parked under
      * /_archived-… by TemplateInstaller when a template replaced them.

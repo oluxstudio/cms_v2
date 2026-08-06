@@ -43,7 +43,7 @@
             x-data="{ profileOpen: false }" @click.outside="profileOpen = false">
 
         {{-- Logo --}}
-        <a href="/" class="flex items-center gap-2.5 shrink-0">
+        <a href="{{ route('home') }}" class="flex items-center gap-2.5 shrink-0">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--primary)">
                 <x-app-logo-icon class="w-4 h-4 fill-current text-white" />
             </div>

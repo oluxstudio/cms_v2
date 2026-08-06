@@ -54,7 +54,7 @@
                       lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
 
             {{-- Site selector pill --}}
-            <a href="/" class="flex items-center gap-3 bg-white/70 dark:bg-white/[0.06] backdrop-blur rounded-2xl px-4 py-3 shadow-sm hover:bg-white dark:hover:bg-white/[0.1] transition-colors">
+            <a href="{{ route('home') }}" class="flex items-center gap-3 bg-white/70 dark:bg-white/[0.06] backdrop-blur rounded-2xl px-4 py-3 shadow-sm hover:bg-white dark:hover:bg-white/[0.1] transition-colors">
                 <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                 </div>

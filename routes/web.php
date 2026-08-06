@@ -125,9 +125,15 @@ Route::get('/preview/{siteName}/{pageUrl}', [PublicPageController::class, 'show'
      ->where('pageUrl', '.*')
      ->name('public.page');
 
+// ── Root: the public landing page for EVERYONE (signed in or not) ────────────
+Route::view('/', 'landing')->name('landing');
+Route::redirect('/welcome', '/');
+
 // ── Auth-protected app routes
 Route::middleware('auth')->group(function () {
-    Route::get('/',          [SiteController::class, 'index'])->name('home');
+    // The app home (site picker). Keeps the 'home' route name so every
+    // existing route('home') redirect — auth flows, layouts — lands here.
+    Route::get('/select-site', [SiteController::class, 'index'])->name('home');
 
     // Account subscription — the 5-tier plan page (trial → paid upgrades).
     Route::view('/account/subscription', 'subscription')->name('account.subscription');
@@ -188,6 +194,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/dashboard',                [SiteController::class, 'dashboard']);
     Route::get('/{siteID}/pages',                    [SiteController::class, 'pages'])->middleware('perm:pages.view')->name('pages');
     Route::get('/{siteID}/collections',              [SiteController::class, 'collections'])->middleware('perm:collections.view')->name('collections');
+    Route::get('/{siteID}/components', function ($siteID) {
+        $site = \App\Models\Site::where('name', $siteID)->firstOrFail();
+        abort_unless($site->allows(\Illuminate\Support\Facades\Auth::user(), 'components.view'), 403);
+
+        return view('components-page', ['site' => $site]);
+    })->name('site.components');
     Route::get('/{siteID}/media',                    [SiteController::class, 'media'])->middleware('perm:media.view')->name('media');
     // The Media page is presented as "Assets" — keep both URLs working.
     Route::redirect('/{siteID}/assets', '/{siteID}/media');
@@ -196,6 +208,7 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/{siteID}/templates', '/{siteID}/marketplace')->name('site.templates');
     Route::get('/{siteID}/marketplace',              [SiteController::class, 'marketplace'])->middleware('perm:addons.manage')->name('site.marketplace');
     Route::get('/{siteID}/publish',                  [SiteController::class, 'publish'])->middleware('perm:publish.manage')->name('site.publish');
+    Route::get('/{siteID}/api-docs',                 [SiteController::class, 'apiDocs'])->name('site.apidocs');
     Route::get('/{siteID}/team',                     [SiteController::class, 'team'])->middleware('perm:team.manage')->name('site.team');
     Route::get('/{siteID}/contacts',                 [SiteController::class, 'contacts'])->middleware('perm:contacts.view')->name('site.contacts');
     Route::get('/{siteID}/alerts',                   [SiteController::class, 'alerts'])->middleware('perm:analytics.view')->name('site.alerts');

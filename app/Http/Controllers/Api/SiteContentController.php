@@ -53,6 +53,8 @@ class SiteContentController extends Controller
             'domain'      => $site->domain,
             'description' => $site->description,
             'theme'       => $site->themeValues(),
+            // EVERY site attribute (EAV) — templates read their config here.
+            'attributes'  => $site->attrMap(),
         ];
     }
 
@@ -64,6 +66,11 @@ class SiteContentController extends Controller
             'keywords'    => $page->keywords,
             'description' => $page->getAttr('description', ''),
             'attributes'  => $page->attrMap(),
+            // Classic components attached to this page (ordered), each with
+            // ALL of its nodes + linked collections.
+            'components'  => $page->components()->with('nodes')->get()
+                ->map(fn ($c) => $c->payload() + ['order' => (int) $c->pivot->order])
+                ->values()->all(),
             'block_tree'  => $this->blockTree($page, $site),
         ];
     }

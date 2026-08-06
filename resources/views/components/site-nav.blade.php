@@ -29,6 +29,7 @@
             $link('pages', 'Pages'),
             $link('posts', 'Posts'),
             $link('collections', 'Collections'),
+            $link('components', 'Components'),
             $link('media', 'Assets'),
         ],
         'Audience' => [
@@ -41,6 +42,7 @@
         'Site' => [
             $link('analytics', 'Analytics'),
             $link('publish', 'Go live'),
+            $link('api-docs', 'API docs'),
             // Feature toggles + templates, tucked away (Marketplace demoted).
             $link('marketplace', 'Add-ons'),
         ],

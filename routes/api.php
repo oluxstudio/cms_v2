@@ -94,8 +94,17 @@ Route::post('/sites/{siteName}/booking',              [BookingApiController::cla
 Route::get( '/sites/{siteName}/booking/{reference}',  [BookingApiController::class, 'show'])
     ->where('reference', '[A-Za-z0-9]{6,14}')->name('api.booking.show');
 
+// ── Components (classic content components + their nodes) ───────────────────
+Route::get('/sites/{siteName}/components',      [\App\Http\Controllers\Api\ComponentApiController::class, 'index'])->name('api.components.index');
+Route::get('/sites/{siteName}/components/{id}', [\App\Http\Controllers\Api\ComponentApiController::class, 'show'])->whereNumber('id')->name('api.components.show');
+
 // Token-authenticated management (Authorization: Bearer <api token>).
 Route::middleware('auth.token')->group(function () {
     Route::get(  '/sites/{siteName}/bookings',      [\App\Http\Controllers\Api\BookingAdminApiController::class, 'index'])->name('api.bookings.index');
     Route::patch('/sites/{siteName}/bookings/{id}', [\App\Http\Controllers\Api\BookingAdminApiController::class, 'update'])->name('api.bookings.update');
+
+    // Components CRUD (writes).
+    Route::post(  '/sites/{siteName}/components',      [\App\Http\Controllers\Api\ComponentApiController::class, 'store'])->name('api.components.store');
+    Route::patch( '/sites/{siteName}/components/{id}', [\App\Http\Controllers\Api\ComponentApiController::class, 'update'])->whereNumber('id')->name('api.components.update');
+    Route::delete('/sites/{siteName}/components/{id}', [\App\Http\Controllers\Api\ComponentApiController::class, 'destroy'])->whereNumber('id')->name('api.components.destroy');
 });

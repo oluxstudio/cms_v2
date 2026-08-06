@@ -18,10 +18,70 @@ class PageComponent extends Component
     public int $editingId = 0;
     public PageForm $form;
 
+    // ── Component picker (attach content components to a page) ──
+    public ?int $pickerPageId = null;
+    public string $pickerSearch = '';
+    public string $pickerTag = '';
+
     public function mount(Site $site): void
     {
         $this->site = $site;
         $this->initLayout('pages', 'list');
+    }
+
+    public function openPicker(int $pageId): void
+    {
+        abort_unless($this->site->allows(auth()->user(), 'pages.manage'), 403);
+        $this->pickerPageId = Page::where('site_id', $this->site->id)->findOrFail($pageId)->id;
+        $this->reset(['pickerSearch', 'pickerTag']);
+    }
+
+    public function closePicker(): void
+    {
+        $this->reset(['pickerPageId', 'pickerSearch', 'pickerTag']);
+    }
+
+    public function getPickerPageProperty(): ?Page
+    {
+        return $this->pickerPageId
+            ? Page::where('site_id', $this->site->id)->find($this->pickerPageId)
+            : null;
+    }
+
+    /** Site components filtered by the picker's search + tag. */
+    public function getPickerComponentsProperty()
+    {
+        return $this->site->contentComponents()->with('nodes')
+            ->when($this->pickerSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->pickerSearch.'%'))
+            ->get()
+            ->when($this->pickerTag !== '', fn ($c) => $c->filter(
+                fn ($comp) => in_array($this->pickerTag, $comp->tags ?? [], true)
+            )->values());
+    }
+
+    /** Every tag used across the site's components — the filter chips. */
+    public function getComponentTagsProperty(): array
+    {
+        return $this->site->contentComponents()->pluck('tags')
+            ->flatMap(fn ($t) => $t ?? [])->unique()->sort()->values()->all();
+    }
+
+    /** Attach/detach a component on the picker's page (order appends). */
+    public function toggleComponent(int $componentId): void
+    {
+        abort_unless($this->site->allows(auth()->user(), 'pages.manage'), 403);
+        $page = $this->pickerPage;
+        $component = $this->site->contentComponents()->findOrFail($componentId);
+        if (! $page) {
+            return;
+        }
+
+        if ($page->components()->where('components.id', $component->id)->exists()) {
+            $page->components()->detach($component->id);
+        } else {
+            $order = (int) \DB::table('page_component')->where('page_id', $page->id)->max('order') + 1;
+            $page->components()->attach($component->id, ['order' => $order]);
+        }
     }
 
     public function render()

@@ -47,6 +47,11 @@ class SiteController extends Controller
         return view('publish', ['site' => $this->findSiteBySlug($siteID)]);
     }
 
+    public function apiDocs($siteID)
+    {
+        return view('api-docs', ['site' => $this->findSiteBySlug($siteID)]);
+    }
+
     public function alerts($siteID)
     {
         return view('alerts', ['site' => $this->findSiteBySlug($siteID)]);

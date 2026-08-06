@@ -14,7 +14,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Component extends Model
 {
-    protected $fillable = ['site_id', 'site_template_id', 'name', 'author', 'description'];
+    protected $fillable = ['site_id', 'site_template_id', 'name', 'author', 'description', 'tags'];
+
+    protected $casts = ['tags' => 'array'];
 
     public function site(): BelongsTo
     {
@@ -42,5 +44,38 @@ class Component extends Model
             ->filter(fn ($v) => is_numeric($v))->map(fn ($v) => (int) $v);
 
         return Collection::whereIn('id', $ids)->get();
+    }
+
+    /**
+     * The API shape of a component — one definition used by the components
+     * CRUD API and the site content payload: the component with ALL its
+     * nodes (ordered) and the collections its collection-nodes point at.
+     */
+    public function payload(bool $withPages = false): array
+    {
+        $out = [
+            'id' => $this->id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'tags' => array_values($this->tags ?? []),
+            'nodes' => $this->nodes->map(fn ($n) => [
+                'id' => $n->id,
+                'label' => $n->label,
+                'type' => $n->type,
+                'value' => $n->value,
+                'parent' => (int) $n->parent,
+                'order' => (int) $n->order,
+                'description' => $n->description,
+            ])->values()->all(),
+            'collections' => $this->collections()->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->values()->all(),
+        ];
+
+        if ($withPages) {
+            $out['pages'] = $this->pages->map(fn ($p) => [
+                'id' => $p->id, 'name' => $p->name, 'url' => $p->url, 'order' => (int) $p->pivot->order,
+            ])->values()->all();
+        }
+
+        return $out;
     }
 }

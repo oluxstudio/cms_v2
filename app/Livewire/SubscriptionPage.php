@@ -21,7 +21,7 @@ class SubscriptionPage extends Component
         // Only remember an in-app page that isn't this one; else fall back home.
         $this->backUrl = ($prev && $prev !== url()->current() && str_starts_with($prev, url('/')))
             ? $prev
-            : url('/');
+            : route('home');
     }
 
     public function choose(string $plan)
@@ -44,7 +44,7 @@ class SubscriptionPage extends Component
         // happens on the verified success return and/or the webhook.
         if ($billing->configured() && $sub->priceFor($plan) > 0) {
             try {
-                return $this->redirect($billing->checkoutUrl($user, $plan, $this->backUrl ?: url('/')));
+                return $this->redirect($billing->checkoutUrl($user, $plan, $this->backUrl ?: route('home')));
             } catch (\Throwable $e) {
                 report($e);
                 $this->dispatch('toast', level: 'error', title: 'Payment unavailable',
@@ -58,7 +58,7 @@ class SubscriptionPage extends Component
         // plan: switch instantly.
         $billing->activate($user, $plan);
 
-        return $this->redirect($this->backUrl ?: url('/'));
+        return $this->redirect($this->backUrl ?: route('home'));
     }
 
     public function render()

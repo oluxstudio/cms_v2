@@ -120,7 +120,7 @@ class AcceptInvitePage extends Component
         $invitation->update(['accepted_at' => now()]);
 
         session()->regenerate();
-        $this->redirect(url('/'));
+        $this->redirect(route('home'));
     }
 
     public function render()

@@ -95,25 +95,23 @@ new #[Layout('components.layouts.bare')] class extends Component {
 
 <div
     x-data="{ mode: 'login' }"
-    class="min-h-screen flex items-center justify-center p-4"
-    style="background:#f3f4f6; font-family:'Instrument Sans',sans-serif"
+    class="auth-screen min-h-screen flex items-center justify-center p-4"
 >
-    <div class="w-full max-w-[900px] bg-white rounded-3xl shadow-2xl overflow-hidden relative"
-         style="min-height:600px">
+    <div class="auth-card w-full max-w-[900px] rounded-3xl shadow-2xl overflow-hidden relative">
 
         {{-- ════════════════════════════════════
              FORM PANEL — slides left ↔ right
         ════════════════════════════════════ --}}
-        <div class="absolute top-0 bottom-0 w-1/2 flex flex-col justify-center px-10 py-12 z-10
+        <div class="absolute top-0 bottom-0 w-1/2 flex flex-col justify-center px-10 py-20 z-10
                     transition-all duration-500 ease-in-out"
              :class="mode === 'login' ? 'left-0' : 'left-1/2'">
 
             {{-- Logo --}}
             <div class="flex items-center gap-2 mb-8">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#1e2235">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(120deg,var(--primary),var(--primary-2))">
                     <x-app-logo-icon class="w-4 h-4 fill-current text-white" />
                 </div>
-                <span class="font-bold text-lg" style="color:#1e2235">
+                <span class="font-bold text-lg auth-logo-text">
                     Olux CMS<span style="color:var(--primary)">.</span>
                 </span>
             </div>
@@ -123,7 +121,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
                  x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                  x-transition:leave="transition-opacity duration-150" x-transition:leave-end="opacity-0">
 
-                <h1 class="text-[26px] font-bold mb-1" style="color:#111827">Welcome Back</h1>
+                <h1 class="text-[26px] mb-1">Welcome Back</h1>
                 <p class="text-sm text-gray-400 mb-6">Let's login to your studio account</p>
 
                 {{-- Social buttons — 2 col grid --}}
@@ -218,11 +216,11 @@ new #[Layout('components.layouts.bare')] class extends Component {
                             <span class="text-sm text-gray-600">Remember me</span>
                         </label>
                         @if (Route::has('password.request'))
-                            <a href="{{ route('password.request') }}" class="text-sm font-medium hover:underline" style="color:#1e2235">Forgot Password?</a>
+                            <a href="{{ route('password.request') }}" class="text-sm font-medium hover:underline" style="color:var(--penta)">Forgot Password?</a>
                         @endif
                     </div>
 
-                    <button type="submit" class="w-full py-3.5 text-white font-semibold rounded-xl transition-colors mt-1" style="background:#1e2235">
+                    <button type="submit" class="w-full py-3.5 text-white font-semibold rounded-xl transition-all mt-1 auth-submit">
                         <span wire:loading.remove wire:target="login">Login</span>
                         <span wire:loading wire:target="login">Logging in…</span>
                     </button>
@@ -241,7 +239,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
                  x-transition:leave="transition-opacity duration-150" x-transition:leave-end="opacity-0"
                  x-cloak>
 
-                <h1 class="text-[26px] font-bold mb-1" style="color:#111827">Create Account</h1>
+                <h1 class="text-[26px] mb-1">Create Account</h1>
                 <p class="text-sm text-gray-400 mb-6">Sign up to get started with Olux CMS</p>
 
                 <form wire:submit="register" class="flex flex-col gap-3.5">
@@ -284,7 +282,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
                     </div>
                     @error('registerPasswordConfirmation') <p class="text-xs text-red-500 -mt-1 px-1">{{ $message }}</p> @enderror
 
-                    <button type="submit" class="w-full py-3.5 text-white font-semibold rounded-xl transition-colors mt-1" style="background:var(--primary)">
+                    <button type="submit" class="w-full py-3.5 text-white font-semibold rounded-xl transition-all mt-1 auth-submit">
                         <span wire:loading.remove wire:target="register">Create Account</span>
                         <span wire:loading wire:target="register">Creating…</span>
                     </button>
@@ -293,7 +291,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
                 <p class="text-center text-sm text-gray-400 mt-5">
                     Already have an account?
                     <button type="button" @click="mode = 'login'"
-                        class="font-semibold hover:underline" style="color:#1e2235">Login</button>
+                        class="font-semibold hover:underline" style="color:var(--penta)">Login</button>
                 </p>
             </div>
         </div>
@@ -304,41 +302,26 @@ new #[Layout('components.layouts.bare')] class extends Component {
         <div class="absolute top-0 bottom-0 w-1/2 transition-all duration-500 ease-in-out"
              :class="mode === 'login' ? 'left-1/2' : 'left-0'">
             <div class="absolute inset-0 m-3 rounded-2xl overflow-hidden"
-                 style="background:linear-gradient(160deg,#3b4a6b 0%,#1e2235 60%,#0f1322 100%)">
+                 style="background:linear-gradient(160deg,var(--primary) 0%,var(--primary-3) 62%,var(--primary-4) 100%)">
 
                 {{-- Grid overlay --}}
                 <div class="absolute inset-0 opacity-[0.07]"
                      style="background-image:linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px);background-size:36px 36px"></div>
 
-                {{-- Cityscape --}}
-                <div class="absolute inset-0 flex items-end justify-center pb-24 opacity-25">
-                    <svg viewBox="0 0 420 260" class="w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="0"   y="60"  width="55"  height="200" fill="#6366f1" opacity=".7"/>
-                        <rect x="50"  y="90"  width="40"  height="170" fill="#818cf8" opacity=".6"/>
-                        <rect x="85"  y="30"  width="70"  height="230" fill="#4f46e5" opacity=".8"/>
-                        <rect x="150" y="10"  width="50"  height="250" fill="#3730a3" opacity=".9"/>
-                        <rect x="195" y="50"  width="65"  height="210" fill="#4f46e5" opacity=".7"/>
-                        <rect x="255" y="75"  width="50"  height="185" fill="#6366f1" opacity=".6"/>
-                        <rect x="300" y="100" width="60"  height="160" fill="#818cf8" opacity=".5"/>
-                        <rect x="355" y="80"  width="65"  height="180" fill="#4f46e5" opacity=".7"/>
-                        <rect x="10"  y="80"  width="8" height="8" fill="white" opacity=".5"/>
-                        <rect x="24"  y="80"  width="8" height="8" fill="white" opacity=".4"/>
-                        <rect x="10"  y="100" width="8" height="8" fill="white" opacity=".6"/>
-                        <rect x="95"  y="50"  width="9" height="9" fill="white" opacity=".5"/>
-                        <rect x="115" y="50"  width="9" height="9" fill="white" opacity=".6"/>
-                        <rect x="160" y="28"  width="9" height="9" fill="white" opacity=".6"/>
-                        <rect x="178" y="28"  width="9" height="9" fill="white" opacity=".5"/>
-                        <rect x="205" y="68"  width="9" height="9" fill="white" opacity=".6"/>
-                        <ellipse cx="80"  cy="25" rx="38" ry="14" fill="white" opacity=".7"/>
-                        <ellipse cx="108" cy="16" rx="28" ry="11" fill="white" opacity=".8"/>
-                        <ellipse cx="300" cy="20" rx="32" ry="12" fill="white" opacity=".6"/>
-                        <ellipse cx="328" cy="12" rx="22" ry="10" fill="white" opacity=".8"/>
-                    </svg>
-                </div>
+                {{-- Drifting brand shapes (landing-style ambient) --}}
+                <span class="auth-drift" style="top:12%;left:12%;width:16px;height:16px;--d:16s"></span>
+                <span class="auth-drift" style="top:70%;left:80%;width:26px;height:26px;--d:22s"></span>
+                <span class="auth-drift dot" style="top:30%;left:78%;width:12px;height:12px;--d:19s"></span>
+                <span class="auth-drift dot" style="top:82%;left:18%;width:20px;height:20px;--d:25s"></span>
 
-                {{-- Door frame --}}
-                <div class="absolute top-8 left-1/2 -translate-x-1/2 w-28 h-40 rounded-t-full"
-                     style="border:3px solid rgba(255,255,255,0.2)"></div>
+                {{-- What the studio actually does — a live dashboard feed mock --}}
+                <div class="absolute inset-x-8 top-14 space-y-2.5">
+                    <div class="auth-feed-row">New estimate request <small>2 min ago</small></div>
+                    <div class="auth-feed-row">Booking confirmed — £120 <small>1 h ago</small></div>
+                    <div class="auth-feed-row">Invoice INV-014 paid <small>3 h ago</small></div>
+                    <div class="auth-feed-row">New contact captured <small>today</small></div>
+                    <div class="auth-feed-row">Site published — live with SSL <small>today</small></div>
+                </div>
 
                 {{-- Tagline --}}
                 <div class="absolute bottom-8 left-0 right-0 text-center px-8">
@@ -358,4 +341,53 @@ new #[Layout('components.layouts.bare')] class extends Component {
 
 <style>
     [x-cloak] { display: none !important; }
+
+    /* ── Landing-page theme applied to auth ─────────────────────────────── */
+    @font-face { font-family: 'junegull'; src: url('/fonts/junegull.otf'); font-display: swap; }
+    @font-face { font-family: 'garet'; font-weight: 400; src: url('/fonts/Garet-Book.woff2') format('woff2'); font-display: swap; }
+    @font-face { font-family: 'comforta'; font-weight: 400; src: url('/fonts/Comfortaa-Regular.ttf'); font-display: swap; }
+    @font-face { font-family: 'comforta'; font-weight: 700; src: url('/fonts/Comfortaa-Bold.ttf'); font-display: swap; }
+
+    .auth-screen {
+        --primary: #e38704; --primary-2: #f77315; --primary-3: #5e3802; --primary-4: #3a2301;
+        --penta: #fbbf24; --bg: #120f14; --on-bg: #f8f5f2; --on-bg-soft: rgba(248,245,242,.72);
+        --surface: #1b1620; --line-inv: rgba(255,255,255,.12);
+        background: var(--bg); font-family: 'garet', sans-serif; color: var(--on-bg);
+    }
+    .auth-card { background: var(--surface); border: 1px solid var(--line-inv); min-height: 710px; }
+    .auth-screen h1 { font-family: 'junegull', 'trebuchet ms', sans-serif; text-transform: uppercase; color: var(--on-bg); font-weight: 400; }
+    .auth-logo-text { font-family: 'junegull', sans-serif; color: var(--on-bg); }
+    .auth-screen label, .auth-screen .text-xs, .auth-screen .text-sm { font-family: 'comforta', sans-serif; }
+
+    /* Inputs on dark */
+    .auth-screen input[type="email"], .auth-screen input[type="password"], .auth-screen input[type="text"] {
+        background: rgba(255,255,255,.05); border-color: var(--line-inv); color: var(--on-bg);
+    }
+    .auth-screen input::placeholder { color: rgba(248,245,242,.35); }
+
+    /* Social buttons + divider on dark */
+    .auth-screen .grid.grid-cols-2 a { border-color: var(--line-inv); color: var(--on-bg-soft); }
+    .auth-screen .grid.grid-cols-2 a:hover { background: rgba(255,255,255,.06); border-color: var(--primary); }
+    .auth-screen .h-px { background: var(--line-inv); }
+    .auth-screen .text-gray-600, .auth-screen .text-gray-700 { color: var(--on-bg-soft); }
+
+    /* Submit buttons: orange gradient with glow */
+    .auth-submit { background: linear-gradient(120deg, var(--primary), var(--primary-2)); box-shadow: 0 12px 26px -12px rgba(227,135,4,.55); font-family: 'comforta', sans-serif; }
+    .auth-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    /* Hero panel extras */
+    .auth-feed-row {
+        display: flex; justify-content: space-between; align-items: center;
+        background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.15);
+        border-radius: 12px; padding: 11px 15px; color: #fff;
+        font-family: 'comforta', sans-serif; font-size: 12.5px; font-weight: 700;
+    }
+    .auth-feed-row small { opacity: .7; font-weight: 400; }
+    .auth-drift { position: absolute; display: block; border-radius: 22%; background: rgba(255,255,255,.35); animation: auth-drift var(--d, 18s) ease-in-out infinite; }
+    .auth-drift.dot { border-radius: 9999px; background: rgba(251,191,36,.55); }
+    @keyframes auth-drift {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        50%      { transform: translate(14px, -18px) rotate(25deg); }
+    }
+    @media (prefers-reduced-motion: reduce) { .auth-drift { animation: none; } }
 </style>
