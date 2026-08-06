@@ -152,3 +152,51 @@ test('components carry tags and the pages picker filters by them', function () {
         ->assertJsonPath('components.0.tags.0', 'footer')   // newest first
         ->assertJsonPath('components.1.tags.0', 'hero');
 });
+
+test('components record who created them and how, shown in the detail view', function () {
+    [$owner, $site, $page] = componentSite();
+
+    // Created via the APP interface → source=app, creator = the admin.
+    Livewire::actingAs($owner)->test(ComponentsPage::class, ['site' => $site])
+        ->call('open', 0)->set('cName', 'App made')
+        ->set('nodes', [['label' => 'Heading', 'type' => 'text', 'value' => 'x', 'description' => '']])
+        ->call('save');
+    $appMade = $site->contentComponents()->firstWhere('name', 'App made');
+    expect($appMade->source)->toBe('app')
+        ->and($appMade->created_by)->toBe($owner->id);
+
+    // Created via the API → source=api, creator = the token's user.
+    $token = ApiToken::create(['user_id' => $owner->id, 'name' => 't', 'token' => Str::random(48)]);
+    $this->postJson("/api/sites/{$site->name}/components", [
+        'name' => 'Api made',
+        'nodes' => [['label' => 'Text', 'type' => 'text', 'value' => 'y']],
+    ], ['Authorization' => 'Bearer '.$token->token])->assertStatus(201)
+        ->assertJsonPath('component.source', 'api')
+        ->assertJsonPath('component.created_by', $owner->name);
+
+    // The detail view renders every stored fact.
+    $html = Livewire::actingAs($owner)->test(ComponentsPage::class, ['site' => $site])
+        ->call('view', $appMade->id)->html();
+    expect($html)->toContain('#'.$appMade->id)
+        ->toContain('App interface')
+        ->toContain($owner->name)
+        ->toContain('Created')
+        ->toContain('Last modified');
+});
+
+test('image and url nodes render the reusable asset picker in the editor', function () {
+    [$owner, $site] = componentSite();
+    $site->media()->create(['name' => 'Hero shot', 'file_type' => 'image', 'url' => 'https://cdn.test/hero.jpg', 'size' => 100]);
+
+    Livewire::actingAs($owner)->test(ComponentsPage::class, ['site' => $site])
+        ->call('open', 0)
+        ->set('nodes', [
+            ['label' => 'Photo', 'type' => 'image', 'value' => '', 'description' => ''],
+            ['label' => 'Link', 'type' => 'url', 'value' => '', 'description' => ''],
+            ['label' => 'Title', 'type' => 'text', 'value' => '', 'description' => ''],
+        ])
+        ->assertSeeHtml('Pick from the asset library')
+        ->assertSeeHtml('Image URL or pick from assets')
+        ->assertSeeHtml('URL or pick any asset')
+        ->assertSeeHtml('/api/sites/'.$site->name.'/media');
+});

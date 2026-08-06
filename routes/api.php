@@ -98,6 +98,17 @@ Route::get( '/sites/{siteName}/booking/{reference}',  [BookingApiController::cla
 Route::get('/sites/{siteName}/components',      [\App\Http\Controllers\Api\ComponentApiController::class, 'index'])->name('api.components.index');
 Route::get('/sites/{siteName}/components/{id}', [\App\Http\Controllers\Api\ComponentApiController::class, 'show'])->whereNumber('id')->name('api.components.show');
 
+// ── Pages (page records + EAV attributes; content lives on /content, /page) ──
+Route::get('/sites/{siteName}/pages',      [\App\Http\Controllers\Api\PageApiController::class, 'index'])->name('api.pages.index');
+Route::get('/sites/{siteName}/pages/{id}', [\App\Http\Controllers\Api\PageApiController::class, 'show'])->whereNumber('id')->name('api.pages.show');
+
+// ── Collections (public collections + their published items) ────────────────
+Route::get('/sites/{siteName}/collections',      [\App\Http\Controllers\Api\CollectionApiController::class, 'index'])->name('api.collections.index');
+Route::get('/sites/{siteName}/collections/{id}', [\App\Http\Controllers\Api\CollectionApiController::class, 'show'])->whereNumber('id')->name('api.collections.show');
+
+// ── Forms directory (active forms + schemas; single-form schema/submit above)
+Route::get('/sites/{siteName}/forms', [\App\Http\Controllers\Api\FormApiController::class, 'index'])->name('api.forms.index');
+
 // Token-authenticated management (Authorization: Bearer <api token>).
 Route::middleware('auth.token')->group(function () {
     Route::get(  '/sites/{siteName}/bookings',      [\App\Http\Controllers\Api\BookingAdminApiController::class, 'index'])->name('api.bookings.index');
@@ -107,4 +118,32 @@ Route::middleware('auth.token')->group(function () {
     Route::post(  '/sites/{siteName}/components',      [\App\Http\Controllers\Api\ComponentApiController::class, 'store'])->name('api.components.store');
     Route::patch( '/sites/{siteName}/components/{id}', [\App\Http\Controllers\Api\ComponentApiController::class, 'update'])->whereNumber('id')->name('api.components.update');
     Route::delete('/sites/{siteName}/components/{id}', [\App\Http\Controllers\Api\ComponentApiController::class, 'destroy'])->whereNumber('id')->name('api.components.destroy');
+
+    // Posts CRUD (writes; public reads live above).
+    Route::post(  '/sites/{siteName}/posts',        [\App\Http\Controllers\Api\PostApiController::class, 'store'])->name('api.posts.store');
+    Route::patch( '/sites/{siteName}/posts/{slug}', [\App\Http\Controllers\Api\PostApiController::class, 'update'])->name('api.posts.update');
+    Route::delete('/sites/{siteName}/posts/{slug}', [\App\Http\Controllers\Api\PostApiController::class, 'destroy'])->name('api.posts.destroy');
+
+    // Pages CRUD (writes).
+    Route::post(  '/sites/{siteName}/pages',      [\App\Http\Controllers\Api\PageApiController::class, 'store'])->name('api.pages.store');
+    Route::patch( '/sites/{siteName}/pages/{id}', [\App\Http\Controllers\Api\PageApiController::class, 'update'])->whereNumber('id')->name('api.pages.update');
+    Route::delete('/sites/{siteName}/pages/{id}', [\App\Http\Controllers\Api\PageApiController::class, 'destroy'])->whereNumber('id')->name('api.pages.destroy');
+
+    // Assets (media) CRUD (writes; public reads live above).
+    Route::post(  '/sites/{siteName}/media',      [MediaController::class, 'store'])->name('api.media.store');
+    Route::patch( '/sites/{siteName}/media/{id}', [MediaController::class, 'update'])->whereNumber('id')->name('api.media.update');
+    Route::delete('/sites/{siteName}/media/{id}', [MediaController::class, 'destroy'])->whereNumber('id')->name('api.media.destroy');
+
+    // Forms CRUD (writes; schema + submit endpoints above are public).
+    Route::post(  '/sites/{siteName}/forms',            [\App\Http\Controllers\Api\FormApiController::class, 'store'])->name('api.forms.store');
+    Route::patch( '/sites/{siteName}/forms/{formName}', [\App\Http\Controllers\Api\FormApiController::class, 'update'])->name('api.forms.update');
+    Route::delete('/sites/{siteName}/forms/{formName}', [\App\Http\Controllers\Api\FormApiController::class, 'destroy'])->name('api.forms.destroy');
+
+    // Collections + items CRUD (writes).
+    Route::post(  '/sites/{siteName}/collections',                      [\App\Http\Controllers\Api\CollectionApiController::class, 'store'])->name('api.collections.store');
+    Route::patch( '/sites/{siteName}/collections/{id}',                 [\App\Http\Controllers\Api\CollectionApiController::class, 'update'])->whereNumber('id')->name('api.collections.update');
+    Route::delete('/sites/{siteName}/collections/{id}',                 [\App\Http\Controllers\Api\CollectionApiController::class, 'destroy'])->whereNumber('id')->name('api.collections.destroy');
+    Route::post(  '/sites/{siteName}/collections/{id}/items',           [\App\Http\Controllers\Api\CollectionApiController::class, 'storeItem'])->whereNumber('id')->name('api.collections.items.store');
+    Route::patch( '/sites/{siteName}/collections/{id}/items/{itemId}',  [\App\Http\Controllers\Api\CollectionApiController::class, 'updateItem'])->whereNumber(['id', 'itemId'])->name('api.collections.items.update');
+    Route::delete('/sites/{siteName}/collections/{id}/items/{itemId}',  [\App\Http\Controllers\Api\CollectionApiController::class, 'destroyItem'])->whereNumber(['id', 'itemId'])->name('api.collections.items.destroy');
 });

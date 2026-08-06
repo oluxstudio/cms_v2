@@ -17,7 +17,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
                 <x-field.text wire:model.live="search" placeholder="Search collections…"
-                              style="width:16rem;padding-left:2.25rem" />
+                              class="w-full sm:w-64" style="padding-left:2.25rem" />
             </div>
             <div class="ml-auto flex items-center gap-3">
                 <span class="text-xs text-gray-400 dark:text-gray-500">{{ $collections->count() }} result{{ $collections->count() !== 1 ? 's' : '' }}</span>

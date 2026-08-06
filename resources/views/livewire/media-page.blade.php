@@ -87,12 +87,12 @@
         </button>
         @endforeach
 
-        <div class="ml-auto flex items-center gap-2">
+        <div class="ml-auto flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />
-            <div class="relative">
+            <div class="relative w-full sm:w-auto">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <x-field.text wire:model.live.debounce.300ms="search"
-                              placeholder="Search media…" style="width:14rem;padding-left:2.25rem" />
+                              placeholder="Search media…" class="w-full sm:w-56" style="padding-left:2.25rem" />
             </div>
         </div>
     </div>

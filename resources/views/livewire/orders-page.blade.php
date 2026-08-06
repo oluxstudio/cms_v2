@@ -141,10 +141,10 @@
 
     {{-- toolbar --}}
     <div class="flex flex-wrap items-center gap-2 mb-3">
-        <div class="relative">
+        <div class="relative w-full sm:w-auto">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm">⌕</span>
             <input type="search" wire:model.live.debounce.400ms="search" placeholder="Search orders"
-                   class="w-48 text-xs font-medium rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#1d1e2a] pl-8 pr-3 py-2 text-gray-700 dark:text-gray-200">
+                   class="w-full sm:w-48 text-xs font-medium rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#1d1e2a] pl-8 pr-3 py-2 text-gray-700 dark:text-gray-200">
         </div>
         <span class="text-[11px] text-gray-400 font-medium">{{ $this->orders->count() }} orders</span>
         <div class="ml-auto flex items-center gap-2">

@@ -127,6 +127,7 @@
 
         {{ $slot }}
 
+        <x-confirm-modal />
         @fluxScripts
     </body>
 </html>

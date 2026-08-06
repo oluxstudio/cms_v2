@@ -231,10 +231,10 @@
                             <option value="{{ $f }}">{{ $f === 'all' ? 'All statuses' : ucfirst($f) }}</option>
                         @endforeach
                     </select>
-                    <div class="relative">
+                    <div class="relative w-full sm:w-auto">
                         <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-xs">⌕</span>
                         <input type="search" wire:model.live.debounce.400ms="search" placeholder="Search"
-                               class="w-36 text-[11px] font-medium rounded-lg border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] pl-7 pr-2 py-1.5 text-gray-700 dark:text-gray-200">
+                               class="w-full sm:w-36 text-[11px] font-medium rounded-lg border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] pl-7 pr-2 py-1.5 text-gray-700 dark:text-gray-200">
                     </div>
                 </div>
                 @forelse($this->invoices as $inv)

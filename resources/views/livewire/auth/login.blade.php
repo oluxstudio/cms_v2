@@ -350,7 +350,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
 
     .auth-screen {
         --primary: #e38704; --primary-2: #f77315; --primary-3: #5e3802; --primary-4: #3a2301;
-        --penta: #fbbf24; --bg: #120f14; --on-bg: #f8f5f2; --on-bg-soft: rgba(248,245,242,.72);
+        --penta: #fbbf24; --bg: #120f14; --on-bg: #f8f5f2; --on-bg-soft: rgba(248,245,242,.87);
         --surface: #1b1620; --line-inv: rgba(255,255,255,.12);
         background: var(--bg); font-family: 'garet', sans-serif; color: var(--on-bg);
     }
@@ -363,7 +363,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
     .auth-screen input[type="email"], .auth-screen input[type="password"], .auth-screen input[type="text"] {
         background: rgba(255,255,255,.05); border-color: var(--line-inv); color: var(--on-bg);
     }
-    .auth-screen input::placeholder { color: rgba(248,245,242,.35); }
+    .auth-screen input::placeholder { color: rgba(248,245,242,.55); }
 
     /* Social buttons + divider on dark */
     .auth-screen .grid.grid-cols-2 a { border-color: var(--line-inv); color: var(--on-bg-soft); }

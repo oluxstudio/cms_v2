@@ -7,11 +7,11 @@
             <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Components</h1>
             <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Standalone content components — build the nodes once, attach to pages or link collections anywhere.</p>
         </div>
-        <div class="flex items-center gap-3">
-            <div class="relative">
+        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div class="relative w-full sm:w-auto">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search components…"
-                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-56">
+                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-56">
             </div>
             @if ($canManage)
             <button wire:click="open(0)"
@@ -68,14 +68,16 @@
                 @endforeach
                 @if ($c->nodes->count() > 6)<span class="text-[10px] text-gray-400">+{{ $c->nodes->count() - 6 }}</span>@endif
             </div>
-            @if ($canManage)
             <div class="flex gap-2 mt-4">
+                <button wire:click="view({{ $c->id }})"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">View</button>
+                @if ($canManage)
                 <button wire:click="open({{ $c->id }})"
                         class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">Edit</button>
-                <button wire:click="deleteComponent({{ $c->id }})" wire:confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
+                <button wire:click="deleteComponent({{ $c->id }})" data-confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
                         class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
+                @endif
             </div>
-            @endif
         </div>
         @empty
         <div class="sm:col-span-2 lg:col-span-3 flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05]">
@@ -86,12 +88,97 @@
         @endforelse
     </div>
 
+    {{-- ═══ DETAIL VIEW — every stored fact, on the reusable lightbox ═══ --}}
+    @if ($viewingId !== null && $this->viewing)
+    @php $v = $this->viewing; @endphp
+    <x-lightbox close="closeView" icon="🧩" :title="$v->name" :subtitle="$v->description" max-width="max-w-2xl">
+        <x-slot:badge>
+            <span class="text-[10px] font-bold px-2.5 py-1 rounded-full {{ ($v->source ?? 'app') === 'api' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300' }}">
+                {{ ($v->source ?? 'app') === 'api' ? '🔌 API' : '🖥 App' }}</span>
+        </x-slot:badge>
+
+        {{-- Provenance grid --}}
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            @foreach ([
+                ['ID', '#'.$v->id, 'font-mono'],
+                ['Created by', $v->creator?->name ?? $v->author ?? '—', ''],
+                ['Tags', $v->tags ? '#'.implode(' #', $v->tags) : '—', ''],
+                ['Created', $v->created_at->format('M j, Y · g:i A'), ''],
+                ['Last modified', $v->updated_at->format('M j, Y · g:i A'), ''],
+                ['Created via', ($v->source ?? 'app') === 'api' ? 'API call' : 'App interface', ''],
+            ] as [$label, $value, $extra])
+            <div class="rounded-xl bg-gray-50 dark:bg-white/[0.04] px-3.5 py-2.5">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ $label }}</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate {{ $extra }}" title="{{ $value }}">{{ $value }}</p>
+            </div>
+            @endforeach
+        </div>
+
+        {{-- Nodes --}}
+        <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400 mt-5 mb-2">Nodes ({{ $v->nodes->count() }})</p>
+        <div class="rounded-xl border border-gray-100 dark:border-white/[0.06] overflow-hidden">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="text-[10px] uppercase tracking-wider text-gray-400 bg-gray-50 dark:bg-white/[0.03]">
+                        <th class="px-3.5 py-2 font-bold">Label</th>
+                        <th class="px-3.5 py-2 font-bold">Type</th>
+                        <th class="px-3.5 py-2 font-bold">Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($v->nodes as $n)
+                    <tr class="border-t border-gray-50 dark:border-white/[0.04] align-top">
+                        <td class="px-3.5 py-2 text-xs font-semibold text-gray-900 dark:text-white whitespace-nowrap">{{ $n->label }}</td>
+                        <td class="px-3.5 py-2"><span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400">{{ $n->type }}</span></td>
+                        <td class="px-3.5 py-2 text-xs text-gray-500 dark:text-gray-400 break-all">
+                            @if ($n->type === 'collection')
+                                {{ $n->linkedCollection()?->name ?? $n->value }} <span class="text-gray-300">(collection)</span>
+                            @else
+                                {{ Str::limit((string) $n->value, 90) ?: '—' }}
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Attachments --}}
+        <div class="grid sm:grid-cols-2 gap-4 mt-5">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400 mb-2">Attached to pages ({{ $v->pages->count() }})</p>
+                @forelse ($v->pages as $p)
+                    <p class="text-xs text-gray-600 dark:text-gray-300 py-0.5">{{ $p->name }} <span class="font-mono text-gray-400">{{ $p->url }}</span></p>
+                @empty
+                    <p class="text-xs text-gray-400">Standalone — not on any page.</p>
+                @endforelse
+            </div>
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400 mb-2">Linked collections</p>
+                @forelse ($v->collections() as $col)
+                    <p class="text-xs text-gray-600 dark:text-gray-300 py-0.5">{{ $col->name }}</p>
+                @empty
+                    <p class="text-xs text-gray-400">None.</p>
+                @endforelse
+            </div>
+        </div>
+
+        @if ($canManage)
+        <x-slot:footer>
+            <div class="flex justify-end gap-2">
+                <button wire:click="closeView" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-500 border border-gray-200 dark:border-white/[0.08]">Close</button>
+                <button wire:click="editFromView"
+                        class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">Edit this component</button>
+            </div>
+        </x-slot:footer>
+        @endif
+    </x-lightbox>
+    @endif
+
     {{-- ═══ EDITOR ═══ --}}
     @if ($editingId !== null)
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" wire:click="close"></div>
-        <div class="relative bg-white dark:bg-[#1d1e2a] rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] overflow-y-auto p-6">
-            <h2 class="text-base font-bold text-gray-900 dark:text-white mb-4">{{ $editingId ? 'Edit component' : 'New component' }}</h2>
+    <x-lightbox close="close" icon="🧩" :title="$editingId ? 'Edit component' : 'New component'"
+                subtitle="Nodes are the content fields; attach to pages or link a collection node." max-width="max-w-3xl">
             <form wire:submit="save" class="space-y-5">
                 <div class="grid sm:grid-cols-2 gap-4">
                     <div>
@@ -135,6 +222,10 @@
                                         class="px-3 py-2 pr-7 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
                                     <option value="1">True</option><option value="0">False</option>
                                 </select>
+                            @elseif (($n['type'] ?? 'text') === 'image')
+                                <x-asset-picker model="nodes.{{ $i }}.value" :site="$site" type="image" placeholder="Image URL or pick from assets" />
+                            @elseif (($n['type'] ?? 'text') === 'url')
+                                <x-asset-picker model="nodes.{{ $i }}.value" :site="$site" type="" placeholder="URL or pick any asset" />
                             @else
                                 <input wire:model="nodes.{{ $i }}.value" type="text" placeholder="Value"
                                        class="flex-1 min-w-[140px] px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
@@ -174,7 +265,6 @@
                     <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">Save component</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-lightbox>
     @endif
 </div>

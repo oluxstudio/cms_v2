@@ -6,10 +6,10 @@
             <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Client accounts</h1>
             <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Subscriptions, custom per-client pricing and plan assignment.</p>
         </div>
-        <div class="relative">
+        <div class="relative w-full sm:w-auto">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search accounts…"
-                   class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-64">
+                   class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-64">
         </div>
     </div>
 

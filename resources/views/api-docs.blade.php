@@ -25,6 +25,173 @@
             ],
         ],
 
+        'Components' => [
+            [
+                'method' => 'GET', 'path' => '/components',
+                'summary' => 'Every content component on the site — each with ALL of its nodes (the typed content fields, in order), its tags, the pages it is attached to, and any linked collections.',
+                'params' => [],
+                'example' => "curl {$base}/components",
+            ],
+            [
+                'method' => 'GET', 'path' => '/components/{id}',
+                'summary' => 'One component with its full node list, tags, page attachments and linked collections.',
+                'params' => [
+                    ['id', 'path', 'integer', true, 'The component id from the /components listing.'],
+                ],
+                'example' => "curl {$base}/components/12",
+            ],
+            [
+                'method' => 'POST', 'path' => '/components 🔒', 'auth' => true,
+                'summary' => 'Create a component INCLUDING its nodes in one call. Requires an API token (Authorization: Bearer). The nodes array defines the content fields; page_ids attaches the component to pages (order appends at the end of each page).',
+                'params' => [
+                    ['name', 'body', 'string', true, 'Component name (max 120).'],
+                    ['description', 'body', 'string', false, 'What the component is for (max 500).'],
+                    ['tags', 'body', 'string[]', false, 'Up to 12 tags (max 40 chars each) — used to filter the page picker.'],
+                    ['nodes', 'body', 'array', false, 'The content fields. Each item: label (required), type (required: text | url | image | number | boolean | color | collection), value, parent (0 = root), order, description.'],
+                    ['nodes.*.label', 'body', 'string', true, 'Field name shown in the admin (max 120).'],
+                    ['nodes.*.type', 'body', 'string', true, 'One of: text, url, image, number, boolean, color, collection. A collection node stores a Collection id in value — that links the component to the collection.'],
+                    ['nodes.*.value', 'body', 'string', false, 'The field value (max 5000). booleans use "1"/"0".'],
+                    ['page_ids', 'body', 'integer[]', false, 'Pages to attach the component to. Ids not belonging to the site are ignored.'],
+                ],
+                'example' => "curl -X POST {$base}/components \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Hero banner\",\"tags\":[\"hero\"],\"nodes\":[{\"label\":\"Heading\",\"type\":\"text\",\"value\":\"Welcome!\"},{\"label\":\"Team\",\"type\":\"collection\",\"value\":\"3\"}],\"page_ids\":[1]}'",
+            ],
+            [
+                'method' => 'PATCH', 'path' => '/components/{id} 🔒', 'auth' => true,
+                'summary' => 'Update a component. Send only what changes — but note: when a nodes array is present the nodes are REPLACED wholesale with it; omit nodes to keep them. page_ids: [] detaches from every page; omit to leave attachments alone.',
+                'params' => [
+                    ['id', 'path', 'integer', true, 'The component id.'],
+                    ['name', 'body', 'string', false, 'New name.'],
+                    ['description', 'body', 'string', false, 'New description (null clears it).'],
+                    ['tags', 'body', 'string[]', false, 'Replaces the tag list.'],
+                    ['nodes', 'body', 'array', false, 'FULL replacement node list (same shape as POST).'],
+                    ['page_ids', 'body', 'integer[]', false, 'Full sync of page attachments (existing order kept, new ones append).'],
+                ],
+                'example' => "curl -X PATCH {$base}/components/12 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Hero banner v2\",\"nodes\":[{\"label\":\"Heading\",\"type\":\"text\",\"value\":\"Hi there\"}]}'",
+            ],
+            [
+                'method' => 'DELETE', 'path' => '/components/{id} 🔒', 'auth' => true,
+                'summary' => 'Delete a component — its nodes and every page attachment go with it.',
+                'params' => [['id', 'path', 'integer', true, 'The component id.']],
+                'example' => "curl -X DELETE {$base}/components/12 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
+            ],
+        ],
+
+        'Pages' => [
+            [
+                'method' => 'GET', 'path' => '/pages',
+                'summary' => 'Every page on the site — name, url, keywords, publish state and the page\'s attribute map (key → value). Full page content (components → nodes) lives on GET /content and GET /page.',
+                'params' => [],
+                'example' => "curl {$base}/pages",
+            ],
+            [
+                'method' => 'GET', 'path' => '/pages/{id}',
+                'summary' => 'One page record with its attributes.',
+                'params' => [['id', 'path', 'integer', true, 'The page id from the /pages listing.']],
+                'example' => "curl {$base}/pages/4",
+            ],
+            [
+                'method' => 'POST', 'path' => '/pages 🔒', 'auth' => true,
+                'summary' => 'Create a page. Requires an API token with the pages.manage permission. The optional attributes map sets page attributes (EAV key → value) in the same call. The url must be unique on the site.',
+                'params' => [
+                    ['name', 'body', 'string', true, 'Page name (max 255).'],
+                    ['url', 'body', 'string', true, 'Page path, e.g. "/about". Must be unique per site.'],
+                    ['keywords', 'body', 'string', false, 'SEO keywords. Defaults to empty.'],
+                    ['is_published', 'body', 'boolean', false, 'Defaults to true.'],
+                    ['attributes', 'body', 'object', false, 'Key → value map of page attributes (max 60 keys, values max 5000 chars).'],
+                ],
+                'example' => "curl -X POST {$base}/pages \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"About\",\"url\":\"/about\",\"attributes\":{\"hero_title\":\"Who we are\"}}'",
+            ],
+            [
+                'method' => 'PATCH', 'path' => '/pages/{id} 🔒', 'auth' => true,
+                'summary' => 'Update a page. Send only what changes. In the attributes map, a null value FORGETS that key; other keys are set/overwritten and unmentioned keys are left alone (merge, not replace).',
+                'params' => [
+                    ['id', 'path', 'integer', true, 'The page id.'],
+                    ['name', 'body', 'string', false, 'New name.'],
+                    ['url', 'body', 'string', false, 'New path (must stay unique).'],
+                    ['keywords', 'body', 'string', false, 'New keywords.'],
+                    ['is_published', 'body', 'boolean', false, 'Publish / unpublish.'],
+                    ['attributes', 'body', 'object', false, 'Keys to set; null values are removed.'],
+                ],
+                'example' => "curl -X PATCH {$base}/pages/4 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"is_published\":false,\"attributes\":{\"theme\":null,\"hero_sub\":\"Since 2020\"}}'",
+            ],
+            [
+                'method' => 'DELETE', 'path' => '/pages/{id} 🔒', 'auth' => true,
+                'summary' => 'Delete a page — its attributes and component attachments go with it (the components themselves survive).',
+                'params' => [['id', 'path', 'integer', true, 'The page id.']],
+                'example' => "curl -X DELETE {$base}/pages/4 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
+            ],
+        ],
+
+        'Collections' => [
+            [
+                'method' => 'GET', 'path' => '/collections',
+                'summary' => 'The site\'s PUBLIC collections (is_public = true), each with its field schema and published items. Private collections and non-published items never appear on public reads.',
+                'params' => [],
+                'example' => "curl {$base}/collections",
+            ],
+            [
+                'method' => 'GET', 'path' => '/collections/{id}',
+                'summary' => 'One public collection with its published items.',
+                'params' => [['id', 'path', 'integer', true, 'The collection id.']],
+                'example' => "curl {$base}/collections/3",
+            ],
+            [
+                'method' => 'POST', 'path' => '/collections 🔒', 'auth' => true,
+                'summary' => 'Create a collection. Requires an API token with the collections.manage permission. fields defines the item schema; the slug is derived from the name automatically.',
+                'params' => [
+                    ['name', 'body', 'string', true, 'Collection name (max 255). Also drives the slug.'],
+                    ['type', 'body', 'string', false, 'Collection kind, e.g. "list". Default "list".'],
+                    ['description', 'body', 'string', false, 'What the collection holds (max 1000).'],
+                    ['fields', 'body', 'array', false, 'Field schema — items like {"key":"quote","label":"Quote","type":"textarea"}.'],
+                    ['is_public', 'body', 'boolean', false, 'Whether public reads may see it. Default true.'],
+                    ['allow_submit', 'body', 'boolean', false, 'Whether visitors may submit items. Default false.'],
+                ],
+                'example' => "curl -X POST {$base}/collections \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Testimonials\",\"fields\":[{\"key\":\"quote\",\"label\":\"Quote\",\"type\":\"textarea\"}]}'",
+            ],
+            [
+                'method' => 'PATCH', 'path' => '/collections/{id} 🔒', 'auth' => true,
+                'summary' => 'Update a collection (same body fields as POST, all optional). Renaming also regenerates the slug. Authenticated write responses include ALL items regardless of status.',
+                'params' => [['id', 'path', 'integer', true, 'The collection id.']],
+                'example' => "curl -X PATCH {$base}/collections/3 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"is_public\":false}'",
+            ],
+            [
+                'method' => 'DELETE', 'path' => '/collections/{id} 🔒', 'auth' => true,
+                'summary' => 'Delete a collection and every item in it.',
+                'params' => [['id', 'path', 'integer', true, 'The collection id.']],
+                'example' => "curl -X DELETE {$base}/collections/3 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
+            ],
+            [
+                'method' => 'POST', 'path' => '/collections/{id}/items 🔒', 'auth' => true,
+                'summary' => 'Add an item. data is a free-form object matching the collection\'s field schema keys. Items default to published; use status "pending" to hold one back from public reads.',
+                'params' => [
+                    ['id', 'path', 'integer', true, 'The collection id.'],
+                    ['data', 'body', 'object', true, 'The item content, keyed by field key.'],
+                    ['status', 'body', 'string', false, 'published | pending | archived. Default published.'],
+                ],
+                'example' => "curl -X POST {$base}/collections/3/items \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"data\":{\"quote\":\"Great work!\"}}'",
+            ],
+            [
+                'method' => 'PATCH', 'path' => '/collections/{id}/items/{itemId} 🔒', 'auth' => true,
+                'summary' => 'Update an item\'s data and/or status. A data object REPLACES the item\'s data wholesale.',
+                'params' => [
+                    ['id', 'path', 'integer', true, 'The collection id.'],
+                    ['itemId', 'path', 'integer', true, 'The item id.'],
+                    ['data', 'body', 'object', false, 'Full replacement item content.'],
+                    ['status', 'body', 'string', false, 'published | pending | archived.'],
+                ],
+                'example' => "curl -X PATCH {$base}/collections/3/items/9 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"status\":\"archived\"}'",
+            ],
+            [
+                'method' => 'DELETE', 'path' => '/collections/{id}/items/{itemId} 🔒', 'auth' => true,
+                'summary' => 'Delete one item.',
+                'params' => [
+                    ['id', 'path', 'integer', true, 'The collection id.'],
+                    ['itemId', 'path', 'integer', true, 'The item id.'],
+                ],
+                'example' => "curl -X DELETE {$base}/collections/3/items/9 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
+            ],
+        ],
+
         'Posts (blog)' => [
             [
                 'method' => 'GET', 'path' => '/posts',
@@ -55,6 +222,39 @@
                 'params' => [['slug', 'path', 'string', true, 'The post slug.']],
                 'example' => "curl -X POST {$base}/posts/my-first-post/like",
             ],
+            [
+                'method' => 'POST', 'path' => '/posts 🔒', 'auth' => true,
+                'summary' => 'Create a post. Requires an API token with the posts.manage permission. The slug is generated from the title (unique per site) and is stable — it never changes on later edits. Posts default to draft; publishing without a published_at stamps the current time.',
+                'params' => [
+                    ['title', 'body', 'string', true, 'Post title (max 255). Drives the slug.'],
+                    ['excerpt', 'body', 'string', false, 'Short teaser shown in listings (max 1000).'],
+                    ['body', 'body', 'string', false, 'Full post body HTML.'],
+                    ['cover_image', 'body', 'string', false, 'Cover image URL.'],
+                    ['status', 'body', 'string', false, 'draft | published. Default draft.'],
+                    ['published_at', 'body', 'datetime', false, 'Publish timestamp; auto-set when publishing without one.'],
+                ],
+                'example' => "curl -X POST {$base}/posts \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"title\":\"Hello World\",\"body\":\"<p>First post</p>\",\"status\":\"published\"}'",
+            ],
+            [
+                'method' => 'PATCH', 'path' => '/posts/{slug} 🔒', 'auth' => true,
+                'summary' => 'Update a post (drafts included) by slug. Send only what changes — the slug itself is immutable so links keep working.',
+                'params' => [
+                    ['slug', 'path', 'string', true, 'The post slug.'],
+                    ['title', 'body', 'string', false, 'New title (slug unchanged).'],
+                    ['excerpt', 'body', 'string', false, 'New excerpt.'],
+                    ['body', 'body', 'string', false, 'New body HTML.'],
+                    ['cover_image', 'body', 'string', false, 'New cover image URL.'],
+                    ['status', 'body', 'string', false, 'draft | published.'],
+                    ['published_at', 'body', 'datetime', false, 'Override the publish timestamp.'],
+                ],
+                'example' => "curl -X PATCH {$base}/posts/hello-world \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"status\":\"draft\"}'",
+            ],
+            [
+                'method' => 'DELETE', 'path' => '/posts/{slug} 🔒', 'auth' => true,
+                'summary' => 'Delete a post by slug (any status).',
+                'params' => [['slug', 'path', 'string', true, 'The post slug.']],
+                'example' => "curl -X DELETE {$base}/posts/hello-world \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
+            ],
         ],
 
         'Forms & leads' => [
@@ -70,10 +270,53 @@
                 'example' => "curl -X POST {$base}/contact \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Ada\",\"email\":\"ada@example.com\",\"message\":\"Hello!\"}'",
             ],
             [
+                'method' => 'GET', 'path' => '/forms',
+                'summary' => 'Directory of the site\'s ACTIVE forms — each with its field schema and ready-made submit_url. Inactive forms are hidden.',
+                'params' => [],
+                'example' => "curl {$base}/forms",
+            ],
+            [
                 'method' => 'GET', 'path' => '/form/{formName}',
                 'summary' => 'Fetch a custom form\'s field schema and validation rules — render the form from this before submitting.',
                 'params' => [['formName', 'path', 'string', true, 'The form\'s name as defined on the Forms page.']],
                 'example' => "curl {$base}/form/newsletter-signup",
+            ],
+            [
+                'method' => 'POST', 'path' => '/forms 🔒', 'auth' => true,
+                'summary' => 'Create a form. Requires an API token with the forms.manage permission. The name is slugified (unique per site) and becomes the handle for the schema + submit endpoints. Field keys are slugified too ("full name" → full_name) and drive both validation and submission body keys.',
+                'params' => [
+                    ['name', 'body', 'string', true, 'Form name (max 120) — slugified into the /form/{name} handle.'],
+                    ['title', 'body', 'string', false, 'Display title shown to visitors.'],
+                    ['description', 'body', 'string', false, 'What the form is for (max 1000).'],
+                    ['is_active', 'body', 'boolean', false, 'Whether it accepts submissions. Default true.'],
+                    ['fields', 'body', 'array', true, 'The field schema (1–60 fields).'],
+                    ['fields.*.key', 'body', 'string', true, 'Field key (max 60) — the submission body key.'],
+                    ['fields.*.label', 'body', 'string', false, 'Label; defaults to a prettified key.'],
+                    ['fields.*.type', 'body', 'string', false, 'text | email | tel | number | url | date | textarea | select | radio | checkbox. Default text.'],
+                    ['fields.*.required', 'body', 'boolean', false, 'Default false.'],
+                    ['fields.*.placeholder', 'body', 'string', false, 'Input placeholder.'],
+                    ['fields.*.options', 'body', 'string[]', false, 'Choices for select / radio — submissions must match one.'],
+                    ['fields.*.min / max', 'body', 'number', false, 'Min/max length (or value for number fields).'],
+                ],
+                'example' => "curl -X POST {$base}/forms \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Project Enquiry\",\"title\":\"Start a project\",\"fields\":[{\"key\":\"full_name\",\"type\":\"text\",\"required\":true},{\"key\":\"email\",\"type\":\"email\",\"required\":true},{\"key\":\"budget\",\"type\":\"select\",\"options\":[\"< £1k\",\"£1k–£5k\",\"£5k+\"]}]}'",
+            ],
+            [
+                'method' => 'PATCH', 'path' => '/forms/{formName} 🔒', 'auth' => true,
+                'summary' => 'Update a form. Send only what changes — a fields array REPLACES the schema wholesale (existing responses are kept). Set is_active to false to stop accepting submissions without deleting anything.',
+                'params' => [
+                    ['formName', 'path', 'string', true, 'The form\'s current slug name.'],
+                    ['name', 'body', 'string', false, 'Rename — the slug (and submit URL) changes with it.'],
+                    ['title / description', 'body', 'string', false, 'New display texts.'],
+                    ['is_active', 'body', 'boolean', false, 'Open / close the form.'],
+                    ['fields', 'body', 'array', false, 'FULL replacement field schema (same shape as POST).'],
+                ],
+                'example' => "curl -X PATCH {$base}/forms/project-enquiry \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"is_active\":false}'",
+            ],
+            [
+                'method' => 'DELETE', 'path' => '/forms/{formName} 🔒', 'auth' => true,
+                'summary' => 'Delete a form and every response submitted to it.',
+                'params' => [['formName', 'path', 'string', true, 'The form\'s slug name.']],
+                'example' => "curl -X DELETE {$base}/forms/project-enquiry \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
             ],
             [
                 'method' => 'POST', 'path' => '/form/{formName}',
@@ -228,6 +471,36 @@
                 ],
                 'example' => "curl \"{$base}/media?type=image\"",
             ],
+            [
+                'method' => 'POST', 'path' => '/media 🔒', 'auth' => true,
+                'summary' => 'Add an asset. Requires an API token with the media.manage permission. Two modes: upload a file (multipart form field `file`, max 50 MB — type and size are detected) OR register an external asset by `url`.',
+                'params' => [
+                    ['file', 'body', 'file', false, 'Multipart file upload. Required when no url is given.'],
+                    ['url', 'body', 'string', false, 'External asset URL. Required when no file is given.'],
+                    ['name', 'body', 'string', false, 'Display name. Defaults to the file/url name.'],
+                    ['type', 'body', 'string', false, 'For url assets: image | video | document | font. Default image.'],
+                    ['alt', 'body', 'string', false, 'Alt text (max 500).'],
+                ],
+                'example' => "# upload a file\ncurl -X POST {$base}/media \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -F \"file=@photo.jpg\" -F \"alt=The team\"\n\n# or register an external URL\ncurl -X POST {$base}/media \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"url\":\"https://cdn.example.com/team.jpg\",\"name\":\"Team photo\"}'",
+            ],
+            [
+                'method' => 'PATCH', 'path' => '/media/{id} 🔒', 'auth' => true,
+                'summary' => 'Edit an asset\'s name and alt text. For url-registered assets the url and type can also change; an uploaded file\'s url is immutable (delete and re-upload instead).',
+                'params' => [
+                    ['id', 'path', 'integer', true, 'The asset id from the /media listing.'],
+                    ['name', 'body', 'string', false, 'New display name.'],
+                    ['alt', 'body', 'string', false, 'New alt text (null clears it).'],
+                    ['url', 'body', 'string', false, 'New URL — external assets only.'],
+                    ['type', 'body', 'string', false, 'image | video | document | font.'],
+                ],
+                'example' => "curl -X PATCH {$base}/media/7 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\":\"Team 2026\",\"alt\":\"All of us\"}'",
+            ],
+            [
+                'method' => 'DELETE', 'path' => '/media/{id} 🔒', 'auth' => true,
+                'summary' => 'Delete an asset. Uploaded files are removed from storage too; external url assets just drop the record.',
+                'params' => [['id', 'path', 'integer', true, 'The asset id.']],
+                'example' => "curl -X DELETE {$base}/media/7 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
+            ],
         ],
     ];
 
@@ -235,6 +508,7 @@
         'GET' => 'background:#d9f068;color:#2b3110',
         'POST' => 'background:#d7c3f5;color:#33245c',
         'PATCH' => 'background:#f2c94c;color:#4a3608',
+        'DELETE' => 'background:#fecdd3;color:#8b1a2e',
     ];
 @endphp
 

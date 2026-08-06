@@ -67,6 +67,8 @@ class ComponentApiController extends Controller
             'site_id' => $site->id,
             'name' => $data['name'],
             'author' => $request->attributes->get('api_token_user')?->name ?? 'API',
+            'created_by' => $request->attributes->get('api_token_user')?->id,
+            'source' => 'api',
             'description' => $data['description'] ?? null,
             'tags' => $data['tags'] ?? null,
         ]);

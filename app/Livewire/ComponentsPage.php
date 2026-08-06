@@ -173,6 +173,8 @@ class ComponentsPage extends LivewireComponent
                 'site_id' => $this->site->id,
                 'name' => trim($this->cName),
                 'author' => Auth::user()?->name ?? 'Admin',
+                'created_by' => Auth::id(),
+                'source' => 'app',
                 'description' => trim($this->cDescription) ?: null,
                 'tags' => $this->parsedTags() ?: null,
             ]);
@@ -205,6 +207,36 @@ class ComponentsPage extends LivewireComponent
         $this->dispatch('toast', level: 'success', title: 'Component saved',
             message: $component->name.' has '.$rows->count().' '.Str::plural('node', $rows->count()).'.');
         $this->close();
+    }
+
+    /** Component being VIEWED read-only (null = closed). */
+    public ?int $viewingId = null;
+
+    public function view(int $id): void
+    {
+        $this->viewingId = $this->site->contentComponents()->findOrFail($id)->id;
+    }
+
+    public function closeView(): void
+    {
+        $this->viewingId = null;
+    }
+
+    /** Jump from the read-only view straight into the editor. */
+    public function editFromView(): void
+    {
+        $id = $this->viewingId;
+        $this->closeView();
+        if ($id) {
+            $this->open($id);
+        }
+    }
+
+    public function getViewingProperty(): ?Component
+    {
+        return $this->viewingId
+            ? $this->site->contentComponents()->with(['nodes', 'pages', 'creator'])->find($this->viewingId)
+            : null;
     }
 
     public function deleteComponent(int $id): void

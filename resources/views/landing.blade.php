@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Olux Studio — Websites, leads &amp; bookings in one platform</title>
     <meta name="description" content="Olux Studio CMS: build sites, capture leads, take bookings and payments, send invoices and go live on your own domain — with a built-in CRM and AI assistant.">
-    <link rel="icon" href="/olux.ico">
+    <link rel="icon" href="{{asset('favicon.ico')}}">
     {{-- Brand fonts — same files the main site (oluxstudio.com) serves --}}
     <style>
         @font-face { font-family: 'junegull'; src: url('/fonts/junegull.otf'); font-display: swap; }
@@ -23,23 +23,48 @@
         $tiers = collect(config('plans.tiers'))->sortBy('order');
     @endphp
     <style>
+    /* Theme pair for buttons — UNLAYERED on purpose: these names also exist in
+       app.css (unlayered), and only unlayered definitions here can win.
+       The two colors INVERT with the theme toggle. */
+    :root { --background: #120f14; --foreground: #f8f5f2; }   /* dark theme  */
+    .light { --background: #fbdeb5; --foreground: #2b1c0a; }  /* light theme */
+
+    /* Full landing palette — UNLAYERED so these names (esp. --primary) beat
+       app.css's own :root definitions. */
+    /* ── Palette: the MAIN SITE's default theme (assets/styles/main.css) ── */
+    :root {
+        --primary: #e38704;             /* rgb(227,135,4) */
+        --primary-2: #f77315;           /* secondary rgb(247,115,21) */
+        --primary-3: #5e3802;           /* tertiary rgb(94,56,2) */
+        --primary-4: #3a2301;           /* deepest shade */
+        --penta: #fbbf24;               /* rgb(251,191,36) amber */
+        --bg: #120f14;              /* back rgb(18,15,20) */
+        --on-bg: #f8f5f2;               /* fore rgb(248,245,242) */
+        --on-bg-soft: rgba(248,245,242,.87);
+        --on-bg-chip: rgba(255,255,255,.07);
+        --surface: #1b1620;             /* elevated card on dark */
+        --surface-2: #17121c;           /* alt band */
+        --line-inv: rgba(255,255,255,.12);
+        --accent-on-bg: var(--penta);
+    }
+
+    /* ── LIGHT THEME: warm apricot re-map of the same token system ── */
+    .light {
+        --bg: #fbdeb5;              /* apricot canvas */
+        --on-bg: #2b1c0a;               /* deep warm brown text */
+        --on-bg-soft: rgba(43,28,10,.87);
+        --on-bg-chip: rgba(94,56,2,.08);
+        --surface: #fff3dd;             /* cards lift LIGHTER than the canvas */
+        --surface-2: #f4cf9a;           /* alt bands sink DEEPER than the canvas */
+        --line-inv: rgba(94,56,2,.2);
+        --penta: #913f01;               /* amber deepened for contrast */
+        --accent-on-bg: #b45309;			
+			--foreground: #241a10; 
+			--background: #fbbf24;
+    }
+
+
     @layer components { /* below Tailwind's `utilities` layer → utilities override this sheet */
-        /* ── Palette: the MAIN SITE's default theme (assets/styles/main.css) ── */
-        :root {
-            --primary: #e38704;                     /* rgb(227,135,4) */
-            --primary-2: #f77315;                   /* secondary rgb(247,115,21) */
-            --primary-3: #5e3802;                   /* tertiary rgb(94,56,2) */
-            --primary-4: #3a2301;                   /* deepest shade */
-            --penta: #fbbf24;                       /* rgb(251,191,36) amber */
-            --bg: #120f14;                          /* back rgb(18,15,20) */
-            --on-bg: #f8f5f2;                       /* fore rgb(248,245,242) */
-            --on-bg-soft: rgba(248,245,242,.72);
-            --on-bg-chip: rgba(255,255,255,.07);
-            --surface: #1b1620;                     /* elevated card on dark */
-            --surface-2: #17121c;                   /* alt band */
-            --line-inv: rgba(255,255,255,.12);
-            --accent-on-bg: var(--penta);
-        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
         /* Main-site body rhythm: garet, text-lg / leading-8 */
@@ -47,7 +72,7 @@
         h1, h2, h3 { font-family: 'junegull', 'trebuchet ms', sans-serif; line-height: 1.15; font-weight: 400; }
         a { color: inherit; text-decoration: none; }
         /* Main-site container rhythm: px-4, prose capped near max-w-3xl+ */
-        .wrap { max-width: 80rem; margin: 0 auto; padding: 0 1rem; }
+        .wrap { max-width: 96rem; margin: 80px auto; padding: 0 1rem; }
         section { padding: 3.5rem 0; }               /* py-14 */
         /* .section-label from the main site: comforta, bold, uppercase, widest */
         .eyebrow { display: inline-block; font-family: 'comforta', sans-serif; font-size: .875rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--primary); margin-bottom: .75rem; }
@@ -55,34 +80,63 @@
         .h2 { font-size: clamp(30px, 4.4vw, 48px); text-transform: uppercase; margin-bottom: .75rem; color: var(--on-bg); }
         .sub { color: var(--on-bg-soft); max-width: 48rem; font-size: 1rem; line-height: 1.8; }
         /* Alt bands: slightly lifted dark, same dark theme as the main site */
-        .alt { background: var(--surface-2); border-block: 1px solid var(--line-inv); color: var(--on-bg); }
+        .alt { background: var(--surface-2); opacity: 0.95; border-block: 1px solid var(--line-inv); color: var(--on-bg); }
         .alt .eyebrow { color: var(--primary); }
         .alt .h2 { color: var(--on-bg); }
         .alt .sub { color: var(--on-bg-soft); }
-        .btn { display: inline-block; padding: 13px 26px; border-radius: 12px; font-weight: 700; font-size: 14px; transition: transform .15s, box-shadow .15s, background .15s; }
+        .btn { display: inline-block; padding: 15px 46px !important; border-radius: 12px; font-weight: 700; font-size: 19px; transition: transform .15s, box-shadow .15s, background .15s; }
         .btn { font-family: 'comforta', sans-serif; }
         .btn-primary { background: linear-gradient(120deg, var(--primary), var(--primary-2)); color: #fff; box-shadow: 0 12px 26px -12px rgba(227,135,4,.55); }
         .btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); }
         /* Inverted button: light pill on dark */
-        .btn-invert { background: var(--on-bg); color: var(--primary-3); box-shadow: 0 12px 26px -12px rgba(0,0,0,.5); }
-        .btn-invert:hover { background: #fff; transform: translateY(-2px); }
-        .btn-dark { background: var(--primary-3); color: var(--surface-2); }
-        .btn-dark:hover { background: var(--primary-4); transform: translateY(-2px); }
+        /* Inverted pill: text-color fill + canvas-color label — the pair always
+           contrasts, in BOTH themes, with no per-theme override needed. */
+        .btn-invert { background: var(--primary-2); color: var(--foreground); box-shadow: 0 12px 26px -12px rgba(0,0,0,.5); }
+        .btn-invert:hover { filter: brightness(1.12); transform: translateY(-2px); }
+        /* Contrast button: canvas-on-text inversion — flips with the theme toggle */
+        .btn-dark { background: var(--background); color: var(--foreground); border: 2px solid var(--foreground); }
+        .btn-dark:hover { background: var(--foreground); color: var(--background); transform: translateY(-2px); }
         .btn-ghost { border: 2px solid var(--line-inv); color: var(--on-bg); }
         .btn-ghost:hover { border-color: var(--primary); color: var(--penta); }
 
         /* ── Nav: sticky, logo left, links center, CTA at the end ── */
         nav { position: sticky; top: 0; z-index: 60; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-inv); color: var(--on-bg); }
-        .nav-inner { display: flex; align-items: center; gap: 26px; height: 66px; }
+        .nav-inner { display: flex; align-items: center; gap: 26px; height: 96px; }
         .logo { font-family: 'junegull', sans-serif; font-size: 21px; }
         .logo b { color: var(--accent-on-bg); }
         /* Image logo: render as pure WHITE so it reads on the orange nav */
         .logo img { filter: brightness(0) invert(1); }
-        .nav-links { display: flex; gap: 22px; font-family: 'comforta', sans-serif; font-size: 13.5px; font-weight: 700; color: var(--on-bg-soft); }
+        .nav-links { display: flex; gap: 40px; font-family: 'comforta', sans-serif; font-size: 16.5px; font-weight: 700; color: var(--on-bg-soft); }
         .nav-links a:hover { color: var(--penta); }
-        .nav-cta { display: flex; gap: 10px; margin-left: 8px; }
+        .nav-cta { display: flex; gap: 20px; margin-left: 8px; align-items: center;}
         .nav-cta .btn { padding: 9px 18px; }
-        @media (max-width: 800px) { .nav-links { display: none; } }
+        /* Hamburger — mobile only */
+        .nav-burger { display: none; width: 40px; height: 40px; border-radius: 9999px; border: 2px solid var(--line-inv); background: transparent; color: var(--on-bg); font-size: 17px; line-height: 1; cursor: pointer; transition: border-color .2s; }
+        .nav-burger:hover { border-color: var(--primary); }
+        .nav-auth-mobile { display: none; }
+
+        @media (max-width: 800px) {
+            .nav-inner { height: 68px; gap: 10px; }
+            /* Links collapse into a full-width dropdown under the bar */
+            .nav-links {
+                display: none;
+                position: absolute; top: 100%; left: 0; right: 0;
+                flex-direction: column; gap: 2px;
+                background: color-mix(in srgb, var(--bg) 97%, transparent);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--line-inv);
+                padding: 12px 16px 16px;
+            }
+            nav.nav-open .nav-links { display: flex; }
+            .nav-links a { padding: 11px 10px; border-radius: 10px; }
+            .nav-links a:hover { background: var(--on-bg-chip); }
+            /* Auth buttons move into the panel; the THEME TOGGLE stays on top */
+            .nav-cta { margin-left: auto; gap: 10px; }
+            .nav-cta > .btn { display: none; }
+            .nav-burger { display: grid; place-items: center; }
+            .nav-auth-mobile { display: flex; gap: 10px; margin-top: 12px; }
+            .nav-auth-mobile .btn { display: block; flex: 1; text-align: center; padding: 12px 10px !important; font-size: 15px; }
+        }
 
         /* ── Ambient background: FIXED layer, elements drift while the page
               scrolls over them (same idea as the app's ambient blobs) ── */
@@ -90,7 +144,7 @@
         .ambient span {
             position: absolute; display: block;
             animation: drift var(--dur, 18s) ease-in-out var(--delay, 0s) infinite;
-            opacity: .5;
+            opacity: .35;
         }
         .ambient .sq { border-radius: 22%; }
         .ambient .dot { border-radius: 9999px; }
@@ -104,16 +158,16 @@
 
         /* ── Hero: CENTERED single column ── */
         .hero { padding: 92px 0 118px; position: relative; text-align: center; } /* extra bottom room for the pinned scroll cue */
-        .hero h1 { font-size: clamp(38px, 5.6vw, 60px); text-transform: uppercase; max-width: 800px; margin: 0 auto 16px; color: var(--on-bg); }
+        .hero h1 { font-size: clamp(38px, 5.6vw, 74px); text-transform: uppercase; max-width: 900px; margin: 0 auto 16px; color: var(--on-bg); }
         .hero h1 em { font-style: normal; background: linear-gradient(92deg, var(--primary), var(--primary-2), var(--penta)); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .hero .tagline { font-family: 'comforta', sans-serif; font-weight: 700; color: var(--penta); margin-bottom: 14px; font-size: .95rem; }
         .hero p.lede { color: var(--on-bg-soft); max-width: 600px; margin: 0 auto 26px; font-size: 16px; }
         .stat-badges { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; justify-content: center; }
         .stat-badges span { background: var(--on-bg-chip); color: var(--penta); border: 1px solid var(--line-inv); font-family: 'comforta', sans-serif; font-weight: 700; font-size: 12.5px; padding: 8px 14px; border-radius: 10px; }
-        .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; justify-content: center; }
+        .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; margin-top: 30px; justify-content: center; }
         .stack { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; color: var(--on-bg-soft); font-family: 'comforta', sans-serif; font-size: 12.5px; }
         .stack-space { margin-bottom: 90px; } /* extra room for the scroll cue */
-        .stack span { border: 1px solid var(--line-inv); padding: 5px 12px; border-radius: 9999px; font-weight: 600; background: var(--surface); color: var(--on-bg); font-size: 12px; }
+        .stack span { border: 1px solid var(--line-inv); padding: 3px 30px; border-radius: 9999px; font-weight: 600; background: var(--surface); color: var(--on-bg); font-size: 14px; }
         /* Scroll cue — centered, pinned to the hero's bottom edge:
            label + "mouse" pill with a dropping amber dot */
         .scroll-cue {
@@ -156,6 +210,7 @@
         @media (max-width: 860px) { .about { grid-template-columns: 1fr; } }
         .quote-box { border-left: 4px solid var(--primary); background: var(--on-bg-chip); border-radius: 0 14px 14px 0; padding: 18px 20px; font-family: 'comforta', sans-serif; font-weight: 700; color: var(--penta); margin: 22px 0; font-size: .95rem; }
         .mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        @media (max-width: 800px) { .mini-stats { grid-template-columns: 1fr; gap: 30px; } }
         .mini-stats b { display: block; font-family: 'junegull', sans-serif; font-size: 28px; color: var(--primary); }
         .mini-stats span { font-size: 12.5px; color: var(--on-bg-soft); }
         .about-visual { background: linear-gradient(150deg, var(--primary), var(--primary-2)); border: 1px solid var(--line-inv); border-radius: 20px; padding: 26px; color: #fff; box-shadow: 0 26px 50px -26px rgba(227,135,4,.4); }
@@ -175,17 +230,17 @@
                background: color-mix(in srgb, var(--primary) 15%, transparent);
                border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent); color: var(--primary); }
         .ico svg { width: 23px; height: 23px; }
-        .card h3 { font-family: 'comforta', sans-serif; font-weight: 700; font-size: 19px; margin: 14px 0 6px; color: var(--on-bg); }
+        .card h3 { font-family: 'comforta', sans-serif; font-weight: 700; font-size: 19px; margin: 20px 0 15px; color: var(--on-bg); }
         .card p { font-size: 13px; line-height: 1.7; color: var(--on-bg-soft); margin-bottom: 12px; }
         .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-        .tags span { font-family: 'comforta', sans-serif; font-size: 11px; font-weight: 700; background: rgba(227,135,4,.15); color: var(--penta); padding: 4px 10px; border-radius: 9999px; }
+        .tags span { font-family: 'comforta', sans-serif; font-size: 11px; font-weight: 700; background: rgba(227,135,4,.15); color: var(--penta); padding: 2px 20px; border-radius: 9999px; }
 
         /* ── Specialties: 6 cards ── */
         .cards-6 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 36px; }
 
         /* ── Process: 4 numbered steps ── */
         .steps { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 42px; }
-        .step { position: relative; background: var(--surface); border: 1px solid var(--line-inv); border-radius: 16px; padding: 30px 22px 22px; }
+        .step { position: relative; background: var(--surface); border: 1px solid var(--line-inv); border-radius: 16px; padding: 50px 22px 22px; }
         .step .num { position: absolute; top: -17px; left: 20px; background: linear-gradient(120deg, var(--primary), var(--primary-2)); color: #fff; font-family: 'junegull', sans-serif; font-size: 13px; padding: 7px 13px; border-radius: 10px; }
         .step h3 { font-family: 'comforta', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--on-bg); }
         .step ul { list-style: none; }
@@ -239,8 +294,8 @@
         footer { background: var(--line-inv); border-top: 1px solid var(--line-inv); color: var(--on-bg-soft); padding: 52px 0 30px; }
         .foot-grid { display: grid; gap: 30px; grid-template-columns: 1.4fr 1fr 1fr 1fr; margin-bottom: 34px; }
         @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
-        footer h4 { font-family: 'Sora', sans-serif; color: #fff; font-size: 14px; margin-bottom: 12px; }
-        footer a { display: block; font-size: 13px; padding: 3px 0; opacity: .85; }
+        footer h4 { font-family: 'junegull', sans-serif; color: var(--on-bg); font-size: 14px; margin-bottom: 12px; }
+        footer a { display: block; font-size: 13px; padding: 3px 0; }
         footer a:hover { opacity: 1; color: #fff; }
         .foot-base { border-top: 1px solid rgba(255,255,255,.18); padding-top: 20px; font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; opacity: .85; }
 
@@ -270,18 +325,6 @@
         .light .ambient .c4 { background: rgba(180,83,9,.3); }
         .light .ambient .c5 { background: rgba(251,191,36,.45); }
 
-        /* ── LIGHT THEME: warm apricot re-map of the same token system ── */
-        .light {
-            --bg: #fbdeb5;                          /* apricot canvas */
-            --on-bg: #2b1c0a;                       /* deep warm brown text */
-            --on-bg-soft: rgba(43,28,10,.74);
-            --on-bg-chip: rgba(94,56,2,.08);
-            --surface: #fff3dd;                     /* cards lift LIGHTER than the canvas */
-            --surface-2: #f4cf9a;                   /* alt bands sink DEEPER than the canvas */
-            --line-inv: rgba(94,56,2,.2);
-            --penta: #b45309;                       /* amber deepened for contrast */
-            --accent-on-bg: #b45309;
-        }
         body, nav, .slide, details, .alt, .marquee { transition: background-color .3s, color .3s, border-color .3s; }
         /* Tiles: ONE combined transition — smooth hover lift + glow AND theme
            cross-fade (a later transition rule would otherwise wipe the earlier one) */
@@ -294,7 +337,8 @@
             will-change: transform;
         }
         .light .logo img { filter: brightness(0); } /* black logo on light nav */
-        .light .btn-invert { background: #241a10; color: #fbbf24; }
+        .light .eyebrow { color: var(--penta); }             /* deep amber on apricot */
+        .light .marquee-track span b { color: var(--penta); }
         .light .hero h1 em { background: linear-gradient(92deg, var(--primary-2), #b45309); -webkit-background-clip: text; background-clip: text; }
     } /* /@layer components */
     </style>
@@ -309,12 +353,27 @@
             var light = document.documentElement.classList.toggle('light');
             localStorage.setItem('olux_landing_theme', light ? 'light' : 'dark');
         }
+        function toggleNav(btn) {
+            var open = document.querySelector('nav').classList.toggle('nav-open');
+            btn.textContent = open ? '✕' : '☰';
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        }
+        // Tapping a menu link closes the panel again.
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.nav-links a')) {
+                var nav = document.querySelector('nav');
+                nav.classList.remove('nav-open');
+                var b = nav.querySelector('.nav-burger');
+                if (b) { b.textContent = '☰'; b.setAttribute('aria-expanded', 'false'); }
+            }
+        });
     </script>
 
     {{-- ── Ambient drifting shapes: fixed behind everything, page scrolls
          over them while they float (mirrors the app's ambient background) ── --}}
     <div class="ambient" aria-hidden="true">
-        @foreach (range(1, 9) as $i)
+        @foreach (range(1, 39) as $i)
             @php $size = rand(10, 46); @endphp
             <span class="{{ $i % 3 === 0 ? 'dot' : 'sq' }} c{{ $i % 6 }}"
                   style="top:{{ rand(3, 95) }}%;left:{{ rand(2, 96) }}%;width:{{ $size }}px;height:{{ $size }}px;--dur:{{ rand(14, 30) }}s;--delay:-{{ rand(0, 12) }}s"></span>
@@ -323,8 +382,8 @@
 
     {{-- ── Nav ── --}}
     <nav>
-        <div class="wrap nav-inner justify-between">
-            <a class="logo flex max-w-30" href="/">
+        <div class="my-2 wrap nav-inner justify-between">
+            <a class="logo flex max-w-26 lg:max-w-36" href="/">
 				<img class="w-full" src="{{Vite::asset('resources/images/logo.webp')}}" alt="Olux Studio" />
 				<b>.</b>
 			</a>
@@ -334,6 +393,15 @@
                 <a href="#process">How it works</a>
                 <a href="#pricing">Pricing</a>
                 <a href="#faq">FAQ</a>
+                {{-- Mobile-only: auth actions live inside the menu panel --}}
+                <div class="nav-auth-mobile">
+                    @auth
+                        <a class="btn btn-invert" href="{{ route('home') }}">Open app →</a>
+                    @else
+                        <a class="btn btn-ghost" href="{{ route('login') }}">Sign in</a>
+                        <a class="btn btn-primary" href="{{ route('register') }}">Get started</a>
+                    @endauth
+                </div>
             </div>
             <div class="nav-cta">
                 <button type="button" class="theme-toggle" onclick="toggleTheme()" aria-label="Switch between dark and light theme" title="Toggle theme">
@@ -345,6 +413,7 @@
                     <a class="btn btn-ghost" href="{{ route('login') }}">Sign in</a>
                     <a class="btn btn-invert" href="{{ route('register') }}">Get started</a>
                 @endauth
+                <button type="button" class="nav-burger" onclick="toggleNav(this)" aria-label="Open menu" aria-expanded="false">☰</button>
             </div>
         </div>
     </nav>
@@ -363,7 +432,7 @@
             </div>
             <div class="hero-ctas">
                 <a class="btn btn-invert" href="{{ route('register') }}">Start your free trial</a>
-                <a class="btn btn-dark" href="#pricing">See pricing</a>
+                <a class="btn bg-[var(--penta)] light:bg-[var(--primary-3)] text-black light:text-white " href="#pricing">See pricing</a>
             </div>
             <div class="stack stack-space ">
                 Built in: <span>Pages</span><span>Posts</span><span>Forms</span><span>Contacts</span><span>Bookings</span><span>Invoices</span><span>Estimators</span><span>AI assistant</span>

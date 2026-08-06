@@ -10,11 +10,11 @@
             <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Posts</h1>
             <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Write, publish and see which posts your visitors love.</p>
         </div>
-        <div class="flex items-center gap-3">
-            <div class="relative">
+        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div class="relative w-full sm:w-auto">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search posts…"
-                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-56">
+                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-56">
             </div>
             @if($canManage)
             <button wire:click="createPost"
@@ -64,7 +64,7 @@
                     {{ $post->isPublished() ? 'Published' : 'Draft' }}
                 </button>
                 @if($canManage)
-                <button type="button" @click.stop="if (confirm('Delete this post?')) $wire.deletePost({{ $post->id }})"
+                <button type="button" @click.stop wire:click="deletePost({{ $post->id }})" data-confirm="Delete this post?"
                         class="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>

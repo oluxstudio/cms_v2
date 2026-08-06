@@ -6,7 +6,7 @@
 --}}
 @php
     $palette = ['#dd6119', '#b79df0', '#f291bb', '#1164a8', '#160b3d', '#416d08', '#803249', '#f7bb09', '#8f78f8', '#f2f2f2', '#9e0c0c', '#2a6464', '#93949e', '#211d15'];
-    $sizes = [3, 10, 19, 26, 38, 52]; // rem — all distinct
+    $sizes = [3, 10, 5, 14, 23, 19, 26, 38]; // rem — all distinct
 
     // Initial deal: shuffle both decks so no two elements share a color or size.
     $colors = $palette;
@@ -71,6 +71,6 @@
             moving = ! moving;
         };
 
-        window.__oluxAmbientRoam = setInterval(tick, 9000); // each 8s CSS ease finishes before the next phase
+        window.__oluxAmbientRoam = setInterval(tick, 3000); // each 8s CSS ease finishes before the next phase
     })();
 </script>

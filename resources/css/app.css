@@ -13,6 +13,8 @@
 @source '../../vendor/livewire/flux/stubs/**/*.blade.php';
 
 @custom-variant dark (&:where(.dark, .dark *));
+/* Landing-page light theme (html.light toggled by its theme button) */
+@custom-variant light (&:where(.light, .light *));
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
@@ -120,6 +122,16 @@ select:focus[data-flux-control] {
             color-mix(in srgb, var(--tertiary) 10%, var(--background)) 100%);
 }
 
+/* ── Reusable lightbox (components/lightbox.blade.php) ────────────────────
+   Soft entrance: backdrop fades, panel pops up with a slight overshoot. */
+.lightbox-backdrop { animation: lb-fade .18s ease-out both; }
+.lightbox-panel { animation: lb-pop .24s cubic-bezier(.2, .9, .3, 1.15) both; }
+@keyframes lb-fade { from { opacity: 0; } }
+@keyframes lb-pop { from { opacity: 0; transform: translateY(14px) scale(.965); } }
+@media (prefers-reduced-motion: reduce) {
+    .lightbox-backdrop, .lightbox-panel { animation: none; }
+}
+
 /* ── Dashboard group tiles: vertical timeline rail ────────────────────────
    New statuses always enter at the TOP; when a tile is expanded the icon
    bubbles become nodes on this connecting line. */
@@ -148,8 +160,8 @@ select:focus[data-flux-control] {
     position: absolute;
     transform: translate(-50%, -50%); /* top/left address the element's CENTER */
     border-radius: 90%;               /* soft-cornered square */
-    opacity: .21;
-    filter: blur(78px);
+    opacity: .11;
+    filter: blur(3px);
     transition:
         top 8s cubic-bezier(.45, .05, .35, 1),
         left 8s cubic-bezier(.45, .05, .35, 1),

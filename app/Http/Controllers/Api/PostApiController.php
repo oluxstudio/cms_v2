@@ -87,4 +87,81 @@ class PostApiController extends Controller
             'comments' => (int) $p->comments,
         ];
     }
+
+    /* ── CRUD (Bearer token · posts.manage) ─────────────────────────────── */
+
+    private function manageableSite(Request $request, string $siteName): Site
+    {
+        $site = $this->site($siteName);
+        $user = $request->attributes->get('api_token_user');
+        abort_unless($user && $site->allows($user, 'posts.manage'), 403, 'This token cannot manage posts on this site.');
+
+        return $site;
+    }
+
+    /** Full record for CRUD responses — includes drafts, id, status and body. */
+    private function record(Post $p): array
+    {
+        return ['id' => $p->id, 'status' => $p->status] + $this->summary($p) + [
+            'body' => (string) $p->body,
+            'created_at' => $p->created_at?->toIso8601String(),
+            'updated_at' => $p->updated_at?->toIso8601String(),
+        ];
+    }
+
+    private function validated(Request $request, bool $creating): array
+    {
+        return $request->validate([
+            'title' => [$creating ? 'required' : 'sometimes', 'string', 'max:255'],
+            'excerpt' => ['nullable', 'string', 'max:1000'],
+            'body' => ['nullable', 'string'],
+            'cover_image' => ['nullable', 'string', 'max:2048'],
+            'status' => ['sometimes', 'in:draft,published'],
+            'published_at' => ['nullable', 'date'],
+        ]);
+    }
+
+    public function store(Request $request, string $siteName): JsonResponse
+    {
+        $site = $this->manageableSite($request, $siteName);
+        $data = $this->validated($request, creating: true);
+        $status = $data['status'] ?? 'draft';
+
+        $post = Post::create([
+            'site_id' => $site->id,
+            'user_id' => $request->attributes->get('api_token_user')?->id,
+            'title' => $data['title'],
+            'slug' => Post::uniqueSlug($site->id, $data['title']),
+            'excerpt' => $data['excerpt'] ?? null,
+            'body' => $data['body'] ?? '',
+            'cover_image' => $data['cover_image'] ?? null,
+            'status' => $status,
+            'published_at' => $data['published_at'] ?? ($status === 'published' ? now() : null),
+        ]);
+
+        return response()->json(['ok' => true, 'post' => $this->record($post->load('author:id,name'))], 201);
+    }
+
+    public function update(Request $request, string $siteName, string $slug): JsonResponse
+    {
+        $site = $this->manageableSite($request, $siteName);
+        $post = Post::where('site_id', $site->id)->where('slug', $slug)->firstOrFail();
+        $data = $this->validated($request, creating: false);
+
+        $post->fill($data);
+        if ($post->status === 'published' && ! $post->published_at) {
+            $post->published_at = now();
+        }
+        $post->save();
+
+        return response()->json(['ok' => true, 'post' => $this->record($post->load('author:id,name'))]);
+    }
+
+    public function destroy(Request $request, string $siteName, string $slug): JsonResponse
+    {
+        $site = $this->manageableSite($request, $siteName);
+        Post::where('site_id', $site->id)->where('slug', $slug)->firstOrFail()->delete();
+
+        return response()->json(['ok' => true]);
+    }
 }

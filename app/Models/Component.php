@@ -14,9 +14,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Component extends Model
 {
-    protected $fillable = ['site_id', 'site_template_id', 'name', 'author', 'description', 'tags'];
+    protected $fillable = ['site_id', 'site_template_id', 'name', 'author', 'created_by', 'source', 'description', 'tags'];
 
     protected $casts = ['tags' => 'array'];
+
+    /** The user who created this component (null for legacy/system rows). */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     public function site(): BelongsTo
     {
@@ -58,6 +64,10 @@ class Component extends Model
             'name' => $this->name,
             'description' => $this->description,
             'tags' => array_values($this->tags ?? []),
+            'source' => $this->source ?? 'app',
+            'created_by' => $this->creator?->name ?? $this->author,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
             'nodes' => $this->nodes->map(fn ($n) => [
                 'id' => $n->id,
                 'label' => $n->label,

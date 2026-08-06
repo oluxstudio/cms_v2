@@ -56,7 +56,7 @@
                 @endforeach
             </select>
             <button wire:click="removeMember({{ $member->id }})"
-                    wire:confirm="Remove {{ $member->user->name ?? 'this member' }} from the account?"
+                    data-confirm="Remove {{ $member->user->name ?? 'this member' }} from the account?"
                     class="w-8 h-8 flex items-center justify-center rounded-full text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors" title="Remove">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -110,7 +110,7 @@
                     </p>
                 </div>
                 <button wire:click="resendInvite({{ $invite->id }})" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600">Resend</button>
-                <button wire:click="revokeInvite({{ $invite->id }})" wire:confirm="Revoke this invitation?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">Revoke</button>
+                <button wire:click="revokeInvite({{ $invite->id }})" data-confirm="Revoke this invitation?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">Revoke</button>
             </div>
             @endforeach
         </div>
@@ -137,7 +137,7 @@
                 <button wire:click="openRoleEditor({{ $role->id }})"
                         class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">Edit permissions</button>
                 @unless ($role->is_system)
-                    <button wire:click="deleteRole({{ $role->id }})" wire:confirm="Delete the {{ $role->name }} role?"
+                    <button wire:click="deleteRole({{ $role->id }})" data-confirm="Delete the {{ $role->name }} role?"
                             class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
                 @endunless
             </div>
