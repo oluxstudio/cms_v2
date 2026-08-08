@@ -76,14 +76,8 @@ jobs:
           script: |
             set -e
             cd /var/www/cms
-            git pull --ff-only origin main
+            git fetch origin main
+            git checkout origin/main -- deploy.sh
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            export IMAGE_TAG=sha-${{ github.sha }}
-            docker compose -f docker-compose.prod.yml pull app
-            docker compose -f docker-compose.prod.yml up -d
-            docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
-            docker compose -f docker-compose.prod.yml exec -T app php artisan optimize:clear
-            docker compose -f docker-compose.prod.yml exec -T app php artisan optimize
-            docker compose -f docker-compose.prod.yml exec -T app php artisan queue:restart
+            ./deploy.sh sha-${{ github.sha }}
             docker logout ghcr.io
-            docker image prune -f
