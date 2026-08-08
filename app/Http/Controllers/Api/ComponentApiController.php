@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Component;
 use App\Models\Node;
@@ -25,7 +26,7 @@ use Illuminate\Http\Request;
  */
 class ComponentApiController extends Controller
 {
-    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+    use ResolvesApiSite;
 
     public function index(string $siteName): JsonResponse
     {
@@ -37,7 +38,7 @@ class ComponentApiController extends Controller
         ]);
     }
 
-    public function show(string $siteName, int $id): JsonResponse
+    public function show(string $siteName, string $id): JsonResponse
     {
         $component = $this->publicSite($siteName)
             ->contentComponents()->with(['nodes', 'pages'])->findOrFail($id);
@@ -65,7 +66,7 @@ class ComponentApiController extends Controller
         return response()->json(['ok' => true, 'component' => $component->fresh(['nodes', 'pages'])->payload(withPages: true)], 201);
     }
 
-    public function update(Request $request, string $siteName, int $id): JsonResponse
+    public function update(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'components.manage');
         $component = Component::where('site_id', $site->id)->findOrFail($id);
@@ -93,7 +94,7 @@ class ComponentApiController extends Controller
         return response()->json(['ok' => true, 'component' => $component->fresh(['nodes', 'pages'])->payload(withPages: true)]);
     }
 
-    public function destroy(Request $request, string $siteName, int $id): JsonResponse
+    public function destroy(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'components.manage');
         Component::where('site_id', $site->id)->findOrFail($id)->delete(); // nodes + pivots cascade
@@ -118,7 +119,7 @@ class ComponentApiController extends Controller
             'nodes.*.order' => ['nullable', 'integer', 'min:0'],
             'nodes.*.description' => ['nullable', 'string', 'max:255'],
             'page_ids' => ['sometimes', 'nullable', 'array'],
-            'page_ids.*' => ['integer'],
+            'page_ids.*' => ['string'],
         ]);
     }
 

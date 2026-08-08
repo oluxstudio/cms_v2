@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\Money;
 use App\Templates\TemplateContract;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Template extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'uuid', 'user_id', 'name', 'slug', 'description', 'category', 'tags',
         'status', 'price_cents', 'currency', 'source', 'builtin_key',
@@ -23,10 +27,10 @@ class Template extends Model
     ];
 
     protected $casts = [
-        'tags'         => 'array',
+        'tags' => 'array',
         'published_at' => 'datetime',
         'submitted_at' => 'datetime',
-        'rating_avg'   => 'float',
+        'rating_avg' => 'float',
     ];
 
     public function ratings(): HasMany
@@ -56,7 +60,7 @@ class Template extends Model
 
     public function priceLabel(): string
     {
-        return \App\Support\Money::format((int) $this->price_cents, $this->currency ?? 'gbp', free: true);
+        return Money::format((int) $this->price_cents, $this->currency ?? 'gbp', free: true);
     }
 
     /** Live preview URL if a static demo exists for this template, else null. */

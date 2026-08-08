@@ -3,44 +3,56 @@
 namespace App\Livewire;
 
 use App\Livewire\Concerns\WithLayoutMode;
-use Livewire\Component;
-use Livewire\WithFileUploads;
-use Livewire\WithPagination;
-use App\Models\Site;
 use App\Models\Media as MediaModel;
+use App\Models\Site;
+use App\Services\MediaStore;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 
 class MediaPage extends Component
 {
-    use WithFileUploads, WithPagination, WithLayoutMode;
+    use WithFileUploads, WithLayoutMode, WithPagination;
 
     public const PER_PAGE = 12;
 
     public Site $site;
+
     public string $search = '';
+
     public string $activeTab = 'all';   // all | image | video | document
 
     /** Preview lightbox. */
-    public ?int $previewId = null;
+    public ?string $previewId = null;
 
     /** Drag-and-drop queue (multiple files). */
     public array $uploads = [];
 
     // Manual "add by URL" / edit form
     public bool $showModal = false;
+
     public bool $showDeleteModal = false;
-    public int $editingId = 0;
-    public int $deletingId = 0;
+
+    public ?string $editingId = null;
+
+    public ?string $deletingId = null;
+
     public string $name = '';
+
     public string $file_type = 'image';
+
     public string $url = '';
+
     public string $size = '';
+
     public string $alt_text = '';
 
     public string $successMessage = '';
-    public string $errorMessage   = '';
+
+    public string $errorMessage = '';
 
     public function mount(Site $site): void
     {
@@ -59,7 +71,7 @@ class MediaPage extends Component
         $this->resetPage();
     }
 
-    public function preview(int $id): void
+    public function preview(string $id): void
     {
         $this->previewId = $id;
     }
@@ -80,13 +92,13 @@ class MediaPage extends Component
     public function updatedUploads(): void
     {
         $this->validate([
-            'uploads'   => ['array'],
+            'uploads' => ['array'],
             'uploads.*' => ['file', 'max:51200'], // 50 MB each
         ], [
             'uploads.*.max' => 'Each file must be 50 MB or smaller.',
         ]);
 
-        $store = app(\App\Services\MediaStore::class);
+        $store = app(MediaStore::class);
         $count = 0;
         foreach ($this->uploads as $file) {
             $store->store($this->site, $file);
@@ -95,7 +107,7 @@ class MediaPage extends Component
 
         $this->uploads = [];
         if ($count > 0) {
-            $this->successMessage = $count . ' ' . str('file')->plural($count) . ' uploaded.';
+            $this->successMessage = $count.' '.str('file')->plural($count).' uploaded.';
         }
     }
 
@@ -107,15 +119,15 @@ class MediaPage extends Component
             ->when($this->activeTab !== 'all', fn ($q) => $q->where('file_type', $this->activeTab))
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->where('name', 'like', '%'.$this->search.'%')
-                  ->orWhere('alt_text', 'like', '%'.$this->search.'%');
+                    ->orWhere('alt_text', 'like', '%'.$this->search.'%');
             }))
             ->latest()
             ->paginate(self::PER_PAGE);
 
         $counts = [
-            'all'      => (clone $base)->count(),
-            'image'    => (clone $base)->where('file_type', 'image')->count(),
-            'video'    => (clone $base)->where('file_type', 'video')->count(),
+            'all' => (clone $base)->count(),
+            'image' => (clone $base)->where('file_type', 'image')->count(),
+            'video' => (clone $base)->where('file_type', 'video')->count(),
             'document' => (clone $base)->where('file_type', 'document')->count(),
         ];
 
@@ -123,8 +135,8 @@ class MediaPage extends Component
 
         return view('livewire.media-page', [
             'mediaItems' => $mediaItems,
-            'counts'     => $counts,
-            'recent'     => $recent,
+            'counts' => $counts,
+            'recent' => $recent,
         ]);
     }
 
@@ -137,30 +149,30 @@ class MediaPage extends Component
         $this->showModal = true;
     }
 
-    public function openEdit(int $id): void
+    public function openEdit(string $id): void
     {
-        $media            = MediaModel::where('site_id', $this->site->id)->findOrFail($id);
-        $this->editingId  = $id;
-        $this->name       = $media->name;
-        $this->file_type  = $media->file_type;
-        $this->url        = $media->url;
-        $this->size       = $media->size ?? '';
-        $this->alt_text   = $media->alt_text ?? '';
-        $this->showModal  = true;
+        $media = MediaModel::where('site_id', $this->site->id)->findOrFail($id);
+        $this->editingId = $id;
+        $this->name = $media->name;
+        $this->file_type = $media->file_type;
+        $this->url = $media->url;
+        $this->size = $media->size ?? '';
+        $this->alt_text = $media->alt_text ?? '';
+        $this->showModal = true;
     }
 
     public function save(): void
     {
         $this->validate([
-            'name'      => 'required|min:2',
+            'name' => 'required|min:2',
             'file_type' => 'required|in:image,video,document',
-            'url'       => 'required',
-            'size'      => 'nullable|max:20',
-            'alt_text'  => 'nullable|max:255',
+            'url' => 'required',
+            'size' => 'nullable|max:20',
+            'alt_text' => 'nullable|max:255',
         ]);
 
-        $url      = $this->url;
-        $size     = $this->size;
+        $url = $this->url;
+        $size = $this->size;
         $fileType = $this->file_type;
 
         // If an external URL was given, pull the file into THIS site's folder
@@ -169,18 +181,18 @@ class MediaPage extends Component
         if (Str::startsWith($url, ['http://', 'https://'])) {
             $fetched = $this->fetchIntoSiteFolder($url);
             if ($fetched) {
-                $url      = $fetched['url'];
-                $size     = $size ?: $fetched['size'];
+                $url = $fetched['url'];
+                $size = $size ?: $fetched['size'];
                 $fileType = $fetched['type'] ?? $fileType;
             }
         }
 
         $payload = [
-            'name'      => $this->name,
+            'name' => $this->name,
             'file_type' => $fileType,
-            'url'       => $url,
-            'size'      => $size,
-            'alt_text'  => $this->alt_text,
+            'url' => $url,
+            'size' => $size,
+            'alt_text' => $this->alt_text,
         ];
 
         if ($this->editingId) {
@@ -229,11 +241,11 @@ class MediaPage extends Component
         $ext = pathinfo((string) parse_url($remoteUrl, PHP_URL_PATH), PATHINFO_EXTENSION)
             ?: $this->extFromMime($mime);
 
-        $path = 'media/' . $this->site->name . '/' . Str::random(40) . ($ext ? '.' . $ext : '');
+        $path = 'media/'.$this->site->name.'/'.Str::random(40).($ext ? '.'.$ext : '');
         Storage::disk('public')->put($path, $body);
 
         return [
-            'url'  => Storage::url($path),
+            'url' => Storage::url($path),
             'size' => MediaModel::humanSize($bytes),
             'type' => $type,
         ];
@@ -243,11 +255,11 @@ class MediaPage extends Component
     {
         return match ($mime) {
             'image/jpeg' => 'jpg',
-            'image/png'  => 'png',
-            'image/gif'  => 'gif',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
             'image/webp' => 'webp',
             'image/svg+xml' => 'svg',
-            'video/mp4'  => 'mp4',
+            'video/mp4' => 'mp4',
             'video/webm' => 'webm',
             'application/pdf' => 'pdf',
             default => null,
@@ -255,7 +267,7 @@ class MediaPage extends Component
     }
 
     /** Delete one media item — confirmation happens in the shared modal (data-confirm). */
-    public function deleteMedia(int $id): void
+    public function deleteMedia(string $id): void
     {
         $this->deletingId = $id;
         $this->delete();
@@ -272,7 +284,7 @@ class MediaPage extends Component
 
         $media->delete();
         $this->showDeleteModal = false;
-        $this->deletingId      = 0;
-        $this->successMessage  = 'Media deleted.';
+        $this->deletingId = 0;
+        $this->successMessage = 'Media deleted.';
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Node extends Model
 {
+    use HasUlids;
+
     public const TYPES = ['text', 'url', 'image', 'number', 'boolean', 'color', 'collection'];
 
     protected $fillable = ['component_id', 'parent', 'label', 'value', 'type', 'order', 'description'];
@@ -24,8 +27,8 @@ class Node extends Model
     /** The linked Collection when this is a collection-typed node. */
     public function linkedCollection(): ?Collection
     {
-        return $this->type === 'collection' && is_numeric($this->value)
-            ? Collection::find((int) $this->value)
+        return $this->type === 'collection' && filled($this->value)
+            ? Collection::find($this->value)
             : null;
     }
 }

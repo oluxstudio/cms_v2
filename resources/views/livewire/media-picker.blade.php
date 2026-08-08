@@ -55,7 +55,7 @@
                 @else
                     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                         @foreach($items as $m)
-                            <button wire:key="pick-{{ $m->id }}" wire:click="pick({{ $m->id }})" type="button"
+                            <button wire:key="pick-{{ $m->id }}" wire:click="pick('{{ $m->id }}')" type="button"
                                     class="group relative aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] hover:ring-2 hover:ring-indigo-500 transition-shadow text-left"
                                     title="{{ $m->name }} ({{ $m->size }})">
                                 @if($m->file_type === 'image')

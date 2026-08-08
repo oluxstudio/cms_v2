@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskLog extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'user_id', 'level', 'type', 'title', 'message', 'meta'];
 
     protected $casts = ['meta' => 'array'];

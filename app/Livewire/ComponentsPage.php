@@ -21,7 +21,7 @@ class ComponentsPage extends LivewireComponent
     public string $search = '';
 
     // Editor state (null = closed, 0 = new)
-    public ?int $editingId = null;
+    public ?string $editingId = null;
 
     public string $cName = '';
 
@@ -78,7 +78,7 @@ class ComponentsPage extends LivewireComponent
 
     // ── Editor ───────────────────────────────────────────────────
 
-    public function open(int $id = 0): void
+    public function open(string $id = ''): void
     {
         $this->guard();
         $this->errorMessage = '';
@@ -210,9 +210,9 @@ class ComponentsPage extends LivewireComponent
     }
 
     /** Component being VIEWED read-only (null = closed). */
-    public ?int $viewingId = null;
+    public ?string $viewingId = null;
 
-    public function view(int $id): void
+    public function view(string $id): void
     {
         $this->viewingId = $this->site->contentComponents()->findOrFail($id)->id;
     }
@@ -239,7 +239,7 @@ class ComponentsPage extends LivewireComponent
             : null;
     }
 
-    public function deleteComponent(int $id): void
+    public function deleteComponent(string $id): void
     {
         $this->guard();
         $component = $this->site->contentComponents()->findOrFail($id);

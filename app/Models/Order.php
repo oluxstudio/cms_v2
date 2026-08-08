@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Support\Money;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
+    use HasUlids;
+
     public const STATUSES = ['pending', 'paid', 'fulfilled', 'cancelled'];
 
     protected $fillable = [
@@ -17,7 +21,7 @@ class Order extends Model
 
     protected $casts = [
         'total_cents' => 'integer',
-        'paid_at'     => 'datetime',
+        'paid_at' => 'datetime',
     ];
 
     public function site(): BelongsTo
@@ -32,7 +36,7 @@ class Order extends Model
 
     public function formattedTotal(): string
     {
-        return \App\Support\Money::format((int) $this->total_cents, $this->currency);
+        return Money::format((int) $this->total_cents, $this->currency);
     }
 
     public function isPaid(): bool
@@ -48,9 +52,9 @@ class Order extends Model
         }
 
         $this->update([
-            'status'                => 'paid',
+            'status' => 'paid',
             'stripe_payment_intent' => $paymentIntent,
-            'paid_at'               => now(),
+            'paid_at' => now(),
         ]);
 
         $this->syncContact();
@@ -76,7 +80,7 @@ class Order extends Model
 
         $contact->logActivity('order_paid', null, [
             'order_id' => $this->id,
-            'total'    => $this->formattedTotal(),
+            'total' => $this->formattedTotal(),
         ], null);
     }
 }

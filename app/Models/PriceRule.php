@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PriceRule extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'service_id', 'resource_id', 'starts_on', 'ends_on', 'price_cents', 'label'];
 
     protected $casts = ['starts_on' => 'date', 'ends_on' => 'date', 'price_cents' => 'integer'];

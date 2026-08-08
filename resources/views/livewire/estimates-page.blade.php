@@ -59,11 +59,11 @@
                 </div>
             </div>
             <div class="flex gap-2 mt-3">
-                <button wire:click="select({{ $est->id }})"
+                <button wire:click="select('{{ $est->id }}')"
                         class="px-3.5 py-1.5 rounded-xl text-xs font-semibold {{ $selectedId === $est->id ? 'bg-indigo-600 text-white' : 'border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600' }} transition-colors">
                     {{ $selectedId === $est->id ? 'Editing…' : 'Edit' }}
                 </button>
-                <button wire:click="deleteEstimator({{ $est->id }})" data-confirm="Delete the {{ $est->name }} estimator? Its fields and calculations go with it (captured leads stay)."
+                <button wire:click="deleteEstimator('{{ $est->id }}')" data-confirm="Delete the {{ $est->name }} estimator? Its fields and calculations go with it (captured leads stay)."
                         class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
             </div>
         </div>
@@ -114,8 +114,8 @@
                                 @else · visitor {{ $f->type }} @endif
                             </p>
                         </div>
-                        <button wire:click="openField({{ $f->id }})" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600">Edit</button>
-                        <button wire:click="deleteField({{ $f->id }})" data-confirm="Delete this field?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">✕</button>
+                        <button wire:click="openField('{{ $f->id }}')" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600">Edit</button>
+                        <button wire:click="deleteField('{{ $f->id }}')" data-confirm="Delete this field?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">✕</button>
                     </div>
                     @empty
                     <p class="text-xs text-gray-400 py-2">No fields yet — add visitor inputs (number, choice, yes/no) or fixed set data like your hourly rate.</p>
@@ -190,8 +190,8 @@
                             <p class="text-[11px] text-gray-400 font-mono truncate">{{ $c->formula }}</p>
                         </div>
                         <span class="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:#d9f068;color:#2b3110" title="Preview with example values">{{ $preview[$i]['formatted'] ?? '' }}</span>
-                        <button wire:click="openCalc({{ $c->id }})" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600">Edit</button>
-                        <button wire:click="deleteCalc({{ $c->id }})" data-confirm="Delete this calculation?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">✕</button>
+                        <button wire:click="openCalc('{{ $c->id }}')" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600">Edit</button>
+                        <button wire:click="deleteCalc('{{ $c->id }}')" data-confirm="Delete this calculation?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">✕</button>
                     </div>
                     @empty
                     <p class="text-xs text-gray-400 py-2">No calculations yet — the first <span class="font-semibold">money</span> one becomes the headline price.</p>
@@ -351,7 +351,7 @@
                 {{ $e->created_at->format('M j, g:i A') }}
             </div>
 
-            <select @change.stop="$wire.updateStatus({{ $e->id }}, $event.target.value)"
+            <select @change.stop="$wire.updateStatus('{{ $e->id }}', $event.target.value)"
                     class="text-xs font-semibold capitalize pr-7 pl-3 py-1.5 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-indigo-500 outline-none {{ $statusStyles[$e->status] ?? '' }}">
                 @foreach(\App\Livewire\EstimatesPage::STATUSES as $st)
                     <option value="{{ $st }}" @selected($e->status === $st)>{{ ucfirst($st) }}</option>
@@ -359,7 +359,7 @@
             </select>
 
             @if ($canManage)
-            <button type="button" @click.stop wire:click="deleteEstimate({{ $e->id }})" data-confirm="Delete this estimate?"
+            <button type="button" @click.stop wire:click="deleteEstimate('{{ $e->id }}')" data-confirm="Delete this estimate?"
                     class="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>

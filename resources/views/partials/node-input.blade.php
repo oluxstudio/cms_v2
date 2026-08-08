@@ -41,7 +41,7 @@
             @php
                 $rawImg = (string) ($nodeForm[$node->id]['value'] ?? $node->value);
                 $imgSiteId = $siteId ?? ($node->component->site_id ?? 0);
-                $resolvedImg = $rawImg !== '' ? \App\Models\Media::resolveRef((int) $imgSiteId, $rawImg) : '';
+                $resolvedImg = $rawImg !== '' ? \App\Models\Media::resolveRef($imgSiteId, $rawImg) : '';
                 // Template /assets/… files aren't served by the CMS — placeholder.
                 if (str_starts_with($resolvedImg, '/assets/')) { $resolvedImg = ''; }
             @endphp

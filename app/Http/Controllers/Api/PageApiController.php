@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Page;
 use App\Models\Site;
@@ -23,7 +24,7 @@ use Illuminate\Http\Request;
  */
 class PageApiController extends Controller
 {
-    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+    use ResolvesApiSite;
 
     private function record(Page $page): array
     {
@@ -49,7 +50,7 @@ class PageApiController extends Controller
         ]);
     }
 
-    public function show(string $siteName, int $id): JsonResponse
+    public function show(string $siteName, string $id): JsonResponse
     {
         return response()->json(['page' => $this->record($this->publicSite($siteName)->pages()->findOrFail($id))]);
     }
@@ -91,7 +92,7 @@ class PageApiController extends Controller
         return response()->json(['ok' => true, 'page' => $this->record($page)], 201);
     }
 
-    public function update(Request $request, string $siteName, int $id): JsonResponse
+    public function update(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'pages.manage');
         $page = $site->pages()->findOrFail($id);
@@ -107,7 +108,7 @@ class PageApiController extends Controller
         return response()->json(['ok' => true, 'page' => $this->record($page)]);
     }
 
-    public function destroy(Request $request, string $siteName, int $id): JsonResponse
+    public function destroy(Request $request, string $siteName, string $id): JsonResponse
     {
         $this->manageableSite($request, $siteName, 'pages.manage')->pages()->findOrFail($id)->delete();
 

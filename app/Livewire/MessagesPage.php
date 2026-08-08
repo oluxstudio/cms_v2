@@ -10,10 +10,12 @@ use Livewire\Component;
 
 class MessagesPage extends Component
 {
-    public int $siteId;
+    public string $siteId;
 
     public bool $composing = false;
+
     public string $recipient = 'team';   // 'team' or a user id
+
     public string $body = '';
 
     #[Computed]
@@ -38,15 +40,15 @@ class MessagesPage extends Component
     #[Computed]
     public function stats(): array
     {
-        $me  = Auth::id();
+        $me = Auth::id();
         $all = Message::visibleTo($this->site, Auth::user())->get(['sender_id', 'recipient_id', 'read_at']);
 
         return [
-            'total'      => $all->count(),
-            'unread'     => $all->whereNull('read_at')->where('sender_id', '!=', $me)->count(),
+            'total' => $all->count(),
+            'unread' => $all->whereNull('read_at')->where('sender_id', '!=', $me)->count(),
             'broadcasts' => $all->whereNull('recipient_id')->count(),
-            'direct'     => $all->whereNotNull('recipient_id')->count(),
-            'sent'       => $all->where('sender_id', $me)->count(),
+            'direct' => $all->whereNotNull('recipient_id')->count(),
+            'sent' => $all->where('sender_id', $me)->count(),
         ];
     }
 
@@ -60,9 +62,9 @@ class MessagesPage extends Component
         }
 
         $this->site->messages()->create([
-            'sender_id'    => Auth::id(),
+            'sender_id' => Auth::id(),
             'recipient_id' => $recipientId,
-            'body'         => trim($this->body),
+            'body' => trim($this->body),
         ]);
 
         $this->reset('body', 'composing');
@@ -72,14 +74,14 @@ class MessagesPage extends Component
             message: $recipientId ? 'Delivered.' : 'Posted to the team.');
     }
 
-    public function markRead(int $id): void
+    public function markRead(string $id): void
     {
         Message::visibleTo($this->site, Auth::user())->whereKey($id)->whereNull('read_at')->update(['read_at' => now()]);
         unset($this->messages, $this->stats);
     }
 
     /** Delete a message — confirmation happens in the shared modal (data-confirm). */
-    public function deleteMessage(int $id): void
+    public function deleteMessage(string $id): void
     {
         Message::visibleTo($this->site, Auth::user())->whereKey($id)->delete();
         unset($this->messages, $this->stats);

@@ -3,9 +3,17 @@
 namespace App\Livewire;
 
 use App\Models\Block;
+use App\Models\BlockLayout;
+use App\Models\BlockPreset;
+use App\Models\BuilderTemplate;
+use App\Models\Media;
 use App\Models\Page;
 use App\Models\Site;
+use App\Services\BlockHtmlExporter;
 use App\Services\BlockTreeService;
+use App\Services\SiteAppExporter;
+use App\Support\ThemeTokens;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -18,9 +26,9 @@ use Livewire\Component;
  */
 class BlockEditor extends Component
 {
-    public int $siteId;
+    public string $siteId;
 
-    public ?int $pageId = null;
+    public ?string $pageId = null;
 
     /** Active editor tab — URL-addressable so the nav can deep-link ?tab=components. */
     #[Url(as: 'tab', except: 'build')]
@@ -44,7 +52,7 @@ class BlockEditor extends Component
     public string $newLayoutName = '';
 
     /** Layout being edited in the canvas (Layout View); null = editing the page. */
-    public ?int $editingLayoutId = null;
+    public ?string $editingLayoutId = null;
 
     /** Inspector working copies (bound to the schema-driven form). */
     public array $propsForm = [];
@@ -79,7 +87,7 @@ class BlockEditor extends Component
             : null;
     }
 
-    public function mount(int $siteId, ?int $pageId = null): void
+    public function mount(string $siteId, ?string $pageId = null): void
     {
         $this->siteId = $siteId;
         $this->theme = $this->site()->themeValues();
@@ -97,10 +105,10 @@ class BlockEditor extends Component
         if ($name === '') {
             return;
         }
-        $url = '/'.\Illuminate\Support\Str::slug($name);
+        $url = '/'.Str::slug($name);
         $i = 2;
         while ($this->site()->pages()->where('url', $url)->exists()) {
-            $url = '/'.\Illuminate\Support\Str::slug($name).'-'.$i++;
+            $url = '/'.Str::slug($name).'-'.$i++;
         }
         $page = $this->site()->pages()->create(['name' => $name, 'url' => $url, 'keywords' => '', 'is_published' => false]);
         $this->newPageName = '';
@@ -117,8 +125,8 @@ class BlockEditor extends Component
         }
         $name = trim($this->pageName) ?: $page->name;
         $page->update([
-            'name'         => $name,
-            'url'          => '/'.ltrim(\Illuminate\Support\Str::slug(trim($this->pageUrl, '/')) ?: \Illuminate\Support\Str::slug($name), '/'),
+            'name' => $name,
+            'url' => '/'.ltrim(Str::slug(trim($this->pageUrl, '/')) ?: Str::slug($name), '/'),
             'is_published' => $this->pagePublished,
         ]);
         // Page-level custom JS — runs on the live page and in exports.
@@ -128,7 +136,7 @@ class BlockEditor extends Component
         $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Page details updated.');
     }
 
-    public function deletePage(int $id): void
+    public function deletePage(string $id): void
     {
         $page = Page::where('site_id', $this->siteId)->find($id);
         if (! $page) {
@@ -148,10 +156,10 @@ class BlockEditor extends Component
      * The tree currently being edited: a LAYOUT when the Layout View opened
      * one, else the selected page. Every canvas action targets this owner.
      */
-    protected function owner(): Page|\App\Models\BlockLayout|null
+    protected function owner(): Page|BlockLayout|null
     {
         if ($this->editingLayoutId) {
-            return \App\Models\BlockLayout::where('site_id', $this->siteId)->find($this->editingLayoutId);
+            return BlockLayout::where('site_id', $this->siteId)->find($this->editingLayoutId);
         }
 
         return $this->page();
@@ -163,15 +171,15 @@ class BlockEditor extends Component
         if ($name === '') {
             return;
         }
-        $layout = \App\Models\BlockLayout::make($this->site(), $name);
+        $layout = BlockLayout::make($this->site(), $name);
         $this->newLayoutName = '';
         $this->editLayout($layout->id); // straight into designing it
     }
 
     /** Open a layout's tree in the canvas — same editor, layout as the owner. */
-    public function editLayout(int $layoutId): void
+    public function editLayout(string $layoutId): void
     {
-        $layout = \App\Models\BlockLayout::where('site_id', $this->siteId)->find($layoutId);
+        $layout = BlockLayout::where('site_id', $this->siteId)->find($layoutId);
         if (! $layout) {
             return;
         }
@@ -198,9 +206,9 @@ class BlockEditor extends Component
         $this->dispatch('bk-mutated');
     }
 
-    public function deleteBlockLayout(int $id): void
+    public function deleteBlockLayout(string $id): void
     {
-        $layout = \App\Models\BlockLayout::where('site_id', $this->siteId)->find($id);
+        $layout = BlockLayout::where('site_id', $this->siteId)->find($id);
         if (! $layout || $layout->is_system) {
             $this->dispatch('toast', level: 'error', title: 'Protected', message: 'The Blank layout is built in and cannot be deleted.');
 
@@ -227,14 +235,14 @@ class BlockEditor extends Component
         if ($name === '') {
             return;
         }
-        $component = \App\Models\BlockLayout::makeComponent($this->site(), $name);
+        $component = BlockLayout::makeComponent($this->site(), $name);
         $this->newComponentName = '';
         $this->editLayout($component->id); // same canvas, component as the owner
     }
 
-    public function deleteComponent(int $id): void
+    public function deleteComponent(string $id): void
     {
-        $component = \App\Models\BlockLayout::components()->where('site_id', $this->siteId)->find($id);
+        $component = BlockLayout::components()->where('site_id', $this->siteId)->find($id);
         if (! $component) {
             return;
         }
@@ -259,9 +267,9 @@ class BlockEditor extends Component
      * Entry point for drop/click: if the component exposes props, open the
      * fill-in dialog (defaults prefilled); otherwise stamp immediately.
      */
-    public function requestComponentInsert(int $componentId, string $parentId, int $index): void
+    public function requestComponentInsert(string $componentId, string $parentId, int $index): void
     {
-        $component = \App\Models\BlockLayout::components()->where('site_id', $this->siteId)->find($componentId);
+        $component = BlockLayout::components()->where('site_id', $this->siteId)->find($componentId);
         if (! $component) {
             return;
         }
@@ -295,7 +303,7 @@ class BlockEditor extends Component
     }
 
     /** The props a component exposes: blocks marked with meta.prop + their default content. */
-    private function componentProps(\App\Models\BlockLayout $component): array
+    private function componentProps(BlockLayout $component): array
     {
         $out = [];
         $walk = function (array $node) use (&$walk, &$out) {
@@ -321,14 +329,14 @@ class BlockEditor extends Component
         return array_values($out);
     }
 
-    public function insertComponentAt(int $componentId, string $parentId, int $index, array $overrides = []): void
+    public function insertComponentAt(string $componentId, string $parentId, int $index, array $overrides = []): void
     {
         $owner = $this->owner();
-        $component = \App\Models\BlockLayout::components()->where('site_id', $this->siteId)->find($componentId);
+        $component = BlockLayout::components()->where('site_id', $this->siteId)->find($componentId);
         if (! $owner || ! $component) {
             return;
         }
-        if ($owner instanceof \App\Models\BlockLayout && $owner->id === $component->id) {
+        if ($owner instanceof BlockLayout && $owner->id === $component->id) {
             $this->dispatch('toast', level: 'error', title: 'Not here', message: 'A component cannot contain itself.');
 
             return;
@@ -341,9 +349,9 @@ class BlockEditor extends Component
             // LIVE LINK: one reference block — the component renders through it,
             // so editing the component updates every placed instance.
             $created = $this->service()->insertBlocks($owner, $parentId, max(0, $index), [[
-                'type'  => 'component_ref',
+                'type' => 'component_ref',
                 'props' => ['component_id' => $component->id, 'overrides' => array_filter($overrides, fn ($v) => trim((string) $v) !== '')],
-                'meta'  => ['label' => $component->name],
+                'meta' => ['label' => $component->name],
             ]]);
             $this->select($created[0]['id']);
             $this->dispatch('bk-mutated');
@@ -394,7 +402,7 @@ class BlockEditor extends Component
     }
 
     /** Palette click: stamp the component into the selected container, else the page root. */
-    public function insertComponent(int $componentId): void
+    public function insertComponent(string $componentId): void
     {
         $owner = $this->owner();
         if (! $owner) {
@@ -436,22 +444,22 @@ class BlockEditor extends Component
         }
 
         return [
-            'type'     => $node['type'],
-            'props'    => $props,
-            'style'    => $node['style'] ?? [],
-            'meta'     => $meta,
+            'type' => $node['type'],
+            'props' => $props,
+            'style' => $node['style'] ?? [],
+            'meta' => $meta,
             'children' => array_map(fn ($c) => $this->stripIds($c, $overrides), $node['children'] ?? []),
         ];
     }
 
     /** Layout picker: assign this page's layout (null/'' = the Blank default). */
-    public function setPageBlockLayout(?int $layoutId): void
+    public function setPageBlockLayout(?string $layoutId): void
     {
         $page = $this->page();
         if (! $page) {
             return;
         }
-        $layout = $layoutId ? \App\Models\BlockLayout::where('site_id', $this->siteId)->find($layoutId) : null;
+        $layout = $layoutId ? BlockLayout::where('site_id', $this->siteId)->find($layoutId) : null;
         // Content-section blocks live on the page — switching layouts never touches them.
         $page->update(['block_layout_id' => $layout?->id]);
         $this->dispatch('bk-mutated');
@@ -479,14 +487,14 @@ class BlockEditor extends Component
         $site = $this->site();
         $clean = array_merge(Site::THEME_DEFAULTS, array_intersect_key($this->theme, Site::THEME_DEFAULTS));
         // User-defined variables ($primary, $hero-pad, …) ride along with the theme.
-        $clean['variables'] = \App\Support\ThemeTokens::clean((array) ($this->theme['variables'] ?? []));
+        $clean['variables'] = ThemeTokens::clean((array) ($this->theme['variables'] ?? []));
         $site->update(['theme' => $clean]);
         $this->theme = $clean;
         $this->dispatch('bk-mutated'); // preview picks the new tokens up on reload
         $this->dispatch('toast', level: 'success', title: 'Theme saved', message: 'Site look updated.');
     }
 
-    public function selectPage(int $id): void
+    public function selectPage(string $id): void
     {
         $page = Page::where('site_id', $this->siteId)->find($id);
         if (! $page) {
@@ -522,7 +530,7 @@ class BlockEditor extends Component
     public function select(string $blockId): void
     {
         $owner = $this->owner();
-        $col = $owner instanceof \App\Models\BlockLayout ? 'layout_id' : 'page_id';
+        $col = $owner instanceof BlockLayout ? 'layout_id' : 'page_id';
         $block = Block::where($col, $owner?->id)->find($blockId);
         if (! $block) {
             return;
@@ -574,7 +582,7 @@ class BlockEditor extends Component
                     // int-typed style keys so validation sees real integers.
                     ->map(fn ($v, $k) => (config("blockkit.style.{$k}.type") === 'int' && is_numeric($v)) ? (int) $v : $v)
                     ->all(),
-                'meta'  => array_merge(
+                'meta' => array_merge(
                     ['label' => trim($this->labelForm) ?: 'Block', 'script' => trim($this->scriptForm)],
                     // Prop exposure only means something while designing a component.
                     ($this->editingLayout()?->isComponent() ?? false)
@@ -590,7 +598,7 @@ class BlockEditor extends Component
     }
 
     /** Move stored per-instance override values from an old prop name to its new one. */
-    private function renamePropOnInstances(int $componentId, string $old, string $new): void
+    private function renamePropOnInstances(string $componentId, string $old, string $new): void
     {
         Block::where('type', 'component_ref')->get()
             ->filter(fn ($ref) => (int) data_get($ref->props, 'component_id') === $componentId)
@@ -623,13 +631,13 @@ class BlockEditor extends Component
                 continue;
             }
             $out[$key] = match ($rule['type']) {
-                'bool'    => filter_var($value, FILTER_VALIDATE_BOOLEAN),
-                'int'     => (int) $value,
+                'bool' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+                'int' => (int) $value,
                 'columns' => is_array($value) ? array_map('intval', array_filter($value, fn ($v) => $v !== '' && $v !== null)) : (int) $value,
                 'options' => is_array($value) ? $value : array_values(array_filter(array_map('trim', explode("\n", (string) $value)))),
                 // Responsive enum: drop empty breakpoints; all empty → key omitted upstream.
                 'responsive_enum' => is_array($value) ? array_filter($value, fn ($v) => $v !== '' && $v !== null) : $value,
-                default   => $value,
+                default => $value,
             };
         }
 
@@ -709,8 +717,8 @@ class BlockEditor extends Component
         $path = [];
         $find = function (array $node, array $trail) use (&$find, &$path): bool {
             $trail[] = [
-                'id'    => $node['id'],
-                'type'  => $node['type'],
+                'id' => $node['id'],
+                'type' => $node['type'],
                 'label' => $node['meta']['label'] ?? ucfirst($node['type']),
             ];
             if ($node['id'] === $this->selectedId) {
@@ -789,25 +797,25 @@ class BlockEditor extends Component
         if (! $block || $block->type === 'content_slot') {
             return;
         }
-        \App\Models\BlockPreset::create([
-            'user_id'   => auth()->id(),
-            'name'      => $name,
+        BlockPreset::create([
+            'user_id' => auth()->id(),
+            'name' => $name,
             'root_type' => $block->type,
-            'tree'      => $this->subtreeArray($block),
+            'tree' => $this->subtreeArray($block),
         ]);
         $this->dispatch('toast', level: 'success', title: 'Saved', message: "“{$name}” added to Reusable blocks.");
     }
 
-    public function deleteReusable(int $id): void
+    public function deleteReusable(string $id): void
     {
-        \App\Models\BlockPreset::where('user_id', auth()->id())->whereKey($id)->delete();
+        BlockPreset::where('user_id', auth()->id())->whereKey($id)->delete();
     }
 
     /** Drop / click a reusable: insert a fresh copy of its subtree. */
-    public function insertReusableAt(int $id, ?string $parentId = null, ?int $index = null): void
+    public function insertReusableAt(string $id, ?string $parentId = null, ?int $index = null): void
     {
         $owner = $this->owner();
-        $preset = \App\Models\BlockPreset::where('user_id', auth()->id())->find($id);
+        $preset = BlockPreset::where('user_id', auth()->id())->find($id);
         if (! $owner || ! $preset) {
             return;
         }
@@ -828,10 +836,10 @@ class BlockEditor extends Component
     private function subtreeArray(Block $block): array
     {
         return [
-            'type'     => $block->type,
-            'props'    => $block->props ?? [],
-            'style'    => $block->style ?? [],
-            'meta'     => array_diff_key($block->meta ?? [], ['locked' => 1]),
+            'type' => $block->type,
+            'props' => $block->props ?? [],
+            'style' => $block->style ?? [],
+            'meta' => array_diff_key($block->meta ?? [], ['locked' => 1]),
             'children' => $block->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
         ];
     }
@@ -842,7 +850,7 @@ class BlockEditor extends Component
 
     private function templateQuery()
     {
-        return \App\Models\BuilderTemplate::where('user_id', auth()->id());
+        return BuilderTemplate::where('user_id', auth()->id());
     }
 
     /** Snapshot the current build into a named template. */
@@ -856,7 +864,7 @@ class BlockEditor extends Component
         $limit = max(1, (int) (auth()->user()->template_limit ?? 1));
         if ($this->templateQuery()->count() >= $limit) {
             $this->dispatch('toast', level: 'error', title: 'Template limit reached',
-                message: "Your plan allows {$limit} ".str('template')->plural($limit).". Update an existing one, or upgrade for more slots.");
+                message: "Your plan allows {$limit} ".str('template')->plural($limit).'. Update an existing one, or upgrade for more slots.');
 
             return;
         }
@@ -865,22 +873,22 @@ class BlockEditor extends Component
         $pageRoot = $this->service()->ensureRoot($page);
         $layoutRoot = $this->service()->ensureRoot($layout);
 
-        \App\Models\BuilderTemplate::create([
-            'user_id'    => auth()->id(),
-            'name'       => $name,
+        BuilderTemplate::create([
+            'user_id' => auth()->id(),
+            'name' => $name,
             'is_default' => $this->templateQuery()->count() === 0, // first one = the default/free slot
-            'payload'    => [
-                'content'     => $pageRoot->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
-                'layout'      => $layout->is_system ? [] : $layoutRoot->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
+            'payload' => [
+                'content' => $pageRoot->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
+                'layout' => $layout->is_system ? [] : $layoutRoot->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
                 'layout_name' => $layout->is_system ? null : $layout->name,
-                'theme'       => $this->site()->themeValues(),
+                'theme' => $this->site()->themeValues(),
             ],
         ]);
         $this->dispatch('toast', level: 'success', title: 'Template saved', message: "“{$name}” captured — content, layout and theme.");
     }
 
     /** Overwrite an existing template with the current build. */
-    public function updateTemplate(int $id): void
+    public function updateTemplate(string $id): void
     {
         $tpl = $this->templateQuery()->find($id);
         $page = $this->page();
@@ -891,16 +899,16 @@ class BlockEditor extends Component
         $pageRoot = $this->service()->ensureRoot($page);
         $layoutRoot = $this->service()->ensureRoot($layout);
         $tpl->update(['payload' => [
-            'content'     => $pageRoot->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
-            'layout'      => $layout->is_system ? [] : $layoutRoot->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
+            'content' => $pageRoot->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
+            'layout' => $layout->is_system ? [] : $layoutRoot->children()->orderBy('position')->get()->map(fn ($c) => $this->subtreeArray($c))->values()->all(),
             'layout_name' => $layout->is_system ? null : $layout->name,
-            'theme'       => $this->site()->themeValues(),
+            'theme' => $this->site()->themeValues(),
         ]]);
         $this->dispatch('toast', level: 'success', title: 'Template updated', message: "“{$tpl->name}” now holds the current build.");
     }
 
     /** Load a template into the current page — then modify it freely. */
-    public function applyTemplate(int $id): void
+    public function applyTemplate(string $id): void
     {
         $tpl = $this->templateQuery()->find($id);
         $page = $this->page();
@@ -926,11 +934,11 @@ class BlockEditor extends Component
             $layoutNodes = array_values($p['layout'] ?? []);
             $nonSlot = array_values(array_filter($layoutNodes, fn ($n) => ($n['type'] ?? '') !== 'content_slot'));
             if ($nonSlot !== []) {
-                $layout = \App\Models\BlockLayout::make($this->site(), ($p['layout_name'] ?? $tpl->name).' (template)');
+                $layout = BlockLayout::make($this->site(), ($p['layout_name'] ?? $tpl->name).' (template)');
                 $lroot = $this->service()->ensureRoot($layout);
                 $slotIdx = collect($layoutNodes)->search(fn ($n) => ($n['type'] ?? '') === 'content_slot');
-                $pre  = $slotIdx === false ? $nonSlot : array_slice($layoutNodes, 0, $slotIdx);
-                $post = $slotIdx === false ? []       : array_values(array_filter(array_slice($layoutNodes, $slotIdx + 1), fn ($n) => ($n['type'] ?? '') !== 'content_slot'));
+                $pre = $slotIdx === false ? $nonSlot : array_slice($layoutNodes, 0, $slotIdx);
+                $post = $slotIdx === false ? [] : array_values(array_filter(array_slice($layoutNodes, $slotIdx + 1), fn ($n) => ($n['type'] ?? '') !== 'content_slot'));
                 if ($pre !== []) {
                     $this->service()->insertBlocks($layout, $lroot->id, 0, $pre);
                 }
@@ -956,13 +964,13 @@ class BlockEditor extends Component
         }
     }
 
-    public function setDefaultTemplate(int $id): void
+    public function setDefaultTemplate(string $id): void
     {
         $this->templateQuery()->update(['is_default' => false]);
         $this->templateQuery()->whereKey($id)->update(['is_default' => true]);
     }
 
-    public function deleteTemplate(int $id): void
+    public function deleteTemplate(string $id): void
     {
         $tpl = $this->templateQuery()->find($id);
         if (! $tpl) {
@@ -990,7 +998,7 @@ class BlockEditor extends Component
             : $this->composeCanvas($this->page());
         $tree = $this->service()->expandComponentRefs($tree, $this->siteId); // live components → real markup
         $tree = $this->resolveBgImages($tree); // @media/… background refs → URLs
-        $this->exportHtml = \App\Services\BlockHtmlExporter::render(
+        $this->exportHtml = BlockHtmlExporter::render(
             $tree,
             $this->page()?->name ?? 'Exported page',
             (array) ($this->site()->themeValues()['variables'] ?? []),
@@ -1007,7 +1015,7 @@ class BlockEditor extends Component
     public function publishSite(): void
     {
         try {
-            $dest = app(\App\Services\SiteAppExporter::class)->publish($this->site());
+            $dest = app(SiteAppExporter::class)->publish($this->site());
             $this->dispatch('toast', level: 'success', title: 'Site published',
                 message: "Nuxt 4 app pushed to templates/{$this->site()->name} — run npm install && npm run dev there.");
         } catch (\Throwable $e) {
@@ -1019,7 +1027,7 @@ class BlockEditor extends Component
     public function exportSiteZip(): mixed
     {
         try {
-            $zip = app(\App\Services\SiteAppExporter::class)->zip($this->site());
+            $zip = app(SiteAppExporter::class)->zip($this->site());
 
             return response()->download($zip, $this->site()->name.'-site.zip')->deleteFileAfterSend(true);
         } catch (\Throwable $e) {
@@ -1033,7 +1041,7 @@ class BlockEditor extends Component
     private function resolveBgImages(array $node): array
     {
         if (! empty($node['props']['bg_image']) && str_starts_with((string) $node['props']['bg_image'], '@media/')) {
-            $node['props']['bg_image'] = \App\Models\Media::resolveRef($this->siteId, (string) $node['props']['bg_image']);
+            $node['props']['bg_image'] = Media::resolveRef($this->siteId, (string) $node['props']['bg_image']);
         }
         $node['children'] = array_map(fn ($c) => $this->resolveBgImages($c), $node['children'] ?? []);
 
@@ -1048,30 +1056,30 @@ class BlockEditor extends Component
             // ── Palette aliases: friendly pieces that insert a preset block ──
             'video_player' => ['type' => 'media', 'props' => ['kind' => 'video', 'src' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'controls' => true, 'ratio' => '16:9'], 'meta' => ['label' => 'Video player']],
             'image_viewer' => ['type' => 'media', 'props' => ['kind' => 'image', 'image_brief' => 'Describe the image you want here', 'alt' => 'Image'], 'meta' => ['label' => 'Image viewer']],
-            'logo'         => ['type' => 'media', 'props' => ['kind' => 'image', 'image_brief' => 'Your logo', 'alt' => 'Logo', 'fit' => 'contain'], 'meta' => ['label' => 'Logo']],
+            'logo' => ['type' => 'media', 'props' => ['kind' => 'image', 'image_brief' => 'Your logo', 'alt' => 'Logo', 'fit' => 'contain'], 'meta' => ['label' => 'Logo']],
 
-            'prop'     => ['props' => ['name' => 'prop_'.substr(uniqid(), -4), 'kind' => 'heading', 'default' => 'Default value'], 'meta' => ['label' => 'Prop']],
-            'navbar'   => ['props' => ['items' => ['Home | /', 'About | /about', 'Contact | /contact']]],
-            'panel'    => ['props' => []],
-            'header'   => ['props' => ['content' => 'New heading', 'level' => 'h2']],
-            'content'  => ['props' => ['content' => 'New paragraph — click to edit.']],
-            'button'   => ['props' => ['label' => 'Click me', 'action' => ['type' => 'link', 'target' => '#']]],
-            'media'    => ['props' => ['kind' => 'image', 'image_brief' => 'Describe the image you want here', 'alt' => 'Placeholder image']],
-            'tile'     => ['props' => ['label' => 'New tile', 'media' => ['ratio' => '4:3'], 'action' => ['type' => 'link', 'target' => '#']]],
-            'list'     => ['props' => ['items' => ['First item', 'Second item', 'Third item']]],
+            'prop' => ['props' => ['name' => 'prop_'.substr(uniqid(), -4), 'kind' => 'heading', 'default' => 'Default value'], 'meta' => ['label' => 'Prop']],
+            'navbar' => ['props' => ['items' => ['Home | /', 'About | /about', 'Contact | /contact']]],
+            'panel' => ['props' => []],
+            'header' => ['props' => ['content' => 'New heading', 'level' => 'h2']],
+            'content' => ['props' => ['content' => 'New paragraph — click to edit.']],
+            'button' => ['props' => ['label' => 'Click me', 'action' => ['type' => 'link', 'target' => '#']]],
+            'media' => ['props' => ['kind' => 'image', 'image_brief' => 'Describe the image you want here', 'alt' => 'Placeholder image']],
+            'tile' => ['props' => ['label' => 'New tile', 'media' => ['ratio' => '4:3'], 'action' => ['type' => 'link', 'target' => '#']]],
+            'list' => ['props' => ['items' => ['First item', 'Second item', 'Third item']]],
             'lightbox' => ['props' => ['media_ids' => ['(paste media block ids here)']]],
-            'modal'    => ['props' => ['title' => 'New modal'], 'children' => [
+            'modal' => ['props' => ['title' => 'New modal'], 'children' => [
                 ['type' => 'content', 'props' => ['content' => 'Modal content — wire a button action (open_modal) to this modal’s id.'], 'meta' => ['label' => 'Modal text']],
             ]],
-            'card'     => ['props' => ['variant' => 'elevated'], 'children' => [
+            'card' => ['props' => ['variant' => 'elevated'], 'children' => [
                 ['type' => 'header', 'props' => ['content' => 'Card title', 'level' => 'h3'], 'meta' => ['label' => 'Card title']],
                 ['type' => 'content', 'props' => ['content' => 'Card body copy.'], 'meta' => ['label' => 'Card body']],
             ]],
-            'input'    => ['props' => ['name' => 'field_'.substr(uniqid(), -4), 'label' => 'New field', 'field_type' => 'text']],
+            'input' => ['props' => ['name' => 'field_'.substr(uniqid(), -4), 'label' => 'New field', 'field_type' => 'text']],
             'textarea' => ['props' => ['name' => 'message_'.substr(uniqid(), -4), 'label' => 'Message']],
-            'select'   => ['props' => ['name' => 'choice_'.substr(uniqid(), -4), 'label' => 'Choose one', 'options' => ['Option A', 'Option B']]],
+            'select' => ['props' => ['name' => 'choice_'.substr(uniqid(), -4), 'label' => 'Choose one', 'options' => ['Option A', 'Option B']]],
             'checkbox' => ['props' => ['name' => 'agree_'.substr(uniqid(), -4), 'label' => 'I agree']],
-            'form'     => ['props' => ['submit_action' => 'collect', 'success_message' => 'Thanks — we got your message.'], 'children' => [
+            'form' => ['props' => ['submit_action' => 'collect', 'success_message' => 'Thanks — we got your message.'], 'children' => [
                 ['type' => 'input', 'props' => ['name' => 'email', 'label' => 'Email', 'field_type' => 'email', 'required' => true], 'meta' => ['label' => 'Email field']],
                 ['type' => 'button', 'props' => ['label' => 'Send', 'action' => ['type' => 'submit']], 'meta' => ['label' => 'Submit button']],
             ]],
@@ -1145,10 +1153,10 @@ class BlockEditor extends Component
         $this->propNameForm = '';
     }
 
-    protected function editingLayout(): ?\App\Models\BlockLayout
+    protected function editingLayout(): ?BlockLayout
     {
         return $this->editingLayoutId
-            ? \App\Models\BlockLayout::where('site_id', $this->siteId)->find($this->editingLayoutId)
+            ? BlockLayout::where('site_id', $this->siteId)->find($this->editingLayoutId)
             : null;
     }
 
@@ -1184,7 +1192,7 @@ class BlockEditor extends Component
 
     public function render()
     {
-        \App\Models\BlockLayout::blank($this->site()); // the undeletable default always exists
+        BlockLayout::blank($this->site()); // the undeletable default always exists
 
         $page = $this->page();
         $owner = $this->owner();
@@ -1206,41 +1214,41 @@ class BlockEditor extends Component
         }
 
         return view('livewire.block-editor', [
-            'canUndo'   => $owner ? $this->service()->canUndo($owner) : null,
-            'canRedo'   => $owner ? $this->service()->canRedo($owner) : null,
-            'site'      => $this->site(),
-            'page'      => $page,
+            'canUndo' => $owner ? $this->service()->canUndo($owner) : null,
+            'canRedo' => $owner ? $this->service()->canRedo($owner) : null,
+            'site' => $this->site(),
+            'page' => $page,
             'editingLayout' => $editingLayout,
-            'pages'     => $this->site()->livePages()->orderBy('id')->get(),
-            'blockLayouts'  => \App\Models\BlockLayout::layouts()->where('site_id', $this->siteId)->withCount('pages')->orderByDesc('is_system')->orderBy('name')->get(),
-            'components'    => \App\Models\BlockLayout::components()->where('site_id', $this->siteId)->withCount('blocks')->orderBy('name')->get(),
-            'pageLayout'    => $page?->resolvedBlockLayout(),
-            'tree'      => $tree,
-            'selected'  => $selected,
+            'pages' => $this->site()->livePages()->orderBy('id')->get(),
+            'blockLayouts' => BlockLayout::layouts()->where('site_id', $this->siteId)->withCount('pages')->orderByDesc('is_system')->orderBy('name')->get(),
+            'components' => BlockLayout::components()->where('site_id', $this->siteId)->withCount('blocks')->orderBy('name')->get(),
+            'pageLayout' => $page?->resolvedBlockLayout(),
+            'tree' => $tree,
+            'selected' => $selected,
             // Ancestor chain root→selected — the breadcrumb bar renders it so
             // ANY wrapper is one tap away (the mobile answer to hover/cycling).
             'selectedPath' => $this->selectedPath($tree),
-            'schema'    => $selected ? (array) config('blockkit.types.'.$selected->type.'.props', []) : [],
+            'schema' => $selected ? (array) config('blockkit.types.'.$selected->type.'.props', []) : [],
             'styleSchema' => (array) config('blockkit.style', []),
             'catalogue' => config('blockkit.types'),
-            'palette'   => $this->palette(),
+            'palette' => $this->palette(),
             'previewUrl' => $page && ! $editingLayout ? $this->site()->previewUrl($page->url) : null,
-            'reusables'  => \App\Models\BlockPreset::where('user_id', auth()->id())->orderBy('name')->get(),
+            'reusables' => BlockPreset::where('user_id', auth()->id())->orderBy('name')->get(),
             'mediaImages' => $selected && in_array($selected->type, ['media', 'tile', 'container', 'panel', 'grid', 'flex', 'card', 'masonry', 'modal', 'lightbox'], true)
-                ? \App\Models\Media::where('site_id', $this->siteId)->where('file_type', 'image')->latest()->limit(30)->get()
+                ? Media::where('site_id', $this->siteId)->where('file_type', 'image')->latest()->limit(30)->get()
                 : collect(),
-            'builderTemplates' => \App\Models\BuilderTemplate::where('user_id', auth()->id())->orderByDesc('is_default')->orderBy('name')->get(),
+            'builderTemplates' => BuilderTemplate::where('user_id', auth()->id())->orderByDesc('is_default')->orderBy('name')->get(),
             // Live instance inspector: the linked component + its exposed props.
             'refComponent' => $refComponent = ($selected?->type === 'component_ref')
-                ? \App\Models\BlockLayout::components()->where('site_id', $this->siteId)->find((int) data_get($selected->props, 'component_id'))
+                ? BlockLayout::components()->where('site_id', $this->siteId)->find((int) data_get($selected->props, 'component_id'))
                 : null,
             'refProps' => $refComponent ? $this->componentProps($refComponent) : [],
-            'templateLimit'    => max(1, (int) (auth()->user()->template_limit ?? 1)),
+            'templateLimit' => max(1, (int) (auth()->user()->template_limit ?? 1)),
             'mediaVideos' => $selected && $selected->type === 'media'
-                ? \App\Models\Media::where('site_id', $this->siteId)->where('file_type', 'video')->latest()->limit(30)->get()
+                ? Media::where('site_id', $this->siteId)->where('file_type', 'video')->latest()->limit(30)->get()
                 : collect(),
             // Rich-text link picker: link to a site page or a media file.
-            'linkMedia' => \App\Models\Media::where('site_id', $this->siteId)->latest()->limit(40)->get(),
+            'linkMedia' => Media::where('site_id', $this->siteId)->latest()->limit(40)->get(),
         ]);
     }
 
@@ -1257,38 +1265,38 @@ class BlockEditor extends Component
         return [
             'Containers' => [
                 'container' => $t('container'),
-                'panel'     => $t('panel'),
-                'card'      => $t('card'),
-                'modal'     => $t('modal'),
+                'panel' => $t('panel'),
+                'card' => $t('card'),
+                'modal' => $t('modal'),
                 // Slot + Prop: shown only while designing a component (the blade filters them).
-                'slot'      => $t('slot'),
-                'prop'      => $t('prop'),
+                'slot' => $t('slot'),
+                'prop' => $t('prop'),
             ],
             'Grid' => [
-                'grid'    => $t('grid'),
-                'flex'    => $t('flex'),
+                'grid' => $t('grid'),
+                'flex' => $t('flex'),
                 'masonry' => $t('masonry'),
             ],
             'Content' => [
-                'header'  => $t('header'),
+                'header' => $t('header'),
                 'content' => $t('content'),
-                'navbar'  => $t('navbar'),
-                'tile'    => $t('tile'),
-                'list'    => $t('list'),
-                'button'  => $t('button'),
+                'navbar' => $t('navbar'),
+                'tile' => $t('tile'),
+                'list' => $t('list'),
+                'button' => $t('button'),
                 'divider' => $t('divider'),
             ],
             'Media' => [
                 'image_viewer' => $alias('Image viewer', '🖼', 'An image from the media library or a brief.'),
                 'video_player' => $alias('Video player', '▶', 'YouTube, Vimeo or a hosted video file.'),
-                'logo'         => $alias('Logo', '◆', 'Your brand mark — an image that keeps its proportions.'),
-                'lightbox'     => $t('lightbox'),
+                'logo' => $alias('Logo', '◆', 'Your brand mark — an image that keeps its proportions.'),
+                'lightbox' => $t('lightbox'),
             ],
             'Form' => [
-                'form'     => $t('form'),
-                'input'    => $t('input'),
+                'form' => $t('form'),
+                'input' => $t('input'),
                 'textarea' => $t('textarea'),
-                'select'   => $t('select'),
+                'select' => $t('select'),
                 'checkbox' => $t('checkbox'),
             ],
         ];

@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Support\Money;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Donation extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'donor_email', 'donor_name', 'amount_cents',
         'currency', 'message', 'status', 'stripe_session_id', 'paid_at',
@@ -14,7 +18,7 @@ class Donation extends Model
 
     protected $casts = [
         'amount_cents' => 'integer',
-        'paid_at'      => 'datetime',
+        'paid_at' => 'datetime',
     ];
 
     public function site(): BelongsTo
@@ -24,7 +28,7 @@ class Donation extends Model
 
     public function formattedAmount(): string
     {
-        return \App\Support\Money::format((int) $this->amount_cents, $this->currency);
+        return Money::format((int) $this->amount_cents, $this->currency);
     }
 
     public function markPaid(): void

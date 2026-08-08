@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PageAttribute extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['page_id', 'key', 'value'];
 
     public function page(): BelongsTo

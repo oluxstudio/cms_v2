@@ -8,6 +8,8 @@ use App\Models\Donation;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Site;
+use App\Services\ActivityLogger;
+use App\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -28,19 +30,29 @@ class InvoicesPage extends Component
     public Site $site;
 
     // Invoice form
-    public ?int $editingId = null;
+    public ?string $editingId = null;
+
     public string $customerName = '';
+
     public string $customerEmail = '';
+
     public string $dueDate = '';
+
     public string $taxPercent = '0';
+
     public string $invNotes = '';
+
     public string $recurInterval = '';   // '' = one-off
+
     public string $invCurrency = '';     // '' = site default
+
     /** @var array<int,array{description:string,qty:int|string,price:string}> */
     public array $items = [['description' => '', 'qty' => 1, 'price' => '']];
 
     public string $statusFilter = 'all';
+
     public string $clientFilter = 'all';
+
     public string $search = '';
 
     // AI-ish quick generator: free-text prompt → draft invoice
@@ -83,32 +95,43 @@ class InvoicesPage extends Component
             ->paginate(10);
     }
 
-    public function updatedStatusFilter(): void { $this->resetPage(); }
-    public function updatedClientFilter(): void { $this->resetPage(); }
-    public function updatedSearch(): void { $this->resetPage(); }
+    public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedClientFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
     /** Hero metrics for the dashboard tiles (this month vs last). */
     #[Computed]
     public function hero(): array
     {
         $monthStart = now()->startOfMonth();
-        $prevStart  = now()->subMonthNoOverflow()->startOfMonth();
-        $prevEnd    = $monthStart->copy()->subSecond();
+        $prevStart = now()->subMonthNoOverflow()->startOfMonth();
+        $prevEnd = $monthStart->copy()->subSecond();
         $pct = fn ($now, $prev) => $prev > 0 ? (int) round(($now - $prev) / $prev * 100) : null;
 
         $q = fn () => Invoice::where('site_id', $this->site->id);
-        $nInv  = $q()->where('created_at', '>=', $monthStart)->count();
-        $pInv  = $q()->whereBetween('created_at', [$prevStart, $prevEnd])->count();
-        $nCli  = $q()->where('created_at', '>=', $monthStart)->distinct('customer_email')->count('customer_email');
-        $pCli  = $q()->whereBetween('created_at', [$prevStart, $prevEnd])->distinct('customer_email')->count('customer_email');
+        $nInv = $q()->where('created_at', '>=', $monthStart)->count();
+        $pInv = $q()->whereBetween('created_at', [$prevStart, $prevEnd])->count();
+        $nCli = $q()->where('created_at', '>=', $monthStart)->distinct('customer_email')->count('customer_email');
+        $pCli = $q()->whereBetween('created_at', [$prevStart, $prevEnd])->distinct('customer_email')->count('customer_email');
 
         return [
-            'invoices'  => $nInv,  'invDelta' => $pct($nInv, $pInv),
-            'clients'   => $nCli,  'cliDelta' => $pct($nCli, $pCli),
+            'invoices' => $nInv,  'invDelta' => $pct($nInv, $pInv),
+            'clients' => $nCli,  'cliDelta' => $pct($nCli, $pCli),
             'allClients' => $q()->distinct('customer_email')->count('customer_email'),
-            'awaiting'  => $q()->whereIn('status', ['sent', 'overdue'])->count(),
-            'overdueN'  => $q()->where('status', 'overdue')->count(),
-            'allCount'  => $q()->count(),
+            'awaiting' => $q()->whereIn('status', ['sent', 'overdue'])->count(),
+            'overdueN' => $q()->where('status', 'overdue')->count(),
+            'allCount' => $q()->count(),
         ];
     }
 
@@ -126,10 +149,10 @@ class InvoicesPage extends Component
         $total = max(1, array_sum(array_column($rows, 1)));
 
         return collect($rows)->filter(fn ($r) => $r[1] > 0)->map(fn ($r) => [
-            'name'  => $r[0],
+            'name' => $r[0],
             'cents' => $r[1],
             'share' => round($r[1] / $total * 100, 1),
-            'money' => \App\Support\Money::format($r[1], $this->site->currency),
+            'money' => Money::format($r[1], $this->site->currency),
         ])->values()->all();
     }
 
@@ -174,7 +197,7 @@ class InvoicesPage extends Component
     {
         $months = $this->monthly;
         $this_ = end($months);
-        $prev  = $months[count($months) - 2] ?? ['cents' => 0];
+        $prev = $months[count($months) - 2] ?? ['cents' => 0];
         $delta = $prev['cents'] > 0
             ? (int) round((($this_['cents'] - $prev['cents']) / $prev['cents']) * 100)
             : null;
@@ -213,8 +236,8 @@ class InvoicesPage extends Component
 
                 return [
                     'description' => Str::ucfirst(trim($desc)) ?: 'Services',
-                    'qty'         => 1,
-                    'price'       => number_format((float) $m[1], 2, '.', ''),
+                    'qty' => 1,
+                    'price' => number_format((float) $m[1], 2, '.', ''),
                 ];
             })
             ->filter()
@@ -229,9 +252,9 @@ class InvoicesPage extends Component
 
         // Prefill the form as a draft for review — the owner stays in control.
         $this->resetForm();
-        $this->customerName  = $name ?: 'Customer';
+        $this->customerName = $name ?: 'Customer';
         $this->customerEmail = $email;
-        $this->items         = $items->all();
+        $this->items = $items->all();
         if (preg_match('/due in (\d+) days?/i', $text, $d)) {
             $this->dueDate = now()->addDays((int) $d[1])->format('Y-m-d');
         }
@@ -245,14 +268,14 @@ class InvoicesPage extends Component
     {
         $all = Invoice::where('site_id', $this->site->id)->get(['status', 'total_cents', 'currency']);
         $currency = $all->first()->currency ?? $this->site->currency ?? 'gbp';
-        $fmt = fn (int $cents) => \App\Support\Money::format($cents, $currency);
+        $fmt = fn (int $cents) => Money::format($cents, $currency);
 
         return [
-            'invoiced'    => $fmt($all->whereNotIn('status', ['draft', 'cancelled'])->sum('total_cents')),
-            'collected'   => $fmt($all->where('status', 'paid')->sum('total_cents')),
+            'invoiced' => $fmt($all->whereNotIn('status', ['draft', 'cancelled'])->sum('total_cents')),
+            'collected' => $fmt($all->where('status', 'paid')->sum('total_cents')),
             'outstanding' => $fmt($all->whereIn('status', ['sent', 'overdue'])->sum('total_cents')),
-            'overdueN'    => $all->where('status', 'overdue')->count(),
-            'overdue'     => $fmt($all->where('status', 'overdue')->sum('total_cents')),
+            'overdueN' => $all->where('status', 'overdue')->count(),
+            'overdue' => $fmt($all->where('status', 'overdue')->sum('total_cents')),
         ];
     }
 
@@ -281,7 +304,7 @@ class InvoicesPage extends Component
         $byMonth = collect($sources)->flatten(1)->groupBy(fn ($r) => Carbon::parse($r->at)->format('Y-m'));
 
         return $months->map(fn ($m) => [
-            'key'   => $m->format('Y-m'),
+            'key' => $m->format('Y-m'),
             'label' => $m->format('M'),
             'cents' => (int) ($byMonth->get($m->format('Y-m'))?->sum('cents') ?? 0),
         ])->all();
@@ -320,29 +343,29 @@ class InvoicesPage extends Component
     public function saveInvoice(): void
     {
         $this->validate([
-            'customerName'        => 'required|string|max:120',
-            'customerEmail'       => 'required|email|max:160',
-            'dueDate'             => 'nullable|date',
-            'taxPercent'          => 'required|numeric|min:0|max:100',
-            'items'               => 'required|array|min:1',
+            'customerName' => 'required|string|max:120',
+            'customerEmail' => 'required|email|max:160',
+            'dueDate' => 'nullable|date',
+            'taxPercent' => 'required|numeric|min:0|max:100',
+            'items' => 'required|array|min:1',
             'items.*.description' => 'required|string|max:200',
-            'items.*.qty'         => 'required|integer|min:1|max:10000',
-            'items.*.price'       => 'required|numeric|min:0',
-            'recurInterval'       => 'nullable|in:,weekly,monthly,quarterly,yearly',
+            'items.*.qty' => 'required|integer|min:1|max:10000',
+            'items.*.price' => 'required|numeric|min:0',
+            'recurInterval' => 'nullable|in:,weekly,monthly,quarterly,yearly',
         ]);
 
         $cfg = $this->site->feature('invoices');
         $attrs = [
-            'customer_name'  => $this->customerName,
+            'customer_name' => $this->customerName,
             'customer_email' => $this->customerEmail,
-            'items'          => collect($this->items)->map(fn ($i) => [
+            'items' => collect($this->items)->map(fn ($i) => [
                 'description' => trim($i['description']),
-                'qty'         => (int) $i['qty'],
-                'unit_cents'  => (int) round(((float) $i['price']) * 100),
+                'qty' => (int) $i['qty'],
+                'unit_cents' => (int) round(((float) $i['price']) * 100),
             ])->values()->all(),
-            'tax_bp'   => (int) round(((float) $this->taxPercent) * 100),
+            'tax_bp' => (int) round(((float) $this->taxPercent) * 100),
             'due_date' => $this->dueDate ?: null,
-            'notes'    => trim($this->invNotes) ?: null,
+            'notes' => trim($this->invNotes) ?: null,
             'currency' => array_key_exists(strtolower($this->invCurrency), config('currencies'))
                 ? strtolower($this->invCurrency) : ($this->site->currency ?? 'gbp'),
             'recur_interval' => $this->recurInterval ?: null,
@@ -354,8 +377,8 @@ class InvoicesPage extends Component
         } else {
             $invoice = new Invoice($attrs + [
                 'site_id' => $this->site->id,
-                'number'  => Invoice::nextNumber($this->site),
-                'status'  => 'draft',
+                'number' => Invoice::nextNumber($this->site),
+                'status' => 'draft',
             ]);
         }
         $isNewDraft = ! $invoice->exists;
@@ -366,17 +389,17 @@ class InvoicesPage extends Component
             $invoice->recur_next_on = null;
         } elseif (! $invoice->recur_next_on) {
             $invoice->recur_next_on = match ($invoice->recur_interval) {
-                'weekly'    => now()->addWeek()->toDateString(),
+                'weekly' => now()->addWeek()->toDateString(),
                 'quarterly' => now()->addMonths(3)->toDateString(),
-                'yearly'    => now()->addYear()->toDateString(),
-                default     => now()->addMonth()->toDateString(),
+                'yearly' => now()->addYear()->toDateString(),
+                default => now()->addMonth()->toDateString(),
             };
         }
         $invoice->save();
 
         if ($isNewDraft) {
             try {
-                \App\Services\ActivityLogger::invoiceEvent($invoice, 'created');
+                ActivityLogger::invoiceEvent($invoice, 'created');
             } catch (\Throwable $e) {
                 report($e);
             }
@@ -388,27 +411,27 @@ class InvoicesPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Saved', message: "Invoice {$invoice->number} saved.");
     }
 
-    public function editInvoice(int $id): void
+    public function editInvoice(string $id): void
     {
         $i = Invoice::where('site_id', $this->site->id)->findOrFail($id);
-        $this->editingId     = $i->id;
-        $this->customerName  = $i->customer_name;
+        $this->editingId = $i->id;
+        $this->customerName = $i->customer_name;
         $this->customerEmail = $i->customer_email;
-        $this->dueDate       = $i->due_date?->format('Y-m-d') ?? '';
-        $this->taxPercent    = (string) ($i->tax_bp / 100);
-        $this->invNotes      = (string) $i->notes;
+        $this->dueDate = $i->due_date?->format('Y-m-d') ?? '';
+        $this->taxPercent = (string) ($i->tax_bp / 100);
+        $this->invNotes = (string) $i->notes;
         $this->recurInterval = (string) ($i->recur_interval ?? '');
-        $this->invCurrency   = (string) $i->currency;
-        $this->formOpen      = true;
-        $this->items         = collect($i->items)->map(fn ($it) => [
+        $this->invCurrency = (string) $i->currency;
+        $this->formOpen = true;
+        $this->items = collect($i->items)->map(fn ($it) => [
             'description' => $it['description'],
-            'qty'         => $it['qty'],
-            'price'       => number_format($it['unit_cents'] / 100, 2, '.', ''),
+            'qty' => $it['qty'],
+            'price' => number_format($it['unit_cents'] / 100, 2, '.', ''),
         ])->values()->all();
     }
 
     /** Email the invoice (pay link included) and mark it sent. */
-    public function sendInvoice(int $id): void
+    public function sendInvoice(string $id): void
     {
         $invoice = Invoice::where('site_id', $this->site->id)->findOrFail($id);
         if (in_array($invoice->status, ['paid', 'cancelled'], true)) {
@@ -426,7 +449,7 @@ class InvoicesPage extends Component
 
         $invoice->update(['status' => $invoice->status === 'overdue' ? 'overdue' : 'sent', 'sent_at' => now()]);
         try {
-            \App\Services\ActivityLogger::invoiceEvent($invoice, 'sent');
+            ActivityLogger::invoiceEvent($invoice, 'sent');
         } catch (\Throwable $e) {
             report($e);
         }
@@ -434,7 +457,7 @@ class InvoicesPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Invoice sent', message: "{$invoice->number} emailed to {$invoice->customer_email}.");
     }
 
-    public function markPaid(int $id): void
+    public function markPaid(string $id): void
     {
         $invoice = Invoice::where('site_id', $this->site->id)->findOrFail($id);
         $invoice->markPaid();
@@ -442,13 +465,13 @@ class InvoicesPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Paid', message: "{$invoice->number} marked as paid.");
     }
 
-    public function cancelInvoice(int $id): void
+    public function cancelInvoice(string $id): void
     {
         Invoice::where('site_id', $this->site->id)->whereKey($id)->update(['status' => 'cancelled']);
         unset($this->viewedInvoice, $this->invoices, $this->stats);
     }
 
-    public function deleteInvoice(int $id): void
+    public function deleteInvoice(string $id): void
     {
         Invoice::where('site_id', $this->site->id)->whereKey($id)->delete();
         if ($this->editingId === $id) {
@@ -459,11 +482,11 @@ class InvoicesPage extends Component
 
     // ── Invoice detail (lightbox) ─────────────────────────────────────────
 
-    public ?int $viewingId = null;
+    public ?string $viewingId = null;
 
-    public function viewInvoice(int $id): void
+    public function viewInvoice(string $id): void
     {
-        $this->viewingId = \App\Models\Invoice::where('site_id', $this->site->id)->whereKey($id)->exists() ? $id : null;
+        $this->viewingId = Invoice::where('site_id', $this->site->id)->whereKey($id)->exists() ? $id : null;
     }
 
     public function closeInvoice(): void
@@ -471,11 +494,11 @@ class InvoicesPage extends Component
         $this->viewingId = null;
     }
 
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function viewedInvoice()
     {
         return $this->viewingId
-            ? \App\Models\Invoice::where('site_id', $this->site->id)->find($this->viewingId)
+            ? Invoice::where('site_id', $this->site->id)->find($this->viewingId)
             : null;
     }
 

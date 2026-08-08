@@ -6,6 +6,7 @@ use App\Models\Block;
 use App\Models\BlockBatch;
 use App\Models\BlockLayout;
 use App\Models\Page;
+use App\Support\RichText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -116,8 +117,8 @@ class BlockTreeService
         BlockBatch::where($batch['owner_col'], $batch['owner_id'])->where('undone', true)->delete();
         BlockBatch::create([
             $batch['owner_col'] => $batch['owner_id'],
-            'source'  => $batch['source'],
-            'label'   => mb_substr($batch['label'], 0, 120),
+            'source' => $batch['source'],
+            'label' => mb_substr($batch['label'], 0, 120),
             'forward' => $batch['forward'],
             'inverse' => $batch['inverse'],
         ]);
@@ -176,7 +177,7 @@ class BlockTreeService
             foreach ($ops as $op) {
                 match ($op['op']) {
                     'restore_subtree' => $this->restoreSubtree($owner, $op),
-                    'restore_block'   => $this->scoped($owner)->whereKey($op['id'])->update([
+                    'restore_block' => $this->scoped($owner)->whereKey($op['id'])->update([
                         'props' => $op['props'], 'style' => $op['style'], 'meta' => $op['meta'],
                     ]),
                     'move' => $this->applyHistoryMove($owner, $op),
@@ -266,7 +267,7 @@ class BlockTreeService
      * accept per-instance drops; the wrapper stays `component_ref` for the
      * instance chrome. Plain mode (API/export) emits ordinary containers.
      */
-    public function expandComponentRefs(array $node, int $siteId, bool $forCanvas = false, array $seen = []): array
+    public function expandComponentRefs(array $node, string $siteId, bool $forCanvas = false, array $seen = []): array
     {
         if (($node['type'] ?? '') !== 'component_ref') {
             $node['children'] = array_map(fn ($c) => $this->expandComponentRefs($c, $siteId, $forCanvas, $seen), $node['children'] ?? []);
@@ -393,7 +394,7 @@ class BlockTreeService
     public static function sanitizeRichText(string $type, array $props): array
     {
         if (in_array($type, ['header', 'content'], true) && isset($props['content']) && is_string($props['content'])) {
-            $props['content'] = \App\Support\RichText::clean($props['content']);
+            $props['content'] = RichText::clean($props['content']);
         }
 
         // CSS-bearing props are injected verbatim into style attributes on all
@@ -425,11 +426,11 @@ class BlockTreeService
     public static function materializeProp(string $kind, string $value, string $name = ''): array
     {
         return match ($kind) {
-            'text'   => ['type' => 'content', 'props' => ['content' => $value], 'children' => []],
+            'text' => ['type' => 'content', 'props' => ['content' => $value], 'children' => []],
             'button' => ['type' => 'button', 'props' => ['label' => $value !== '' ? $value : 'Button', 'action' => ['type' => 'link', 'target' => '#']], 'children' => []],
-            'image'  => ['type' => 'media', 'props' => ['kind' => 'image', 'src' => $value, 'alt' => $name !== '' ? $name : 'image'], 'children' => []],
-            'video'  => ['type' => 'media', 'props' => ['kind' => 'video', 'src' => $value, 'controls' => true, 'ratio' => '16:9'], 'children' => []],
-            default  => ['type' => 'header', 'props' => ['content' => $value, 'level' => 'h2'], 'children' => []],
+            'image' => ['type' => 'media', 'props' => ['kind' => 'image', 'src' => $value, 'alt' => $name !== '' ? $name : 'image'], 'children' => []],
+            'video' => ['type' => 'media', 'props' => ['kind' => 'video', 'src' => $value, 'controls' => true, 'ratio' => '16:9'], 'children' => []],
+            default => ['type' => 'header', 'props' => ['content' => $value, 'level' => 'h2'], 'children' => []],
         };
     }
 
@@ -534,7 +535,7 @@ class BlockTreeService
         }
         $props = self::sanitizeRichText($block->type, $props);
         $style = array_key_exists('style', $patch) ? array_merge($block->style ?? [], $patch['style'] ?? []) : ($block->style ?? []);
-        $meta  = array_key_exists('meta', $patch) ? array_merge($block->meta ?? [], $patch['meta'] ?? []) : ($block->meta ?? []);
+        $meta = array_key_exists('meta', $patch) ? array_merge($block->meta ?? [], $patch['meta'] ?? []) : ($block->meta ?? []);
 
         // Only the USER may lock/unlock (the AI cannot unpin work).
         if ($source === self::SOURCE_AI && (bool) data_get($meta, 'locked') !== (bool) data_get($block->meta, 'locked')) {
@@ -853,7 +854,10 @@ class BlockTreeService
                 break;
             case 'responsive_enum':
                 // Mobile-first: a single value, or {base, md, lg} — each from the enum.
-                if (is_string($value)) { in_array($value, $rule['values'], true) || $fail('must be one of: '.implode('|', $rule['values'])); break; }
+                if (is_string($value)) {
+                    in_array($value, $rule['values'], true) || $fail('must be one of: '.implode('|', $rule['values']));
+                    break;
+                }
                 is_array($value) || $fail('expected a value or a {base, md, lg} object');
                 $value !== [] || $fail('breakpoint object cannot be empty');
                 foreach ($value as $bp => $v) {

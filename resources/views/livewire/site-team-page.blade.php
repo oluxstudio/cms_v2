@@ -49,13 +49,13 @@
                 <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $member->user->name ?? '—' }}</p>
                 <p class="text-xs text-gray-400 truncate">{{ $member->user->email ?? '' }} · joined {{ $member->created_at->diffForHumans() }}</p>
             </div>
-            <select wire:change="updateMemberRole({{ $member->id }}, $event.target.value)"
+            <select wire:change="updateMemberRole('{{ $member->id }}', $event.target.value)"
                     class="text-xs font-semibold pr-7 pl-3 py-1.5 rounded-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300 cursor-pointer focus:outline-none">
                 @foreach ($this->rolesList as $role)
                     <option value="{{ $role->id }}" @selected($member->role_id === $role->id)>{{ $role->name }}</option>
                 @endforeach
             </select>
-            <button wire:click="removeMember({{ $member->id }})"
+            <button wire:click="removeMember('{{ $member->id }}')"
                     data-confirm="Remove {{ $member->user->name ?? 'this member' }} from the account?"
                     class="w-8 h-8 flex items-center justify-center rounded-full text-gray-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors" title="Remove">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -109,8 +109,8 @@
                         @endif
                     </p>
                 </div>
-                <button wire:click="resendInvite({{ $invite->id }})" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600">Resend</button>
-                <button wire:click="revokeInvite({{ $invite->id }})" data-confirm="Revoke this invitation?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">Revoke</button>
+                <button wire:click="resendInvite('{{ $invite->id }}')" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600">Resend</button>
+                <button wire:click="revokeInvite('{{ $invite->id }}')" data-confirm="Revoke this invitation?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">Revoke</button>
             </div>
             @endforeach
         </div>
@@ -134,10 +134,10 @@
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 flex-1">{{ $role->description }}</p>
             @endif
             <div class="flex gap-2 mt-4">
-                <button wire:click="openRoleEditor({{ $role->id }})"
+                <button wire:click="openRoleEditor('{{ $role->id }}')"
                         class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">Edit permissions</button>
                 @unless ($role->is_system)
-                    <button wire:click="deleteRole({{ $role->id }})" data-confirm="Delete the {{ $role->name }} role?"
+                    <button wire:click="deleteRole('{{ $role->id }}')" data-confirm="Delete the {{ $role->name }} role?"
                             class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
                 @endunless
             </div>

@@ -66,7 +66,7 @@
         <div class="space-y-2.5 fx-stagger">
             @forelse ($this->messages as $msg)
                 @php $mine = $msg->sender_id === $me; @endphp
-                <div wire:click="markRead({{ $msg->id }})"
+                <div wire:click="markRead('{{ $msg->id }}')"
                      class="fx rounded-2xl border p-4 shadow-sm cursor-default {{ $mine ? 'bg-indigo-50/60 dark:bg-indigo-500/[0.06] border-indigo-100 dark:border-indigo-500/20 ml-8' : 'bg-white dark:bg-[#1d1e2a] border-gray-100 dark:border-white/[0.05] mr-8' }}">
                     <div class="flex items-center gap-2.5 mb-1.5">
                         <span class="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0" style="background:linear-gradient(135deg,var(--primary),var(--primary-2))">
@@ -75,7 +75,7 @@
                         <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ $msg->sender->name ?? 'Unknown' }}{{ $mine ? ' (you)' : '' }}</span>
                         <span class="text-[11px] text-gray-400">{{ is_null($msg->recipient_id) ? 'to team' : 'to '.($msg->recipient->name ?? '—') }}</span>
                         <span class="text-[11px] text-gray-400 ml-auto">{{ $msg->created_at->diffForHumans() }}</span>
-                        <button wire:click.stop="deleteMessage({{ $msg->id }})" data-confirm="Delete this message?"
+                        <button wire:click.stop="deleteMessage('{{ $msg->id }}')" data-confirm="Delete this message?"
                                 class="shrink-0 p-1 rounded-lg text-gray-300 dark:text-gray-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10" title="Delete message">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>

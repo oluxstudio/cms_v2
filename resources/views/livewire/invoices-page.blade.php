@@ -147,7 +147,7 @@
             </div>
             <div class="flex-1 overflow-y-auto max-h-[260px]">
                 @forelse($this->reminderFeed as $r)
-                    <button type="button" wire:click="viewInvoice({{ $r->id }})"
+                    <button type="button" wire:click="viewInvoice('{{ $r->id }}')"
                             class="w-full text-left flex items-start gap-2.5 px-4 py-3 border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
                         <span class="shrink-0 w-8 h-8 rounded-full grid place-items-center text-[11px] font-extrabold text-white"
                               style="background:{{ $accent }}">{{ strtoupper(mb_substr($r->customer_name, 0, 1)) }}</span>
@@ -191,7 +191,7 @@
                 <div class="max-h-[420px] overflow-y-auto">
                     @forelse($this->drafts as $d)
                         <div class="flex items-center gap-2.5 px-4 py-3 border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
-                            <div class="min-w-0 flex-1 cursor-pointer" wire:click="viewInvoice({{ $d->id }})">
+                            <div class="min-w-0 flex-1 cursor-pointer" wire:click="viewInvoice('{{ $d->id }}')">
                                 <p class="text-xs font-bold text-gray-900 dark:text-white">{{ $d->number }}
                                     <span class="text-gray-400 font-normal">· {{ $d->customer_name }}</span></p>
                                 <p class="text-[10.5px] text-gray-400 truncate">{{ $d->customer_email }}
@@ -200,10 +200,10 @@
                             </div>
                             <span class="shrink-0 text-xs font-extrabold tabular-nums">{{ $d->formattedTotal() }}</span>
                             <div class="shrink-0 flex items-center gap-1">
-                                <button wire:click="sendInvoice({{ $d->id }})"
+                                <button wire:click="sendInvoice('{{ $d->id }}')"
                                         data-confirm="Email invoice {{ $d->number }} with its pay link to {{ $d->customer_email }}?"
                                         class="text-[11px] px-2 py-1 rounded-lg font-bold text-white" style="background:{{ $accent }}">Send</button>
-                                <button wire:click="editInvoice({{ $d->id }})" class="text-[11px] px-2 py-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/[0.06]" title="Edit">✎</button>
+                                <button wire:click="editInvoice('{{ $d->id }}')" class="text-[11px] px-2 py-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-white/[0.06]" title="Edit">✎</button>
                             </div>
                         </div>
                     @empty
@@ -239,7 +239,7 @@
                 </div>
                 @forelse($this->invoices as $inv)
                     <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
-                        <div class="min-w-0 flex-1 cursor-pointer" wire:click="viewInvoice({{ $inv->id }})" title="View details">
+                        <div class="min-w-0 flex-1 cursor-pointer" wire:click="viewInvoice('{{ $inv->id }}')" title="View details">
                             <p class="text-sm font-semibold text-gray-900 dark:text-white">
                                 {{ $inv->number }} <span class="text-gray-400 font-normal">· {{ $inv->customer_name }}</span>
                             </p>
@@ -269,21 +269,21 @@
                         </span>
                         <div class="shrink-0 flex items-center gap-1">
                             @if(! in_array($inv->status, ['paid', 'cancelled'], true))
-                                <button wire:click="sendInvoice({{ $inv->id }})"
+                                <button wire:click="sendInvoice('{{ $inv->id }}')"
                                         data-confirm="Email invoice {{ $inv->number }} with its pay link to {{ $inv->customer_email }}?"
                                         class="text-[11px] px-2 py-1 rounded-lg text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
                                         title="Email the invoice with its pay link">{{ $inv->sent_at ? 'Resend' : 'Send' }}</button>
-                                <button wire:click="markPaid({{ $inv->id }})"
+                                <button wire:click="markPaid('{{ $inv->id }}')"
                                         data-confirm="Mark {{ $inv->number }} as paid ({{ $inv->formattedTotal() }})?"
                                         class="text-[11px] px-2 py-1 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10">Mark paid</button>
                             @endif
                             <a href="{{ $inv->payUrl() }}" target="_blank" rel="noopener"
                                class="text-[11px] px-2 py-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" title="Open the public invoice page">View</a>
                             @if($inv->status === 'draft')
-                                <button wire:click="editInvoice({{ $inv->id }})" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
+                                <button wire:click="editInvoice('{{ $inv->id }}')" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
                             @endif
                             @if(! in_array($inv->status, ['paid'], true))
-                                <button wire:click="{{ $inv->status === 'cancelled' ? 'deleteInvoice' : 'cancelInvoice' }}({{ $inv->id }})"
+                                <button wire:click="{{ $inv->status === 'cancelled' ? 'deleteInvoice' : 'cancelInvoice' }}('{{ $inv->id }}')"
                                         data-confirm="{{ $inv->status === 'cancelled' ? 'Delete invoice '.$inv->number.' permanently?' : 'Cancel invoice '.$inv->number.'? The pay link stops working.' }}"
                                         class="text-gray-300 hover:text-rose-500" title="{{ $inv->status === 'cancelled' ? 'Delete' : 'Cancel' }}">✕</button>
                             @endif
@@ -418,11 +418,11 @@
                 <x-invoice-card :invoice="$vi" :accent="$vAccent" :view-url="url($site->name.'/invoices/'.$vi->id)">
                     <x-slot:actions>
                         @if(in_array($vi->status, ['sent', 'overdue', 'draft'], true))
-                            <button type="button" wire:click="markPaid({{ $vi->id }})" data-confirm="Mark {{ $vi->number }} as paid?"
+                            <button type="button" wire:click="markPaid('{{ $vi->id }}')" data-confirm="Mark {{ $vi->number }} as paid?"
                                     class="text-white/90 hover:text-white underline underline-offset-2">Mark paid</button>
                         @endif
                         @if(! in_array($vi->status, ['cancelled', 'paid'], true))
-                            <button type="button" wire:click="cancelInvoice({{ $vi->id }})" data-confirm="Cancel invoice {{ $vi->number }}?"
+                            <button type="button" wire:click="cancelInvoice('{{ $vi->id }}')" data-confirm="Cancel invoice {{ $vi->number }}?"
                                     class="text-white/90 hover:text-white underline underline-offset-2">Cancel</button>
                         @endif
                         <a href="{{ $vi->payUrl() }}" target="_blank" rel="noopener"

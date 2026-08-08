@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BlockPreset extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['user_id', 'name', 'root_type', 'tree'];
 
     protected $casts = ['tree' => 'array'];

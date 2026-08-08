@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -9,6 +10,8 @@ use Illuminate\Support\Str;
 /** A site blog post (Posts content module) with simple visit/engagement counters. */
 class Post extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'user_id', 'title', 'slug', 'excerpt', 'body', 'cover_image',
         'status', 'published_at', 'views', 'likes', 'comments',
@@ -38,7 +41,7 @@ class Post extends Model
     }
 
     /** A slug unique within the site, derived from the title. */
-    public static function uniqueSlug(int $siteId, string $title): string
+    public static function uniqueSlug(string $siteId, string $title): string
     {
         $base = Str::slug(Str::limit($title, 60, '')) ?: 'post';
         $slug = $base;

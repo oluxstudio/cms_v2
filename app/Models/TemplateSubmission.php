@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,14 +14,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class TemplateSubmission extends Model
 {
-    public const STATUS_PENDING  = 'pending';
+    use HasUlids;
+
+    public const STATUS_PENDING = 'pending';
+
     public const STATUS_ACCEPTED = 'accepted';
+
     public const STATUS_REJECTED = 'rejected';
 
     protected $fillable = ['key', 'name', 'status', 'extraction', 'note', 'reviewed_by', 'reviewed_at'];
 
     protected $casts = [
-        'extraction'  => 'array',
+        'extraction' => 'array',
         'reviewed_at' => 'datetime',
     ];
 
@@ -47,12 +52,12 @@ class TemplateSubmission extends Model
         $pages = $x['pages'] ?? [];
 
         return [
-            'pages'      => count($pages),
-            'blocks'     => array_sum(array_map(fn ($p) => count($p['blocks'] ?? []), $pages)),
-            'assets'     => $x['assets']['count'] ?? 0,
+            'pages' => count($pages),
+            'blocks' => array_sum(array_map(fn ($p) => count($p['blocks'] ?? []), $pages)),
+            'assets' => $x['assets']['count'] ?? 0,
             'behaviours' => $x['behaviours'] ?? [],
-            'fonts'      => array_column($x['fonts'] ?? [], 'family'),
-            'theme'      => $x['theme'] ?? [],
+            'fonts' => array_column($x['fonts'] ?? [], 'family'),
+            'theme' => $x['theme'] ?? [],
         ];
     }
 }

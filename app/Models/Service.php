@@ -2,14 +2,19 @@
 
 namespace App\Models;
 
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class Service extends Model
 {
+    use HasUlids;
+
     public const KINDS = ['slot', 'stay', 'trip'];
 
     protected $fillable = [
@@ -18,14 +23,14 @@ class Service extends Model
     ];
 
     protected $casts = [
-        'is_active'        => 'boolean',
-        'duration_min'     => 'integer',
-        'price_cents'      => 'integer',
-        'config'           => 'array',
+        'is_active' => 'boolean',
+        'duration_min' => 'integer',
+        'price_cents' => 'integer',
+        'config' => 'array',
         'requires_payment' => 'boolean',
-        'capacity'         => 'integer',
-        'deposit_cents'    => 'integer',
-        'deposit_pct'      => 'integer',
+        'capacity' => 'integer',
+        'deposit_cents' => 'integer',
+        'deposit_pct' => 'integer',
     ];
 
     protected function slug(): Attribute
@@ -54,7 +59,7 @@ class Service extends Model
      * Named SITE-LEVEL resources attached to this service (staff / rooms /
      * vehicles, shared across services) — empty = anonymous capacity.
      */
-    public function resources(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function resources(): BelongsToMany
     {
         return $this->belongsToMany(ServiceResource::class, 'resource_service', 'service_id', 'resource_id');
     }
@@ -141,8 +146,8 @@ class Service extends Model
     {
         $deposit = match (true) {
             ($this->deposit_cents ?? 0) > 0 => $this->deposit_cents,
-            ($this->deposit_pct ?? 0) > 0   => (int) round($totalCents * $this->deposit_pct / 100),
-            default                         => $totalCents,
+            ($this->deposit_pct ?? 0) > 0 => (int) round($totalCents * $this->deposit_pct / 100),
+            default => $totalCents,
         };
 
         return max(0, min($deposit, $totalCents));
@@ -160,6 +165,6 @@ class Service extends Model
 
     public function formattedPrice(): string
     {
-        return \App\Support\Money::format((int) $this->price_cents, $this->currency, free: true);
+        return Money::format((int) $this->price_cents, $this->currency, free: true);
     }
 }

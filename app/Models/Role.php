@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Access\Permissions;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,6 +16,8 @@ use Illuminate\Support\Str;
  */
 class Role extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['account_id', 'name', 'slug', 'description', 'permissions', 'is_system'];
 
     protected $casts = ['permissions' => 'array', 'is_system' => 'boolean'];
@@ -65,7 +68,7 @@ class Role extends Model
     }
 
     /** Unique slug for a new custom role within an account. */
-    public static function slugFor(int $accountId, string $name): string
+    public static function slugFor(string $accountId, string $name): string
     {
         $base = Str::slug($name) ?: 'role';
         $slug = $base;

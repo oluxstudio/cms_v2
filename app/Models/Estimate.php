@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Money;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -10,6 +11,8 @@ use Illuminate\Support\Str;
 /** A visitor's saved estimate request (Estimator module lead). */
 class Estimate extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'estimator_id', 'reference', 'trade', 'customer_name', 'customer_email',
         'customer_phone', 'notes', 'inputs', 'results', 'cost_low_cents', 'cost_high_cents',

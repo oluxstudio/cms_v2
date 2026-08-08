@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
+use App\Mail\BookingCancelled;
 use App\Mail\BookingConfirmed;
 use App\Models\Site;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -15,7 +18,7 @@ use Illuminate\Support\Facades\Mail;
  */
 class BookingAdminApiController extends Controller
 {
-    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+    use ResolvesApiSite;
 
     private function site(Request $request, string $siteName): Site
     {
@@ -49,28 +52,28 @@ class BookingAdminApiController extends Controller
 
         return response()->json([
             'data' => collect($page->items())->map(fn ($b) => [
-                'id'          => $b->id,
-                'reference'   => $b->reference,
-                'status'      => $b->status,
-                'kind'        => $b->service?->kind,
-                'service'     => $b->service?->name,
-                'customer'    => ['name' => $b->customer_name, 'email' => $b->customer_email, 'phone' => $b->customer_phone],
-                'starts_at'   => $b->starts_at?->toIso8601String(),
-                'ends_at'     => $b->ends_at?->toIso8601String(),
-                'params'      => (object) ($b->params ?? []),
-                'quantity'    => $b->quantity,
+                'id' => $b->id,
+                'reference' => $b->reference,
+                'status' => $b->status,
+                'kind' => $b->service?->kind,
+                'service' => $b->service?->name,
+                'customer' => ['name' => $b->customer_name, 'email' => $b->customer_email, 'phone' => $b->customer_phone],
+                'starts_at' => $b->starts_at?->toIso8601String(),
+                'ends_at' => $b->ends_at?->toIso8601String(),
+                'params' => (object) ($b->params ?? []),
+                'quantity' => $b->quantity,
                 'total_cents' => $b->total_cents,
-                'currency'    => $b->currency,
-                'created_at'  => $b->created_at->toIso8601String(),
+                'currency' => $b->currency,
+                'created_at' => $b->created_at->toIso8601String(),
             ]),
-            'total'        => $page->total(),
-            'per_page'     => $page->perPage(),
+            'total' => $page->total(),
+            'per_page' => $page->perPage(),
             'current_page' => $page->currentPage(),
         ]);
     }
 
     /** Confirm or cancel a booking. */
-    public function update(Request $request, string $siteName, int $id): JsonResponse
+    public function update(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->site($request, $siteName);
         $data = $request->validate(['status' => ['required', 'in:confirmed,cancelled']]);
@@ -81,7 +84,7 @@ class BookingAdminApiController extends Controller
 
         if ($was !== $data['status']) {
             try {
-                \App\Services\ActivityLogger::bookingEvent($booking, $data['status']);
+                ActivityLogger::bookingEvent($booking, $data['status']);
             } catch (\Throwable $e) {
                 report($e);
             }
@@ -96,7 +99,7 @@ class BookingAdminApiController extends Controller
         }
         if ($data['status'] === 'cancelled' && $was !== 'cancelled') {
             try {
-                Mail::to($booking->customer_email)->send(new \App\Mail\BookingCancelled($booking, $site));
+                Mail::to($booking->customer_email)->send(new BookingCancelled($booking, $site));
             } catch (\Throwable $e) {
                 report($e);
             }

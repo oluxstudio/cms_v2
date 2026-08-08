@@ -176,7 +176,7 @@
                         @endif
                         <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.05]">
                             <span class="text-[10px] text-gray-400">{{ $it->pageCount() }} {{ Str::plural('page', $it->pageCount()) }}</span>
-                            <button wire:click="uninstallTemplate({{ $it->id }})" data-confirm="Remove this template from the site?" @disabled(!$canManage)
+                            <button wire:click="uninstallTemplate('{{ $it->id }}')" data-confirm="Remove this template from the site?" @disabled(!$canManage)
                                     class="text-xs font-semibold text-rose-500 hover:underline disabled:opacity-40">Remove</button>
                         </div>
                     </div>
@@ -280,7 +280,7 @@
                                     Installed
                                 </span>
                             @else
-                                <button wire:click="installFromCatalog({{ $tpl->id }})" @disabled(!$canManage)
+                                <button wire:click="installFromCatalog('{{ $tpl->id }}')" @disabled(!$canManage)
                                         class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-semibold">
                                     {{ $tpl->isFree() ? 'Install' : 'Get '.$tpl->priceLabel() }}
                                 </button>

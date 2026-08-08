@@ -48,14 +48,14 @@
                         <img src="{{ $post->cover_image }}" alt="" class="w-full h-full object-cover" loading="lazy">
                     @else 📝 @endif
                 </div>
-                <div class="min-w-0 flex-1 {{ $canManage ? 'cursor-pointer' : '' }}" @if($canManage) wire:click="editPost({{ $post->id }})" @endif>
+                <div class="min-w-0 flex-1 {{ $canManage ? 'cursor-pointer' : '' }}" @if($canManage) wire:click="editPost('{{ $post->id }}')" @endif>
                     <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $post->title }}</p>
                     <p class="text-xs text-gray-400 dark:text-gray-500 truncate">
                         {{ $post->author?->name ?? 'Unknown' }} · {{ ($post->published_at ?? $post->created_at)->format('M j, Y') }}
                         · 👁 {{ number_format($post->views) }} · ❤ {{ number_format($post->likes) }} · 💬 {{ number_format($post->comments) }}
                     </p>
                 </div>
-                <button @if($canManage) @click.stop="$wire.togglePublish({{ $post->id }})" @endif
+                <button @if($canManage) @click.stop="$wire.togglePublish('{{ $post->id }}')" @endif
                         class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full {{ $canManage ? 'cursor-pointer' : 'cursor-default' }}
                         {{ $post->isPublished()
                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400'
@@ -64,7 +64,7 @@
                     {{ $post->isPublished() ? 'Published' : 'Draft' }}
                 </button>
                 @if($canManage)
-                <button type="button" @click.stop wire:click="deletePost({{ $post->id }})" data-confirm="Delete this post?"
+                <button type="button" @click.stop wire:click="deletePost('{{ $post->id }}')" data-confirm="Delete this post?"
                         class="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>

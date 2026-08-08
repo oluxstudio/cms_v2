@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BookingBlock extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'service_id', 'date', 'start_time', 'open_time', 'close_time'];
 
     protected $casts = ['date' => 'date'];
@@ -45,8 +48,8 @@ class BookingBlock extends Model
 
         return [
             'dayBlocked' => $rows->contains(fn ($r) => $r->start_time === null && $r->open_time === null),
-            'hours'      => $hoursRow ? ['open' => substr($hoursRow->open_time, 0, 5), 'close' => substr($hoursRow->close_time, 0, 5)] : null,
-            'times'      => $rows->filter(fn ($r) => $r->start_time !== null)
+            'hours' => $hoursRow ? ['open' => substr($hoursRow->open_time, 0, 5), 'close' => substr($hoursRow->close_time, 0, 5)] : null,
+            'times' => $rows->filter(fn ($r) => $r->start_time !== null)
                 ->mapWithKeys(fn ($r) => [substr($r->start_time, 0, 5) => true])->all(),
         ];
     }

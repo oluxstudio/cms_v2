@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
  */
 class TeamInvitation extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['account_id', 'invited_by', 'role_id', 'email', 'token', 'expires_at', 'accepted_at'];
 
     protected $casts = ['expires_at' => 'datetime', 'accepted_at' => 'datetime'];

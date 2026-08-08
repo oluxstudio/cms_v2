@@ -12,16 +12,20 @@ use Livewire\Component;
 
 class TodosPage extends Component
 {
-    public int $siteId;
+    public string $siteId;
 
     #[Url(as: 'show')]
     public string $filter = 'all';   // all | open | done
 
     // composer
     public bool $composing = false;
+
     public string $title = '';
+
     public string $assignee = '';
+
     public string $priority = 'normal';
+
     public string $items = '';       // newline-separated subtasks
 
     public array $newItem = [];      // todoId => label
@@ -52,20 +56,20 @@ class TodosPage extends Component
     #[Computed]
     public function stats(): array
     {
-        $all   = Todo::visibleTo($this->site, Auth::user())->withCount(['items', 'items as done_items_count' => fn ($q) => $q->where('done', true)])->get();
-        $open  = $all->where('status', 'open')->count();
-        $done  = $all->where('status', 'done')->count();
+        $all = Todo::visibleTo($this->site, Auth::user())->withCount(['items', 'items as done_items_count' => fn ($q) => $q->where('done', true)])->get();
+        $open = $all->where('status', 'open')->count();
+        $done = $all->where('status', 'done')->count();
         $items = $all->sum('items_count');
         $doneItems = $all->sum('done_items_count');
 
         return [
-            'total'      => $all->count(),
-            'open'       => $open,
-            'done'       => $done,
+            'total' => $all->count(),
+            'open' => $open,
+            'done' => $done,
             'completion' => $all->count() ? (int) round($done / $all->count() * 100) : 0,
             'byPriority' => $all->groupBy('priority')->map->count(),
-            'items'      => $items,
-            'doneItems'  => $doneItems,
+            'items' => $items,
+            'doneItems' => $doneItems,
         ];
     }
 
@@ -74,11 +78,11 @@ class TodosPage extends Component
         $this->validate(['title' => ['required', 'string', 'max:255']]);
 
         $todo = $this->site->todos()->create([
-            'user_id'          => Auth::id(),
+            'user_id' => Auth::id(),
             'assigned_user_id' => $this->assignee !== '' ? (int) $this->assignee : null,
-            'title'            => trim($this->title),
-            'priority'         => $this->priority,
-            'status'           => 'open',
+            'title' => trim($this->title),
+            'priority' => $this->priority,
+            'status' => 'open',
         ]);
 
         foreach (preg_split('/\r\n|\r|\n/', $this->items) as $i => $line) {
@@ -94,7 +98,7 @@ class TodosPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Todo created', message: $todo->title);
     }
 
-    public function toggleItem(int $itemId): void
+    public function toggleItem(string $itemId): void
     {
         $item = TodoItem::whereHas('todo', fn ($q) => $q->where('site_id', $this->siteId))->findOrFail($itemId);
         $item->update(['done' => ! $item->done]);
@@ -102,9 +106,9 @@ class TodosPage extends Component
         unset($this->todos, $this->stats);
     }
 
-    public function addItem(int $todoId): void
+    public function addItem(string $todoId): void
     {
-        $todo  = Todo::visibleTo($this->site, Auth::user())->findOrFail($todoId);
+        $todo = Todo::visibleTo($this->site, Auth::user())->findOrFail($todoId);
         $label = trim($this->newItem[$todoId] ?? '');
         if ($label === '') {
             return;
@@ -114,7 +118,7 @@ class TodosPage extends Component
         unset($this->todos, $this->stats);
     }
 
-    public function toggleTodo(int $todoId): void
+    public function toggleTodo(string $todoId): void
     {
         $todo = Todo::visibleTo($this->site, Auth::user())->findOrFail($todoId);
         abort_unless($todo->editableBy(Auth::user()), 403);
@@ -123,7 +127,7 @@ class TodosPage extends Component
         unset($this->todos, $this->stats);
     }
 
-    public function deleteTodo(int $todoId): void
+    public function deleteTodo(string $todoId): void
     {
         $todo = Todo::visibleTo($this->site, Auth::user())->findOrFail($todoId);
         abort_unless($todo->editableBy(Auth::user()), 403);
@@ -131,7 +135,7 @@ class TodosPage extends Component
         unset($this->todos, $this->stats);
     }
 
-    private function syncStatus(int $todoId): void
+    private function syncStatus(string $todoId): void
     {
         $todo = Todo::with('items')->find($todoId);
         if (! $todo || $todo->items->isEmpty()) {

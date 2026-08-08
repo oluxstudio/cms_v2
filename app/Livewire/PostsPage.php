@@ -25,7 +25,7 @@ class PostsPage extends Component
     // Create / edit form (modal)
     public bool $showForm = false;
 
-    public ?int $editingId = null;
+    public ?string $editingId = null;
 
     public string $title = '';
 
@@ -57,7 +57,7 @@ class PostsPage extends Component
         $this->showForm = true;
     }
 
-    public function editPost(int $id): void
+    public function editPost(string $id): void
     {
         abort_unless($this->canManage(), 403);
         $post = Post::where('site_id', $this->site->id)->findOrFail($id);
@@ -109,7 +109,7 @@ class PostsPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Post saved.');
     }
 
-    public function togglePublish(int $id): void
+    public function togglePublish(string $id): void
     {
         abort_unless($this->canManage(), 403);
         $post = Post::where('site_id', $this->site->id)->findOrFail($id);
@@ -119,7 +119,7 @@ class PostsPage extends Component
         ]);
     }
 
-    public function deletePost(int $id): void
+    public function deletePost(string $id): void
     {
         abort_unless($this->canManage(), 403);
         Post::where('site_id', $this->site->id)->whereKey($id)->delete();

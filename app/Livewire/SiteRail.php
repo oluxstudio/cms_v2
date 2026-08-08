@@ -7,6 +7,7 @@ use App\Models\Message;
 use App\Models\Site;
 use App\Models\Todo;
 use App\Models\TodoItem;
+use App\Services\TaskLogger;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -18,12 +19,15 @@ use Livewire\Component;
  */
 class SiteRail extends Component
 {
-    public int $siteId;
+    public string $siteId;
+
     public string $tab = 'alerts';
 
     // composers
     public string $newTodo = '';
+
     public string $newMessage = '';
+
     public array $newItem = [];      // todoId => label being typed
 
     #[Computed]
@@ -56,16 +60,17 @@ class SiteRail extends Component
     public function counts(): array
     {
         $u = Auth::user();
+
         return [
-            'alerts'   => Alert::visibleTo($this->site, $u)->whereNull('read_at')->count(),
+            'alerts' => Alert::visibleTo($this->site, $u)->whereNull('read_at')->count(),
             'messages' => Message::visibleTo($this->site, $u)->whereNull('read_at')
-                            ->where('sender_id', '!=', $u->id)->count(),
-            'todos'    => Todo::visibleTo($this->site, $u)->where('status', 'open')->count(),
+                ->where('sender_id', '!=', $u->id)->count(),
+            'todos' => Todo::visibleTo($this->site, $u)->where('status', 'open')->count(),
         ];
     }
 
     // ── Open in #MainContent ────────────────────────────────────────
-    public function open(string $type, int $id): void
+    public function open(string $type, string $id): void
     {
         if ($type === 'alert') {
             Alert::visibleTo($this->site, Auth::user())->whereKey($id)->whereNull('read_at')->update(['read_at' => now()]);
@@ -91,17 +96,17 @@ class SiteRail extends Component
         }
         $todo = $this->site->todos()->create([
             'user_id' => Auth::id(),
-            'title'   => $title,
-            'status'  => 'open',
+            'title' => $title,
+            'status' => 'open',
         ]);
         $this->newTodo = '';
         unset($this->todos);
         $this->dispatch('toast', level: 'success', title: 'Todo added', message: $todo->title);
     }
 
-    public function addItem(int $todoId): void
+    public function addItem(string $todoId): void
     {
-        $todo  = Todo::visibleTo($this->site, Auth::user())->findOrFail($todoId);
+        $todo = Todo::visibleTo($this->site, Auth::user())->findOrFail($todoId);
         $label = trim($this->newItem[$todoId] ?? '');
         if ($label === '') {
             return;
@@ -111,7 +116,7 @@ class SiteRail extends Component
         unset($this->todos);
     }
 
-    public function toggleItem(int $itemId): void
+    public function toggleItem(string $itemId): void
     {
         $item = TodoItem::whereHas('todo', fn ($q) => $q->where('site_id', $this->siteId))->findOrFail($itemId);
         $item->update(['done' => ! $item->done]);
@@ -119,7 +124,7 @@ class SiteRail extends Component
         unset($this->todos);
     }
 
-    public function toggleTodo(int $todoId): void
+    public function toggleTodo(string $todoId): void
     {
         $todo = Todo::visibleTo($this->site, Auth::user())->findOrFail($todoId);
         abort_unless($todo->editableBy(Auth::user()), 403);
@@ -127,12 +132,12 @@ class SiteRail extends Component
         $todo->update(['status' => $done ? 'done' : 'open', 'completed_at' => $done ? now() : null]);
         unset($this->todos);
         if ($done) {
-            app(\App\Services\TaskLogger::class)->record($this->site, Auth::user(), 'Todo completed', 'success', 'todo.completed', $todo->title, [], alertTeam: true);
+            app(TaskLogger::class)->record($this->site, Auth::user(), 'Todo completed', 'success', 'todo.completed', $todo->title, [], alertTeam: true);
             $this->dispatch('toast', level: 'success', title: 'Todo completed', message: $todo->title);
         }
     }
 
-    public function deleteTodo(int $todoId): void
+    public function deleteTodo(string $todoId): void
     {
         $todo = Todo::visibleTo($this->site, Auth::user())->findOrFail($todoId);
         abort_unless($todo->editableBy(Auth::user()), 403);
@@ -140,7 +145,7 @@ class SiteRail extends Component
         unset($this->todos);
     }
 
-    private function syncTodoStatus(int $todoId): void
+    private function syncTodoStatus(string $todoId): void
     {
         $todo = Todo::with('items')->find($todoId);
         if (! $todo || $todo->items->isEmpty()) {
@@ -148,7 +153,7 @@ class SiteRail extends Component
         }
         $allDone = $todo->items->every(fn ($i) => $i->done);
         $todo->update([
-            'status'       => $allDone ? 'done' : 'open',
+            'status' => $allDone ? 'done' : 'open',
             'completed_at' => $allDone ? ($todo->completed_at ?? now()) : null,
         ]);
     }
@@ -161,9 +166,9 @@ class SiteRail extends Component
             return;
         }
         $this->site->messages()->create([
-            'sender_id'    => Auth::id(),
+            'sender_id' => Auth::id(),
             'recipient_id' => null, // broadcast to the team
-            'body'         => $body,
+            'body' => $body,
         ]);
         $this->newMessage = '';
         unset($this->messages);

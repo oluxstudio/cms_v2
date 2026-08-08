@@ -10,6 +10,7 @@ use App\Models\PriceRule;
 use App\Models\Service;
 use App\Models\ServiceResource;
 use App\Models\Site;
+use App\Services\ActivityLogger;
 use App\Services\Booking\SlotAvailability;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -98,7 +99,7 @@ class BookingsPage extends Component
     }
 
     // Service form
-    public ?int $editingId = null;
+    public ?string $editingId = null;
 
     public string $kind = 'slot';
 
@@ -133,7 +134,7 @@ class BookingsPage extends Component
 
     public int $wizStep = 1;
 
-    public ?int $wizTypeId = null;   // chosen custom type (null = built-in engine)
+    public ?string $wizTypeId = null;   // chosen custom type (null = built-in engine)
 
     /** @var array<int,array{name:string,days:string,open:string,close:string}> */
     public array $wizResources = [];
@@ -210,7 +211,7 @@ class BookingsPage extends Component
     ];
 
     // Site-level resource tile form
-    public ?int $srEditingId = null;
+    public ?string $srEditingId = null;
 
     public string $srName = '';
 
@@ -286,7 +287,7 @@ class BookingsPage extends Component
     }
 
     /** Step 1 → choose a built-in engine or a custom type (prefills defaults). */
-    public function wizPickType(string $engine, ?int $typeId = null): void
+    public function wizPickType(string $engine, ?string $typeId = null): void
     {
         if (! in_array($engine, Service::KINDS, true)) {
             return;
@@ -348,14 +349,14 @@ class BookingsPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Type created', message: "“{$type->name}” is now reusable for future services.");
     }
 
-    public function toggleType(int $id): void
+    public function toggleType(string $id): void
     {
         $t = BookingType::where('site_id', $this->site->id)->find($id);
         $t?->update(['is_active' => ! $t->is_active]);
         unset($this->bookingTypes);
     }
 
-    public function deleteType(int $id): void
+    public function deleteType(string $id): void
     {
         // Services keep working: kind stays; booking_type_id nulls via FK.
         BookingType::where('site_id', $this->site->id)->whereKey($id)->delete();
@@ -1108,7 +1109,7 @@ class BookingsPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Service saved.');
     }
 
-    public function editService(int $id): void
+    public function editService(string $id): void
     {
         $s = $this->site->services()->findOrFail($id);
         $this->editingId = $s->id;
@@ -1139,7 +1140,7 @@ class BookingsPage extends Component
         unset($this->departures);
     }
 
-    public function deleteService(int $id): void
+    public function deleteService(string $id): void
     {
         $this->site->services()->whereKey($id)->delete();
         unset($this->services);
@@ -1148,7 +1149,7 @@ class BookingsPage extends Component
         }
     }
 
-    public function toggleService(int $id): void
+    public function toggleService(string $id): void
     {
         $s = $this->site->services()->findOrFail($id);
         $s->update(['is_active' => ! $s->is_active]);
@@ -1189,7 +1190,7 @@ class BookingsPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Added', message: ServiceResource::noun($svc->kind).' added.');
     }
 
-    public function toggleResource(int $id): void
+    public function toggleResource(string $id): void
     {
         $svc = $this->editingId ? $this->site->services()->find($this->editingId) : null;
         $r = $svc?->resources()->whereKey($id)->first();
@@ -1197,7 +1198,7 @@ class BookingsPage extends Component
         unset($this->serviceResources);
     }
 
-    public function deleteResource(int $id): void
+    public function deleteResource(string $id): void
     {
         // Resources are SITE-LEVEL and shared: removing here only DETACHES
         // it from this service — other services keep it. True deletion lives
@@ -1253,7 +1254,7 @@ class BookingsPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Rule added', message: 'Seasonal price rule saved.');
     }
 
-    public function deletePriceRule(int $id): void
+    public function deletePriceRule(string $id): void
     {
         PriceRule::where('site_id', $this->site->id)->whereKey($id)->delete();
         unset($this->priceRules);
@@ -1295,7 +1296,7 @@ class BookingsPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Resource saved.');
     }
 
-    public function editSiteResource(int $id): void
+    public function editSiteResource(string $id): void
     {
         $r = $this->site->resources()->findOrFail($id);
         $this->srEditingId = $r->id;
@@ -1304,7 +1305,7 @@ class BookingsPage extends Component
         $this->srPrice = $r->price_cents === null ? '' : number_format($r->price_cents / 100, 2, '.', '');
     }
 
-    public function toggleSiteResource(int $id): void
+    public function toggleSiteResource(string $id): void
     {
         $r = $this->site->resources()->whereKey($id)->first();
         $r?->update(['is_active' => ! $r->is_active]);
@@ -1312,7 +1313,7 @@ class BookingsPage extends Component
     }
 
     /** TRUE deletion — detaches from every service and removes the resource. */
-    public function deleteSiteResource(int $id): void
+    public function deleteSiteResource(string $id): void
     {
         $r = $this->site->resources()->whereKey($id)->first();
         $r?->services()->detach();
@@ -1321,7 +1322,7 @@ class BookingsPage extends Component
     }
 
     /** Assign / unassign a shared resource to a service (checkbox toggle). */
-    public function toggleResourceService(int $resourceId, int $serviceId): void
+    public function toggleResourceService(string $resourceId, string $serviceId): void
     {
         $r = $this->site->resources()->whereKey($resourceId)->first();
         $svc = $this->site->services()->whereKey($serviceId)->first();
@@ -1364,7 +1365,7 @@ class BookingsPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Departure added', message: $this->depOrigin.' → '.$this->depDestination);
     }
 
-    public function deleteDeparture(int $id): void
+    public function deleteDeparture(string $id): void
     {
         $svc = $this->editingId ? $this->site->services()->find($this->editingId) : null;
         $svc?->departures()->whereKey($id)->delete();
@@ -1373,9 +1374,9 @@ class BookingsPage extends Component
 
     // ── Booking detail (modal) ────────────────────────────────────────────
 
-    public ?int $viewingId = null;
+    public ?string $viewingId = null;
 
-    public function viewBooking(int $id): void
+    public function viewBooking(string $id): void
     {
         $this->viewingId = $this->site->bookings()->whereKey($id)->exists() ? $id : null;
     }
@@ -1406,7 +1407,7 @@ class BookingsPage extends Component
 
     // ── Bookings inbox ────────────────────────────────────────────────────
 
-    public function setStatus(int $bookingId, string $status): void
+    public function setStatus(string $bookingId, string $status): void
     {
         if (! in_array($status, ['pending', 'confirmed', 'cancelled'], true)) {
             return;
@@ -1420,7 +1421,7 @@ class BookingsPage extends Component
 
         if (in_array($status, ['confirmed', 'cancelled'], true) && $was !== $status) {
             try {
-                \App\Services\ActivityLogger::bookingEvent($booking, $status);
+                ActivityLogger::bookingEvent($booking, $status);
             } catch (\Throwable $e) {
                 report($e);
             }

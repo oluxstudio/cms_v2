@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Features\FeatureRegistry;
 use App\Templates\TemplateAppRegistry;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ use Illuminate\Support\Str;
 class Site extends Model
 {
     use HasFactory;
+    use HasUlids;
 
     /** Roles a member can hold within a site, ordered by privilege. */
     public const ROLES = ['owner', 'admin', 'editor', 'viewer'];

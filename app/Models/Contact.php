@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ use Illuminate\Support\Str;
 class Contact extends Model
 {
     use HasFactory;
+    use HasUlids;
 
     /** Pipeline stages, in order. */
     public const STATUSES = ['new', 'contacted', 'qualified', 'won', 'lost'];
@@ -53,7 +55,7 @@ class Contact extends Model
     }
 
     /** Record a timeline entry. Actor defaults to the authenticated user. */
-    public function logActivity(string $type, ?string $body = null, array $meta = [], ?int $userId = null): Activity
+    public function logActivity(string $type, ?string $body = null, array $meta = [], ?string $userId = null): Activity
     {
         return $this->activities()->create([
             'user_id' => $userId ?? auth()->id(),

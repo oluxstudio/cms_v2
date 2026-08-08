@@ -54,7 +54,7 @@
                 'method' => 'GET', 'path' => '/components/{id}',
                 'summary' => 'One component with its full node list, tags, page attachments and linked collections.',
                 'params' => [
-                    ['id', 'path', 'integer', true, 'The component id from the /components listing.'],
+                    ['id', 'path', 'ulid', true, 'The component id from the /components listing.'],
                 ],
                 'example' => "curl {$base}/components/12",
             ],
@@ -77,7 +77,7 @@
                 'method' => 'PATCH', 'path' => '/components/{id} 🔒', 'auth' => true,
                 'summary' => 'Update a component. Send only what changes — but note: when a nodes array is present the nodes are REPLACED wholesale with it; omit nodes to keep them. page_ids: [] detaches from every page; omit to leave attachments alone.',
                 'params' => [
-                    ['id', 'path', 'integer', true, 'The component id.'],
+                    ['id', 'path', 'ulid', true, 'The component id.'],
                     ['name', 'body', 'string', false, 'New name.'],
                     ['description', 'body', 'string', false, 'New description (null clears it).'],
                     ['tags', 'body', 'string[]', false, 'Replaces the tag list.'],
@@ -89,7 +89,7 @@
             [
                 'method' => 'DELETE', 'path' => '/components/{id} 🔒', 'auth' => true,
                 'summary' => 'Delete a component — its nodes and every page attachment go with it.',
-                'params' => [['id', 'path', 'integer', true, 'The component id.']],
+                'params' => [['id', 'path', 'ulid', true, 'The component id.']],
                 'example' => "curl -X DELETE {$base}/components/12 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
             ],
         ],
@@ -104,7 +104,7 @@
             [
                 'method' => 'GET', 'path' => '/pages/{id}',
                 'summary' => 'One page record with its attributes.',
-                'params' => [['id', 'path', 'integer', true, 'The page id from the /pages listing.']],
+                'params' => [['id', 'path', 'ulid', true, 'The page id from the /pages listing.']],
                 'example' => "curl {$base}/pages/4",
             ],
             [
@@ -123,7 +123,7 @@
                 'method' => 'PATCH', 'path' => '/pages/{id} 🔒', 'auth' => true,
                 'summary' => 'Update a page. Send only what changes. In the attributes map, a null value FORGETS that key; other keys are set/overwritten and unmentioned keys are left alone (merge, not replace).',
                 'params' => [
-                    ['id', 'path', 'integer', true, 'The page id.'],
+                    ['id', 'path', 'ulid', true, 'The page id.'],
                     ['name', 'body', 'string', false, 'New name.'],
                     ['url', 'body', 'string', false, 'New path (must stay unique).'],
                     ['keywords', 'body', 'string', false, 'New keywords.'],
@@ -135,7 +135,7 @@
             [
                 'method' => 'DELETE', 'path' => '/pages/{id} 🔒', 'auth' => true,
                 'summary' => 'Delete a page — its attributes and component attachments go with it (the components themselves survive).',
-                'params' => [['id', 'path', 'integer', true, 'The page id.']],
+                'params' => [['id', 'path', 'ulid', true, 'The page id.']],
                 'example' => "curl -X DELETE {$base}/pages/4 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
             ],
         ],
@@ -150,7 +150,7 @@
             [
                 'method' => 'GET', 'path' => '/collections/{id}',
                 'summary' => 'One public collection with its published items.',
-                'params' => [['id', 'path', 'integer', true, 'The collection id.']],
+                'params' => [['id', 'path', 'ulid', true, 'The collection id.']],
                 'example' => "curl {$base}/collections/3",
             ],
             [
@@ -169,20 +169,20 @@
             [
                 'method' => 'PATCH', 'path' => '/collections/{id} 🔒', 'auth' => true,
                 'summary' => 'Update a collection (same body fields as POST, all optional). Renaming also regenerates the slug. Authenticated write responses include ALL items regardless of status.',
-                'params' => [['id', 'path', 'integer', true, 'The collection id.']],
+                'params' => [['id', 'path', 'ulid', true, 'The collection id.']],
                 'example' => "curl -X PATCH {$base}/collections/3 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"is_public\":false}'",
             ],
             [
                 'method' => 'DELETE', 'path' => '/collections/{id} 🔒', 'auth' => true,
                 'summary' => 'Delete a collection and every item in it.',
-                'params' => [['id', 'path', 'integer', true, 'The collection id.']],
+                'params' => [['id', 'path', 'ulid', true, 'The collection id.']],
                 'example' => "curl -X DELETE {$base}/collections/3 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
             ],
             [
                 'method' => 'POST', 'path' => '/collections/{id}/items 🔒', 'auth' => true,
                 'summary' => 'Add an item. data is a free-form object matching the collection\'s field schema keys. Items default to published; use status "pending" to hold one back from public reads.',
                 'params' => [
-                    ['id', 'path', 'integer', true, 'The collection id.'],
+                    ['id', 'path', 'ulid', true, 'The collection id.'],
                     ['data', 'body', 'object', true, 'The item content, keyed by field key.'],
                     ['status', 'body', 'string', false, 'published | pending | archived. Default published.'],
                 ],
@@ -192,8 +192,8 @@
                 'method' => 'PATCH', 'path' => '/collections/{id}/items/{itemId} 🔒', 'auth' => true,
                 'summary' => 'Update an item\'s data and/or status. A data object REPLACES the item\'s data wholesale.',
                 'params' => [
-                    ['id', 'path', 'integer', true, 'The collection id.'],
-                    ['itemId', 'path', 'integer', true, 'The item id.'],
+                    ['id', 'path', 'ulid', true, 'The collection id.'],
+                    ['itemId', 'path', 'ulid', true, 'The item id.'],
                     ['data', 'body', 'object', false, 'Full replacement item content.'],
                     ['status', 'body', 'string', false, 'published | pending | archived.'],
                 ],
@@ -203,8 +203,8 @@
                 'method' => 'DELETE', 'path' => '/collections/{id}/items/{itemId} 🔒', 'auth' => true,
                 'summary' => 'Delete one item.',
                 'params' => [
-                    ['id', 'path', 'integer', true, 'The collection id.'],
-                    ['itemId', 'path', 'integer', true, 'The item id.'],
+                    ['id', 'path', 'ulid', true, 'The collection id.'],
+                    ['itemId', 'path', 'ulid', true, 'The item id.'],
                 ],
                 'example' => "curl -X DELETE {$base}/collections/3/items/9 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
             ],
@@ -452,7 +452,7 @@
                 'method' => 'PATCH', 'path' => '/bookings/{id} 🔒', 'auth' => true,
                 'summary' => 'Admin: confirm or cancel a booking. Customer emails + dashboard activity fire automatically.',
                 'params' => [
-                    ['id', 'path', 'integer', true, 'The booking id.'],
+                    ['id', 'path', 'ulid', true, 'The booking id.'],
                     ['status', 'body', 'string', true, 'confirmed or cancelled.'],
                 ],
                 'example' => "curl -X PATCH {$base}/bookings/42 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"status\":\"confirmed\"}'",
@@ -505,7 +505,7 @@
                 'method' => 'PATCH', 'path' => '/media/{id} 🔒', 'auth' => true,
                 'summary' => 'Edit an asset\'s name and alt text. For url-registered assets the url and type can also change; an uploaded file\'s url is immutable (delete and re-upload instead).',
                 'params' => [
-                    ['id', 'path', 'integer', true, 'The asset id from the /media listing.'],
+                    ['id', 'path', 'ulid', true, 'The asset id from the /media listing.'],
                     ['name', 'body', 'string', false, 'New display name.'],
                     ['alt', 'body', 'string', false, 'New alt text (null clears it).'],
                     ['url', 'body', 'string', false, 'New URL — external assets only.'],
@@ -516,7 +516,7 @@
             [
                 'method' => 'DELETE', 'path' => '/media/{id} 🔒', 'auth' => true,
                 'summary' => 'Delete an asset. Uploaded files are removed from storage too; external url assets just drop the record.',
-                'params' => [['id', 'path', 'integer', true, 'The asset id.']],
+                'params' => [['id', 'path', 'ulid', true, 'The asset id.']],
                 'example' => "curl -X DELETE {$base}/media/7 \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
             ],
         ],

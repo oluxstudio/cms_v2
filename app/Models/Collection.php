@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\HasFieldSchema;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,14 +15,15 @@ class Collection extends Model
 {
     use HasFactory;
     use HasFieldSchema;
+    use HasUlids;
 
     protected $fillable = [
         'site_id', 'name', 'slug', 'type', 'description', 'fields', 'is_public', 'allow_submit', 'auto_publish',
     ];
 
     protected $casts = [
-        'fields'       => 'array',
-        'is_public'    => 'boolean',
+        'fields' => 'array',
+        'is_public' => 'boolean',
         'allow_submit' => 'boolean',
         'auto_publish' => 'boolean',
     ];

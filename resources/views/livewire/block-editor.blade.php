@@ -107,14 +107,14 @@
                     @foreach($pages as $p)
                         <div class="flex items-center gap-2 rounded-xl border px-3 py-2 transition-colors
                             {{ $page && $page->id === $p->id ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30' : 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-white/[0.06]' }}">
-                            <button wire:click="selectPage({{ $p->id }})" class="flex-1 text-left min-w-0">
+                            <button wire:click="selectPage('{{ $p->id }}')" class="flex-1 text-left min-w-0">
                                 <span class="block text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ $p->name }}</span>
                                 <span class="block text-[11px] text-gray-400 font-mono">{{ $p->url }}</span>
                             </button>
-                            <button wire:click="selectPage({{ $p->id }})" @click="tab = 'build'"
+                            <button wire:click="selectPage('{{ $p->id }}')" @click="tab = 'build'"
                                     class="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">Build →</button>
                             <span class="shrink-0 w-1.5 h-1.5 rounded-full {{ $p->is_published ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600' }}" title="{{ $p->is_published ? 'Published' : 'Draft' }}"></span>
-                            <button wire:click="deletePage({{ $p->id }})" data-confirm="Delete this page and all its blocks?"
+                            <button wire:click="deletePage('{{ $p->id }}')" data-confirm="Delete this page and all its blocks?"
                                     class="shrink-0 p-1 rounded-lg text-gray-300 dark:text-gray-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10" title="Delete page">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
@@ -183,12 +183,12 @@
                                 <span class="text-[11px] text-gray-400">{{ $bl->pages_count }} {{ Str::plural('page', $bl->pages_count) }}</span>
                                 <span class="text-[11px] text-gray-400">· {{ max(0, $bl->blocks()->count() - 2) }} layout {{ Str::plural('block', max(0, $bl->blocks()->count() - 2)) }}</span>
                                 @unless($bl->is_system)
-                                    <button wire:click="editLayout({{ $bl->id }})"
+                                    <button wire:click="editLayout('{{ $bl->id }}')"
                                             class="ml-auto px-2.5 py-1 rounded-lg text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
                                             title="Open this layout in the canvas — full editor, same blocks as pages">
                                         Edit layout
                                     </button>
-                                    <button wire:click="deleteBlockLayout({{ $bl->id }})"
+                                    <button wire:click="deleteBlockLayout('{{ $bl->id }}')"
                                             data-confirm="Delete “{{ $bl->name }}”? {{ $bl->pages_count ? $bl->pages_count.' page(s) will fall back to Blank — their content is kept.' : '' }}"
                                             class="p-1 rounded-lg text-gray-300 dark:text-gray-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10" title="Delete layout">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -230,12 +230,12 @@
                                 <span class="text-[15px]">⚙</span>
                                 <p class="text-sm font-bold text-gray-900 dark:text-white">{{ $comp->name }}</p>
                                 <span class="text-[11px] text-gray-400">{{ max(0, $comp->blocks_count - 1) }} {{ Str::plural('block', max(0, $comp->blocks_count - 1)) }}</span>
-                                <button wire:click="editLayout({{ $comp->id }})"
+                                <button wire:click="editLayout('{{ $comp->id }}')"
                                         class="ml-auto px-2.5 py-1 rounded-lg text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
                                         title="Open this component in the canvas — same editor pages use">
                                     Edit component
                                 </button>
-                                <button wire:click="deleteComponent({{ $comp->id }})"
+                                <button wire:click="deleteComponent('{{ $comp->id }}')"
                                         data-confirm="Delete “{{ $comp->name }}”? Copies already placed on pages are kept."
                                         class="p-1 rounded-lg text-gray-300 dark:text-gray-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10" title="Delete component">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -353,17 +353,17 @@
                                     · saved {{ $tpl->updated_at->diffForHumans() }}
                                 </span>
                                 <span class="ml-auto flex items-center gap-1.5">
-                                    <button wire:click="applyTemplate({{ $tpl->id }})" @click="tab = 'build'"
+                                    <button wire:click="applyTemplate('{{ $tpl->id }}')" @click="tab = 'build'"
                                             data-confirm="Load “{{ $tpl->name }}” into “{{ $page?->name }}”? The page's current blocks are replaced (Ctrl+Z undoes the content)."
                                             class="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white bg-indigo-600 hover:bg-indigo-700">Apply &amp; edit</button>
-                                    <button wire:click="updateTemplate({{ $tpl->id }})"
+                                    <button wire:click="updateTemplate('{{ $tpl->id }}')"
                                             data-confirm="Overwrite “{{ $tpl->name }}” with the current build?"
                                             class="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">Update</button>
                                     @unless($tpl->is_default)
-                                        <button wire:click="setDefaultTemplate({{ $tpl->id }})" title="Make this the default template"
+                                        <button wire:click="setDefaultTemplate('{{ $tpl->id }}')" title="Make this the default template"
                                                 class="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-gray-500 border border-gray-200 dark:border-white/[0.08] hover:bg-gray-50 dark:hover:bg-white/[0.05]">Set default</button>
                                     @endunless
-                                    <button wire:click="deleteTemplate({{ $tpl->id }})" data-confirm="Delete template “{{ $tpl->name }}”? Pages already built from it keep their blocks."
+                                    <button wire:click="deleteTemplate('{{ $tpl->id }}')" data-confirm="Delete template “{{ $tpl->name }}”? Pages already built from it keep their blocks."
                                             class="p-1 rounded-lg text-gray-300 dark:text-gray-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10" title="Delete template">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </button>
@@ -426,7 +426,7 @@
                     @else
                         <div class="grid grid-cols-2 gap-1.5">
                             @foreach($components as $comp)
-                                <div draggable="true" data-bkw-component="{{ $comp->id }}" wire:click="insertComponent({{ $comp->id }})"
+                                <div draggable="true" data-bkw-component="{{ $comp->id }}" wire:click="insertComponent('{{ $comp->id }}')"
                                      class="bkw-pblock group rounded-lg border border-emerald-200 dark:border-emerald-400/30 bg-white dark:bg-white/[0.04] p-2 cursor-grab active:cursor-grabbing select-none hover:border-emerald-400 hover:-translate-y-px transition-all"
                                      title="{{ $comp->name }} — your component; drag onto the canvas or click to insert">
                                     <div class="h-7 rounded bg-emerald-50 dark:bg-emerald-400/10 grid place-items-center text-[13px] text-emerald-500">⚙</div>
@@ -445,13 +445,13 @@
                     @else
                         <div class="grid grid-cols-2 gap-1.5">
                             @foreach($reusables as $r)
-                                <div draggable="true" data-bkw-reuse="{{ $r->id }}" wire:click="insertReusableAt({{ $r->id }})"
+                                <div draggable="true" data-bkw-reuse="{{ $r->id }}" wire:click="insertReusableAt('{{ $r->id }}')"
                                      class="bkw-pblock group relative rounded-lg border border-amber-200 dark:border-amber-400/30 bg-white dark:bg-white/[0.04] p-2 cursor-grab active:cursor-grabbing select-none hover:border-amber-400 hover:-translate-y-px transition-all"
                                      title="Reusable {{ $r->root_type }} — drag onto the canvas or click to insert">
                                     <div class="h-7 rounded bg-amber-50 dark:bg-amber-400/10 grid place-items-center text-[13px] text-amber-500">⟳</div>
                                     <p class="mt-1.5 text-[11px] font-semibold leading-tight text-gray-800 dark:text-gray-100 truncate">{{ $r->name }}</p>
                                     <p class="font-mono text-[9px] text-gray-400">{{ $r->root_type }}</p>
-                                    <button wire:click.stop="deleteReusable({{ $r->id }})" title="Remove from palette"
+                                    <button wire:click.stop="deleteReusable('{{ $r->id }}')" title="Remove from palette"
                                             class="absolute top-1 right-1 hidden group-hover:block text-[10px] text-gray-400 hover:text-rose-500 px-1">✕</button>
                                 </div>
                             @endforeach
@@ -911,7 +911,7 @@
                                 @endforeach
                                 <div class="flex gap-1.5 pt-0.5">
                                     @if($refComponent)
-                                        <button wire:click="editLayout({{ $refComponent->id }})"
+                                        <button wire:click="editLayout('{{ $refComponent->id }}')"
                                                 class="flex-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-400/40 hover:bg-emerald-100 dark:hover:bg-emerald-400/10">Edit component</button>
                                     @endif
                                     <button wire:click="detachComponent('{{ $selected->id }}')"

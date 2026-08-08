@@ -9,13 +9,15 @@ use Livewire\Component;
 
 class SitePrompt extends Component
 {
-    public int    $siteId;
-    public string $input   = '';
-    public array  $messages = [];
+    public string $siteId;
 
-    public function mount(int $siteId): void
+    public string $input = '';
+
+    public array $messages = [];
+
+    public function mount(string $siteId): void
     {
-        $this->siteId   = $siteId;
+        $this->siteId = $siteId;
         $this->messages = session("chat:{$siteId}", []);
     }
 
@@ -28,7 +30,9 @@ class SitePrompt extends Component
     public function send(): void
     {
         $text = trim($this->input);
-        if ($text === '') return;
+        if ($text === '') {
+            return;
+        }
 
         $this->input = '';
 
@@ -47,14 +51,14 @@ class SitePrompt extends Component
                 $history,
             );
             $reply = $result['text'];
-            $ok    = $result['ok'];
+            $ok = $result['ok'];
             $built = $result['built'] ?? false;
-            $page  = $result['page'] ?? null;
+            $page = $result['page'] ?? null;
         } else {
-            $reply = "No AI driver configured. Add DEEPSEEK_API_KEY and set LLM_DRIVER=deepseek in your .env file.";
-            $ok    = false;
+            $reply = 'No AI driver configured. Add DEEPSEEK_API_KEY and set LLM_DRIVER=deepseek in your .env file.';
+            $ok = false;
             $built = false;
-            $page  = null;
+            $page = null;
         }
 
         // Add AI response
@@ -70,12 +74,13 @@ class SitePrompt extends Component
         // clarifying-question turns (no writes) stay in the chat so the user can answer.
         if ($ok && $built) {
             $this->redirect(route('blocks', ['siteID' => $this->site->name]), navigate: true);
+
             return;
         }
 
         $this->dispatch('toast',
-            level:   $ok ? 'success' : 'error',
-            title:   $ok ? 'Done' : 'Error',
+            level: $ok ? 'success' : 'error',
+            title: $ok ? 'Done' : 'Error',
             message: mb_substr($reply, 0, 120),
         );
     }

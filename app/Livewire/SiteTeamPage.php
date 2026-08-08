@@ -24,17 +24,17 @@ class SiteTeamPage extends Component
     public Site $site;
 
     /** The client account whose team this is (the site's owner). */
-    public int $accountId;
+    public string $accountId;
 
     public string $tab = 'members'; // members | invites | roles
 
     // Invite form
     public string $inviteEmail = '';
 
-    public ?int $inviteRoleId = null;
+    public ?string $inviteRoleId = null;
 
     // Role editor
-    public ?int $editingRoleId = null;   // 0 = creating a new role
+    public ?string $editingRoleId = null;   // 0 = creating a new role
 
     public string $roleName = '';
 
@@ -91,7 +91,7 @@ class SiteTeamPage extends Component
             ->get();
     }
 
-    public function updateMemberRole(int $memberId, int $roleId): void
+    public function updateMemberRole(string $memberId, string $roleId): void
     {
         $this->guard();
         $member = AccountMember::where('account_id', $this->accountId)->findOrFail($memberId);
@@ -100,7 +100,7 @@ class SiteTeamPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Role updated', message: ($member->user->name ?? 'Member').' is now '.$role->name.'.');
     }
 
-    public function removeMember(int $memberId): void
+    public function removeMember(string $memberId): void
     {
         $this->guard();
         $member = AccountMember::where('account_id', $this->accountId)->findOrFail($memberId);
@@ -117,7 +117,7 @@ class SiteTeamPage extends Component
         $this->errorMessage = '';
         $this->validate([
             'inviteEmail' => ['required', 'email', 'max:255'],
-            'inviteRoleId' => ['required', 'integer'],
+            'inviteRoleId' => ['required', 'string'],
         ]);
 
         $email = mb_strtolower(trim($this->inviteEmail));
@@ -143,7 +143,7 @@ class SiteTeamPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Invitation sent', message: 'An email with a verification link is on its way to '.$email.'.');
     }
 
-    public function resendInvite(int $invitationId): void
+    public function resendInvite(string $invitationId): void
     {
         $this->guard();
         $invitation = TeamInvitation::where('account_id', $this->accountId)->findOrFail($invitationId);
@@ -153,7 +153,7 @@ class SiteTeamPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Invitation re-sent', message: 'A fresh link went to '.$invitation->email.'.');
     }
 
-    public function revokeInvite(int $invitationId): void
+    public function revokeInvite(string $invitationId): void
     {
         $this->guard();
         TeamInvitation::where('account_id', $this->accountId)->findOrFail($invitationId)->delete();
@@ -162,7 +162,7 @@ class SiteTeamPage extends Component
 
     // ── Roles & permissions ──────────────────────────────────────
 
-    public function openRoleEditor(int $roleId = 0): void
+    public function openRoleEditor(string $roleId = ''): void
     {
         $this->guard();
         $this->editingRoleId = $roleId;
@@ -216,7 +216,7 @@ class SiteTeamPage extends Component
         $this->closeRoleEditor();
     }
 
-    public function deleteRole(int $roleId): void
+    public function deleteRole(string $roleId): void
     {
         $this->guard();
         $role = Role::where('account_id', $this->accountId)->findOrFail($roleId);

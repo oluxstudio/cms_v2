@@ -615,7 +615,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                                 <p class="text-xs text-gray-400 font-mono mt-0.5">{{ $token->maskedToken() }}</p>
                                 <p class="text-xs text-gray-400 mt-0.5">Created {{ $token->created_at->diffForHumans() }}{{ $token->last_used_at ? ' · Last used '.$token->last_used_at->diffForHumans() : '' }}</p>
                             </div>
-                            <button wire:click="revokeToken({{ $token->id }})" data-confirm="Revoke this token?"
+                            <button wire:click="revokeToken('{{ $token->id }}')" data-confirm="Revoke this token?"
                                 class="text-xs font-medium text-red-500 hover:text-red-700 px-3 py-1.5 hover:bg-red-50 rounded-lg transition-colors">
                                 Revoke
                             </button>

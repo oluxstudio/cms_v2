@@ -17,9 +17,9 @@ use Livewire\Component;
  */
 class BlockAssistant extends Component
 {
-    public int $siteId;
+    public string $siteId;
 
-    public ?int $pageId = null;
+    public ?string $pageId = null;
 
     public ?string $selectedId = null;
 
@@ -30,14 +30,14 @@ class BlockAssistant extends Component
     /** @var array<int,array{role:string,text:string}> */
     public array $messages = [];
 
-    public function mount(int $siteId, ?int $pageId = null): void
+    public function mount(string $siteId, ?string $pageId = null): void
     {
         $this->siteId = $siteId;
         $this->pageId = $pageId;
     }
 
     #[On('bk-page-changed')]
-    public function onPageChanged(int $pageId): void
+    public function onPageChanged(string $pageId): void
     {
         $this->pageId = $pageId;
         $this->selectedId = null;

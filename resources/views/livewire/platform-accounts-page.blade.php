@@ -30,7 +30,7 @@
                 <span class="text-[10px] font-bold text-emerald-500" title="Has custom pricing">★ custom</span>
             @endif
 
-            <select wire:change="assignPlan({{ $account->id }}, $event.target.value)"
+            <select wire:change="assignPlan('{{ $account->id }}', $event.target.value)"
                     class="text-xs font-semibold pr-7 pl-3 py-1.5 rounded-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300 cursor-pointer focus:outline-none">
                 <option value="">Set plan…</option>
                 @foreach(config('plans.tiers') as $key => $t)
@@ -38,7 +38,7 @@
                 @endforeach
             </select>
 
-            <button wire:click="edit({{ $account->id }})"
+            <button wire:click="edit('{{ $account->id }}')"
                     class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
                 Pricing
             </button>

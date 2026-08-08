@@ -32,7 +32,7 @@ class ActivityLogger
      * } $options
      */
     public static function log(
-        int $siteId,
+        string $siteId,
         string $entityType,
         string $action,
         string $title,
@@ -213,7 +213,7 @@ class ActivityLogger
         );
     }
 
-    public static function memberJoined(User $user, int $siteId): void
+    public static function memberJoined(User $user, string $siteId): void
     {
         static::log(
             $siteId,

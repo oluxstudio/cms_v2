@@ -69,12 +69,12 @@
                 @if ($c->nodes->count() > 6)<span class="text-[10px] text-gray-400">+{{ $c->nodes->count() - 6 }}</span>@endif
             </div>
             <div class="flex gap-2 mt-4">
-                <button wire:click="view({{ $c->id }})"
+                <button wire:click="view('{{ $c->id }}')"
                         class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">View</button>
                 @if ($canManage)
-                <button wire:click="open({{ $c->id }})"
+                <button wire:click="open('{{ $c->id }}')"
                         class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">Edit</button>
-                <button wire:click="deleteComponent({{ $c->id }})" data-confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
+                <button wire:click="deleteComponent('{{ $c->id }}')" data-confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
                         class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
                 @endif
             </div>

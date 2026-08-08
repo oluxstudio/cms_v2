@@ -99,17 +99,17 @@ server.tool("update_post", "Update a post by slug (any field; drafts included)."
 
 const nodeSchema = z.object({
   label: z.string(), type: z.enum(["text", "url", "image", "number", "boolean", "color", "collection"]),
-  value: z.string().optional(), parent: z.number().int().optional(), order: z.number().int().optional(),
+  value: z.string().optional(), parent: z.string().optional(), order: z.number().int().optional(),
 });
 
 server.tool("create_component", "Create a content component with its typed nodes; optionally attach to pages.", {
   name: z.string(), description: z.string().optional(), tags: z.array(z.string()).optional(),
-  nodes: z.array(nodeSchema).optional(), page_ids: z.array(z.number().int()).optional(),
+  nodes: z.array(nodeSchema).optional(), page_ids: z.array(z.string()).optional(),
 }, async (args) => ok(await api("POST", `${s}/components`, args)));
 
 server.tool("update_component", "Update a component. A nodes array REPLACES all nodes; omit to keep them.", {
-  id: z.number().int(), name: z.string().optional(), description: z.string().optional(),
-  tags: z.array(z.string()).optional(), nodes: z.array(nodeSchema).optional(), page_ids: z.array(z.number().int()).optional(),
+  id: z.string(), name: z.string().optional(), description: z.string().optional(),
+  tags: z.array(z.string()).optional(), nodes: z.array(nodeSchema).optional(), page_ids: z.array(z.string()).optional(),
 }, async ({ id, ...rest }) => ok(await api("PATCH", `${s}/components/${id}`, rest)));
 
 server.tool("create_page", "Create a page (url must be unique on the site). attributes = key→value map.", {
@@ -118,7 +118,7 @@ server.tool("create_page", "Create a page (url must be unique on the site). attr
 }, async (args) => ok(await api("POST", `${s}/pages`, args)));
 
 server.tool("update_page", "Update a page; attribute values of null forget that key.", {
-  id: z.number().int(), name: z.string().optional(), url: z.string().optional(), keywords: z.string().optional(),
+  id: z.string(), name: z.string().optional(), url: z.string().optional(), keywords: z.string().optional(),
   is_published: z.boolean().optional(), attributes: z.record(z.string(), z.string().nullable()).optional(),
 }, async ({ id, ...rest }) => ok(await api("PATCH", `${s}/pages/${id}`, rest)));
 
@@ -132,7 +132,7 @@ server.tool("create_form", "Create a form; its schema immediately powers the pub
 }, async (args) => ok(await api("POST", `${s}/forms`, args)));
 
 server.tool("add_collection_item", "Add an item to a collection (status defaults to published).", {
-  collection_id: z.number().int(), data: z.record(z.string(), z.unknown()),
+  collection_id: z.string(), data: z.record(z.string(), z.unknown()),
   status: z.enum(["published", "pending", "archived"]).optional(),
 }, async ({ collection_id, ...rest }) => ok(await api("POST", `${s}/collections/${collection_id}/items`, rest)));
 
@@ -141,7 +141,7 @@ server.tool("add_media_url", "Register an external asset by URL in the media lib
 }, async (args) => ok(await api("POST", `${s}/media`, args)));
 
 server.tool("update_booking", "Update a booking's status (confirmed emails the customer; cancelled too).", {
-  id: z.number().int(), status: z.enum(["pending", "confirmed", "cancelled"]),
+  id: z.string(), status: z.enum(["pending", "confirmed", "cancelled"]),
 }, async ({ id, ...rest }) => ok(await api("PATCH", `${s}/bookings/${id}`, rest)));
 
 /* ── Destructive tools — refuse without confirm: true ───────────────────── */
@@ -157,12 +157,12 @@ server.tool("delete_post", "DELETE a post by slug. Requires confirm: true.", { s
   return ok(await api("DELETE", `${s}/posts/${encodeURIComponent(slug)}`));
 });
 
-server.tool("delete_component", "DELETE a component (nodes + page attachments go with it). Requires confirm: true.", { id: z.number().int(), confirm: z.boolean().optional() }, async ({ id, confirm }) => {
+server.tool("delete_component", "DELETE a component (nodes + page attachments go with it). Requires confirm: true.", { id: z.string(), confirm: z.boolean().optional() }, async ({ id, confirm }) => {
   needsConfirm(confirm);
   return ok(await api("DELETE", `${s}/components/${id}`));
 });
 
-server.tool("delete_page", "DELETE a page. Requires confirm: true.", { id: z.number().int(), confirm: z.boolean().optional() }, async ({ id, confirm }) => {
+server.tool("delete_page", "DELETE a page. Requires confirm: true.", { id: z.string(), confirm: z.boolean().optional() }, async ({ id, confirm }) => {
   needsConfirm(confirm);
   return ok(await api("DELETE", `${s}/pages/${id}`));
 });

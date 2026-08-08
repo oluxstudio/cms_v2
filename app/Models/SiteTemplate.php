@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Templates\ArrayTemplate;
 use App\Templates\TemplateContract;
 use App\Templates\TemplateRegistry;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class SiteTemplate extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'template_id', 'template_version_id', 'source', 'builtin_key',
         'name', 'description', 'category', 'accent_color', 'gradient_class',
@@ -22,10 +25,10 @@ class SiteTemplate extends Model
     ];
 
     protected $casts = [
-        'payload'        => 'array',
+        'payload' => 'array',
         'previous_theme' => 'array',
         'previous_state' => 'array',
-        'applied_at'     => 'datetime',
+        'applied_at' => 'datetime',
     ];
 
     /** Whether this template is currently applied (in use) on the site. */
@@ -78,17 +81,17 @@ class SiteTemplate extends Model
 
         return new ArrayTemplate(
             meta: [
-                'key'         => 'site-template-'.$this->id,
-                'name'        => $this->name,
+                'key' => 'site-template-'.$this->id,
+                'name' => $this->name,
                 'description' => (string) $this->description,
-                'category'    => (string) $this->category,
+                'category' => (string) $this->category,
                 'accentColor' => $this->accent_color ?: '#6366f1',
                 'gradientClass' => $this->gradient_class ?: 'from-slate-400 to-slate-600',
-                'tags'        => $payload['tags'] ?? [],
-                'features'    => $payload['features'] ?? [],
-                'version'     => $payload['version'] ?? '1.0.0',
-                'author'      => $payload['author'] ?? 'Imported',
-                'createdAt'   => $payload['createdAt'] ?? $this->created_at?->toDateString() ?? '2026-01-01',
+                'tags' => $payload['tags'] ?? [],
+                'features' => $payload['features'] ?? [],
+                'version' => $payload['version'] ?? '1.0.0',
+                'author' => $payload['author'] ?? 'Imported',
+                'createdAt' => $payload['createdAt'] ?? $this->created_at?->toDateString() ?? '2026-01-01',
             ],
             pages: $payload['pages'] ?? [],
             theme: $payload['theme'] ?? [],

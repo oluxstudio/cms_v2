@@ -26,7 +26,7 @@ class SiteSubmissionsPage extends Component
     public string $formFilter = '';
 
     /** Open detail row (contact / form response) */
-    public ?int $openId = null;
+    public ?string $openId = null;
 
     // ─────────────────────────────────────────────────────────────
     // Boot
@@ -43,8 +43,8 @@ class SiteSubmissionsPage extends Component
 
     public function setTab(string $tab): void
     {
-        $this->tab        = $tab;
-        $this->openId     = null;
+        $this->tab = $tab;
+        $this->openId = null;
         $this->formFilter = '';
         $this->resetPage();
     }
@@ -53,7 +53,7 @@ class SiteSubmissionsPage extends Component
     // Detail expand / collapse
     // ─────────────────────────────────────────────────────────────
 
-    public function toggleOpen(int $id): void
+    public function toggleOpen(string $id): void
     {
         $this->openId = ($this->openId === $id) ? null : $id;
 
@@ -62,17 +62,17 @@ class SiteSubmissionsPage extends Component
         }
     }
 
-    private function markOneRead(int $id): void
+    private function markOneRead(string $id): void
     {
         if ($this->tab === 'contact') {
             ContactSubmission::where('site_id', $this->site->id)
-                             ->find($id)
-                             ?->markAsRead();
+                ->find($id)
+                ?->markAsRead();
         } elseif ($this->tab === 'forms') {
             // Guard: response must belong to a form owned by this site
             FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))
-                        ->find($id)
-                        ?->markAsRead();
+                ->find($id)
+                ?->markAsRead();
         }
     }
 
@@ -84,12 +84,12 @@ class SiteSubmissionsPage extends Component
     {
         if ($this->tab === 'contact') {
             ContactSubmission::where('site_id', $this->site->id)
-                             ->whereNull('read_at')
-                             ->update(['read_at' => now()]);
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
 
         } elseif ($this->tab === 'forms') {
             $query = FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))
-                                 ->whereNull('read_at');
+                ->whereNull('read_at');
 
             if ($this->formFilter) {
                 $query->where('form_id', (int) $this->formFilter);
@@ -99,7 +99,7 @@ class SiteSubmissionsPage extends Component
         }
     }
 
-    public function deleteSubmission(int $id): void
+    public function deleteSubmission(string $id): void
     {
         if ($this->tab === 'subscriptions') {
             Subscription::where('site_id', $this->site->id)->find($id)?->delete();
@@ -109,11 +109,13 @@ class SiteSubmissionsPage extends Component
 
         } elseif ($this->tab === 'forms') {
             FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))
-                        ->find($id)
-                        ?->delete();
+                ->find($id)
+                ?->delete();
         }
 
-        if ($this->openId === $id) $this->openId = null;
+        if ($this->openId === $id) {
+            $this->openId = null;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -124,19 +126,19 @@ class SiteSubmissionsPage extends Component
     {
         // ── Subscriptions ───────────────────────────────────────
         $subscriptions = Subscription::where('site_id', $this->site->id)
-                                     ->latest()
-                                     ->paginate(20, pageName: 'subPage');
+            ->latest()
+            ->paginate(20, pageName: 'subPage');
 
         // ── Contact messages ────────────────────────────────────
         $contacts = ContactSubmission::where('site_id', $this->site->id)
-                                     ->latest()
-                                     ->paginate(20, pageName: 'conPage');
+            ->latest()
+            ->paginate(20, pageName: 'conPage');
 
         // ── Custom forms ─────────────────────────────────────────
         // All Form records for this site (used as filter pills)
         $formList = Form::where('site_id', $this->site->id)
-                        ->orderBy('name')
-                        ->get();
+            ->orderBy('name')
+            ->get();
 
         // Paginated responses, optionally filtered by form
         $responsesQuery = FormResponse::whereHas(
@@ -151,11 +153,11 @@ class SiteSubmissionsPage extends Component
 
         // ── Counts for tab badges ────────────────────────────────
         $counts = [
-            'subscriptions'  => Subscription::where('site_id', $this->site->id)->count(),
-            'contact'        => ContactSubmission::where('site_id', $this->site->id)->count(),
+            'subscriptions' => Subscription::where('site_id', $this->site->id)->count(),
+            'contact' => ContactSubmission::where('site_id', $this->site->id)->count(),
             'unread_contact' => ContactSubmission::where('site_id', $this->site->id)->whereNull('read_at')->count(),
-            'forms'          => FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))->count(),
-            'unread_forms'   => FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))->whereNull('read_at')->count(),
+            'forms' => FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))->count(),
+            'unread_forms' => FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))->whereNull('read_at')->count(),
         ];
 
         return view('livewire.site-submissions-page', compact(

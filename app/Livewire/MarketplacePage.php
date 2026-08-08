@@ -253,7 +253,7 @@ class MarketplacePage extends Component
     }
 
     /** Rate a template the user has installed (1–5 stars). */
-    public function rateTemplate(int $templateId, int $stars): void
+    public function rateTemplate(string $templateId, int $stars): void
     {
         $tpl = Template::find($templateId);
         if (! $tpl) {
@@ -270,7 +270,7 @@ class MarketplacePage extends Component
     }
 
     /** Install a catalog template (free → grant + install; paid → entitlement-gated checkout). */
-    public function installFromCatalog(int $templateId)
+    public function installFromCatalog(string $templateId)
     {
         if (! $this->guard()) {
             return;
@@ -333,7 +333,7 @@ class MarketplacePage extends Component
     }
 
     /** Uninstall a template from this site (un-applying it first if it's in use). */
-    public function uninstallTemplate(int $id): void
+    public function uninstallTemplate(string $id): void
     {
         if (! $this->guard()) {
             return;

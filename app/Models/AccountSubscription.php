@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** A user's platform subscription (config/plans.php tier + trial state). */
 class AccountSubscription extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'user_id', 'plan', 'status', 'trial_ends_at', 'started_at',
         'stripe_customer_id', 'stripe_subscription_id', 'price_overrides',

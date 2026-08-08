@@ -4,23 +4,29 @@ namespace App\Livewire;
 
 use App\Livewire\Concerns\WithLayoutMode;
 use App\Livewire\Forms\PageForm;
-use Livewire\Component;
-use App\Models\Site;
 use App\Models\Page;
+use App\Models\Site;
+use Livewire\Component;
 
 class PageComponent extends Component
 {
     use WithLayoutMode;
 
     public Site $site;
+
     public string $search = '';
+
     public bool $showModal = false;
-    public int $editingId = 0;
+
+    public ?string $editingId = null;
+
     public PageForm $form;
 
     // ── Component picker (attach content components to a page) ──
-    public ?int $pickerPageId = null;
+    public ?string $pickerPageId = null;
+
     public string $pickerSearch = '';
+
     public string $pickerTag = '';
 
     public function mount(Site $site): void
@@ -29,7 +35,7 @@ class PageComponent extends Component
         $this->initLayout('pages', 'list');
     }
 
-    public function openPicker(int $pageId): void
+    public function openPicker(string $pageId): void
     {
         abort_unless($this->site->allows(auth()->user(), 'pages.manage'), 403);
         $this->pickerPageId = Page::where('site_id', $this->site->id)->findOrFail($pageId)->id;
@@ -67,7 +73,7 @@ class PageComponent extends Component
     }
 
     /** Attach/detach a component on the picker's page (order appends). */
-    public function toggleComponent(int $componentId): void
+    public function toggleComponent(string $componentId): void
     {
         abort_unless($this->site->allows(auth()->user(), 'pages.manage'), 403);
         $page = $this->pickerPage;
@@ -89,22 +95,22 @@ class PageComponent extends Component
         $pages = Page::where('site_id', $this->site->id)
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->where('name', 'like', '%'.$this->search.'%')
-                  ->orWhere('url', 'like', '%'.$this->search.'%')
-                  ->orWhere('keywords', 'like', '%'.$this->search.'%');
+                    ->orWhere('url', 'like', '%'.$this->search.'%')
+                    ->orWhere('keywords', 'like', '%'.$this->search.'%');
             }))
             ->latest()
             ->get();
 
-        $total       = Page::where('site_id', $this->site->id)->count();
-        $thisWeek    = Page::where('site_id', $this->site->id)
-                           ->where('created_at', '>=', now()->startOfWeek())->count();
+        $total = Page::where('site_id', $this->site->id)->count();
+        $thisWeek = Page::where('site_id', $this->site->id)
+            ->where('created_at', '>=', now()->startOfWeek())->count();
         $avgKeywords = Page::where('site_id', $this->site->id)->get()
-                           ->avg(fn ($p) => count(array_filter(explode(',', $p->keywords))));
+            ->avg(fn ($p) => count(array_filter(explode(',', $p->keywords))));
 
         return view('livewire.page-component', [
-            'pages'       => $pages,
-            'total'       => $total,
-            'thisWeek'    => $thisWeek,
+            'pages' => $pages,
+            'total' => $total,
+            'thisWeek' => $thisWeek,
             'avgKeywords' => round($avgKeywords ?? 0),
         ]);
     }
@@ -116,14 +122,14 @@ class PageComponent extends Component
         $this->showModal = true;
     }
 
-    public function openEdit(int $id): void
+    public function openEdit(string $id): void
     {
         $page = Page::findOrFail($id);
-        $this->editingId      = $id;
-        $this->form->name     = $page->name;
-        $this->form->url      = $page->url;
+        $this->editingId = $id;
+        $this->form->name = $page->name;
+        $this->form->url = $page->url;
         $this->form->keywords = $page->keywords;
-        $this->showModal      = true;
+        $this->showModal = true;
     }
 
     public function save(): void
@@ -132,15 +138,15 @@ class PageComponent extends Component
 
         if ($this->editingId) {
             Page::findOrFail($this->editingId)->update([
-                'name'     => $this->form->name,
-                'url'      => $this->form->url,
+                'name' => $this->form->name,
+                'url' => $this->form->url,
                 'keywords' => $this->form->keywords,
             ]);
         } else {
             Page::create([
-                'site_id'  => $this->site->id,
-                'name'     => $this->form->name,
-                'url'      => $this->form->url,
+                'site_id' => $this->site->id,
+                'name' => $this->form->name,
+                'url' => $this->form->url,
                 'keywords' => $this->form->keywords,
             ]);
         }
@@ -150,7 +156,7 @@ class PageComponent extends Component
     }
 
     /** Delete a page — confirmation happens in the shared modal (data-confirm). */
-    public function deletePage(int $id): void
+    public function deletePage(string $id): void
     {
         Page::where('site_id', $this->site->id)->findOrFail($id)->delete();
     }

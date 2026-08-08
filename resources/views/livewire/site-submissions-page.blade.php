@@ -85,7 +85,7 @@
                             {{ $sub->created_at->format('M j, Y') }}
                         </td>
                         <td class="px-5 py-3.5 text-right">
-                            <button wire:click="deleteSubmission({{ $sub->id }})" data-confirm="Delete this submission?"
+                            <button wire:click="deleteSubmission('{{ $sub->id }}')" data-confirm="Delete this submission?"
                                     data-confirm="Delete this subscriber?"
                                     class="text-xs text-gray-400 hover:text-rose-500 transition-colors cursor-pointer">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -134,7 +134,7 @@
                         {{ $msg->isUnread() ? 'border-indigo-300 dark:border-indigo-500/40' : 'border-gray-200 dark:border-white/[0.07]' }}">
 
                 {{-- Row header --}}
-                <button wire:click="toggleOpen({{ $msg->id }})"
+                <button wire:click="toggleOpen('{{ $msg->id }}')"
                         class="w-full flex items-center gap-4 px-5 py-4 text-left cursor-pointer">
 
                     {{-- Unread dot --}}
@@ -188,7 +188,7 @@
                         <span class="text-xs text-gray-400 dark:text-gray-500 ml-auto">
                             {{ $msg->created_at->format('M j, Y · g:i a') }}
                         </span>
-                        <button wire:click="deleteSubmission({{ $msg->id }})" data-confirm="Delete this submission?"
+                        <button wire:click="deleteSubmission('{{ $msg->id }}')" data-confirm="Delete this submission?"
                                 data-confirm="Delete this message?"
                                 class="text-xs text-rose-500 hover:text-rose-600 transition-colors cursor-pointer font-semibold">
                             Delete
@@ -248,7 +248,7 @@
             <div class="bg-white dark:bg-[#1d1e2a] rounded-xl border transition-colors
                         {{ $sub->isUnread() ? 'border-indigo-300 dark:border-indigo-500/40' : 'border-gray-200 dark:border-white/[0.07]' }}">
 
-                <button wire:click="toggleOpen({{ $sub->id }})"
+                <button wire:click="toggleOpen('{{ $sub->id }}')"
                         class="w-full flex items-center gap-4 px-5 py-4 text-left cursor-pointer">
                     <span class="w-2 h-2 rounded-full shrink-0 {{ $sub->isUnread() ? 'bg-indigo-500' : 'bg-transparent' }}"></span>
                     <div class="flex-1 min-w-0">
@@ -294,7 +294,7 @@
                             {{ $sub->created_at->format('M j, Y · g:i a') }}
                             @if($sub->ip_address) · {{ $sub->ip_address }} @endif
                         </span>
-                        <button wire:click="deleteSubmission({{ $sub->id }})" data-confirm="Delete this submission?"
+                        <button wire:click="deleteSubmission('{{ $sub->id }}')" data-confirm="Delete this submission?"
                                 data-confirm="Delete this submission?"
                                 class="ml-auto text-xs text-rose-500 hover:text-rose-600 transition-colors cursor-pointer font-semibold">
                             Delete

@@ -57,7 +57,7 @@ type Node {
     label: String!
     type: String!
     value: String
-    parent: Int
+    parent: String
     order: Int
 }
 

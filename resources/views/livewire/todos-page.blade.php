@@ -85,7 +85,7 @@
                 @php $prog = $todo->progress(); @endphp
                 <div class="rounded-2xl bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] p-4 shadow-sm fx-in">
                     <div class="flex items-start gap-2.5">
-                        <button wire:click="toggleTodo({{ $todo->id }})" class="fx mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 {{ $todo->status==='done' ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 dark:border-gray-600 hover:border-emerald-400' }}">
+                        <button wire:click="toggleTodo('{{ $todo->id }}')" class="fx mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 {{ $todo->status==='done' ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 dark:border-gray-600 hover:border-emerald-400' }}">
                             @if ($todo->status==='done')<svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>@endif
                         </button>
                         <div class="min-w-0 flex-1">
@@ -95,7 +95,7 @@
                                 {{ ucfirst($todo->priority) }}{{ $todo->assignee ? ' · '.$todo->assignee->name : '' }}
                             </p>
                         </div>
-                        <button wire:click="deleteTodo({{ $todo->id }})" data-confirm="Delete this todo?" class="fx text-gray-300 hover:text-rose-500 shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg></button>
+                        <button wire:click="deleteTodo('{{ $todo->id }}')" data-confirm="Delete this todo?" class="fx text-gray-300 hover:text-rose-500 shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg></button>
                     </div>
 
                     @if ($todo->items->isNotEmpty())
@@ -105,13 +105,13 @@
                     <div class="mt-2 space-y-1">
                         @foreach ($todo->items as $item)
                             <label class="flex items-center gap-2 text-xs cursor-pointer group">
-                                <button type="button" wire:click="toggleItem({{ $item->id }})" class="fx w-4 h-4 rounded border flex items-center justify-center shrink-0 {{ $item->done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 dark:border-gray-600 group-hover:border-emerald-400' }}">
+                                <button type="button" wire:click="toggleItem('{{ $item->id }}')" class="fx w-4 h-4 rounded border flex items-center justify-center shrink-0 {{ $item->done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 dark:border-gray-600 group-hover:border-emerald-400' }}">
                                     @if ($item->done)<svg class="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>@endif
                                 </button>
                                 <span class="text-gray-600 dark:text-gray-300 {{ $item->done ? 'line-through text-gray-400' : '' }}">{{ $item->label }}</span>
                             </label>
                         @endforeach
-                        <form wire:submit="addItem({{ $todo->id }})">
+                        <form wire:submit="addItem('{{ $todo->id }}')">
                             <input wire:model="newItem.{{ $todo->id }}" type="text" placeholder="+ subtask"
                                    class="w-full mt-1 px-2 py-1 rounded-lg text-[11px] bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-emerald-500">
                         </form>

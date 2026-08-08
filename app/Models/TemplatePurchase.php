@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TemplatePurchase extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'uuid', 'template_id', 'template_version_id', 'user_id',
         'price_cents', 'currency', 'platform_fee_cents', 'creator_amount_cents',

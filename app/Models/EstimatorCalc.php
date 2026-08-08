@@ -4,12 +4,15 @@ namespace App\Models;
 
 use App\Services\Estimator\Formula;
 use App\Support\Money;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** An admin-authored calculation over the site's estimator fields. */
 class EstimatorCalc extends Model
 {
+    use HasUlids;
+
     public const FORMATS = ['money', 'number', 'hours'];
 
     protected $fillable = ['site_id', 'estimator_id', 'name', 'formula', 'format', 'sort'];

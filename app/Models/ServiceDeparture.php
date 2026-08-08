@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,16 +13,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ServiceDeparture extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'service_id', 'resource_id', 'origin', 'destination', 'departs_at',
         'seats', 'price_cents', 'is_active',
     ];
 
     protected $casts = [
-        'departs_at'  => 'datetime',
-        'seats'       => 'integer',
+        'departs_at' => 'datetime',
+        'seats' => 'integer',
         'price_cents' => 'integer',
-        'is_active'   => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     public function service(): BelongsTo

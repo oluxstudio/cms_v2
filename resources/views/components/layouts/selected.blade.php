@@ -199,7 +199,7 @@
                     @auth
                     @if(!empty($promptSiteId))
                     <div x-show="detail" x-cloak class="h-full">
-                        <livewire:site-rail-detail :site-id="(int) $promptSiteId" :key="'rail-detail-'.$promptSiteId" />
+                        <livewire:site-rail-detail :site-id="$promptSiteId" :key="'rail-detail-'.$promptSiteId" />
                     </div>
                     @endif
                     @endauth
@@ -217,7 +217,7 @@
 
             {{-- Alerts · Messages · Todos hub (real data, RBAC-scoped; click opens in #MainContent) --}}
             <div class="flex-1 min-h-0">
-                <livewire:site-rail :site-id="(int) $promptSiteId" :key="'site-rail-'.$promptSiteId" />
+                <livewire:site-rail :site-id="$promptSiteId" :key="'site-rail-'.$promptSiteId" />
             </div>
 
             {{-- ── LLM section (closable) ── --}}
@@ -233,7 +233,7 @@
                     </button>
                 </div>
                 <div x-show="llm" class="flex-1 min-h-0 overflow-hidden">
-                    <livewire:site-prompt :site-id="(int) $promptSiteId" :key="'site-prompt-'.$promptSiteId" />
+                    <livewire:site-prompt :site-id="$promptSiteId" :key="'site-prompt-'.$promptSiteId" />
                 </div>
             </div>
         </aside>

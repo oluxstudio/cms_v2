@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
+    use HasUlids;
+
     /** Super admin — sees and accesses everything in the CMS. */
     public function isSuper(): bool
     {
@@ -123,7 +126,7 @@ class User extends Authenticatable
     private array $membershipMemo = [];
 
     /** This user's membership in the given account, if any. */
-    public function membershipIn(int $accountId): ?AccountMember
+    public function membershipIn(string $accountId): ?AccountMember
     {
         return $this->membershipMemo[$accountId]
             ??= $this->memberships()->with('role')->where('account_id', $accountId)->first();
@@ -134,7 +137,7 @@ class User extends Authenticatable
      * Owners of the account and super admins implicitly hold everything;
      * members are checked against their role's permission list.
      */
-    public function canInAccount(int $accountId, string $permission): bool
+    public function canInAccount(string $accountId, string $permission): bool
     {
         if ($this->isSuper() || $this->id === $accountId) {
             return true;

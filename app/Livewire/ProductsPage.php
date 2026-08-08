@@ -2,7 +2,6 @@
 
 namespace App\Livewire;
 
-use App\Models\Product;
 use App\Models\Site;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -14,21 +13,30 @@ class ProductsPage extends Component
 
     public Site $site;
 
-    public bool   $showForm   = false;
-    public ?int   $editingId  = null;
-    public string $search     = '';
+    public bool $showForm = false;
+
+    public ?string $editingId = null;
+
+    public string $search = '';
 
     // Form
-    public string $name        = '';
+    public string $name = '';
+
     public string $description = '';
-    public string $price       = '';
-    public string $inventory   = '';
-    public bool   $is_active   = true;
+
+    public string $price = '';
+
+    public string $inventory = '';
+
+    public bool $is_active = true;
+
     public $photo;
+
     public ?string $existingImage = null;
 
     public string $successMessage = '';
-    public string $errorMessage   = '';
+
+    public string $errorMessage = '';
 
     public function mount(Site $site): void
     {
@@ -38,7 +46,7 @@ class ProductsPage extends Component
     public function getProductsProperty()
     {
         return $this->site->products()
-            ->when($this->search !== '', fn ($q) => $q->where('name', 'like', '%' . $this->search . '%'))
+            ->when($this->search !== '', fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
             ->orderBy('sort')
             ->latest()
             ->get();
@@ -58,44 +66,45 @@ class ProductsPage extends Component
     {
         if ($this->site->products()->count() >= $this->productLimit) {
             $this->errorMessage = "You've reached the product limit ({$this->productLimit}). Raise it in Marketplace → Store settings.";
+
             return;
         }
         $this->resetForm();
         $this->showForm = true;
     }
 
-    public function edit(int $id): void
+    public function edit(string $id): void
     {
         $p = $this->site->products()->findOrFail($id);
-        $this->editingId     = $p->id;
-        $this->name          = $p->name;
-        $this->description   = $p->description ?? '';
-        $this->price         = (string) $p->priceMajor();
-        $this->inventory     = $p->inventory === null ? '' : (string) $p->inventory;
-        $this->is_active     = $p->is_active;
+        $this->editingId = $p->id;
+        $this->name = $p->name;
+        $this->description = $p->description ?? '';
+        $this->price = (string) $p->priceMajor();
+        $this->inventory = $p->inventory === null ? '' : (string) $p->inventory;
+        $this->is_active = $p->is_active;
         $this->existingImage = $p->image;
-        $this->photo         = null;
-        $this->showForm      = true;
+        $this->photo = null;
+        $this->showForm = true;
     }
 
     public function save(): void
     {
         $validated = $this->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'price'       => ['required', 'numeric', 'min:0'],
-            'inventory'   => ['nullable', 'integer', 'min:0'],
-            'is_active'   => ['boolean'],
-            'photo'       => ['nullable', 'image', 'max:4096'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'inventory' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['boolean'],
+            'photo' => ['nullable', 'image', 'max:4096'],
         ]);
 
         $data = [
-            'name'        => $validated['name'],
+            'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'price_cents' => (int) round(((float) $validated['price']) * 100),
-            'currency'    => $this->currency,
-            'inventory'   => $validated['inventory'] !== '' && $validated['inventory'] !== null ? (int) $validated['inventory'] : null,
-            'is_active'   => $this->is_active,
+            'currency' => $this->currency,
+            'inventory' => $validated['inventory'] !== '' && $validated['inventory'] !== null ? (int) $validated['inventory'] : null,
+            'is_active' => $this->is_active,
         ];
 
         if ($this->photo) {
@@ -107,13 +116,16 @@ class ProductsPage extends Component
             $this->successMessage = 'Product updated.';
         } else {
             if ($this->site->products()->count() >= $this->productLimit) {
-                $this->errorMessage = "Product limit reached.";
+                $this->errorMessage = 'Product limit reached.';
+
                 return;
             }
             // Ensure unique slug within the site
-            $base = Str::slug($data['name']); $slug = $base; $i = 1;
+            $base = Str::slug($data['name']);
+            $slug = $base;
+            $i = 1;
             while ($this->site->products()->where('slug', $slug)->exists()) {
-                $slug = $base . '-' . (++$i);
+                $slug = $base.'-'.(++$i);
             }
             $this->site->products()->create($data + ['slug' => $slug]);
             $this->successMessage = 'Product created.';
@@ -123,13 +135,13 @@ class ProductsPage extends Component
         $this->resetForm();
     }
 
-    public function toggleActive(int $id): void
+    public function toggleActive(string $id): void
     {
         $p = $this->site->products()->findOrFail($id);
         $p->update(['is_active' => ! $p->is_active]);
     }
 
-    public function delete(int $id): void
+    public function delete(string $id): void
     {
         $this->site->products()->findOrFail($id)->delete();
         $this->successMessage = 'Product deleted.';

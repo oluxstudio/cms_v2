@@ -18,14 +18,16 @@ use Livewire\Component;
  */
 class SiteRailDetail extends Component
 {
-    public int $siteId;
+    public string $siteId;
+
     public ?string $type = null;
-    public ?int $itemId = null;
+
+    public ?string $itemId = null;
 
     #[On('rail-open')]
-    public function open(string $type, int $id): void
+    public function open(string $type, string $id): void
     {
-        $this->type   = $type;
+        $this->type = $type;
         $this->itemId = $id;
     }
 
@@ -44,10 +46,10 @@ class SiteRailDetail extends Component
         $user = Auth::user();
 
         return match ($this->type) {
-            'alert'   => Alert::visibleTo($this->site, $user)->find($this->itemId),
+            'alert' => Alert::visibleTo($this->site, $user)->find($this->itemId),
             'message' => Message::visibleTo($this->site, $user)->with('sender:id,name', 'recipient:id,name')->find($this->itemId),
-            'todo'    => Todo::visibleTo($this->site, $user)->with('items', 'creator:id,name', 'assignee:id,name')->find($this->itemId),
-            default   => null,
+            'todo' => Todo::visibleTo($this->site, $user)->with('items', 'creator:id,name', 'assignee:id,name')->find($this->itemId),
+            default => null,
         };
     }
 

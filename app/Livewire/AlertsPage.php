@@ -11,7 +11,7 @@ use Livewire\Component;
 
 class AlertsPage extends Component
 {
-    public int $siteId;
+    public string $siteId;
 
     #[Url(as: 'cat')]
     public string $filter = 'all';   // all | unread | type:* | level:*
@@ -47,9 +47,9 @@ class AlertsPage extends Component
         $all = Alert::visibleTo($this->site, Auth::user())->get(['type', 'level', 'read_at']);
 
         return [
-            'total'   => $all->count(),
-            'unread'  => $all->whereNull('read_at')->count(),
-            'byType'  => $all->groupBy('type')->map->count()->sortDesc(),
+            'total' => $all->count(),
+            'unread' => $all->whereNull('read_at')->count(),
+            'byType' => $all->groupBy('type')->map->count()->sortDesc(),
             'byLevel' => $all->groupBy('level')->map->count(),
         ];
     }
@@ -61,7 +61,7 @@ class AlertsPage extends Component
     }
 
     /** Delete one alert — confirmation happens in the shared modal (data-confirm). */
-    public function deleteAlert(int $id): void
+    public function deleteAlert(string $id): void
     {
         Alert::visibleTo($this->site, Auth::user())->whereKey($id)->delete();
         if ($this->expanded === $id) {
@@ -78,7 +78,7 @@ class AlertsPage extends Component
         unset($this->alerts, $this->stats);
     }
 
-    public function toggle(int $id): void
+    public function toggle(string $id): void
     {
         $this->expanded = $this->expanded === $id ? null : $id;
         if ($this->expanded) {

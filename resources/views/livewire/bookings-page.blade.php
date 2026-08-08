@@ -288,7 +288,7 @@
                 @forelse($this->bookings as $b)
                 @php $p = (array) ($b->params ?? []); $bkind = $b->service?->kind ?? 'slot'; @endphp
                 <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-50 dark:border-white/[0.04] last:border-0 cursor-pointer hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors"
-                     wire:click="viewBooking({{ $b->id }})" title="View details">
+                     wire:click="viewBooking('{{ $b->id }}')" title="View details">
                     <p class="text-sm font-semibold text-gray-900 dark:text-white flex-1 min-w-0 truncate">
                         {{ $b->service?->typeIcon() }} {{ $b->service?->name ?? 'Service' }}
                     </p>
@@ -481,9 +481,9 @@
                                                 {{ $res->configValue('open_time') ? '· '.$res->configValue('open_time').'–'.$res->configValue('close_time', '?') : '' }}</span>
                                         @endif
                                         <span class="ml-auto text-gray-400">{{ $res->active_bookings_count }} upcoming</span>
-                                        <button wire:click="toggleResource({{ $res->id }})"
+                                        <button wire:click="toggleResource('{{ $res->id }}')"
                                                 class="text-[10px] px-1.5 py-0.5 rounded {{ $res->is_active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-400 bg-gray-100 dark:bg-white/5' }}">{{ $res->is_active ? 'On' : 'Off' }}</button>
-                                        <button wire:click="deleteResource({{ $res->id }})"
+                                        <button wire:click="deleteResource('{{ $res->id }}')"
                                                 data-confirm="Remove “{{ $res->name }}”? Its bookings are kept (unassigned)."
                                                 class="text-gray-300 hover:text-rose-500" title="Remove">✕</button>
                                     </div>
@@ -517,7 +517,7 @@
                                         <span class="text-gray-400">{{ $dep->departs_at->format('D, M j · g:i A') }}</span>
                                         <span class="ml-auto text-gray-400">{{ $dep->seatsLeft() }}/{{ $dep->seats }} seats</span>
                                         <span class="font-semibold">{{ number_format($dep->effectivePriceCents() / 100, 2) }}</span>
-                                        <button wire:click="deleteDeparture({{ $dep->id }})" data-confirm="Delete this departure? Its bookings are kept."
+                                        <button wire:click="deleteDeparture('{{ $dep->id }}')" data-confirm="Delete this departure? Its bookings are kept."
                                                 class="text-gray-300 hover:text-rose-500" title="Delete departure">✕</button>
                                     </div>
                                 @empty
@@ -551,7 +551,7 @@
                                         <span class="text-gray-400">{{ $rule->starts_on->format('M j') }} – {{ $rule->ends_on->format('M j, Y') }}</span>
                                         @if($rule->resource)<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">{{ $rule->resource->name }}</span>@endif
                                         @if($rule->label)<span class="text-gray-400 italic">{{ $rule->label }}</span>@endif
-                                        <button wire:click="deletePriceRule({{ $rule->id }})" data-confirm="Delete this price rule?"
+                                        <button wire:click="deletePriceRule('{{ $rule->id }}')" data-confirm="Delete this price rule?"
                                                 class="ml-auto text-gray-300 hover:text-rose-500" title="Delete rule">✕</button>
                                     </div>
                                 @empty
@@ -595,9 +595,9 @@
                                 @if($svc->requires_payment) · 💳 paid @endif
                             </p>
                         </div>
-                        <button wire:click="toggleService({{ $svc->id }})" class="text-[11px] px-2 py-1 rounded-lg {{ $svc->is_active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-400 bg-gray-100 dark:bg-white/5' }}">{{ $svc->is_active ? 'Active' : 'Off' }}</button>
-                        <button wire:click="editService({{ $svc->id }})" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
-                        <button wire:click="deleteService({{ $svc->id }})" data-confirm="Delete this service?" class="text-gray-400 hover:text-rose-500" title="Delete">✕</button>
+                        <button wire:click="toggleService('{{ $svc->id }}')" class="text-[11px] px-2 py-1 rounded-lg {{ $svc->is_active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-400 bg-gray-100 dark:bg-white/5' }}">{{ $svc->is_active ? 'Active' : 'Off' }}</button>
+                        <button wire:click="editService('{{ $svc->id }}')" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
+                        <button wire:click="deleteService('{{ $svc->id }}')" data-confirm="Delete this service?" class="text-gray-400 hover:text-rose-500" title="Delete">✕</button>
                     </div>
                     @empty
                     <p class="text-xs text-gray-400 px-1">No services yet. Add one on the left so visitors can book.</p>
@@ -615,17 +615,17 @@
                                         @if($r->capacity > 1)<span class="text-gray-400">cap {{ $r->capacity }}</span>@endif
                                         @if($r->price_cents !== null)<span class="text-gray-400">{{ \App\Support\Money::format((int) $r->price_cents, $site->currency) }}</span>@endif
                                         <span class="ml-auto text-gray-400">{{ $r->active_bookings_count }} upcoming</span>
-                                        <button wire:click="editSiteResource({{ $r->id }})" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
-                                        <button wire:click="toggleSiteResource({{ $r->id }})"
+                                        <button wire:click="editSiteResource('{{ $r->id }}')" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
+                                        <button wire:click="toggleSiteResource('{{ $r->id }}')"
                                                 class="text-[10px] px-1.5 py-0.5 rounded {{ $r->is_active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-400 bg-gray-100 dark:bg-white/5' }}">{{ $r->is_active ? 'On' : 'Off' }}</button>
-                                        <button wire:click="deleteSiteResource({{ $r->id }})"
+                                        <button wire:click="deleteSiteResource('{{ $r->id }}')"
                                                 data-confirm="Delete “{{ $r->name }}” everywhere? It is removed from every service; bookings are kept (unassigned)."
                                                 class="text-gray-300 hover:text-rose-500" title="Delete resource">✕</button>
                                     </div>
                                     <div class="flex flex-wrap gap-1 mt-1.5">
                                         @foreach($this->services as $svc)
                                             @php $on = $r->services->contains('id', $svc->id); @endphp
-                                            <button wire:click="toggleResourceService({{ $r->id }}, {{ $svc->id }})"
+                                            <button wire:click="toggleResourceService('{{ $r->id }}', {{ $svc->id }})"
                                                     class="text-[10px] px-1.5 py-0.5 rounded-md border transition-all
                                                         {{ $on ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 font-semibold' : 'border-gray-200 dark:border-white/[0.08] text-gray-400' }}"
                                                     title="{{ $on ? 'Unassign from' : 'Assign to' }} {{ $svc->name }}">{{ $on ? '✓ ' : '' }}{{ $svc->name }}</button>
@@ -1010,7 +1010,7 @@
                     @forelse($this->dayBookings as $b)
                         @php $p = (array) ($b->params ?? []); $bkind = $b->service?->kind ?? 'slot';
                              $hue = ['#6366f1','#0ea5e9','#f59e0b','#10b981','#ec4899'][abs(crc32($b->customer_name)) % 5]; @endphp
-                        <div class="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0 cursor-pointer hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors" wire:click="viewBooking({{ $b->id }})" title="View details">
+                        <div class="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0 cursor-pointer hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors" wire:click="viewBooking('{{ $b->id }}')" title="View details">
                             <span class="shrink-0 w-8 h-8 rounded-full grid place-items-center text-white text-[10px] font-bold" style="background:{{ $hue }}">
                                 {{ strtoupper(\Illuminate\Support\Str::of($b->customer_name)->substr(0, 2)) }}</span>
                             <div class="min-w-0 flex-1">
@@ -1049,7 +1049,7 @@
 
                 <x-booking-card :booking="$vb" :accent="$vAccent">
                     @if(! in_array($vb->status, ["confirmed", "awaiting_payment", "cancelled"], true))
-                        <button type="button" wire:click="setStatus({{ $vb->id }}, 'confirmed')"
+                        <button type="button" wire:click="setStatus('{{ $vb->id }}', 'confirmed')"
                                 class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white hover:opacity-90"
                                 style="background:{{ $vAccent }}">Confirm booking</button>
                     @endif
@@ -1059,7 +1059,7 @@
                                 style="border-color:rgba(51,44,31,.14)">Record balance</button>
                     @endif
                     @if($vb->status !== "cancelled")
-                        <button type="button" wire:click="setStatus({{ $vb->id }}, 'cancelled')" data-confirm="Cancel this booking? The customer is emailed about the cancellation."
+                        <button type="button" wire:click="setStatus('{{ $vb->id }}', 'cancelled')" data-confirm="Cancel this booking? The customer is emailed about the cancellation."
                                 class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-rose-600 border shadow-sm hover:bg-rose-50"
                                 style="border-color:rgba(51,44,31,.14)">Cancel</button>
                     @endif

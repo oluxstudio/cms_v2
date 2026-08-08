@@ -18,7 +18,8 @@ use Livewire\Component;
 class TemplateSubmissions extends Component
 {
     public string $rejectNote = '';
-    public ?int $rejectingId = null;
+
+    public ?string $rejectingId = null;
 
     private function isModerator(): bool
     {
@@ -66,7 +67,7 @@ class TemplateSubmissions extends Component
     }
 
     /** Build the staging app into /nuxt-preview/_staging/{key}/ (queued — takes minutes). */
-    public function buildPreview(int $id): void
+    public function buildPreview(string $id): void
     {
         if (! $this->isModerator()) {
             return;
@@ -88,7 +89,7 @@ class TemplateSubmissions extends Component
     }
 
     /** Accept: publish app + package to the marketplace. */
-    public function accept(int $id): void
+    public function accept(string $id): void
     {
         if (! $this->isModerator()) {
             return;
@@ -102,8 +103,8 @@ class TemplateSubmissions extends Component
             return;
         }
         $sub->update([
-            'status'      => TemplateSubmission::STATUS_ACCEPTED,
-            'note'        => null,
+            'status' => TemplateSubmission::STATUS_ACCEPTED,
+            'note' => null,
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
         ]);
@@ -114,7 +115,7 @@ class TemplateSubmissions extends Component
         $this->dispatch('toast', level: 'success', title: 'Accepted', message: "“{$sub->name}” published to the marketplace. Renderer build queued.");
     }
 
-    public function startReject(int $id): void
+    public function startReject(string $id): void
     {
         $this->rejectingId = $id;
         $this->rejectNote = '';
@@ -127,8 +128,8 @@ class TemplateSubmissions extends Component
         }
         $sub = TemplateSubmission::findOrFail($this->rejectingId);
         $sub->update([
-            'status'      => TemplateSubmission::STATUS_REJECTED,
-            'note'        => Str::limit(trim($this->rejectNote), 500),
+            'status' => TemplateSubmission::STATUS_REJECTED,
+            'note' => Str::limit(trim($this->rejectNote), 500),
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
         ]);
@@ -143,7 +144,7 @@ class TemplateSubmissions extends Component
             : collect();
 
         return view('livewire.template-submissions', [
-            'subs'        => $subs,
+            'subs' => $subs,
             'isModerator' => $this->isModerator(),
         ]);
     }

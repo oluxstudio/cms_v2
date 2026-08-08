@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -17,6 +19,8 @@ use Illuminate\Support\Str;
  */
 class Booking extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'service_id', 'departure_id', 'resource_id', 'reference',
         'customer_name', 'customer_email', 'customer_phone',
@@ -25,14 +29,14 @@ class Booking extends Model
     ];
 
     protected $casts = [
-        'starts_at'   => 'datetime',
-        'ends_at'     => 'datetime',
-        'busy_from'   => 'datetime',
-        'busy_until'  => 'datetime',
-        'params'      => 'array',
-        'quantity'    => 'integer',
+        'starts_at' => 'datetime',
+        'ends_at' => 'datetime',
+        'busy_from' => 'datetime',
+        'busy_until' => 'datetime',
+        'params' => 'array',
+        'quantity' => 'integer',
         'total_cents' => 'integer',
-        'paid_cents'  => 'integer',
+        'paid_cents' => 'integer',
     ];
 
     protected static function booted(): void
@@ -57,8 +61,8 @@ class Booking extends Model
             ['label' => 'Created',   'at' => $this->created_at],
             ['label' => 'Confirmed', 'at' => $this->status === 'confirmed' ? $this->updated_at : null],
             ['label' => $this->status === 'cancelled' ? 'Cancelled' : 'Paid',
-             'at' => $this->status === 'cancelled' ? $this->updated_at
-                 : ($paid && $this->balanceCents() === 0 ? $this->updated_at : null)],
+                'at' => $this->status === 'cancelled' ? $this->updated_at
+                    : ($paid && $this->balanceCents() === 0 ? $this->updated_at : null)],
         ];
     }
 
@@ -76,7 +80,7 @@ class Booking extends Model
     {
         return $this->total_cents <= 0
             ? 'Free'
-            : \App\Support\Money::format((int) $this->total_cents, $this->currency);
+            : Money::format((int) $this->total_cents, $this->currency);
     }
 
     /** Money still owed (deposit flows): total − paid. */
@@ -87,12 +91,12 @@ class Booking extends Model
 
     public function formattedBalance(): string
     {
-        return \App\Support\Money::format($this->balanceCents(), $this->currency);
+        return Money::format($this->balanceCents(), $this->currency);
     }
 
     public function formattedPaid(): string
     {
-        return \App\Support\Money::format((int) $this->paid_cents, $this->currency);
+        return Money::format((int) $this->paid_cents, $this->currency);
     }
 
     public function site(): BelongsTo

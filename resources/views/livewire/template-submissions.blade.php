@@ -78,23 +78,23 @@
 
                     @if($url = $this->previewUrl($sub))
                         <a href="{{ $url }}" target="_blank" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]">Open preview ↗</a>
-                        <button wire:click="buildPreview({{ $sub->id }})" class="px-2.5 py-1.5 rounded-lg text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Rebuild the preview">↻ Rebuild</button>
+                        <button wire:click="buildPreview('{{ $sub->id }}')" class="px-2.5 py-1.5 rounded-lg text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Rebuild the preview">↻ Rebuild</button>
                     @else
-                        <button wire:click="buildPreview({{ $sub->id }})" wire:loading.attr="disabled"
+                        <button wire:click="buildPreview('{{ $sub->id }}')" wire:loading.attr="disabled"
                                 class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]">Build preview</button>
                     @endif
 
                     @if($sub->status !== 'accepted')
-                        <button wire:click="accept({{ $sub->id }})" data-confirm="Publish “{{ $sub->name }}” to the marketplace? Its block components will be rewritten for content editing."
+                        <button wire:click="accept('{{ $sub->id }}')" data-confirm="Publish “{{ $sub->name }}” to the marketplace? Its block components will be rewritten for content editing."
                                 wire:loading.attr="disabled" wire:target="accept"
                                 class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 text-white text-xs font-semibold">
                             <span wire:loading.remove wire:target="accept">Accept & publish</span>
                             <span wire:loading wire:target="accept">Publishing…</span>
                         </button>
-                        <button wire:click="startReject({{ $sub->id }})"
+                        <button wire:click="startReject('{{ $sub->id }}')"
                                 class="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-500 border border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10">Reject</button>
                     @else
-                        <button wire:click="accept({{ $sub->id }})" data-confirm="Re-publish “{{ $sub->name }}” with the latest staging code and extraction?"
+                        <button wire:click="accept('{{ $sub->id }}')" data-confirm="Re-publish “{{ $sub->name }}” with the latest staging code and extraction?"
                                 class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/[0.08] hover:bg-gray-50 dark:hover:bg-white/[0.05]">Re-publish update</button>
                     @endif
                 </div>

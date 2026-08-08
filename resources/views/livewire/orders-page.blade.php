@@ -172,8 +172,8 @@
                 <tbody>
                     @forelse($this->orders as $order)
                         <tr class="border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors">
-                            <td class="px-4 py-3 text-xs font-bold text-gray-900 dark:text-white cursor-pointer" wire:click="open({{ $order->id }})">#{{ $order->id }}</td>
-                            <td class="px-4 py-3 cursor-pointer" wire:click="open({{ $order->id }})">
+                            <td class="px-4 py-3 text-xs font-bold text-gray-900 dark:text-white cursor-pointer" wire:click="open('{{ $order->id }}')">#{{ $order->id }}</td>
+                            <td class="px-4 py-3 cursor-pointer" wire:click="open('{{ $order->id }}')">
                                 <p class="text-xs font-semibold text-gray-900 dark:text-white truncate max-w-[160px]">{{ $order->customer_name ?: 'Guest' }}</p>
                                 <p class="text-[10px] text-gray-400 truncate max-w-[160px]">{{ $order->customer_email }}</p>
                             </td>
@@ -182,7 +182,7 @@
                             <td class="px-4 py-3 text-[11px] text-gray-400 whitespace-nowrap">{{ $order->created_at->format('d.m.Y') }}</td>
                             <td class="px-4 py-3 text-[11px] text-gray-500 dark:text-gray-300">{{ $order->stripe_session_id ? 'Card · Stripe' : 'Manual' }}</td>
                             <td class="px-4 py-3">
-                                <select wire:change="setStatus({{ $order->id }}, $event.target.value)"
+                                <select wire:change="setStatus('{{ $order->id }}', $event.target.value)"
                                         class="text-[10px] font-bold capitalize rounded-lg border-0 px-2 py-1 cursor-pointer {{ $statusStyles[$order->status] ?? '' }}">
                                     @foreach($statuses as $st)
                                         <option value="{{ $st }}" @selected($order->status === $st)>{{ $st }}</option>
@@ -235,9 +235,9 @@
                 </div>
 
                 @if($o->status === 'paid')
-                <button wire:click="markFulfilled({{ $o->id }})" data-confirm="Mark this order as fulfilled?" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors mb-2">Mark as fulfilled</button>
+                <button wire:click="markFulfilled('{{ $o->id }}')" data-confirm="Mark this order as fulfilled?" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors mb-2">Mark as fulfilled</button>
                 @endif
-                <button wire:click="invoiceOrder({{ $o->id }})" data-confirm="Create a draft invoice from this order? You'll be taken to the Invoices page."
+                <button wire:click="invoiceOrder('{{ $o->id }}')" data-confirm="Create a draft invoice from this order? You'll be taken to the Invoices page."
                         class="w-full py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">🧾 Invoice this order</button>
             </div>
         </div>

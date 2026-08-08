@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Component extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'site_template_id', 'name', 'author', 'created_by', 'source', 'description', 'tags'];
 
     protected $casts = ['tags' => 'array'];
@@ -46,8 +49,7 @@ class Component extends Model
     /** Collections referenced by this component's collection-typed nodes. */
     public function collections()
     {
-        $ids = $this->nodes->where('type', 'collection')->pluck('value')
-            ->filter(fn ($v) => is_numeric($v))->map(fn ($v) => (int) $v);
+        $ids = $this->nodes->where('type', 'collection')->pluck('value')->filter();
 
         return Collection::whereIn('id', $ids)->get();
     }

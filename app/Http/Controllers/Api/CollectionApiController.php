@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Models\CollectionItem;
@@ -27,7 +28,7 @@ use Illuminate\Http\Request;
  */
 class CollectionApiController extends Controller
 {
-    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+    use ResolvesApiSite;
 
     /** @param bool $everything include private fields + all items regardless of status */
     private function record(Collection $c, bool $everything = false): array
@@ -64,7 +65,7 @@ class CollectionApiController extends Controller
         ]);
     }
 
-    public function show(string $siteName, int $id): JsonResponse
+    public function show(string $siteName, string $id): JsonResponse
     {
         $collection = $this->publicSite($siteName)->collections()
             ->where('is_public', true)->with('items')->findOrFail($id);
@@ -102,7 +103,7 @@ class CollectionApiController extends Controller
         return response()->json(['ok' => true, 'collection' => $this->record($collection->load('items'), everything: true)], 201);
     }
 
-    public function update(Request $request, string $siteName, int $id): JsonResponse
+    public function update(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'collections.manage');
         $collection = $site->collections()->findOrFail($id);
@@ -116,7 +117,7 @@ class CollectionApiController extends Controller
         return response()->json(['ok' => true, 'collection' => $this->record($collection->load('items'), everything: true)]);
     }
 
-    public function destroy(Request $request, string $siteName, int $id): JsonResponse
+    public function destroy(Request $request, string $siteName, string $id): JsonResponse
     {
         $collection = $this->manageableSite($request, $siteName, 'collections.manage')->collections()->findOrFail($id);
         $collection->items()->delete();
@@ -135,7 +136,7 @@ class CollectionApiController extends Controller
         ]);
     }
 
-    public function storeItem(Request $request, string $siteName, int $id): JsonResponse
+    public function storeItem(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'collections.manage');
         $collection = $site->collections()->findOrFail($id);
@@ -150,7 +151,7 @@ class CollectionApiController extends Controller
         return response()->json(['ok' => true, 'item' => ['id' => $item->id, 'data' => $item->data, 'status' => $item->status]], 201);
     }
 
-    public function updateItem(Request $request, string $siteName, int $id, int $itemId): JsonResponse
+    public function updateItem(Request $request, string $siteName, string $id, string $itemId): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'collections.manage');
         $item = $site->collections()->findOrFail($id)->items()->findOrFail($itemId);
@@ -159,7 +160,7 @@ class CollectionApiController extends Controller
         return response()->json(['ok' => true, 'item' => ['id' => $item->id, 'data' => $item->data, 'status' => $item->status]]);
     }
 
-    public function destroyItem(Request $request, string $siteName, int $id, int $itemId): JsonResponse
+    public function destroyItem(Request $request, string $siteName, string $id, string $itemId): JsonResponse
     {
         $this->manageableSite($request, $siteName, 'collections.manage')->collections()->findOrFail($id)->items()->findOrFail($itemId)->delete();
 

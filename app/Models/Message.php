@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'sender_id', 'recipient_id', 'body', 'read_at'];
 
     protected $casts = ['read_at' => 'datetime'];

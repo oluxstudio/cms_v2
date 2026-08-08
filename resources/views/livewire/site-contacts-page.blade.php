@@ -72,7 +72,7 @@
     <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden">
         @forelse($this->contacts as $contact)
         <div class="flex items-center gap-4 px-5 py-3.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-            <button wire:click="open({{ $contact->id }})" class="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer">
+            <button wire:click="open('{{ $contact->id }}')" class="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer">
                 @include('partials.contact-avatar', ['contact' => $contact, 'size' => 'w-9 h-9', 'text' => 'text-xs'])
                 <div class="min-w-0">
                     <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $contact->name }}</p>
@@ -82,7 +82,7 @@
                 </div>
             </button>
 
-            <div wire:click="open({{ $contact->id }})" class="hidden md:block w-36 truncate cursor-pointer">
+            <div wire:click="open('{{ $contact->id }}')" class="hidden md:block w-36 truncate cursor-pointer">
                 @if($contact->assignedUser)
                     <div class="flex items-center gap-1.5">
                         @php $ab = ['#6366f1','#8b5cf6','#ec4899','#0ea5e9','#10b981'][abs(crc32($contact->assignedUser->name)) % 5]; @endphp
@@ -96,19 +96,19 @@
                 @endif
             </div>
 
-            <div wire:click="open({{ $contact->id }})" class="hidden sm:block text-xs text-gray-400 dark:text-gray-500 w-20 text-center cursor-pointer">
+            <div wire:click="open('{{ $contact->id }}')" class="hidden sm:block text-xs text-gray-400 dark:text-gray-500 w-20 text-center cursor-pointer">
                 {{ $contact->responses_count }} {{ Str::plural('msg', $contact->responses_count) }}
             </div>
 
             {{-- Status dropdown --}}
-            <select wire:change="updateStatus({{ $contact->id }}, $event.target.value)"
+            <select wire:change="updateStatus('{{ $contact->id }}', $event.target.value)"
                     class="text-xs font-semibold capitalize pr-7 pl-3 py-1.5 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-indigo-500 outline-none {{ $statusStyles[$contact->status] ?? '' }}">
                 @foreach($statuses as $st)
                 <option value="{{ $st }}" @selected($contact->status === $st)>{{ ucfirst($st) }}</option>
                 @endforeach
             </select>
 
-            <button wire:click="deleteContact({{ $contact->id }})" data-confirm="Delete this contact?"
+            <button wire:click="deleteContact('{{ $contact->id }}')" data-confirm="Delete this contact?"
                     class="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
@@ -229,7 +229,7 @@
                 {{-- Avatar / logo URL (blank = Gravatar, else initials) --}}
                 <div class="flex items-center gap-2 mb-6">
                     <input type="url" placeholder="Logo / photo URL (optional)" value="{{ $c->data['avatar'] ?? '' }}"
-                           wire:change="setAvatar({{ $c->id }}, $event.target.value)"
+                           wire:change="setAvatar('{{ $c->id }}', $event.target.value)"
                            class="flex-1 text-xs rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] px-3 py-2 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
                     <a href="{{ url($site->name.'/media') }}" class="text-[11px] font-semibold text-indigo-500 hover:underline shrink-0">Media</a>
                 </div>
@@ -257,7 +257,7 @@
                             @if($i > 0)
                                 <div class="flex-1 h-px mt-[13px] mx-1.5 {{ $done ? 'bg-indigo-400' : 'bg-gray-200 dark:bg-white/[0.08]' }}"></div>
                             @endif
-                            <button type="button" wire:click="updateStatus({{ $c->id }}, '{{ $stage }}')"
+                            <button type="button" wire:click="updateStatus('{{ $c->id }}', '{{ $stage }}')"
                                     title="Move to {{ ucfirst($stage) }}" class="flex flex-col items-center shrink-0 group cursor-pointer">
                                 <span class="w-[26px] h-[26px] rounded-full grid place-items-center text-[10px] font-bold transition-colors
                                     {{ $done ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white dark:bg-white/[0.06] text-gray-400 ring-1 ring-gray-200 dark:ring-white/[0.1] group-hover:ring-indigo-400' }}">
@@ -269,7 +269,7 @@
                         @endforeach
                         {{-- Lost — terminal branch --}}
                         <div class="flex-1 h-px mt-[13px] mx-1.5 {{ $lost ? 'bg-rose-400' : 'bg-gray-200 dark:bg-white/[0.08]' }}"></div>
-                        <button type="button" wire:click="updateStatus({{ $c->id }}, 'lost')"
+                        <button type="button" wire:click="updateStatus('{{ $c->id }}', 'lost')"
                                 title="Mark as lost" class="flex flex-col items-center shrink-0 group cursor-pointer">
                             <span class="w-[26px] h-[26px] rounded-full grid place-items-center text-[10px] font-bold transition-colors
                                 {{ $lost ? 'bg-rose-500 text-white shadow-sm' : 'bg-white dark:bg-white/[0.06] text-gray-400 ring-1 ring-gray-200 dark:ring-white/[0.1] group-hover:ring-rose-400' }}">
@@ -285,7 +285,7 @@
                 <div class="flex items-center gap-3 mb-6 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.04]">
                     <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                     <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">Assigned to</span>
-                    <select wire:change="assign({{ $c->id }}, $event.target.value)"
+                    <select wire:change="assign('{{ $c->id }}', $event.target.value)"
                             class="ml-auto text-xs font-medium pr-7 pl-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
                         <option value="" @selected(! $c->assigned_user_id)>Unassigned</option>
                         @foreach($this->members as $m)
@@ -327,7 +327,7 @@
                 @endif
 
                 {{-- Add note --}}
-                <form wire:submit="addNote({{ $c->id }})" class="mb-6">
+                <form wire:submit="addNote('{{ $c->id }}')" class="mb-6">
                     <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">Add a note</p>
                     <textarea wire:model="note" rows="2" placeholder="Log a call, meeting, or any detail…"
                               class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
@@ -335,8 +335,8 @@
                     <div class="flex justify-end mt-2">
                         <button type="submit"
                                 class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors">
-                            <span wire:loading.remove wire:target="addNote({{ $c->id }})">Add note</span>
-                            <span wire:loading wire:target="addNote({{ $c->id }})">Saving…</span>
+                            <span wire:loading.remove wire:target="addNote('{{ $c->id }}')">Add note</span>
+                            <span wire:loading wire:target="addNote('{{ $c->id }}')">Saving…</span>
                         </button>
                     </div>
                 </form>

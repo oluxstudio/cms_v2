@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\BlockTreeService;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,6 +19,8 @@ use Illuminate\Support\Str;
  */
 class BlockLayout extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'name', 'slug', 'kind', 'is_system'];
 
     protected $casts = ['is_system' => 'boolean'];
@@ -61,7 +65,7 @@ class BlockLayout extends Model
             ['name' => 'Blank', 'is_system' => true],
         );
         // Seed its tree on first touch: root container → content_slot.
-        $svc = app(\App\Services\BlockTreeService::class);
+        $svc = app(BlockTreeService::class);
         $root = $svc->ensureRoot($layout);
         if (! $layout->blocks()->where('type', 'content_slot')->exists()) {
             Block::create([
@@ -84,7 +88,7 @@ class BlockLayout extends Model
             $slug = (Str::slug($name) ?: 'layout').'-'.$i++;
         }
         $layout = static::create(['site_id' => $site->id, 'name' => $name, 'slug' => $slug]);
-        $svc = app(\App\Services\BlockTreeService::class);
+        $svc = app(BlockTreeService::class);
         $root = $svc->ensureRoot($layout);
         Block::create([
             'id' => 'blk_'.Str::random(10),
@@ -115,7 +119,7 @@ class BlockLayout extends Model
             $slug = (Str::slug($name) ?: 'component').'-'.$i++;
         }
         $component = static::create(['site_id' => $site->id, 'name' => $name, 'slug' => $slug, 'kind' => 'component']);
-        app(\App\Services\BlockTreeService::class)->ensureRoot($component);
+        app(BlockTreeService::class)->ensureRoot($component);
 
         return $component;
     }

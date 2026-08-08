@@ -2,22 +2,26 @@
 
 namespace App\Models;
 
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class Product extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'name', 'slug', 'description', 'price_cents',
         'currency', 'image', 'is_active', 'inventory', 'sort',
     ];
 
     protected $casts = [
-        'is_active'   => 'boolean',
+        'is_active' => 'boolean',
         'price_cents' => 'integer',
-        'inventory'   => 'integer',
+        'inventory' => 'integer',
     ];
 
     protected function slug(): Attribute
@@ -34,7 +38,7 @@ class Product extends Model
 
     public function formattedPrice(): string
     {
-        return \App\Support\Money::format((int) $this->price_cents, $this->currency);
+        return Money::format((int) $this->price_cents, $this->currency);
     }
 
     public function priceMajor(): float

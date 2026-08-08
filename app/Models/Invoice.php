@@ -2,9 +2,14 @@
 
 namespace App\Models;
 
+use App\Mail\InvoiceReminder;
+use App\Mail\InvoiceSent;
+use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 /**
@@ -16,6 +21,8 @@ use Illuminate\Support\Str;
  */
 class Invoice extends Model
 {
+    use HasUlids;
+
     public const RECUR_INTERVALS = ['weekly', 'monthly', 'quarterly', 'yearly'];
 
     protected $fillable = [
@@ -27,19 +34,19 @@ class Invoice extends Model
     ];
 
     protected $casts = [
-        'items'          => 'array',
+        'items' => 'array',
         'subtotal_cents' => 'integer',
-        'tax_bp'         => 'integer',
-        'tax_cents'      => 'integer',
-        'total_cents'    => 'integer',
-        'due_date'       => 'date',
-        'sent_at'        => 'datetime',
-        'paid_at'        => 'datetime',
-        'opened_at'      => 'datetime',
-        'viewed_at'      => 'datetime',
-        'reminded_at'    => 'datetime',
+        'tax_bp' => 'integer',
+        'tax_cents' => 'integer',
+        'total_cents' => 'integer',
+        'due_date' => 'date',
+        'sent_at' => 'datetime',
+        'paid_at' => 'datetime',
+        'opened_at' => 'datetime',
+        'viewed_at' => 'datetime',
+        'reminded_at' => 'datetime',
         'reminders_sent' => 'integer',
-        'recur_next_on'  => 'date',
+        'recur_next_on' => 'date',
     ];
 
     protected static function booted(): void
@@ -68,8 +75,8 @@ class Invoice extends Model
         $tax = (int) round($subtotal * $this->tax_bp / 10000);
         $this->forceFill([
             'subtotal_cents' => $subtotal,
-            'tax_cents'      => $tax,
-            'total_cents'    => $subtotal + $tax,
+            'tax_cents' => $tax,
+            'total_cents' => $subtotal + $tax,
         ]);
     }
 
@@ -111,10 +118,10 @@ class Invoice extends Model
         }
         $base = $this->recur_next_on ?? now();
         $this->update(['recur_next_on' => match ($this->recur_interval) {
-            'weekly'    => $base->copy()->addWeek(),
+            'weekly' => $base->copy()->addWeek(),
             'quarterly' => $base->copy()->addMonths(3),
-            'yearly'    => $base->copy()->addYear(),
-            default     => $base->copy()->addMonth(),
+            'yearly' => $base->copy()->addYear(),
+            default => $base->copy()->addMonth(),
         }]);
     }
 
@@ -161,25 +168,25 @@ class Invoice extends Model
 
         foreach ($templates as $tpl) {
             $child = static::create([
-                'site_id'           => $site->id,
-                'number'            => static::nextNumber($site),
-                'customer_name'     => $tpl->customer_name,
-                'customer_email'    => $tpl->customer_email,
-                'items'             => $tpl->items,
-                'tax_bp'            => $tpl->tax_bp,
-                'currency'          => $tpl->currency,
-                'status'            => 'sent',
-                'due_date'          => now()->addDays($dueDays)->toDateString(),
-                'notes'             => $tpl->notes,
-                'sent_at'           => now(),
+                'site_id' => $site->id,
+                'number' => static::nextNumber($site),
+                'customer_name' => $tpl->customer_name,
+                'customer_email' => $tpl->customer_email,
+                'items' => $tpl->items,
+                'tax_bp' => $tpl->tax_bp,
+                'currency' => $tpl->currency,
+                'status' => 'sent',
+                'due_date' => now()->addDays($dueDays)->toDateString(),
+                'notes' => $tpl->notes,
+                'sent_at' => now(),
                 'parent_invoice_id' => $tpl->id,
             ]);
             $child->recalc();
             $child->save();
 
             try {
-                \Illuminate\Support\Facades\Mail::to($child->customer_email)
-                    ->send(new \App\Mail\InvoiceSent($child, $site));
+                Mail::to($child->customer_email)
+                    ->send(new InvoiceSent($child, $site));
             } catch (\Throwable $e) {
                 report($e);
             }
@@ -215,10 +222,10 @@ class Invoice extends Model
 
         foreach ($due as $invoice) {
             try {
-                \Illuminate\Support\Facades\Mail::to($invoice->customer_email)
-                    ->send(new \App\Mail\InvoiceReminder($invoice, $site));
+                Mail::to($invoice->customer_email)
+                    ->send(new InvoiceReminder($invoice, $site));
                 $invoice->update([
-                    'reminded_at'    => now(),
+                    'reminded_at' => now(),
                     'reminders_sent' => $invoice->reminders_sent + 1,
                 ]);
             } catch (\Throwable $e) {
@@ -244,7 +251,7 @@ class Invoice extends Model
 
     public function formattedTotal(): string
     {
-        return \App\Support\Money::format((int) $this->total_cents, $this->currency);
+        return Money::format((int) $this->total_cents, $this->currency);
     }
 
     public function payUrl(): string

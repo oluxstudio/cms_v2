@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Alert extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'user_id', 'level', 'type', 'audience', 'title', 'body', 'link', 'meta', 'read_at'];
 
     protected $casts = ['meta' => 'array', 'read_at' => 'datetime'];

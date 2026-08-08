@@ -2,20 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class FormResponse extends Model
 {
     use HasFactory;
+    use HasUlids;
 
     protected $fillable = ['form_id', 'contact_id', 'fields', 'ip_address', 'read_at', 'converted_at'];
 
     protected $casts = [
-        'fields'       => 'array',
-        'read_at'      => 'datetime',
+        'fields' => 'array',
+        'read_at' => 'datetime',
         'converted_at' => 'datetime',
     ];
 
@@ -68,11 +70,11 @@ class FormResponse extends Model
         }
 
         $fullName = $name
-            ?? trim(($first ?? '') . ' ' . ($last ?? ''))
+            ?? trim(($first ?? '').' '.($last ?? ''))
             ?: ($email ? Str::before($email, '@') : 'Unknown');
 
         return [
-            'name'  => $fullName ?: 'Unknown',
+            'name' => $fullName ?: 'Unknown',
             'email' => $email,
             'phone' => $phone,
             'extra' => $extra,

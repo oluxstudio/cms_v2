@@ -22,7 +22,7 @@ class PlatformAccountsPage extends Component
     public string $search = '';
 
     /** account being edited in the drawer */
-    public ?int $editingId = null;
+    public ?string $editingId = null;
 
     /** plan => price string (whole units, '' = no override) */
     public array $prices = [];
@@ -32,7 +32,7 @@ class PlatformAccountsPage extends Component
         abort_unless(Auth::user()?->isSuper(), 403);
     }
 
-    public function edit(int $userId): void
+    public function edit(string $userId): void
     {
         $user = User::findOrFail($userId);
         $sub = $user->currentSubscription();
@@ -72,7 +72,7 @@ class PlatformAccountsPage extends Component
     }
 
     /** Comp/assign a plan directly, bypassing payment. */
-    public function assignPlan(int $userId, string $plan): void
+    public function assignPlan(string $userId, string $plan): void
     {
         abort_unless(Auth::user()?->isSuper(), 403);
         if (! config("plans.tiers.{$plan}")) {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\BookingConfirmed;
 use App\Mail\NewBookingNotification;
 use App\Models\Booking;
+use App\Models\Contact;
 use App\Models\Service;
 use App\Models\Site;
 use App\Services\BookingService;
@@ -192,15 +193,15 @@ class BookingApiController extends Controller
                 'check_out' => ['required', 'date'],
                 'guests' => ['nullable', 'integer', 'min:1', 'max:50'],
                 'units' => ['nullable', 'integer', 'min:1', 'max:50'],
-                'resource_id' => ['nullable', 'integer'],
+                'resource_id' => ['nullable', 'string'],
             ],
             'trip' => [
-                'departure_id' => ['required', 'integer'],
+                'departure_id' => ['required', 'string'],
                 'qty' => ['required', 'integer', 'min:1', 'max:50'],
             ],
             default => [
                 'start' => ['required', 'date'],
-                'resource_id' => ['nullable', 'integer'],
+                'resource_id' => ['nullable', 'string'],
             ],
         }));
 
@@ -236,7 +237,7 @@ class BookingApiController extends Controller
 
         // CRM funnel: every booking customer becomes (or updates) a Contact.
         try {
-            \App\Models\Contact::capture($site, $result->customer_name, $result->customer_email, $result->customer_phone,
+            Contact::capture($site, $result->customer_name, $result->customer_email, $result->customer_phone,
                 "Booked {$svc->name} ({$result->reference}) — ".($result->starts_at?->format('D, M j · g:i A') ?? 'date tbc').'.');
         } catch (\Throwable $e) {
             report($e);

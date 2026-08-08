@@ -75,7 +75,7 @@
         <div class="space-y-2 fx-stagger">
             @forelse ($this->alerts as $a)
                 <div class="rounded-2xl bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm fx-in">
-                    <button wire:click="toggle({{ $a->id }})" class="w-full text-left flex items-start gap-3 p-4">
+                    <button wire:click="toggle('{{ $a->id }}')" class="w-full text-left flex items-start gap-3 p-4">
                         <span class="mt-1 w-2.5 h-2.5 rounded-full shrink-0" style="background:{{ $levelTint[$a->level] ?? '#3b82f6' }}"></span>
                         <span class="min-w-0 flex-1">
                             <span class="flex items-center gap-2">
@@ -92,7 +92,7 @@
                             {{ $a->body ?: 'No further details.' }}
                             @if ($a->link)<a href="{{ $a->link }}" class="block mt-2 text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Go to related item →</a>@endif
                             <p class="text-[11px] text-gray-400 mt-2">{{ $a->created_at->format('M j, Y · g:i A') }}</p>
-                            <button wire:click="deleteAlert({{ $a->id }})" data-confirm="Delete this alert?"
+                            <button wire:click="deleteAlert('{{ $a->id }}')" data-confirm="Delete this alert?"
                                     class="mt-2 text-xs font-semibold text-gray-400 hover:text-rose-500">Delete alert</button>
                         </div>
                     @endif

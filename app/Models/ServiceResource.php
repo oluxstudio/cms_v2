@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -16,14 +18,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ServiceResource extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'name', 'config', 'capacity', 'price_cents', 'is_active', 'sort'];
 
     protected $casts = [
-        'config'      => 'array',
-        'capacity'    => 'integer',
+        'config' => 'array',
+        'capacity' => 'integer',
         'price_cents' => 'integer',
-        'is_active'   => 'boolean',
-        'sort'        => 'integer',
+        'is_active' => 'boolean',
+        'sort' => 'integer',
     ];
 
     public function site(): BelongsTo
@@ -50,7 +54,7 @@ class ServiceResource extends Model
      * Active bookings (ANY service) whose busy window overlaps [$from, $until).
      * The busy window has each booking's own buffers baked in.
      */
-    public function overlapCount(\Carbon\CarbonInterface $from, \Carbon\CarbonInterface $until): int
+    public function overlapCount(CarbonInterface $from, CarbonInterface $until): int
     {
         return (int) $this->bookings()
             ->active()
@@ -59,7 +63,7 @@ class ServiceResource extends Model
             ->sum('quantity');
     }
 
-    public function freeFor(\Carbon\CarbonInterface $from, \Carbon\CarbonInterface $until, int $qty = 1): bool
+    public function freeFor(CarbonInterface $from, CarbonInterface $until, int $qty = 1): bool
     {
         return $this->overlapCount($from, $until) + $qty <= max(1, $this->capacity);
     }
@@ -68,8 +72,8 @@ class ServiceResource extends Model
     public static function noun(string $kind): string
     {
         return match ($kind) {
-            'stay'  => 'room / house',
-            'trip'  => 'vehicle',
+            'stay' => 'room / house',
+            'trip' => 'vehicle',
             default => 'staff member',
         };
     }

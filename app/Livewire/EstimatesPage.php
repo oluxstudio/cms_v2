@@ -33,7 +33,7 @@ class EstimatesPage extends Component
     // ── Estimators ──
     public string $newEstimatorName = '';
 
-    public ?int $selectedId = null;       // estimator open in the editor
+    public ?string $selectedId = null;       // estimator open in the editor
 
     // ── Editor: name + email template ──
     public string $eName = '';
@@ -43,7 +43,7 @@ class EstimatesPage extends Component
     public string $eEmailBody = '';
 
     // ── Field form ──
-    public ?int $fieldEditingId = null;   // 0 = new
+    public ?string $fieldEditingId = null;   // 0 = new
 
     public string $fLabel = '';
 
@@ -58,7 +58,7 @@ class EstimatesPage extends Component
     public bool $fRequired = false;
 
     // ── Calculation form (calculator-built) ──
-    public ?int $calcEditingId = null;    // 0 = new
+    public ?string $calcEditingId = null;    // 0 = new
 
     public string $cName = '';
 
@@ -112,7 +112,7 @@ class EstimatesPage extends Component
         $this->select($estimator->id);
     }
 
-    public function select(int $id): void
+    public function select(string $id): void
     {
         $this->guardManage();
         $estimator = $this->site->estimators()->findOrFail($id);
@@ -148,7 +148,7 @@ class EstimatesPage extends Component
         $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Estimator settings and email template updated.');
     }
 
-    public function deleteEstimator(int $id): void
+    public function deleteEstimator(string $id): void
     {
         $this->guardManage();
         $estimator = $this->site->estimators()->findOrFail($id);
@@ -166,7 +166,7 @@ class EstimatesPage extends Component
         return $this->selected?->fields()->get() ?? collect();
     }
 
-    public function openField(int $id = 0): void
+    public function openField(string $id = ''): void
     {
         $this->guardManage();
         $this->errorMessage = '';
@@ -245,7 +245,7 @@ class EstimatesPage extends Component
         $this->closeField();
     }
 
-    public function deleteField(int $id): void
+    public function deleteField(string $id): void
     {
         $this->guardManage();
         $field = $this->selected->fields()->findOrFail($id);
@@ -266,7 +266,7 @@ class EstimatesPage extends Component
         return $this->selected?->calcs()->get() ?? collect();
     }
 
-    public function openCalc(int $id = 0): void
+    public function openCalc(string $id = ''): void
     {
         $this->guardManage();
         $this->errorMessage = '';
@@ -314,7 +314,7 @@ class EstimatesPage extends Component
         $this->closeCalc();
     }
 
-    public function deleteCalc(int $id): void
+    public function deleteCalc(string $id): void
     {
         $this->guardManage();
         $this->selected->calcs()->findOrFail($id)->delete();
@@ -340,14 +340,14 @@ class EstimatesPage extends Component
         $this->statusFilter = $status;
     }
 
-    public function updateStatus(int $id, string $status): void
+    public function updateStatus(string $id, string $status): void
     {
         if (in_array($status, self::STATUSES, true)) {
             Estimate::where('site_id', $this->site->id)->whereKey($id)->update(['status' => $status]);
         }
     }
 
-    public function deleteEstimate(int $id): void
+    public function deleteEstimate(string $id): void
     {
         $this->guardManage();
         Estimate::where('site_id', $this->site->id)->whereKey($id)->delete();

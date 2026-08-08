@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
  */
 class Estimator extends Model
 {
+    use HasUlids;
+
     protected $fillable = ['site_id', 'name', 'slug', 'email_subject', 'email_body', 'sort'];
 
     public function site(): BelongsTo
@@ -36,7 +39,7 @@ class Estimator extends Model
     }
 
     /** Unique slug for a new estimator within a site. */
-    public static function slugFor(int $siteId, string $name): string
+    public static function slugFor(string $siteId, string $name): string
     {
         $base = Str::slug($name) ?: 'estimator';
         $slug = $base;

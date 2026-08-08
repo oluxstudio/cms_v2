@@ -77,9 +77,9 @@
                 <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-2">{{ $p->inventory === null ? 'Unlimited stock' : $p->inventory.' in stock' }}</p>
 
                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-white/[0.04]">
-                    <button wire:click="edit({{ $p->id }})" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Edit</button>
-                    <button wire:click="toggleActive({{ $p->id }})" class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">{{ $p->is_active ? 'Hide' : 'Show' }}</button>
-                    <button wire:click="delete({{ $p->id }})" data-confirm="Delete this product?" class="ml-auto text-xs font-medium text-red-500 hover:text-red-700">Delete</button>
+                    <button wire:click="edit('{{ $p->id }}')" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Edit</button>
+                    <button wire:click="toggleActive('{{ $p->id }}')" class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">{{ $p->is_active ? 'Hide' : 'Show' }}</button>
+                    <button wire:click="delete('{{ $p->id }}')" data-confirm="Delete this product?" class="ml-auto text-xs font-medium text-red-500 hover:text-red-700">Delete</button>
                 </div>
             </div>
         </div>

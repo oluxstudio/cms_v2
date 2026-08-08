@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Media;
 use App\Models\Site;
+use App\Services\MediaStore;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -22,11 +23,16 @@ class MediaPicker extends Component
     use WithFileUploads;
     use WithPagination;
 
-    public int $siteId;
+    public string $siteId;
+
     public bool $open = false;
+
     public array $context = [];      // passed back verbatim with media-picked
+
     public string $search = '';
+
     public string $type = 'image';   // all | image | video | document
+
     public array $uploads = [];
 
     #[On('open-media-picker')]
@@ -55,7 +61,7 @@ class MediaPicker extends Component
     }
 
     /** Pick an item → notify the host component and close. */
-    public function pick(int $id): void
+    public function pick(string $id): void
     {
         $media = Media::where('site_id', $this->siteId)->find($id);
         if (! $media) {
@@ -73,7 +79,7 @@ class MediaPicker extends Component
             ['uploads.*.max' => 'Each file must be 50 MB or smaller.'],
         );
         $site = Site::findOrFail($this->siteId);
-        $store = app(\App\Services\MediaStore::class);
+        $store = app(MediaStore::class);
         foreach ($this->uploads as $file) {
             $store->store($site, $file);
         }

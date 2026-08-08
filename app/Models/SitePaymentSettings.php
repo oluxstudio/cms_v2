@@ -2,19 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SitePaymentSettings extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'stripe_secret', 'stripe_publishable', 'stripe_webhook_secret', 'livemode',
     ];
 
     protected $casts = [
-        'stripe_secret'         => 'encrypted',
+        'stripe_secret' => 'encrypted',
         'stripe_webhook_secret' => 'encrypted',
-        'livemode'              => 'boolean',
+        'livemode' => 'boolean',
     ];
 
     public function site(): BelongsTo

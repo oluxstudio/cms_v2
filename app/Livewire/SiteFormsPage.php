@@ -26,16 +26,19 @@ class SiteFormsPage extends Component
     public string $mode = 'list';
 
     /** ID of the Form being viewed / edited. null = creating a new form. */
-    public ?int $activeFormId = null;
+    public ?string $activeFormId = null;
 
     // ─────────────────────────────────────────────────────────────
     // Form-builder state
     // ─────────────────────────────────────────────────────────────
 
-    public string $fbTitle       = '';
-    public string $fbName        = '';
+    public string $fbTitle = '';
+
+    public string $fbName = '';
+
     public string $fbDescription = '';
-    public bool   $fbIsActive    = true;
+
+    public bool $fbIsActive = true;
 
     /**
      * Array of field-draft objects used in the builder UI:
@@ -59,7 +62,7 @@ class SiteFormsPage extends Component
     // Response-view state
     // ─────────────────────────────────────────────────────────────
 
-    public ?int $openId = null;
+    public ?string $openId = null;
 
     // ─────────────────────────────────────────────────────────────
     // Boot
@@ -111,42 +114,48 @@ class SiteFormsPage extends Component
         $this->mode = 'form';
     }
 
-    public function goEdit(int $id): void
+    public function goEdit(string $id): void
     {
         $form = $this->guardedForm($id);
-        if (! $form) return;
+        if (! $form) {
+            return;
+        }
 
         $this->activeFormId = $id;
         $this->loadFormIntoBuilder($form);
         $this->mode = 'form';
     }
 
-    public function goDetail(int $id): void
+    public function goDetail(string $id): void
     {
         $form = $this->guardedForm($id);
-        if (! $form) return;
+        if (! $form) {
+            return;
+        }
 
         $this->activeFormId = $id;
-        $this->openId       = null;
+        $this->openId = null;
         $this->mode = 'detail';
     }
 
-    public function goResponses(?int $id = null): void
+    public function goResponses(?string $id = null): void
     {
         $formId = $id ?? $this->activeFormId;
-        if (! $formId || ! $this->guardedForm($formId)) return;
+        if (! $formId || ! $this->guardedForm($formId)) {
+            return;
+        }
 
         $this->activeFormId = $formId;
-        $this->openId       = null;
+        $this->openId = null;
         $this->resetPage();
         $this->mode = 'responses';
     }
 
     public function backToList(): void
     {
-        $this->mode         = 'list';
+        $this->mode = 'list';
         $this->activeFormId = null;
-        $this->openId       = null;
+        $this->openId = null;
         $this->resetPage();
         $this->resetFormBuilder();
     }
@@ -165,30 +174,30 @@ class SiteFormsPage extends Component
     public function saveForm(): void
     {
         $this->validate([
-            'fbTitle'              => ['required', 'string', 'max:255'],
-            'fbName'               => ['required', 'string', 'max:100', 'regex:/^[a-z0-9][a-z0-9\-_]*$/'],
-            'fbDescription'        => ['nullable', 'string', 'max:2000'],
-            'fbFields'             => ['array'],
-            'fbFields.*.label'     => ['required', 'string', 'max:100'],
-            'fbFields.*.key'       => ['required', 'string', 'max:60', 'regex:/^[a-z][a-z0-9_]*$/'],
-            'fbFields.*.type'      => ['required', 'in:text,email,tel,number,url,date,textarea,select,radio,checkbox'],
-            'fbFields.*.min'       => ['nullable', 'string', 'max:20'],
-            'fbFields.*.max'       => ['nullable', 'string', 'max:20'],
-            'fbFields.*.options'   => ['nullable', 'string', 'max:500'],
+            'fbTitle' => ['required', 'string', 'max:255'],
+            'fbName' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9][a-z0-9\-_]*$/'],
+            'fbDescription' => ['nullable', 'string', 'max:2000'],
+            'fbFields' => ['array'],
+            'fbFields.*.label' => ['required', 'string', 'max:100'],
+            'fbFields.*.key' => ['required', 'string', 'max:60', 'regex:/^[a-z][a-z0-9_]*$/'],
+            'fbFields.*.type' => ['required', 'in:text,email,tel,number,url,date,textarea,select,radio,checkbox'],
+            'fbFields.*.min' => ['nullable', 'string', 'max:20'],
+            'fbFields.*.max' => ['nullable', 'string', 'max:20'],
+            'fbFields.*.options' => ['nullable', 'string', 'max:500'],
         ], [
-            'fbTitle.required'           => 'A form title is required.',
-            'fbName.required'            => 'A form slug is required.',
-            'fbName.regex'               => 'Slug may only contain lowercase letters, numbers, hyphens and underscores.',
-            'fbFields.*.label.required'  => 'Every field needs a label.',
-            'fbFields.*.key.required'    => 'Every field needs a key.',
-            'fbFields.*.key.regex'       => 'Field keys must start with a letter and contain only lowercase letters, numbers and underscores.',
-            'fbFields.*.type.required'   => 'Please choose a type for each field.',
-            'fbFields.*.type.in'         => 'Invalid field type.',
+            'fbTitle.required' => 'A form title is required.',
+            'fbName.required' => 'A form slug is required.',
+            'fbName.regex' => 'Slug may only contain lowercase letters, numbers, hyphens and underscores.',
+            'fbFields.*.label.required' => 'Every field needs a label.',
+            'fbFields.*.key.required' => 'Every field needs a key.',
+            'fbFields.*.key.regex' => 'Field keys must start with a letter and contain only lowercase letters, numbers and underscores.',
+            'fbFields.*.type.required' => 'Please choose a type for each field.',
+            'fbFields.*.type.in' => 'Invalid field type.',
         ]);
 
         // Check slug uniqueness within this site
         $slugQuery = Form::where('site_id', $this->site->id)
-                         ->where('name', $this->fbName);
+            ->where('name', $this->fbName);
 
         if ($this->activeFormId) {
             $slugQuery->where('id', '!=', $this->activeFormId);
@@ -196,15 +205,16 @@ class SiteFormsPage extends Component
 
         if ($slugQuery->exists()) {
             $this->addError('fbName', 'A form with this slug already exists on this site.');
+
             return;
         }
 
         $payload = [
-            'title'       => trim($this->fbTitle),
-            'name'        => $this->fbName,
+            'title' => trim($this->fbTitle),
+            'name' => $this->fbName,
             'description' => trim($this->fbDescription) ?: null,
-            'is_active'   => $this->fbIsActive,
-            'fields'      => $this->prepareFieldsForSave($this->fbFields),
+            'is_active' => $this->fbIsActive,
+            'fields' => $this->prepareFieldsForSave($this->fbFields),
         ];
 
         if ($this->activeFormId) {
@@ -212,14 +222,14 @@ class SiteFormsPage extends Component
                 ->find($this->activeFormId)
                 ?->update($payload);
         } else {
-            $created            = Form::create(['site_id' => $this->site->id] + $payload);
+            $created = Form::create(['site_id' => $this->site->id] + $payload);
             $this->activeFormId = $created->id;
         }
 
         $this->mode = 'detail';
     }
 
-    public function deleteForm(int $id): void
+    public function deleteForm(string $id): void
     {
         Form::where('site_id', $this->site->id)->find($id)?->delete();
 
@@ -235,14 +245,14 @@ class SiteFormsPage extends Component
     public function addField(): void
     {
         $this->fbFields[] = [
-            'key'         => '',
-            'label'       => '',
-            'type'        => 'text',
-            'required'    => false,
+            'key' => '',
+            'label' => '',
+            'type' => 'text',
+            'required' => false,
             'placeholder' => '',
-            'min'         => '',
-            'max'         => '',
-            'options'     => '',
+            'min' => '',
+            'max' => '',
+            'options' => '',
         ];
     }
 
@@ -254,14 +264,18 @@ class SiteFormsPage extends Component
 
     public function moveFieldUp(int $index): void
     {
-        if ($index === 0) return;
+        if ($index === 0) {
+            return;
+        }
         [$this->fbFields[$index - 1], $this->fbFields[$index]] =
             [$this->fbFields[$index], $this->fbFields[$index - 1]];
     }
 
     public function moveFieldDown(int $index): void
     {
-        if ($index >= count($this->fbFields) - 1) return;
+        if ($index >= count($this->fbFields) - 1) {
+            return;
+        }
         [$this->fbFields[$index], $this->fbFields[$index + 1]] =
             [$this->fbFields[$index + 1], $this->fbFields[$index]];
     }
@@ -270,7 +284,7 @@ class SiteFormsPage extends Component
     // CRUD — responses
     // ─────────────────────────────────────────────────────────────
 
-    public function toggleOpen(int $id): void
+    public function toggleOpen(string $id): void
     {
         $this->openId = ($this->openId === $id) ? null : $id;
 
@@ -281,17 +295,21 @@ class SiteFormsPage extends Component
 
     public function markAllRead(): void
     {
-        if (! $this->activeFormId) return;
+        if (! $this->activeFormId) {
+            return;
+        }
 
         FormResponse::where('form_id', $this->activeFormId)
-                    ->whereNull('read_at')
-                    ->update(['read_at' => now()]);
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
     }
 
-    public function deleteResponse(int $id): void
+    public function deleteResponse(string $id): void
     {
         $this->guardedResponse($id)?->delete();
-        if ($this->openId === $id) $this->openId = null;
+        if ($this->openId === $id) {
+            $this->openId = null;
+        }
     }
 
     /**
@@ -299,7 +317,7 @@ class SiteFormsPage extends Component
      * Dedupes by email within the site — an existing contact is updated and
      * linked, otherwise a fresh contact is created.
      */
-    public function convertToContact(int $id): void
+    public function convertToContact(string $id): void
     {
         $response = $this->guardedResponse($id);
         if (! $response || $response->contact_id) {
@@ -318,35 +336,35 @@ class SiteFormsPage extends Component
         if ($contact) {
             // Enrich the existing contact without clobbering good data
             $contact->fill([
-                'name'             => $contact->name ?: $lead['name'],
-                'phone'            => $contact->phone ?: $lead['phone'],
-                'data'             => array_merge($contact->data ?? [], $lead['extra']),
+                'name' => $contact->name ?: $lead['name'],
+                'phone' => $contact->phone ?: $lead['phone'],
+                'data' => array_merge($contact->data ?? [], $lead['extra']),
                 'last_activity_at' => now(),
             ])->save();
         } else {
             $contact = Contact::create([
-                'site_id'          => $this->site->id,
-                'name'             => $lead['name'],
-                'email'            => $lead['email'],
-                'phone'            => $lead['phone'],
-                'status'           => 'new',
-                'source_form_id'   => $response->form_id,
-                'data'             => $lead['extra'],
+                'site_id' => $this->site->id,
+                'name' => $lead['name'],
+                'email' => $lead['email'],
+                'phone' => $lead['phone'],
+                'status' => 'new',
+                'source_form_id' => $response->form_id,
+                'data' => $lead['extra'],
                 'last_activity_at' => now(),
             ]);
             $contact->logActivity('created');
         }
 
         $response->update([
-            'contact_id'   => $contact->id,
+            'contact_id' => $contact->id,
             'converted_at' => now(),
-            'read_at'      => $response->read_at ?? now(),
+            'read_at' => $response->read_at ?? now(),
         ]);
 
         // Record the submission on the contact's timeline
         $contact->logActivity('form_submitted', null, [
             'response_id' => $response->id,
-            'form_id'     => $response->form_id,
+            'form_id' => $response->form_id,
         ]);
 
         session()->flash('contact_converted', $contact->name);
@@ -367,6 +385,7 @@ class SiteFormsPage extends Component
             ->get()
             ->map(function (Form $form) {
                 $form->last_at = $form->responses()->latest()->value('created_at');
+
                 return $form;
             });
 
@@ -395,44 +414,47 @@ class SiteFormsPage extends Component
     // Private helpers
     // ─────────────────────────────────────────────────────────────
 
-    private function guardedForm(int $id): ?Form
+    private function guardedForm(string $id): ?Form
     {
         return Form::where('site_id', $this->site->id)->find($id);
     }
 
-    private function guardedResponse(int $id): ?FormResponse
+    private function guardedResponse(string $id): ?FormResponse
     {
-        if (! $this->activeFormId) return null;
+        if (! $this->activeFormId) {
+            return null;
+        }
+
         return FormResponse::where('form_id', $this->activeFormId)->find($id);
     }
 
     private function resetFormBuilder(): void
     {
-        $this->fbTitle       = '';
-        $this->fbName        = '';
+        $this->fbTitle = '';
+        $this->fbName = '';
         $this->fbDescription = '';
-        $this->fbIsActive    = true;
-        $this->fbFields      = [];
+        $this->fbIsActive = true;
+        $this->fbFields = [];
         $this->resetErrorBag();
     }
 
     private function loadFormIntoBuilder(Form $form): void
     {
-        $this->fbTitle       = $form->title ?? '';
-        $this->fbName        = $form->name;
+        $this->fbTitle = $form->title ?? '';
+        $this->fbName = $form->name;
         $this->fbDescription = $form->description ?? '';
-        $this->fbIsActive    = $form->is_active;
+        $this->fbIsActive = $form->is_active;
 
         $this->fbFields = collect($form->fields ?? [])->map(fn ($f) => [
-            'key'         => $f['key']         ?? '',
-            'label'       => $f['label']        ?? '',
-            'type'        => $f['type']         ?? 'text',
-            'required'    => (bool) ($f['required']   ?? false),
-            'placeholder' => $f['placeholder']  ?? '',
-            'min'         => $f['min']          ?? '',
-            'max'         => $f['max']          ?? '',
+            'key' => $f['key'] ?? '',
+            'label' => $f['label'] ?? '',
+            'type' => $f['type'] ?? 'text',
+            'required' => (bool) ($f['required'] ?? false),
+            'placeholder' => $f['placeholder'] ?? '',
+            'min' => $f['min'] ?? '',
+            'max' => $f['max'] ?? '',
             // Convert stored array back to comma-separated string for the UI
-            'options'     => is_array($f['options'] ?? null)
+            'options' => is_array($f['options'] ?? null)
                 ? implode(', ', $f['options'])
                 : ($f['options'] ?? ''),
         ])->toArray();
@@ -444,15 +466,15 @@ class SiteFormsPage extends Component
     private function prepareFieldsForSave(array $fbFields): array
     {
         return collect($fbFields)->map(fn ($f) => [
-            'key'         => $f['key'],
-            'label'       => $f['label'],
-            'type'        => $f['type'],
-            'required'    => (bool) ($f['required'] ?? false),
+            'key' => $f['key'],
+            'label' => $f['label'],
+            'type' => $f['type'],
+            'required' => (bool) ($f['required'] ?? false),
             'placeholder' => ($f['placeholder'] ?? '') ?: null,
-            'min'         => ($f['min'] ?? '') !== '' ? $f['min'] : null,
-            'max'         => ($f['max'] ?? '') !== '' ? $f['max'] : null,
+            'min' => ($f['min'] ?? '') !== '' ? $f['min'] : null,
+            'max' => ($f['max'] ?? '') !== '' ? $f['max'] : null,
             // Split comma-separated options into a clean array
-            'options'     => ($f['options'] ?? '') !== ''
+            'options' => ($f['options'] ?? '') !== ''
                 ? array_values(array_filter(array_map('trim', explode(',', $f['options']))))
                 : [],
         ])->values()->toArray();

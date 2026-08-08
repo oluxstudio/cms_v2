@@ -71,7 +71,7 @@ class SiteComponent extends Component
             ->all();
     }
 
-    public function selected(int $id): mixed
+    public function selected(string $id): mixed
     {
         $site = $this->findAccessibleSite($id);
 
@@ -117,7 +117,7 @@ class SiteComponent extends Component
         $this->loadSites();
     }
 
-    public function delete(int $id): void
+    public function delete(string $id): void
     {
         // Only the site owner may delete the site
         Site::where('user_id', Auth::id())->findOrFail($id)->delete();
@@ -125,7 +125,7 @@ class SiteComponent extends Component
     }
 
     /** Fetch a site by id only if the current user owns or belongs to it. */
-    private function findAccessibleSite(int $id): Site
+    private function findAccessibleSite(string $id): Site
     {
         $site = Site::findOrFail($id);
         abort_unless($site->accessibleBy(Auth::user()), 403);

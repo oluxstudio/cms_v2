@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
  */
 class BookingType extends Model
 {
+    use HasUlids;
+
     public const ENGINES = ['slot', 'stay', 'trip'];
 
     protected $fillable = ['site_id', 'name', 'slug', 'icon', 'engine', 'resource_noun', 'defaults', 'fields', 'is_active', 'sort'];
@@ -30,27 +33,27 @@ class BookingType extends Model
     {
         return match ($engine) {
             'stay' => [
-                'price'      => 'Price per night',
-                'deposit'    => 'Deposit',
-                'nights'     => 'Min / max nights',
-                'guests'     => 'Max guests',
-                'resources'  => 'Named rooms / houses',
-                'seasonal'   => 'Seasonal pricing',
+                'price' => 'Price per night',
+                'deposit' => 'Deposit',
+                'nights' => 'Min / max nights',
+                'guests' => 'Max guests',
+                'resources' => 'Named rooms / houses',
+                'seasonal' => 'Seasonal pricing',
             ],
             'trip' => [
-                'price'      => 'Seat price',
-                'deposit'    => 'Deposit',
-                'resources'  => 'Named vehicles',
+                'price' => 'Seat price',
+                'deposit' => 'Deposit',
+                'resources' => 'Named vehicles',
             ],
             default => [
-                'duration'   => 'Duration',
-                'buffers'    => 'Buffer before / after',
-                'price'      => 'Price',
-                'deposit'    => 'Deposit',
-                'capacity'   => 'Parallel capacity',
-                'resources'  => 'Named staff',
-                'schedule'   => 'Schedule override',
-                'seasonal'   => 'Seasonal pricing',
+                'duration' => 'Duration',
+                'buffers' => 'Buffer before / after',
+                'price' => 'Price',
+                'deposit' => 'Deposit',
+                'capacity' => 'Parallel capacity',
+                'resources' => 'Named staff',
+                'schedule' => 'Schedule override',
+                'seasonal' => 'Seasonal pricing',
             ],
         };
     }

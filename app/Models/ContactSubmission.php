@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class ContactSubmission extends Model
 {
     use HasFactory;
+    use HasUlids;
 
     protected $fillable = [
         'site_id',
@@ -20,7 +22,7 @@ class ContactSubmission extends Model
     ];
 
     protected $casts = [
-        'read_at'    => 'datetime',
+        'read_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

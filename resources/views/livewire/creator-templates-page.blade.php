@@ -128,9 +128,9 @@
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         @if(in_array($t->status, ['draft','rejected'], true))
-                            <button wire:click="submit({{ $t->id }})" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Submit for review</button>
+                            <button wire:click="submit('{{ $t->id }}')" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Submit for review</button>
                         @endif
-                        <button wire:click="deleteTemplate({{ $t->id }})" data-confirm="Delete this template?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">Delete</button>
+                        <button wire:click="deleteTemplate('{{ $t->id }}')" data-confirm="Delete this template?" class="text-xs font-semibold text-gray-400 hover:text-rose-500">Delete</button>
                     </div>
                 </div>
             @endforeach
@@ -152,14 +152,14 @@
                                 <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $t->name }}</span>
                                 <span class="text-[11px] text-gray-400"> · by {{ $t->user?->name ?? 'Unknown' }} · {{ $t->priceLabel() }} · {{ $t->category }}</span>
                             </div>
-                            <button wire:click="approve({{ $t->id }})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Approve</button>
+                            <button wire:click="approve('{{ $t->id }}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Approve</button>
                             <button wire:click="$set('rejectingId', {{ $t->id }})" class="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-600 dark:text-rose-400 text-xs font-semibold hover:bg-rose-50 dark:hover:bg-rose-500/10">Reject</button>
                         </div>
                         @if($rejectingId === $t->id)
                             <div class="flex items-center gap-2 mt-2">
                                 <input wire:model="rejectReason" type="text" placeholder="Reason (shown to creator)"
                                        class="flex-1 text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-100">
-                                <button wire:click="reject({{ $t->id }})" data-confirm="Reject this template submission?" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Confirm reject</button>
+                                <button wire:click="reject('{{ $t->id }}')" data-confirm="Reject this template submission?" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Confirm reject</button>
                                 <button wire:click="$set('rejectingId', null)" class="text-xs text-gray-400">Cancel</button>
                             </div>
                         @endif

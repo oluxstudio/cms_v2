@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,17 +12,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Module extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'key', 'name', 'description', 'icon', 'collection_id',
         'schema', 'capabilities', 'frontend', 'intents', 'created_by', 'enabled',
     ];
 
     protected $casts = [
-        'schema'       => 'array',
+        'schema' => 'array',
         'capabilities' => 'array',
-        'frontend'     => 'array',
-        'intents'      => 'array',
-        'enabled'      => 'boolean',
+        'frontend' => 'array',
+        'intents' => 'array',
+        'enabled' => 'boolean',
     ];
 
     public function site(): BelongsTo
@@ -36,6 +39,6 @@ class Module extends Model
 
     public function adminUrl(): string
     {
-        return url($this->site->name . '/collections');
+        return url($this->site->name.'/collections');
     }
 }

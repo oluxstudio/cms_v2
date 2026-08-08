@@ -36,11 +36,11 @@ class ModuleController extends Controller
         $c = $module->collection;
 
         return response()->json([
-            'key'          => $module->key,
-            'name'         => $module->name,
-            'description'  => $module->description,
+            'key' => $module->key,
+            'name' => $module->name,
+            'description' => $module->description,
             'capabilities' => $module->capabilities,
-            'fields'       => FieldSchemaPresenter::fields($c->fields ?? []),
+            'fields' => FieldSchemaPresenter::fields($c->fields ?? []),
         ]);
     }
 
@@ -59,11 +59,11 @@ class ModuleController extends Controller
 
         return response()->json([
             'fields' => FieldSchemaPresenter::fields($module->collection->fields ?? []),
-            'items'  => $items,
+            'items' => $items,
         ]);
     }
 
-    public function item(string $siteName, string $key, int $id): JsonResponse
+    public function item(string $siteName, string $key, string $id): JsonResponse
     {
         $module = $this->module($siteName, $key);
         abort_unless(($module->capabilities['get'] ?? false) && $module->collection->is_public, 404);
@@ -87,17 +87,17 @@ class ModuleController extends Controller
         $data = array_intersect_key($validated, array_flip($keys));
 
         $item = $c->items()->create([
-            'site_id'    => $c->site_id,
-            'data'       => $data,
+            'site_id' => $c->site_id,
+            'data' => $data,
             // Held for review unless the collection opts into auto-publish.
-            'status'     => $c->auto_publish ? 'published' : 'pending',
+            'status' => $c->auto_publish ? 'published' : 'pending',
             'ip_address' => $request->ip(),
         ]);
 
         return response()->json([
-            'ok'      => true,
+            'ok' => true,
             'message' => 'Submitted successfully.',
-            'id'      => $item->id,
+            'id' => $item->id,
         ], 201);
     }
 }

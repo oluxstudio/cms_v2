@@ -3,8 +3,9 @@
 namespace App\Models;
 
 use App\Support\HasFieldSchema;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -13,13 +14,14 @@ class Form extends Model
 {
     use HasFactory;
     use HasFieldSchema;
+    use HasUlids;
 
     protected $fillable = [
         'site_id', 'name', 'title', 'description', 'fields', 'is_active',
     ];
 
     protected $casts = [
-        'fields'    => 'array',
+        'fields' => 'array',
         'is_active' => 'boolean',
     ];
 

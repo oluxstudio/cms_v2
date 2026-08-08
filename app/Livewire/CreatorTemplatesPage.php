@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\Template;
+use App\Services\StripeConnect;
+use App\Services\TemplateAnalytics;
 use App\Services\TemplatePublisher;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -17,14 +19,20 @@ class CreatorTemplatesPage extends Component
     use WithFileUploads;
 
     public $zip = null;
+
     public string $tName = '';
+
     public string $tCategory = 'Business';
+
     public string $tPrice = '0';          // dollars
+
     public string $err = '';
+
     public string $ok = '';
 
     // moderation
-    public ?int $rejectingId = null;
+    public ?string $rejectingId = null;
+
     public string $rejectReason = '';
 
     private function publisher(): TemplatePublisher
@@ -40,13 +48,13 @@ class CreatorTemplatesPage extends Component
     /** Whether marketplace payments are configured at all (platform Stripe keys set). */
     public function getPaymentsConfiguredProperty(): bool
     {
-        return app(\App\Services\StripeConnect::class)->configured();
+        return app(StripeConnect::class)->configured();
     }
 
     /** Whether this creator can sell paid templates (Connect onboarded + charges enabled). */
     public function getCanSellProperty(): bool
     {
-        return app(\App\Services\StripeConnect::class)->canSell(Auth::user());
+        return app(StripeConnect::class)->canSell(Auth::user());
     }
 
     public function getMyTemplatesProperty()
@@ -57,13 +65,13 @@ class CreatorTemplatesPage extends Component
     /** Creator earnings totals (sales, gross, fees, net, installs). */
     public function getEarningsProperty(): array
     {
-        return app(\App\Services\TemplateAnalytics::class)->creatorSummary(Auth::user());
+        return app(TemplateAnalytics::class)->creatorSummary(Auth::user());
     }
 
     /** Per-template analytics rows (installs, sales, revenue, rating). */
     public function getAnalyticsProperty()
     {
-        return app(\App\Services\TemplateAnalytics::class)->perTemplate(Auth::user());
+        return app(TemplateAnalytics::class)->perTemplate(Auth::user());
     }
 
     public function getReviewQueueProperty()
@@ -84,23 +92,26 @@ class CreatorTemplatesPage extends Component
 
         if (strtolower($this->zip->getClientOriginalExtension()) !== 'zip') {
             $this->err = 'The template must be a .zip file.';
+
             return;
         }
 
         $priceCents = (int) round(((float) $this->tPrice) * 100);
         if ($priceCents > 0 && ! $this->canSell) {
             $this->err = 'Connect payouts before publishing a paid template (or set the price to 0).';
+
             return;
         }
 
         try {
             $tpl = $this->publisher()->publishFromZip(Auth::user(), $this->zip->getRealPath(), [
-                'name'        => trim($this->tName),
-                'category'    => trim($this->tCategory),
+                'name' => trim($this->tName),
+                'category' => trim($this->tCategory),
                 'price_cents' => (int) round(((float) $this->tPrice) * 100),
             ]);
         } catch (\Throwable $e) {
             $this->err = $e->getMessage();
+
             return;
         }
 
@@ -108,7 +119,7 @@ class CreatorTemplatesPage extends Component
         $this->ok = '“'.$tpl->name.'” created as a draft. Submit it for review when ready.';
     }
 
-    public function submit(int $id): void
+    public function submit(string $id): void
     {
         $tpl = Template::where('user_id', Auth::id())->find($id);
         if ($tpl) {
@@ -117,13 +128,13 @@ class CreatorTemplatesPage extends Component
         }
     }
 
-    public function deleteTemplate(int $id): void
+    public function deleteTemplate(string $id): void
     {
         Template::where('user_id', Auth::id())->whereKey($id)->delete();
         $this->ok = 'Template deleted.';
     }
 
-    public function approve(int $id): void
+    public function approve(string $id): void
     {
         if (! $this->isModerator) {
             return;
@@ -135,7 +146,7 @@ class CreatorTemplatesPage extends Component
         }
     }
 
-    public function reject(int $id): void
+    public function reject(string $id): void
     {
         if (! $this->isModerator) {
             return;

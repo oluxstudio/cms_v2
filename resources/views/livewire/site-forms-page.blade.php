@@ -146,13 +146,13 @@
 
                     {{-- Actions --}}
                     <div class="px-5 pb-5 flex items-center gap-2">
-                        <button wire:click="goDetail({{ $form->id }})"
+                        <button wire:click="goDetail('{{ $form->id }}')"
                                 class="flex-1 text-center text-sm font-semibold px-3 py-2
                                        bg-indigo-600 hover:bg-indigo-700 text-white
                                        rounded-xl transition-colors">
                             View Details
                         </button>
-                        <button wire:click="goEdit({{ $form->id }})"
+                        <button wire:click="goEdit('{{ $form->id }}')"
                                 class="p-2 rounded-xl border border-gray-200 dark:border-white/10
                                        text-gray-500 dark:text-gray-400
                                        hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-colors"
@@ -162,7 +162,7 @@
                                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                         </button>
-                        <button wire:click="deleteForm({{ $form->id }})" data-confirm="Delete this form and its responses?"
+                        <button wire:click="deleteForm('{{ $form->id }}')" data-confirm="Delete this form and its responses?"
                                 data-confirm="Delete '{{ addslashes($form->displayTitle()) }}' and all its responses? This cannot be undone."
                                 class="p-2 rounded-xl border border-red-100 dark:border-red-500/20
                                        text-red-500 dark:text-red-400
@@ -522,7 +522,7 @@
 
         <div class="flex-1"></div>
 
-        <button wire:click="goEdit({{ $activeForm->id }})"
+        <button wire:click="goEdit('{{ $activeForm->id }}')"
                 class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
                        border border-gray-200 dark:border-white/10
                        bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-300
@@ -533,7 +533,7 @@
             </svg>
             Edit Form
         </button>
-        <button wire:click="goResponses({{ $activeForm->id }})"
+        <button wire:click="goResponses('{{ $activeForm->id }}')"
                 class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700
                        text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors">
             View Responses
@@ -738,7 +738,7 @@
                             {{ $isOpen ? 'border-indigo-200 dark:border-indigo-500/30 shadow-sm' : 'border-gray-100 dark:border-white/[0.06]' }}
                             bg-white dark:bg-[#1d1e2a]">
 
-                    <button wire:click="toggleOpen({{ $response->id }})"
+                    <button wire:click="toggleOpen('{{ $response->id }}')"
                             class="w-full flex items-center gap-3 px-4 py-3.5 text-left
                                    hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors">
 
@@ -818,7 +818,7 @@
                                             View Contact
                                         </a>
                                     @else
-                                        <button wire:click="convertToContact({{ $response->id }})"
+                                        <button wire:click="convertToContact('{{ $response->id }}')"
                                                 class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
                                                        text-indigo-600 dark:text-indigo-400
                                                        border border-indigo-200 dark:border-indigo-500/30
@@ -830,7 +830,7 @@
                                         </button>
                                     @endif
 
-                                    <button wire:click="deleteResponse({{ $response->id }})" data-confirm="Delete this response?"
+                                    <button wire:click="deleteResponse('{{ $response->id }}')" data-confirm="Delete this response?"
                                             data-confirm="Delete this response permanently?"
                                             class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
                                                    text-red-600 dark:text-red-400

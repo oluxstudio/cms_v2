@@ -26,7 +26,7 @@ class SiteContactsPage extends Component
 
     /** Currently open contact in the detail drawer (?contact=ID supported). */
     #[Url(as: 'contact')]
-    public ?int $selectedId = null;
+    public ?string $selectedId = null;
 
     /** Note composer in the detail drawer. */
     public string $note = '';
@@ -46,7 +46,7 @@ class SiteContactsPage extends Component
         $this->statusFilter = $status;
     }
 
-    public function open(int $id): void
+    public function open(string $id): void
     {
         $this->selectedId = $id;
     }
@@ -56,7 +56,7 @@ class SiteContactsPage extends Component
         $this->selectedId = null;
     }
 
-    public function updateStatus(int $id, string $status): void
+    public function updateStatus(string $id, string $status): void
     {
         if (! in_array($status, Contact::STATUSES, true)) {
             return;
@@ -73,7 +73,7 @@ class SiteContactsPage extends Component
     }
 
     /** Set (or clear) the contact's logo/photo URL — blank falls back to Gravatar/initials. */
-    public function setAvatar(int $id, ?string $url): void
+    public function setAvatar(string $id, ?string $url): void
     {
         $contact = $this->site->contacts()->find($id);
         if (! $contact) {
@@ -94,7 +94,7 @@ class SiteContactsPage extends Component
         $contact->update(['data' => $data]);
     }
 
-    public function assign(int $id, ?string $userId): void
+    public function assign(string $id, ?string $userId): void
     {
         $contact = $this->site->contacts()->find($id);
         if (! $contact) {
@@ -117,7 +117,7 @@ class SiteContactsPage extends Component
         ]);
     }
 
-    public function addNote(int $id): void
+    public function addNote(string $id): void
     {
         $this->validate(['note' => ['required', 'string', 'max:2000']]);
 
@@ -131,7 +131,7 @@ class SiteContactsPage extends Component
         $this->note = '';
     }
 
-    public function deleteContact(int $id): void
+    public function deleteContact(string $id): void
     {
         $this->site->contacts()->whereKey($id)->delete();
         if ($this->selectedId === $id) {

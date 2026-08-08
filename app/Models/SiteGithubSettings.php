@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SiteGithubSettings extends Model
 {
+    use HasUlids;
+
     protected $fillable = [
         'site_id', 'token', 'owner', 'repo', 'branch', 'pages_url', 'last_pushed_at',
     ];
 
     protected $casts = [
-        'token'          => 'encrypted',
+        'token' => 'encrypted',
         'last_pushed_at' => 'datetime',
     ];
 

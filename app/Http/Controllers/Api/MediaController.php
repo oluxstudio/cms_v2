@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Media;
 use App\Models\Site;
@@ -13,7 +14,7 @@ use Illuminate\Support\Str;
 
 class MediaController extends Controller
 {
-    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+    use ResolvesApiSite;
 
     /**
      * GET /api/media
@@ -31,7 +32,7 @@ class MediaController extends Controller
         }
 
         $perPage = min((int) $request->integer('per_page', 24), 100);
-        $page    = $query->paginate($perPage);
+        $page = $query->paginate($perPage);
 
         return $this->respond($page);
     }
@@ -60,7 +61,7 @@ class MediaController extends Controller
         }
 
         if ($request->filled('search')) {
-            $term = '%' . $request->string('search') . '%';
+            $term = '%'.$request->string('search').'%';
             $query->where(fn ($q) => $q->where('name', 'like', $term)->orWhere('alt_text', 'like', $term));
         }
     }
@@ -68,13 +69,13 @@ class MediaController extends Controller
     private function payloadFor(Media $m): array
     {
         return [
-            'id'         => $m->id,
-            'name'       => $m->name,
-            'type'       => $m->file_type,
-            'url'        => $m->publicUrl(),
-            'size'       => $m->size,
-            'alt'        => $m->alt_text,
-            'site'       => $m->site?->name,
+            'id' => $m->id,
+            'name' => $m->name,
+            'type' => $m->file_type,
+            'url' => $m->publicUrl(),
+            'size' => $m->size,
+            'alt' => $m->alt_text,
+            'site' => $m->site?->name,
             'created_at' => $m->created_at?->toIso8601String(),
         ];
     }
@@ -85,9 +86,9 @@ class MediaController extends Controller
             'data' => collect($paginator->items())->map(fn (Media $m) => $this->payloadFor($m))->all(),
             'meta' => [
                 'current_page' => $paginator->currentPage(),
-                'last_page'    => $paginator->lastPage(),
-                'per_page'     => $paginator->perPage(),
-                'total'        => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
             ],
         ]);
     }
@@ -131,7 +132,7 @@ class MediaController extends Controller
      * PATCH /api/sites/{siteName}/media/{id}
      * Rename / re-describe an asset (name, alt; url + type for external assets).
      */
-    public function update(Request $request, string $siteName, int $id): JsonResponse
+    public function update(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'media.manage');
         $media = Media::where('site_id', $site->id)->findOrFail($id);
@@ -160,7 +161,7 @@ class MediaController extends Controller
      * DELETE /api/sites/{siteName}/media/{id}
      * Delete an asset; uploaded files are removed from disk too.
      */
-    public function destroy(Request $request, string $siteName, int $id): JsonResponse
+    public function destroy(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'media.manage');
         $media = Media::where('site_id', $site->id)->findOrFail($id);

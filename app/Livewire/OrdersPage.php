@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Site;
+use App\Support\Money;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -22,9 +23,10 @@ class OrdersPage extends Component
     public string $statusFilter = 'all';
 
     #[Url(as: 'order')]
-    public ?int $selectedId = null;
+    public ?string $selectedId = null;
 
     public string $search = '';
+
     public string $sort = 'newest';   // newest | oldest | amount
 
     public string $successMessage = '';
@@ -39,7 +41,7 @@ class OrdersPage extends Component
         $this->statusFilter = $status;
     }
 
-    public function open(int $id): void
+    public function open(string $id): void
     {
         $this->selectedId = $id;
     }
@@ -49,7 +51,7 @@ class OrdersPage extends Component
         $this->selectedId = null;
     }
 
-    public function markFulfilled(int $id): void
+    public function markFulfilled(string $id): void
     {
         $order = $this->site->orders()->find($id);
         if ($order && $order->status === 'paid') {
@@ -59,7 +61,7 @@ class OrdersPage extends Component
     }
 
     /** Per-row status dropdown (image-style). Paid stamps paid_at once. */
-    public function setStatus(int $id, string $status): void
+    public function setStatus(string $id, string $status): void
     {
         if (! in_array($status, Order::STATUSES, true)) {
             return;
@@ -69,7 +71,7 @@ class OrdersPage extends Component
             return;
         }
         $order->update([
-            'status'  => $status,
+            'status' => $status,
             'paid_at' => in_array($status, ['paid', 'fulfilled'], true)
                 ? ($order->paid_at ?? now())
                 : $order->paid_at,
@@ -79,9 +81,13 @@ class OrdersPage extends Component
 
     // ── Quick "Create invoice" modal ──────────────────────────────────────
     public bool $qiOpen = false;
+
     public string $qiName = '';
+
     public string $qiEmail = '';
+
     public string $qiDue = '';
+
     /** @var array<int,array{description:string,qty:int,price:string}> */
     public array $qiItems = [['description' => '', 'qty' => 1, 'price' => '']];
 
@@ -108,29 +114,29 @@ class OrdersPage extends Component
     public function createInvoice()
     {
         $this->validate([
-            'qiName'                => 'required|string|max:120',
-            'qiEmail'               => 'required|email|max:160',
-            'qiDue'                 => 'nullable|date',
-            'qiItems'               => 'required|array|min:1',
+            'qiName' => 'required|string|max:120',
+            'qiEmail' => 'required|email|max:160',
+            'qiDue' => 'nullable|date',
+            'qiItems' => 'required|array|min:1',
             'qiItems.*.description' => 'required|string|max:200',
-            'qiItems.*.qty'         => 'required|integer|min:1|max:10000',
-            'qiItems.*.price'       => 'required|numeric|min:0',
+            'qiItems.*.qty' => 'required|integer|min:1|max:10000',
+            'qiItems.*.price' => 'required|numeric|min:0',
         ]);
 
         $invoice = new Invoice([
-            'site_id'        => $this->site->id,
-            'number'         => Invoice::nextNumber($this->site),
-            'customer_name'  => $this->qiName,
+            'site_id' => $this->site->id,
+            'number' => Invoice::nextNumber($this->site),
+            'customer_name' => $this->qiName,
             'customer_email' => $this->qiEmail,
-            'items'          => collect($this->qiItems)->map(fn ($i) => [
+            'items' => collect($this->qiItems)->map(fn ($i) => [
                 'description' => trim($i['description']),
-                'qty'         => (int) $i['qty'],
-                'unit_cents'  => (int) round(((float) $i['price']) * 100),
+                'qty' => (int) $i['qty'],
+                'unit_cents' => (int) round(((float) $i['price']) * 100),
             ])->values()->all(),
-            'tax_bp'         => (int) round(((float) ($this->site->feature('invoices')['tax_percent'] ?? 0)) * 100),
-            'currency'       => $this->site->currency ?? 'gbp',
-            'status'         => 'draft',
-            'due_date'       => $this->qiDue ?: null,
+            'tax_bp' => (int) round(((float) ($this->site->feature('invoices')['tax_percent'] ?? 0)) * 100),
+            'currency' => $this->site->currency ?? 'gbp',
+            'status' => 'draft',
+            'due_date' => $this->qiDue ?: null,
         ]);
         $invoice->recalc();
         $invoice->save();
@@ -141,7 +147,7 @@ class OrdersPage extends Component
     }
 
     /** Turn an order into a draft invoice (visible on the Invoices page). */
-    public function invoiceOrder(int $id)
+    public function invoiceOrder(string $id)
     {
         $order = $this->site->orders()->with('items')->find($id);
         if (! $order || $order->items->isEmpty()) {
@@ -156,20 +162,20 @@ class OrdersPage extends Component
         }
 
         $invoice = new Invoice([
-            'site_id'        => $this->site->id,
-            'number'         => Invoice::nextNumber($this->site),
-            'customer_name'  => $order->customer_name ?: ($order->customer_email ?: 'Customer'),
+            'site_id' => $this->site->id,
+            'number' => Invoice::nextNumber($this->site),
+            'customer_name' => $order->customer_name ?: ($order->customer_email ?: 'Customer'),
             'customer_email' => $order->customer_email ?: 'unknown@example.com',
-            'items'          => $order->items->map(fn ($it) => [
+            'items' => $order->items->map(fn ($it) => [
                 'description' => $it->name,
-                'qty'         => (int) $it->qty,
-                'unit_cents'  => (int) $it->price_cents,
+                'qty' => (int) $it->qty,
+                'unit_cents' => (int) $it->price_cents,
             ])->values()->all(),
-            'tax_bp'         => 0,
-            'currency'       => $order->currency ?? $this->site->currency ?? 'gbp',
-            'status'         => 'draft',
-            'due_date'       => now()->addDays((int) ($this->site->feature('invoices')['due_days'] ?? 14))->toDateString(),
-            'notes'          => $marker,
+            'tax_bp' => 0,
+            'currency' => $order->currency ?? $this->site->currency ?? 'gbp',
+            'status' => 'draft',
+            'due_date' => now()->addDays((int) ($this->site->feature('invoices')['due_days'] ?? 14))->toDateString(),
+            'notes' => $marker,
         ]);
         $invoice->recalc();
         $invoice->save();
@@ -229,16 +235,16 @@ class OrdersPage extends Component
         $paid = fn () => $this->site->orders()->whereIn('status', ['paid', 'fulfilled']);
 
         $monthStart = now()->startOfMonth();
-        $prevStart  = now()->subMonthNoOverflow()->startOfMonth();
-        $prevEnd    = $monthStart->copy()->subSecond();
+        $prevStart = now()->subMonthNoOverflow()->startOfMonth();
+        $prevEnd = $monthStart->copy()->subSecond();
 
         $monthRevenue = (int) $paid()->where('paid_at', '>=', $monthStart)->sum('total_cents');
-        $prevRevenue  = (int) $paid()->whereBetween('paid_at', [$prevStart, $prevEnd])->sum('total_cents');
+        $prevRevenue = (int) $paid()->whereBetween('paid_at', [$prevStart, $prevEnd])->sum('total_cents');
 
         $monthOrders = $this->site->orders()->where('created_at', '>=', $monthStart)->count();
-        $prevOrders  = $this->site->orders()->whereBetween('created_at', [$prevStart, $prevEnd])->count();
+        $prevOrders = $this->site->orders()->whereBetween('created_at', [$prevStart, $prevEnd])->count();
 
-        $customers     = $this->site->orders()->whereNotNull('customer_email')
+        $customers = $this->site->orders()->whereNotNull('customer_email')
             ->where('created_at', '>=', $monthStart)->distinct('customer_email')->count('customer_email');
         $prevCustomers = $this->site->orders()->whereNotNull('customer_email')
             ->whereBetween('created_at', [$prevStart, $prevEnd])->distinct('customer_email')->count('customer_email');
@@ -266,11 +272,11 @@ class OrdersPage extends Component
             ->groupBy('name')->orderByDesc('revenue_cents')->limit(5)->get();
         $catTotal = max(1, (int) $cats->sum('revenue_cents'));
         $categories = $cats->map(fn ($r) => [
-            'name'    => $r->name,
-            'units'   => (int) $r->units,
-            'cents'   => (int) $r->revenue_cents,
-            'share'   => round($r->revenue_cents / $catTotal * 100, 1),
-            'revenue' => \App\Support\Money::format((int) $r->revenue_cents, $currency),
+            'name' => $r->name,
+            'units' => (int) $r->units,
+            'cents' => (int) $r->revenue_cents,
+            'share' => round($r->revenue_cents / $catTotal * 100, 1),
+            'revenue' => Money::format((int) $r->revenue_cents, $currency),
         ])->all();
 
         // Weekly per-status movement for the summary tiles.
@@ -284,20 +290,20 @@ class OrdersPage extends Component
         }
 
         return [
-            'currency'      => $currency,
-            'monthRevenue'  => \App\Support\Money::format($monthRevenue, $currency),
-            'revDelta'      => $this->delta($monthRevenue, $prevRevenue),
-            'monthOrders'   => $monthOrders,
-            'ordDelta'      => $this->delta($monthOrders, $prevOrders),
-            'customers'     => $customers,
-            'custDelta'     => $this->delta($customers, $prevCustomers),
-            'aov'           => \App\Support\Money::format($paidOrders > 0 ? (int) round($revenueAll / $paidOrders) : 0, $currency),
-            'awaiting'      => $this->site->orders()->where('status', 'pending')->count(),
+            'currency' => $currency,
+            'monthRevenue' => Money::format($monthRevenue, $currency),
+            'revDelta' => $this->delta($monthRevenue, $prevRevenue),
+            'monthOrders' => $monthOrders,
+            'ordDelta' => $this->delta($monthOrders, $prevOrders),
+            'customers' => $customers,
+            'custDelta' => $this->delta($customers, $prevCustomers),
+            'aov' => Money::format($paidOrders > 0 ? (int) round($revenueAll / $paidOrders) : 0, $currency),
+            'awaiting' => $this->site->orders()->where('status', 'pending')->count(),
             'waitingPeople' => $this->site->orders()->where('status', 'pending')
                 ->whereNotNull('customer_email')->distinct('customer_email')->count('customer_email'),
-            'daily'         => $daily,
-            'categories'    => $categories,
-            'weekly'        => $weekly,
+            'daily' => $daily,
+            'categories' => $categories,
+            'weekly' => $weekly,
         ];
     }
 
