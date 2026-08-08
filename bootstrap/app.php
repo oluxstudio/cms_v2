@@ -12,6 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health:   '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // The app runs behind a reverse proxy (nginx, or Caddy in edge mode):
+        // honour X-Forwarded-* so https URLs and real client IPs are correct.
+        // '*' is safe — only the proxy can reach the loopback-bound app port.
+        $middleware->trustProxies(at: '*');
+
         // Custom-domain serving: resolve the Host header to a live Site and
         // serve its renderer — must run globally, before any routing.
         $middleware->prepend(\App\Http\Middleware\ServeLiveSite::class);

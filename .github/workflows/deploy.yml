@@ -75,7 +75,7 @@ jobs:
           command_timeout: 20m
           script: |
             set -e
-            cd /var/www/cms
+            cd ${{ vars.VPS_APP_DIR || '/var/www/cms-app/cms_v2' }}
             git fetch origin main
             git checkout origin/main -- deploy.sh
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin

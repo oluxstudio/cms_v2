@@ -1,0 +1,19 @@
+# ── Caddy config: PROXY mode (today's architecture) ──────────────────────────
+# nginx on the host owns ports 80/443, terminates TLS, and proxies to this
+# container on a loopback port (see APP_HTTP_BIND/APP_HTTP_PORT in .env).
+# Caddy here just serves the Laravel app on :80 inside the container.
+#
+# Selected at runtime by the docker-compose.prod.yml bind-mount.
+# The edge variant (Caddy owning 80/443 + on-demand TLS for client custom
+# domains) lives in Caddyfile.edge + docker-compose.edge.yml.
+
+{
+	frankenphp
+	auto_https off
+}
+
+:80 {
+	root * /app/public
+	encode zstd gzip
+	php_server
+}

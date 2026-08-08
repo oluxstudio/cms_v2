@@ -34,7 +34,11 @@ WORKDIR /app
 COPY . /app
 COPY --from=vendor /app/vendor /app/vendor
 COPY --from=assets /app/public/build /app/public/build
-COPY Caddyfile /etc/caddy/Caddyfile
+# Both Caddy variants ship as fallbacks; compose bind-mounts the live choice
+# over /etc/caddy/Caddyfile (proxy = behind nginx, edge = Caddy owns 80/443).
+COPY Caddyfile.proxy /etc/caddy/Caddyfile.proxy
+COPY Caddyfile.edge /etc/caddy/Caddyfile.edge
+COPY Caddyfile.proxy /etc/caddy/Caddyfile
 
 RUN mkdir -p storage/app/public storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && php artisan storage:link || true \

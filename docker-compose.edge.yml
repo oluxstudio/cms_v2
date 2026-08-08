@@ -1,0 +1,18 @@
+# ── EDGE override: Caddy owns 80/443 directly (no nginx in front) ────────────
+# Adds the public port bindings and swaps the Caddy config to the on-demand
+# TLS variant that serves client custom domains (go-live feature).
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.edge.yml up -d
+#
+# Volume merge is by container path, so the Caddyfile mount here REPLACES the
+# proxy one from the base file. The base's loopback port mapping remains
+# alongside these — harmless.
+
+services:
+  app:
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'   # HTTP/3
+    volumes:
+      - ./Caddyfile.edge:/etc/caddy/Caddyfile:ro
