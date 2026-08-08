@@ -115,7 +115,7 @@
                 $ago      = \Carbon\Carbon::parse($site['created_at'])->diffForHumans();
             @endphp
 
-            <div wire:click="selected({{ $site['id'] }})"
+            <div wire:click="selected('{{ $site['id'] }}')"
                  class="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow cursor-pointer group">
 
                 {{-- Body --}}
