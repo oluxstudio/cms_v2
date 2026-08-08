@@ -1,9 +1,6 @@
 import {
     defineConfig
 } from 'vite';
-import.meta.glob([
-  '../images/**',
-]);
 import laravel from 'laravel-vite-plugin';
 import tailwindcss from "@tailwindcss/vite";
 

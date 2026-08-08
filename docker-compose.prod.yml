@@ -1,16 +1,14 @@
 # ── Production stack for cms.oluxstudio.com ─────────────────────────────────
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml up -d
+# The app image is BUILT ONCE in CI (deploy.yml) and pulled from GitHub's
+# registry — the server never builds. IMAGE_TAG pins the exact tested commit
+# (the deploy workflow exports it); `latest` is the manual-ops fallback.
 # Env comes from the server-side .env (never commit it). The app image serves
 # HTTP/HTTPS itself (FrankenPHP/Caddy) — no separate web server needed.
 
 services:
   app:
-    build:
-      context: .
-      args:
-        FLUX_USERNAME: '${FLUX_USERNAME:-}'
-        FLUX_LICENSE_KEY: '${FLUX_LICENSE_KEY:-}'
-    image: olux-cms
+    image: ghcr.io/oluxstudio/cms_v2:${IMAGE_TAG:-latest}
     restart: unless-stopped
     ports:
       - '80:80'
@@ -28,7 +26,7 @@ services:
         condition: service_started
 
   queue:
-    image: olux-cms
+    image: ghcr.io/oluxstudio/cms_v2:${IMAGE_TAG:-latest}
     restart: unless-stopped
     command: php artisan queue:work --tries=1 --timeout=620 --memory=512
     env_file: .env
@@ -39,7 +37,7 @@ services:
         condition: service_healthy
 
   scheduler:
-    image: olux-cms
+    image: ghcr.io/oluxstudio/cms_v2:${IMAGE_TAG:-latest}
     restart: unless-stopped
     command: php artisan schedule:work
     env_file: .env

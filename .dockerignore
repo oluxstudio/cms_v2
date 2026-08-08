@@ -1,0 +1,22 @@
+# Never bake secrets or local state into the image
+.env
+.env.*
+.git
+.github
+.claude
+
+# Heavy / generated — rebuilt or mounted at runtime
+node_modules
+vendor
+public/build
+public/sites
+public/*.zip
+public/videos*
+public/images - Copy
+storage/*
+
+# Not needed inside the runtime image
+tests
+docker-compose*.yml
+Dockerfile
+.dockerignore
