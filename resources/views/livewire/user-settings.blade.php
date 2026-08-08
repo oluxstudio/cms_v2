@@ -40,6 +40,9 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
 
     // — API tokens
     public string $new_token_name  = '';
+    public ?int $new_token_site = null;      // null = all my sites
+    public ?string $new_token_expiry = null; // days ('30'|'90'|'365') or null = never
+    public array $new_token_abilities = [];  // [] = all my permissions
     public ?string $generated_token = null;
 
     // — UI state
@@ -137,18 +140,30 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
 
     public function generateToken(): void
     {
-        $this->validate(['new_token_name' => ['required', 'string', 'max:80']]);
+        $this->validate([
+            'new_token_name' => ['required', 'string', 'max:80'],
+            'new_token_site' => ['nullable', 'integer'],
+            'new_token_expiry' => ['nullable', 'in:30,90,365'],
+            'new_token_abilities' => ['array'],
+        ]);
 
         $raw = Str::random(64);
 
         Auth::user()->apiTokens()->create([
-            'name'  => $this->new_token_name,
+            'name' => $this->new_token_name,
             'token' => hash('sha256', $raw),
+            'token_preview' => substr($raw, 0, 8),
+            'site_id' => $this->new_token_site ?: null,
+            'abilities' => $this->new_token_abilities !== [] ? array_values($this->new_token_abilities) : null,
+            'expires_at' => $this->new_token_expiry ? now()->addDays((int) $this->new_token_expiry) : null,
         ]);
 
         $this->generated_token = $raw;
-        $this->new_token_name  = '';
-        $this->successMessage  = 'Token generated — copy it now, it will not be shown again.';
+        $this->new_token_name = '';
+        $this->new_token_site = null;
+        $this->new_token_expiry = null;
+        $this->new_token_abilities = [];
+        $this->successMessage = 'Token generated — copy it now, it will not be shown again.';
     }
 
     public function revokeToken(int $id): void
@@ -553,21 +568,50 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                         </div>
                         @endif
 
-                        {{-- Generate new --}}
-                        <div class="flex gap-2 mb-5">
-                            <div class="flex-1"><x-field.text model="new_token_name" placeholder="Token name (e.g. CI Deploy)" /></div>
+                        {{-- Generate new — scoped tokens: least privilege by default --}}
+                        <div class="mb-5 p-4 bg-gray-50 dark:bg-white/[0.03] rounded-xl space-y-3">
+                            <div class="flex flex-wrap gap-2">
+                                <div class="flex-1 min-w-[160px]"><x-field.text model="new_token_name" placeholder="Token name (e.g. CI Deploy)" /></div>
+                                <select wire:model="new_token_site" class="px-3 py-2 pr-7 text-sm rounded-xl bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200">
+                                    <option value="">All my sites</option>
+                                    @foreach (\App\Models\Site::all()->filter(fn ($s) => $s->accessibleBy(Auth::user())) as $s)
+                                        <option value="{{ $s->id }}">Only: {{ $s->name }}</option>
+                                    @endforeach
+                                </select>
+                                <select wire:model="new_token_expiry" class="px-3 py-2 pr-7 text-sm rounded-xl bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200">
+                                    <option value="">Never expires</option>
+                                    <option value="30">Expires in 30 days</option>
+                                    <option value="90">Expires in 90 days</option>
+                                    <option value="365">Expires in 1 year</option>
+                                </select>
+                            </div>
+                            <details class="text-xs">
+                                <summary class="cursor-pointer text-gray-500 dark:text-gray-400 font-semibold">Limit abilities <span class="font-normal text-gray-400">— none ticked = everything you can do</span></summary>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-2">
+                                    @foreach (collect(config('permissions.groups', []))->flatMap(fn ($perms) => array_keys($perms)) as $perm)
+                                        <label class="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                                            <input type="checkbox" wire:model="new_token_abilities" value="{{ $perm }}" class="rounded border-gray-300"> {{ $perm }}
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </details>
                             <button wire:click="generateToken" class="px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors whitespace-nowrap">
                                 <span wire:loading.remove wire:target="generateToken">Generate Token</span>
                                 <span wire:loading wire:target="generateToken">…</span>
                             </button>
+                            @error('new_token_name') <p class="text-xs text-red-500">{{ $message }}</p> @enderror
                         </div>
-                        @error('new_token_name') <p class="text-xs text-red-500 mb-3">{{ $message }}</p> @enderror
 
                         {{-- Token list --}}
                         @forelse(Auth::user()->apiTokens()->latest()->get() as $token)
                         <div class="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-xl mb-2">
                             <div>
-                                <p class="text-sm font-medium text-gray-800">{{ $token->name }}</p>
+                                <p class="text-sm font-medium text-gray-800">{{ $token->name }}
+                                    @if ($token->site)<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 ml-1">{{ $token->site->name }}</span>@endif
+                                    @if ($token->abilities)<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 ml-1">{{ count($token->abilities) }} {{ Str::plural('ability', count($token->abilities)) }}</span>@endif
+                                    @if ($token->isExpired())<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 ml-1">expired</span>
+                                    @elseif ($token->expires_at)<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-1">expires {{ $token->expires_at->diffForHumans() }}</span>@endif
+                                </p>
                                 <p class="text-xs text-gray-400 font-mono mt-0.5">{{ $token->maskedToken() }}</p>
                                 <p class="text-xs text-gray-400 mt-0.5">Created {{ $token->created_at->diffForHumans() }}{{ $token->last_used_at ? ' · Last used '.$token->last_used_at->diffForHumans() : '' }}</p>
                             </div>

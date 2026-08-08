@@ -67,8 +67,9 @@ test('the site content API includes site attributes, page attributes and compone
 
 test('the components CRUD API creates, reads, updates and deletes with a bearer token', function () {
     [$owner, $site, $page] = componentSite();
-    $token = ApiToken::create(['user_id' => $owner->id, 'name' => 'test', 'token' => Str::random(48)]);
-    $auth = ['Authorization' => 'Bearer '.$token->token];
+    $raw = Str::random(64);
+    $token = ApiToken::create(['user_id' => $owner->id, 'name' => 'test', 'token' => hash('sha256', $raw)]);
+    $auth = ['Authorization' => 'Bearer '.$raw];
 
     // Create (with nodes + page attachment).
     $res = $this->postJson("/api/sites/{$site->name}/components", [
@@ -166,11 +167,12 @@ test('components record who created them and how, shown in the detail view', fun
         ->and($appMade->created_by)->toBe($owner->id);
 
     // Created via the API → source=api, creator = the token's user.
-    $token = ApiToken::create(['user_id' => $owner->id, 'name' => 't', 'token' => Str::random(48)]);
+    $raw = Str::random(64);
+    $token = ApiToken::create(['user_id' => $owner->id, 'name' => 't', 'token' => hash('sha256', $raw)]);
     $this->postJson("/api/sites/{$site->name}/components", [
         'name' => 'Api made',
         'nodes' => [['label' => 'Text', 'type' => 'text', 'value' => 'y']],
-    ], ['Authorization' => 'Bearer '.$token->token])->assertStatus(201)
+    ], ['Authorization' => 'Bearer '.$raw])->assertStatus(201)
         ->assertJsonPath('component.source', 'api')
         ->assertJsonPath('component.created_by', $owner->name);
 

@@ -15,13 +15,12 @@ use Illuminate\Support\Facades\Mail;
  */
 class BookingAdminApiController extends Controller
 {
+    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+
     private function site(Request $request, string $siteName): Site
     {
-        $site = Site::where('name', $siteName)->firstOrFail();
+        $site = $this->manageableSite($request, $siteName, 'bookings.manage');
         abort_unless($site->hasFeature('bookings'), 404);
-
-        $user = $request->attributes->get('api_token_user');
-        abort_unless($user && $site->canManageTeam($user), 403, 'This token cannot manage this site.');
 
         return $site;
     }

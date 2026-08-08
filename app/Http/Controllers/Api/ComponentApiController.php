@@ -25,20 +25,7 @@ use Illuminate\Http\Request;
  */
 class ComponentApiController extends Controller
 {
-    private function publicSite(string $siteName): Site
-    {
-        return Site::where('name', $siteName)->firstOrFail();
-    }
-
-    /** Token-authenticated site access for mutations. */
-    private function manageableSite(Request $request, string $siteName): Site
-    {
-        $site = Site::where('name', $siteName)->firstOrFail();
-        $user = $request->attributes->get('api_token_user');
-        abort_unless($user && $site->allows($user, 'components.manage'), 403, 'This token cannot manage components on this site.');
-
-        return $site;
-    }
+    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 
     public function index(string $siteName): JsonResponse
     {
@@ -60,7 +47,7 @@ class ComponentApiController extends Controller
 
     public function store(Request $request, string $siteName): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'components.manage');
         $data = $this->validated($request);
 
         $component = Component::create([
@@ -80,7 +67,7 @@ class ComponentApiController extends Controller
 
     public function update(Request $request, string $siteName, int $id): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'components.manage');
         $component = Component::where('site_id', $site->id)->findOrFail($id);
         $data = $this->validated($request, updating: true);
 
@@ -108,7 +95,7 @@ class ComponentApiController extends Controller
 
     public function destroy(Request $request, string $siteName, int $id): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'components.manage');
         Component::where('site_id', $site->id)->findOrFail($id)->delete(); // nodes + pivots cascade
 
         return response()->json(['ok' => true]);

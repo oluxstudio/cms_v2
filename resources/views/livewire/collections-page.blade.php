@@ -177,6 +177,14 @@
                                       placeholder="What is this collection for?" class="resize-none" />
                     @error('description') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
+                <div class="space-y-2">
+                    <x-field.check text="Allow visitor submissions" wire:model.live="allowSubmit"
+                                   hint="Visitors on the client site can add items through the public API." />
+                    @if ($allowSubmit)
+                        <x-field.check model="autoPublish" text="Auto-publish submissions"
+                                       hint="Off (recommended): new submissions are held as pending until you approve them here." />
+                    @endif
+                </div>
             </div>
             <div class="flex gap-3 pt-1">
                 <button wire:click="$set('showModal', false)"

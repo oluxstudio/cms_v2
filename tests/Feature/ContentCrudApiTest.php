@@ -16,9 +16,10 @@ function crudSite(): array
         'user_id' => $owner->id, 'name' => 'crud-'.uniqid(),
         'domain' => 'crud.test', 'owner' => $owner->name, 'description' => 'test',
     ]);
-    $token = ApiToken::create(['user_id' => $owner->id, 'name' => 'crud', 'token' => Str::random(48)]);
+    $raw = Str::random(64);
+    ApiToken::create(['user_id' => $owner->id, 'name' => 'crud', 'token' => hash('sha256', $raw)]);
 
-    return [$owner, $site, ['Authorization' => 'Bearer '.$token->token]];
+    return [$owner, $site, ['Authorization' => 'Bearer '.$raw]];
 }
 
 test('posts CRUD API creates, publishes, updates and deletes with a bearer token', function () {
@@ -169,8 +170,9 @@ test('forms CRUD API creates a form that can be fetched and submitted, then upda
 test('a member without manage permissions cannot write through the content CRUD APIs', function () {
     [$owner, $site, $auth] = crudSite();
     $outsider = User::factory()->create();
-    $badToken = ApiToken::create(['user_id' => $outsider->id, 'name' => 'x', 'token' => Str::random(48)]);
-    $bad = ['Authorization' => 'Bearer '.$badToken->token];
+    $badRaw = Str::random(64);
+    ApiToken::create(['user_id' => $outsider->id, 'name' => 'x', 'token' => hash('sha256', $badRaw)]);
+    $bad = ['Authorization' => 'Bearer '.$badRaw];
 
     $this->postJson("/api/sites/{$site->name}/posts", ['title' => 'No'], $bad)->assertStatus(403);
     $this->postJson("/api/sites/{$site->name}/pages", ['name' => 'No', 'url' => '/no'], $bad)->assertStatus(403);

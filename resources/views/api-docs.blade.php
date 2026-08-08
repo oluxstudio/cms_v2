@@ -8,6 +8,24 @@
     // then how it works and the parameters it accepts.
     // param: [name, in (query|body|path), type, required?, description]
     $docs = [
+        'GraphQL' => [
+            [
+                'method' => 'POST', 'path' => url('/api/graphql'),
+                'summary' => 'Read-only GraphQL endpoint — query exactly the fields you need; a whole site build in ONE request. Rooted at site(name:), no cross-site traversal. Public data only (published posts, public collections) unless a Bearer token with the matching *.view abilities widens it. Guard rails: max depth 8, complexity 400, list limits capped at 100, introspection requires a token in production.',
+                'params' => [
+                    ['query', 'body', 'string', true, 'The GraphQL query.'],
+                    ['variables', 'body', 'object', false, 'Query variables.'],
+                ],
+                'example' => "curl -X POST ".url('/api/graphql')." \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"query\":\"{ site(name: \\\"{$site->name}\\\") { name attributes pages { name url components { name nodes { label type value } } } posts(limit: 5) { title slug excerpt } collections { name items { data } } } }\"}'",
+            ],
+            [
+                'method' => 'GET', 'path' => '/me 🔒 (token introspection)', 'auth' => true,
+                'summary' => 'What may this token do? Returns the acting user, the scoped site (null = all accessible), the ability list (null = everything the user can do), the expiry, and the site names in reach. Call it first from scripts/agents instead of trial-and-error.',
+                'params' => [],
+                'example' => "curl ".url('/api/me')." \\\n  -H \"Authorization: Bearer YOUR_API_TOKEN\"",
+            ],
+        ],
+
         'Site content' => [
             [
                 'method' => 'GET', 'path' => '/content',
@@ -571,6 +589,29 @@
         <p class="text-3xl mb-2">🔍</p>
         <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">Nothing matches “<span x-text="q"></span>”.</p>
         <button type="button" @click="q = ''" class="mt-2 text-xs font-semibold text-indigo-500 hover:underline">Clear the search</button>
+    </div>
+
+    {{-- ── Authentication & security ── --}}
+    <div x-show="!q" class="mb-8 bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm p-5 sm:p-6">
+        <h2 class="text-lg font-extrabold text-gray-900 dark:text-white mb-3">🔐 Authentication &amp; security</h2>
+        <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm text-gray-600 dark:text-gray-300">
+            <div>
+                <p class="font-bold text-gray-800 dark:text-gray-100 mb-1">API tokens (🔒 endpoints)</p>
+                <p class="text-xs leading-relaxed">Send <code class="text-[11px] bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded">Authorization: Bearer &lt;token&gt;</code>. Tokens are created on the settings page, shown <b>once</b>, stored hashed, and can be scoped to <b>one site</b>, a set of <b>abilities</b> (e.g. only <code class="text-[11px]">posts.manage</code>) and an <b>expiry</b>. <code class="text-[11px]">GET /api/me</code> tells a client what its token may do. Least privilege: scope every token you hand out.</p>
+            </div>
+            <div>
+                <p class="font-bold text-gray-800 dark:text-gray-100 mb-1">Rate limits</p>
+                <p class="text-xs leading-relaxed">Per IP/minute: reads 120 · lead submissions (forms, contact, interest, quotes) 10 · bookings 6 · post views/likes 30 · token API 120 per token. Exceeding returns <code class="text-[11px]">429</code> with a <code class="text-[11px]">Retry-After</code> header.</p>
+            </div>
+            <div>
+                <p class="font-bold text-gray-800 dark:text-gray-100 mb-1">Spam &amp; cross-site protection</p>
+                <p class="text-xs leading-relaxed">Visitor submissions accept a hidden <code class="text-[11px]">_hp</code> honeypot field — render it hidden and empty; filled means silently dropped. Browser submissions must come from the site's own domain (or hosts listed in the <code class="text-[11px]">allowed_origins</code> site attribute); server-side calls without an Origin header pass. Public collection submissions land as <b>pending</b> until approved, unless the collection enables auto-publish.</p>
+            </div>
+            <div>
+                <p class="font-bold text-gray-800 dark:text-gray-100 mb-1">AI agents (MCP)</p>
+                <p class="text-xs leading-relaxed">The repo ships an MCP server (<code class="text-[11px]">mcp/</code>) exposing this API as agent tools. Give agents a <b>scoped, expiring token</b> — the API stays the enforcement point, and destructive tools require an explicit <code class="text-[11px]">confirm: true</code>.</p>
+            </div>
+        </div>
     </div>
 
     @foreach ($docs as $group => $endpoints)

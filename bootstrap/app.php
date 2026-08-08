@@ -26,6 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'feature'    => \App\Http\Middleware\EnsureFeatureEnabled::class,
             // Bearer-token auth for third-party API access: ->middleware('auth.token')
             'auth.token' => \App\Http\Middleware\AuthenticateApiToken::class,
+            // Silent spam trap for visitor forms: ->middleware('honeypot')
+            'honeypot'   => \App\Http\Middleware\HoneypotGuard::class,
+            // Cross-site abuse guard for visitor write endpoints: ->middleware('site.origin')
+            'site.origin' => \App\Http\Middleware\VerifySiteOrigin::class,
             // Role-permission gate for site admin pages: ->middleware('perm:pages.view')
             'perm'       => \App\Http\Middleware\EnsureSitePermission::class,
         ]);

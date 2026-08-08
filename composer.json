@@ -18,6 +18,8 @@
         "laravel/tinker": "^3.0",
         "livewire/flux": "^2.1.1",
         "livewire/volt": "^1.10.0",
+        "mll-lab/graphql-php-scalars": "^6.4",
+        "nuwave/lighthouse": "^6.69",
         "openai-php/client": "^0.20.0",
         "socialiteproviders/instagram": "*",
         "socialiteproviders/tiktok": "*",

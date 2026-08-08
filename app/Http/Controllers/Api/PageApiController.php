@@ -23,19 +23,7 @@ use Illuminate\Http\Request;
  */
 class PageApiController extends Controller
 {
-    private function publicSite(string $siteName): Site
-    {
-        return Site::where('name', $siteName)->firstOrFail();
-    }
-
-    private function manageableSite(Request $request, string $siteName): Site
-    {
-        $site = $this->publicSite($siteName);
-        $user = $request->attributes->get('api_token_user');
-        abort_unless($user && $site->allows($user, 'pages.manage'), 403, 'This token cannot manage pages on this site.');
-
-        return $site;
-    }
+    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 
     private function record(Page $page): array
     {
@@ -87,7 +75,7 @@ class PageApiController extends Controller
 
     public function store(Request $request, string $siteName): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'pages.manage');
         $data = $this->validated($request, creating: true);
 
         abort_if($site->pages()->where('url', $data['url'])->exists(), 422, 'A page with this url already exists on the site.');
@@ -105,7 +93,7 @@ class PageApiController extends Controller
 
     public function update(Request $request, string $siteName, int $id): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'pages.manage');
         $page = $site->pages()->findOrFail($id);
         $data = $this->validated($request, creating: false);
 
@@ -121,7 +109,7 @@ class PageApiController extends Controller
 
     public function destroy(Request $request, string $siteName, int $id): JsonResponse
     {
-        $this->manageableSite($request, $siteName)->pages()->findOrFail($id)->delete();
+        $this->manageableSite($request, $siteName, 'pages.manage')->pages()->findOrFail($id)->delete();
 
         return response()->json(['ok' => true]);
     }

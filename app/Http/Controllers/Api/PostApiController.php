@@ -18,6 +18,8 @@ use Illuminate\Http\Request;
  */
 class PostApiController extends Controller
 {
+    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+
     private function site(string $siteName): Site
     {
         return Site::where('name', $siteName)->firstOrFail();
@@ -90,15 +92,6 @@ class PostApiController extends Controller
 
     /* ── CRUD (Bearer token · posts.manage) ─────────────────────────────── */
 
-    private function manageableSite(Request $request, string $siteName): Site
-    {
-        $site = $this->site($siteName);
-        $user = $request->attributes->get('api_token_user');
-        abort_unless($user && $site->allows($user, 'posts.manage'), 403, 'This token cannot manage posts on this site.');
-
-        return $site;
-    }
-
     /** Full record for CRUD responses — includes drafts, id, status and body. */
     private function record(Post $p): array
     {
@@ -123,7 +116,7 @@ class PostApiController extends Controller
 
     public function store(Request $request, string $siteName): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'posts.manage');
         $data = $this->validated($request, creating: true);
         $status = $data['status'] ?? 'draft';
 
@@ -144,7 +137,7 @@ class PostApiController extends Controller
 
     public function update(Request $request, string $siteName, string $slug): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'posts.manage');
         $post = Post::where('site_id', $site->id)->where('slug', $slug)->firstOrFail();
         $data = $this->validated($request, creating: false);
 
@@ -159,7 +152,7 @@ class PostApiController extends Controller
 
     public function destroy(Request $request, string $siteName, string $slug): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'posts.manage');
         Post::where('site_id', $site->id)->where('slug', $slug)->firstOrFail()->delete();
 
         return response()->json(['ok' => true]);

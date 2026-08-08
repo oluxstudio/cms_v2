@@ -16,13 +16,14 @@ class Collection extends Model
     use HasFieldSchema;
 
     protected $fillable = [
-        'site_id', 'name', 'slug', 'type', 'description', 'fields', 'is_public', 'allow_submit',
+        'site_id', 'name', 'slug', 'type', 'description', 'fields', 'is_public', 'allow_submit', 'auto_publish',
     ];
 
     protected $casts = [
         'fields'       => 'array',
         'is_public'    => 'boolean',
         'allow_submit' => 'boolean',
+        'auto_publish' => 'boolean',
     ];
 
     protected function slug(): Attribute

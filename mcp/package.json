@@ -1,0 +1,19 @@
+{
+  "name": "olux-cms-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Olux CMS — lets AI agents read and manage a site through the CMS REST API with a scoped token.",
+  "type": "module",
+  "bin": { "olux-cms-mcp": "dist/index.js" },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

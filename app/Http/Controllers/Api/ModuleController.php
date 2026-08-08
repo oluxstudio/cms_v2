@@ -89,7 +89,8 @@ class ModuleController extends Controller
         $item = $c->items()->create([
             'site_id'    => $c->site_id,
             'data'       => $data,
-            'status'     => 'published',
+            // Held for review unless the collection opts into auto-publish.
+            'status'     => $c->auto_publish ? 'published' : 'pending',
             'ip_address' => $request->ip(),
         ]);
 

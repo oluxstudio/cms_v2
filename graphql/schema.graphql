@@ -1,0 +1,110 @@
+# ── Olux CMS GraphQL — READ-ONLY, per-tenant content graph ───────────────────
+# All writes go through the REST API (token auth + permissions). Every query
+# is rooted at one site — there is no cross-site traversal. Public requests
+# see published/public data only; a Bearer token widens fields per ability.
+# Guard rails: max depth 8, max complexity 400, enforced list limits
+# (default 25, max 100), introspection token-only in production.
+
+scalar JSON @scalar(class: "MLL\\GraphQLScalars\\MixedScalar")
+
+type Query {
+    "One site's content graph. Null when the site does not exist."
+    site(name: String!): Site @field(resolver: "App\\GraphQL\\SiteGraph@site")
+}
+
+type Site {
+    name: String!
+    description: String
+    "Site attributes (EAV key → value map)."
+    attributes: JSON @field(resolver: "App\\GraphQL\\SiteGraph@attributes")
+    "Pages with their attribute maps. Unpublished pages require a token with pages.view."
+    pages(limit: Int = 25): [Page!]! @field(resolver: "App\\GraphQL\\SiteGraph@pages")
+    "Content components with their full node lists."
+    components(limit: Int = 25, tag: String): [Component!]! @field(resolver: "App\\GraphQL\\SiteGraph@components")
+    "Published posts, newest first. Drafts require a token with posts.view."
+    posts(limit: Int = 25): [Post!]! @field(resolver: "App\\GraphQL\\SiteGraph@posts")
+    "One post by slug — includes the body HTML."
+    post(slug: String!): Post @field(resolver: "App\\GraphQL\\SiteGraph@post")
+    "Public collections with published items. Private ones require collections.view."
+    collections(limit: Int = 25): [Collection!]! @field(resolver: "App\\GraphQL\\SiteGraph@collections")
+    "The asset library."
+    media(limit: Int = 25, type: String): [Media!]! @field(resolver: "App\\GraphQL\\SiteGraph@media")
+    "Active forms with their field schemas and submit URLs."
+    forms(limit: Int = 25): [Form!]! @field(resolver: "App\\GraphQL\\SiteGraph@forms")
+}
+
+type Page {
+    id: ID!
+    name: String!
+    url: String!
+    keywords: String
+    is_published: Boolean!
+    attributes: JSON
+    components: [Component!]!
+}
+
+type Component {
+    id: ID!
+    name: String!
+    description: String
+    tags: [String!]
+    source: String
+    nodes: [Node!]!
+}
+
+type Node {
+    id: ID!
+    label: String!
+    type: String!
+    value: String
+    parent: Int
+    order: Int
+}
+
+type Post {
+    title: String!
+    slug: String!
+    excerpt: String
+    body: String
+    cover_image: String
+    author: String
+    status: String
+    published_at: String
+    views: Int!
+    likes: Int!
+}
+
+type Collection {
+    id: ID!
+    name: String!
+    slug: String
+    type: String
+    description: String
+    fields: JSON
+    items: [CollectionItem!]!
+}
+
+type CollectionItem {
+    id: ID!
+    data: JSON
+    status: String!
+    created_at: String
+}
+
+type Media {
+    id: ID!
+    name: String!
+    type: String!
+    url: String!
+    alt: String
+    size: String
+}
+
+type Form {
+    id: ID!
+    name: String!
+    title: String
+    description: String
+    fields: JSON
+    submit_url: String
+}

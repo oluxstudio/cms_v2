@@ -24,19 +24,7 @@ use Illuminate\Support\Str;
  */
 class FormApiController extends Controller
 {
-    private function publicSite(string $siteName): Site
-    {
-        return Site::where('name', $siteName)->firstOrFail();
-    }
-
-    private function manageableSite(Request $request, string $siteName): Site
-    {
-        $site = $this->publicSite($siteName);
-        $user = $request->attributes->get('api_token_user');
-        abort_unless($user && $site->allows($user, 'forms.manage'), 403, 'This token cannot manage forms on this site.');
-
-        return $site;
-    }
+    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 
     private function record(Form $form): array
     {
@@ -101,7 +89,7 @@ class FormApiController extends Controller
 
     public function store(Request $request, string $siteName): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'forms.manage');
         $data = $this->validated($request, creating: true);
         $name = Str::slug($data['name'], '-');
 
@@ -121,7 +109,7 @@ class FormApiController extends Controller
 
     public function update(Request $request, string $siteName, string $formName): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'forms.manage');
         $form = Form::where('site_id', $site->id)->where('name', $formName)->firstOrFail();
         $data = $this->validated($request, creating: false);
 
@@ -143,7 +131,7 @@ class FormApiController extends Controller
 
     public function destroy(Request $request, string $siteName, string $formName): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'forms.manage');
         $form = Form::where('site_id', $site->id)->where('name', $formName)->firstOrFail();
         $form->responses()->delete();
         $form->delete();

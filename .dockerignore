@@ -20,3 +20,6 @@ tests
 docker-compose*.yml
 Dockerfile
 .dockerignore
+
+# MCP server package — not part of the runtime image
+mcp

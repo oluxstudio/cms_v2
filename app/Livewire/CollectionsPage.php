@@ -21,6 +21,8 @@ class CollectionsPage extends Component
     public string $name = '';
     public string $type = 'list';
     public string $description = '';
+    public bool $allowSubmit = false;   // visitors may POST items via the modules API
+    public bool $autoPublish = false;   // submissions go live instantly (else pending review)
 
     public function mount(Site $site): void
     {
@@ -78,7 +80,7 @@ class CollectionsPage extends Component
 
     public function openCreate(): void
     {
-        $this->reset(['name', 'type', 'description', 'editingId']);
+        $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish']);
         $this->type = 'list';
         $this->showModal = true;
     }
@@ -90,6 +92,8 @@ class CollectionsPage extends Component
         $this->name        = $collection->name;
         $this->type        = $collection->type;
         $this->description = $collection->description ?? '';
+        $this->allowSubmit = (bool) $collection->allow_submit;
+        $this->autoPublish = (bool) $collection->auto_publish;
         $this->showModal   = true;
     }
 
@@ -103,21 +107,25 @@ class CollectionsPage extends Component
 
         if ($this->editingId) {
             CollectionModel::findOrFail($this->editingId)->update([
-                'name'        => $this->name,
-                'type'        => $this->type,
-                'description' => $this->description,
+                'name'         => $this->name,
+                'type'         => $this->type,
+                'description'  => $this->description,
+                'allow_submit' => $this->allowSubmit,
+                'auto_publish' => $this->autoPublish,
             ]);
         } else {
             CollectionModel::create([
-                'site_id'     => $this->site->id,
-                'name'        => $this->name,
-                'type'        => $this->type,
-                'description' => $this->description,
+                'site_id'      => $this->site->id,
+                'name'         => $this->name,
+                'type'         => $this->type,
+                'description'  => $this->description,
+                'allow_submit' => $this->allowSubmit,
+                'auto_publish' => $this->autoPublish,
             ]);
         }
 
         $this->showModal = false;
-        $this->reset(['name', 'type', 'description', 'editingId']);
+        $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish']);
     }
 
     /** Delete a collection — confirmation happens in the shared modal (data-confirm). */

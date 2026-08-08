@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
 
 class MediaController extends Controller
 {
+    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+
     /**
      * GET /api/media
      * List all publicly available media across sites.
@@ -92,15 +94,6 @@ class MediaController extends Controller
 
     /* ── Assets CRUD (Bearer token · media.manage) ──────────────────────── */
 
-    private function manageableSite(Request $request, string $siteName): Site
-    {
-        $site = Site::where('name', $siteName)->firstOrFail();
-        $user = $request->attributes->get('api_token_user');
-        abort_unless($user && $site->allows($user, 'media.manage'), 403, 'This token cannot manage assets on this site.');
-
-        return $site;
-    }
-
     /**
      * POST /api/sites/{siteName}/media
      * Create an asset — either upload a file (multipart `file`) or register
@@ -108,7 +101,7 @@ class MediaController extends Controller
      */
     public function store(Request $request, string $siteName): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'media.manage');
         $data = $request->validate([
             'file' => ['required_without:url', 'file', 'max:51200'],
             'url' => ['required_without:file', 'nullable', 'url', 'max:2048'],
@@ -140,7 +133,7 @@ class MediaController extends Controller
      */
     public function update(Request $request, string $siteName, int $id): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'media.manage');
         $media = Media::where('site_id', $site->id)->findOrFail($id);
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
@@ -169,7 +162,7 @@ class MediaController extends Controller
      */
     public function destroy(Request $request, string $siteName, int $id): JsonResponse
     {
-        $site = $this->manageableSite($request, $siteName);
+        $site = $this->manageableSite($request, $siteName, 'media.manage');
         $media = Media::where('site_id', $site->id)->findOrFail($id);
 
         if (Str::startsWith($media->url, '/storage/')) {
