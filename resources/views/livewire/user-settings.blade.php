@@ -233,6 +233,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                 ['id'=>'security',    'label'=>'Account Security',    'icon'=>'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'],
                 ['id'=>'preferences', 'label'=>'Preferences',         'icon'=>'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4'],
                 ['id'=>'permissions', 'label'=>'Access & Permissions', 'icon'=>'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
+                ['id'=>'apikeys',     'label'=>'API Keys',            'icon'=>'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z'],
                 ['id'=>'activity',    'label'=>'Activity & Logs',     'icon'=>'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
                 ['id'=>'account',     'label'=>'Account Management',  'icon'=>'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'],
             ];
@@ -530,7 +531,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                 <div x-show="tab === 'activity'" x-transition:enter="transition-opacity duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-cloak>
                     <div class="mb-6">
                         <h2 class="text-lg font-bold text-gray-900 dark:text-white">Activity & Logs</h2>
-                        <p class="text-sm text-gray-400 mt-0.5">Recent actions and API token management.</p>
+                        <p class="text-sm text-gray-400 mt-0.5">Recent actions on your account.</p>
                     </div>
 
                     {{-- Audit trail --}}
@@ -551,13 +552,21 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                             @endforeach
                         </div>
                     </div>
+                </div>
+
+                {{-- ════════════════ API KEYS ════════════════ --}}
+                <div x-show="tab === 'apikeys'" x-transition:enter="transition-opacity duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-cloak>
+                    <div class="mb-6">
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-white">API Keys</h2>
+                        <p class="text-sm text-gray-400 mt-0.5">Bearer tokens for the CMS API and MCP. Scope each to a site and only the abilities it needs.</p>
+                    </div>
 
                     {{-- API Tokens --}}
                     <div class="p-6 border border-gray-100 dark:border-gray-800 rounded-2xl">
                         <div class="flex items-center justify-between mb-4">
                             <div>
-                                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">API Tokens</h3>
-                                <p class="text-xs text-gray-400 mt-0.5">Manage tokens for programmatic access.</p>
+                                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Your API tokens</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">Shown once at creation — copy it then. Send as <code class="font-mono">Authorization: Bearer &lt;token&gt;</code>.</p>
                             </div>
                         </div>
 
