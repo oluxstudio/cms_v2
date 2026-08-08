@@ -1,8 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" {{ $attributes }}>
-    <path 
-        fill="currentColor" 
-        fill-rule="evenodd" 
-        clip-rule="evenodd"
-        d="M17.2 5.633 8.6.855 0 5.633v26.51l16.2 9 16.2-9v-8.442l7.6-4.223V9.856l-8.6-4.777-8.6 4.777V18.3l-5.6 3.111V5.633ZM38 18.301l-5.6 3.11v-6.157l5.6-3.11V18.3Zm-1.06-7.856-5.54 3.078-5.54-3.079 5.54-3.078 5.54 3.079ZM24.8 18.3v-6.157l5.6 3.111v6.158L24.8 18.3Zm-1 1.732 5.54 3.078-13.14 7.302-5.54-3.078 13.14-7.3v-.002Zm-16.2 7.89 7.6 4.222V38.3L2 30.966V7.92l5.6 3.111v16.892ZM8.6 9.3 3.06 6.222 8.6 3.143l5.54 3.08L8.6 9.3Zm21.8 15.51-13.2 7.334V38.3l13.2-7.334v-6.156ZM9.6 11.034l5.6-3.11v14.6l-5.6 3.11v-14.6Z"
-    />
+{{-- Olux brand mark — hexagonal cube. Monochrome via currentColor so it
+     tints with the surrounding text-* / fill-current utilities (white on the
+     orange login chip, black/white in the auth cards, sidebar, etc.). --}}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 44" fill="none" {{ $attributes }}>
+    {{-- outer hexagon ring --}}
+    <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"
+        d="M20 0 38 10.4v20.8L20 41.6 2 31.2V10.4L20 0Zm0 4.62L6 12.71v16.18L20 36.98l14-8.09V12.71L20 4.62Z" />
+    {{-- inner isometric cube --}}
+    <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"
+        d="M20 11.2 30.4 17.2v11.99L20 35.2 9.6 29.2V17.2L20 11.2Zm0 2.77-8 4.62v9.22l8 4.62 8-4.62v-9.22l-8-4.62Z" />
+    {{-- cube centre spark --}}
+    <path fill="currentColor" d="M20 19.4 23.2 21.2 20 23.1 16.8 21.2 20 19.4Z" />
 </svg>
