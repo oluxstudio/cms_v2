@@ -215,6 +215,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/marketplace', [SiteController::class, 'marketplace'])->middleware('perm:addons.manage')->name('site.marketplace');
     Route::get('/{siteID}/publish', [SiteController::class, 'publish'])->middleware('perm:publish.manage')->name('site.publish');
     Route::get('/{siteID}/api-docs', [SiteController::class, 'apiDocs'])->name('site.apidocs');
+    Route::get('/{siteID}/api-keys', [SiteController::class, 'apiKeys'])->name('site.apikeys');
     Route::get('/{siteID}/team', [SiteController::class, 'team'])->middleware('perm:team.manage')->name('site.team');
     Route::get('/{siteID}/contacts', [SiteController::class, 'contacts'])->middleware('perm:contacts.view')->name('site.contacts');
     Route::get('/{siteID}/alerts', [SiteController::class, 'alerts'])->middleware('perm:analytics.view')->name('site.alerts');

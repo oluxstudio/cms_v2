@@ -60,9 +60,10 @@
         }
     }
 
-    // Owners/admins manage the team (super admins always can).
+    // Owners/admins manage the team + issue API keys (super admins always can).
     if ($navSite && $navSite->canManageTeam(auth()->user())) {
         $menus['Site'][] = $link('team', 'Team');
+        $menus['Site'][] = $link('api-keys', 'API keys');
     }
 
     // RBAC: hide any page the member's role doesn't grant (config/permissions.php

@@ -52,6 +52,14 @@ class SiteController extends Controller
         return view('api-docs', ['site' => $this->findSiteBySlug($siteID)]);
     }
 
+    public function apiKeys($siteID)
+    {
+        $site = $this->findSiteBySlug($siteID);
+        abort_unless($site->canManageTeam(Auth::user()), 403);
+
+        return view('api-keys', compact('site'));
+    }
+
     public function alerts($siteID)
     {
         return view('alerts', ['site' => $this->findSiteBySlug($siteID)]);
