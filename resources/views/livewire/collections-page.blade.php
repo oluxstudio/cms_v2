@@ -1,5 +1,7 @@
 <div class="main-body p-6 space-y-6">
 
+    <x-page-heading segment="collections" />
+
     {{-- ── Summary Tiles — app tile theme ── --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <x-tile accent="ink" :value="$total" label="Total collections" sub="all types" />

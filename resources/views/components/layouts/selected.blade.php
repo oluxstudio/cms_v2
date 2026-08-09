@@ -176,16 +176,20 @@
         {{-- ── Editor (slot) ── --}}
         <main class="flex-1 min-h-0 flex flex-col overflow-hidden">
 
-            {{-- Breadcrumb bar --}}
+            {{-- Breadcrumb bar — Site › Page, on every page --}}
+            @php
+                $crumbSeg  = request()->segment(2) ?: 'dashboard';
+                $crumbMeta = config("site_pages.{$crumbSeg}", ['title' => ucwords(str_replace('-', ' ', $crumbSeg))]);
+            @endphp
             <div class="shrink-0 px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3
                         bg-[#f7f3ee]/85 dark:bg-[#16171d]/85 backdrop-blur
                         border-b border-gray-200/70 dark:border-white/[0.05] z-20">
-                <div class="flex items-center gap-2.5 min-w-0">
+                <nav class="flex items-center gap-2 min-w-0 text-xs" aria-label="Breadcrumb">
                     <span class="w-2 h-2 rounded-full shrink-0 bg-emerald-500"></span>
-                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        Editing <span class="font-semibold text-gray-700 dark:text-gray-200">{{ ucwords(str_replace('-', ' ', $siteName)) }}</span>
-                    </span>
-                </div>
+                    <a href="{{ url($siteName.'/dashboard') }}" class="font-semibold text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 truncate">{{ ucwords(str_replace('-', ' ', $siteName)) }}</a>
+                    <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    <span class="text-gray-500 dark:text-gray-400 truncate" aria-current="page">{{ $crumbMeta['title'] }}</span>
+                </nav>
             </div>
 
             {{-- Page content / detail pane --}}
