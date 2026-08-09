@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\ApiToken;
+use App\Services\AccountActivity;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -32,6 +33,17 @@ class AuthenticateApiToken
         $token->forceFill(['last_used_at' => now()])->saveQuietly();
         $request->attributes->set('api_token', $token);
         $request->attributes->set('api_token_user', $token->user);
+
+        // Audit token-authenticated writes on the account trail (reads are
+        // too frequent and low-value to log).
+        if (! $request->isMethod('GET') && $token->user_id) {
+            AccountActivity::apiCall(
+                $token->site?->user_id ?? $token->user_id,
+                $token->user_id,
+                $request->method(),
+                '/'.ltrim($request->path(), '/'),
+            );
+        }
 
         return $next($request);
     }

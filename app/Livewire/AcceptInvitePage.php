@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\AccountMember;
 use App\Models\TeamInvitation;
 use App\Models\User;
+use App\Services\AccountActivity;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -118,6 +119,7 @@ class AcceptInvitePage extends Component
             ['role_id' => $invitation->role_id],
         );
         $invitation->update(['accepted_at' => now()]);
+        AccountActivity::memberJoined($invitation->account_id, $user);
 
         session()->regenerate();
         $this->redirect(route('home'));

@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\ApiToken;
 use App\Models\Site;
+use App\Services\AccountActivity;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -63,6 +64,8 @@ class SiteApiKeys extends Component
             'expires_at' => $this->newExpiry ? now()->addDays((int) $this->newExpiry) : null,
         ]);
 
+        AccountActivity::apiKeyCreated($this->site->user_id, $this->newName, $this->site->name);
+
         $this->generatedToken = $raw;
         $this->reset(['newName', 'newAbilities', 'newExpiry']);
         $this->successMessage = 'API key generated — copy it now, it will not be shown again.';
@@ -72,7 +75,11 @@ class SiteApiKeys extends Component
     {
         abort_unless($this->site->canManageTeam(Auth::user()), 403);
         // Only tokens belonging to THIS site can be revoked here.
-        ApiToken::where('site_id', $this->site->id)->where('id', $id)->delete();
+        $token = ApiToken::where('site_id', $this->site->id)->where('id', $id)->first();
+        if ($token) {
+            AccountActivity::apiKeyRevoked($this->site->user_id, $token->name);
+            $token->delete();
+        }
         $this->successMessage = 'API key revoked.';
     }
 

@@ -88,6 +88,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
         }
 
         $user->update($validated);
+        \App\Services\AccountActivity::profileUpdated($user);
         $this->successMessage = 'Personal information updated successfully.';
     }
 
@@ -109,6 +110,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
         }
 
         $user->update(['password' => $this->new_password]);
+        \App\Services\AccountActivity::passwordChanged($user);
         $this->current_password     = '';
         $this->new_password         = '';
         $this->new_password_confirm = '';
@@ -158,6 +160,9 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
             'expires_at' => $this->new_token_expiry ? now()->addDays((int) $this->new_token_expiry) : null,
         ]);
 
+        \App\Services\AccountActivity::apiKeyCreated(Auth::id(), $this->new_token_name,
+            $this->new_token_site ? \App\Models\Site::find($this->new_token_site)?->name : null);
+
         $this->generated_token = $raw;
         $this->new_token_name = '';
         $this->new_token_site = null;
@@ -166,9 +171,11 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
         $this->successMessage = 'Token generated — copy it now, it will not be shown again.';
     }
 
-    public function revokeToken(int $id): void
+    public function revokeToken(string $id): void
     {
-        Auth::user()->apiTokens()->findOrFail($id)->delete();
+        $token = Auth::user()->apiTokens()->findOrFail($id);
+        \App\Services\AccountActivity::apiKeyRevoked(Auth::id(), $token->name);
+        $token->delete();
         $this->successMessage = 'Token revoked.';
     }
 
@@ -201,6 +208,18 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                 'current'    => $s->id === request()->session()->getId(),
             ])
             ->toArray();
+    }
+
+    /** Account audit trail, newest first, grouped by day (Today / Yesterday / date). */
+    public function getActivityGroupsProperty()
+    {
+        return \App\Models\AccountActivityLog::where(fn ($q) => $q
+                ->where('account_id', Auth::id())->orWhere('actor_id', Auth::id()))
+            ->with('actor:id,name')
+            ->latest()->limit(100)->get()
+            ->groupBy(fn ($log) => $log->created_at->isToday() ? 'Today'
+                : ($log->created_at->isYesterday() ? 'Yesterday'
+                    : $log->created_at->format('F j, Y')));
     }
 }; ?>
 
@@ -534,23 +553,40 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                         <p class="text-sm text-gray-400 mt-0.5">Recent actions on your account.</p>
                     </div>
 
-                    {{-- Audit trail --}}
+                    {{-- Audit trail — real events, grouped by day, on a timeline rail --}}
                     <div class="p-6 border border-gray-100 dark:border-gray-800 rounded-2xl mb-6">
                         <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">Recent Activity</h3>
-                        <div class="space-y-0">
-                            @foreach([['Logged in','2 minutes ago','Login','indigo'],['Updated profile photo','1 hour ago','Profile','violet'],['Changed password','Yesterday','Security','amber'],['Created new site','2 days ago','Sites','blue'],['Invited team member','3 days ago','Team','emerald']] as [$action,$time,$type,$color])
-                            <div class="flex items-start gap-4 py-3 border-b border-gray-50 last:border-0">
-                                <div class="w-8 h-8 rounded-full bg-{{ $color }}-100 flex items-center justify-center shrink-0 mt-0.5">
-                                    <div class="w-2 h-2 rounded-full bg-{{ $color }}-500"></div>
+
+                        @forelse($this->activityGroups as $day => $logs)
+                        <div class="mb-6 last:mb-0">
+                            {{-- Date heading --}}
+                            <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400 mb-3">{{ $day }}</p>
+
+                            {{-- Timeline: dots joined by a vertical rail --}}
+                            <div class="relative pl-2">
+                                <span class="absolute left-[0.9375rem] top-2 bottom-2 w-px bg-gradient-to-b from-indigo-200 via-gray-200 to-transparent dark:from-indigo-500/40 dark:via-gray-700"></span>
+                                @foreach($logs as $log)
+                                <div class="relative flex items-start gap-4 py-2.5">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 ring-4 ring-white dark:ring-[#1a1b26]"
+                                         style="background:{{ $log->accent() }}1f">
+                                        <div class="w-2 h-2 rounded-full" style="background:{{ $log->accent() }}"></div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ $log->title }}</p>
+                                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                            {{ $log->created_at->format('g:i A') }}
+                                            @if($log->actor && $log->actor_id !== Auth::id()) · by {{ $log->actor->name }} @endif
+                                            @if($log->description) · {{ $log->description }} @endif
+                                        </p>
+                                    </div>
+                                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-lg shrink-0">{{ $log->category }}</span>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ $action }}</p>
-                                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ $time }}</p>
-                                </div>
-                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-lg shrink-0">{{ $type }}</span>
+                                @endforeach
                             </div>
-                            @endforeach
                         </div>
+                        @empty
+                        <p class="text-sm text-gray-400 text-center py-8">No account activity recorded yet.</p>
+                        @endforelse
                     </div>
                 </div>
 

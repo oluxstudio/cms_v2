@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\Site;
 use App\Models\TeamInvitation;
 use App\Models\User;
+use App\Services\AccountActivity;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
@@ -138,6 +139,7 @@ class SiteTeamPage extends Component
 
         [$invitation, $plain] = TeamInvitation::issue($this->account, Auth::user(), $email, $role);
         Mail::to($email)->send(new TeamInvitationMail($invitation, $plain));
+        AccountActivity::memberInvited($this->accountId, $email, $role->name);
 
         $this->reset('inviteEmail');
         $this->dispatch('toast', level: 'success', title: 'Invitation sent', message: 'An email with a verification link is on its way to '.$email.'.');
@@ -202,6 +204,7 @@ class SiteTeamPage extends Component
                 'description' => $this->roleDescription ?: null,
                 'permissions' => $permissions,
             ]);
+            AccountActivity::roleSaved($this->accountId, $this->roleName, isNew: false);
         } else {
             Role::create([
                 'account_id' => $this->accountId,
@@ -210,6 +213,7 @@ class SiteTeamPage extends Component
                 'description' => $this->roleDescription ?: null,
                 'permissions' => $permissions,
             ]);
+            AccountActivity::roleSaved($this->accountId, $this->roleName, isNew: true);
         }
 
         $this->dispatch('toast', level: 'success', title: 'Role saved', message: $this->roleName.' now has '.count($permissions).' permissions.');

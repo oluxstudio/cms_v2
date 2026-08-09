@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Livewire\Forms\SiteForm;
 use App\Models\Site;
+use App\Services\AccountActivity;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -111,6 +112,8 @@ class SiteComponent extends Component
         // Blank scaffold: bind the generic renderer and give the site a Home page.
         $site->update(['template' => 'blank']);
         $site->pages()->firstOrCreate(['url' => '/'], ['name' => 'Home', 'keywords' => '', 'is_published' => true]);
+
+        AccountActivity::siteCreated($site);
 
         $this->form->reset();
         $this->showCreate = false;
