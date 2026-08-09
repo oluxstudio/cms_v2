@@ -1,27 +1,10 @@
 @php $canManage = $this->canManage; @endphp
 <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
-    {{-- Header --}}
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Components</h1>
-            <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Standalone content components — build the nodes once, attach to pages or link collections anywhere.</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <div class="relative w-full sm:w-auto">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search components…"
-                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-56">
-            </div>
-            <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />
-            @if ($canManage)
-            <button wire:click="open(0)"
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                New component
-            </button>
-            @endif
-        </div>
+    {{-- Header — title + description --}}
+    <div class="mb-6">
+        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Components</h1>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Standalone content components — build the nodes once, attach to pages or link collections anywhere.</p>
     </div>
 
     @if ($errorMessage)
@@ -36,34 +19,57 @@
         <x-tile accent="cocoa" :value="$this->components->filter(fn ($c) => $c->nodes->where('type', 'collection')->isNotEmpty())->count()" label="linked to collections" sub="via collection nodes" />
     </div>
 
-    {{-- Tag filter chips --}}
-    @if (count($this->componentTags))
-    <div class="flex flex-wrap items-center gap-2 mb-5">
-        <button wire:click="setTag('')" @class([
-            'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
-            'bg-indigo-600 text-white border-indigo-600' => $filterTag === '',
-            'bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== '',
-        ])>All</button>
-        @foreach ($this->componentTags as $tag)
-        <button wire:click="setTag('{{ $tag }}')" @class([
-            'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
-            'bg-indigo-600 text-white border-indigo-600' => $filterTag === $tag,
-            'bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== $tag,
-        ])>#{{ $tag }}</button>
-        @endforeach
-    </div>
-    @endif
+    {{-- List card — toolbar (search · results · layout · new) then the list --}}
+    <div class="bg-white dark:bg-[#1e1f2b] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
 
-    {{-- Components list — grid / list / compact (shared layout switcher) --}}
-    @if ($this->components->isEmpty())
-        <div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05]">
+        {{-- Toolbar --}}
+        <div class="flex flex-wrap items-center gap-3 p-5 {{ count($this->componentTags) ? '' : 'border-b border-gray-100 dark:border-white/[0.05]' }}">
+            <div class="relative w-full sm:w-auto">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search components…"
+                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-64">
+            </div>
+            <div class="ml-auto flex items-center gap-3">
+                <span class="text-xs text-gray-400 dark:text-gray-500">{{ $this->components->count() }} result{{ $this->components->count() !== 1 ? 's' : '' }}</span>
+                <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />
+                @if ($canManage)
+                <button wire:click="open(0)"
+                        class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    New component
+                </button>
+                @endif
+            </div>
+        </div>
+
+        {{-- Tag filter chips --}}
+        @if (count($this->componentTags))
+        <div class="flex flex-wrap items-center gap-2 px-5 pb-4 border-b border-gray-100 dark:border-white/[0.05]">
+            <button wire:click="setTag('')" @class([
+                'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
+                'bg-indigo-600 text-white border-indigo-600' => $filterTag === '',
+                'bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== '',
+            ])>All</button>
+            @foreach ($this->componentTags as $tag)
+            <button wire:click="setTag('{{ $tag }}')" @class([
+                'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
+                'bg-indigo-600 text-white border-indigo-600' => $filterTag === $tag,
+                'bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== $tag,
+            ])>#{{ $tag }}</button>
+            @endforeach
+        </div>
+        @endif
+
+        {{-- Body — grid / list / compact --}}
+        @if ($this->components->isEmpty())
+        <div class="flex flex-col items-center justify-center py-20 text-center">
             <span class="text-3xl mb-3">🧩</span>
             <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">{{ ($search !== '' || $filterTag !== '') ? 'No components match.' : 'No components yet.' }}</p>
             <p class="text-xs text-gray-400 mt-1">Create one, define its nodes, then attach it to pages or link a collection.</p>
         </div>
 
-    @elseif ($viewMode === 'grid')
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        @elseif ($viewMode === 'grid')
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 p-5">
             @foreach ($this->components as $c)
             <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border {{ $editingId === $c->id ? 'border-indigo-400 ring-2 ring-indigo-500/20' : 'border-gray-100 dark:border-white/[0.05]' }} shadow-sm p-4 flex flex-col">
                 <div class="min-w-0">
@@ -110,9 +116,8 @@
     @else
         {{-- list & compact (table; compact hides description/tags) --}}
         @php $compact = $viewMode === 'compact'; $pad = $compact ? 'px-4 py-2' : 'px-5 py-3.5'; @endphp
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-gray-100 dark:border-white/[0.05]">
                             <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Component</th>
@@ -150,9 +155,10 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>
         </div>
-    @endif
+        @endif
+
+    </div>{{-- /list card --}}
 
     {{-- ═══ DETAIL VIEW — every stored fact, on the reusable lightbox ═══ --}}
     @if ($viewingId !== null && $this->viewing)
