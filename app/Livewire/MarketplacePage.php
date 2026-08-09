@@ -93,13 +93,26 @@ class MarketplacePage extends Component
         }
         abort_unless(FeatureRegistry::exists($key), 404);
 
+        $feature = FeatureRegistry::get($key);
+
         if ($this->site->hasFeature($key)) {
             $this->site->disableFeature($key);
-            $this->successMessage = FeatureRegistry::get($key)['name'].' disabled.';
-        } else {
-            $this->site->enableFeature($key);
-            $this->successMessage = FeatureRegistry::get($key)['name'].' enabled.';
+            $this->successMessage = $feature['name'].' disabled.';
+
+            return;
         }
+
+        // Premium features require a plan that unlocks them (config/plans.php).
+        if (($feature['tier'] ?? 'basic') === 'premium' && ! $this->site->user->currentSubscription()->allowsPremium()) {
+            $this->dispatch('upgrade-required',
+                reason: $feature['name'].' is a premium module. Your current plan doesn\'t include premium modules — upgrade to Pro or higher to enable it.',
+                cta: 'Unlock premium');
+
+            return;
+        }
+
+        $this->site->enableFeature($key);
+        $this->successMessage = $feature['name'].' enabled.';
     }
 
     public function openSettings(string $key): void

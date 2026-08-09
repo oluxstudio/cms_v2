@@ -87,16 +87,16 @@ class SiteComponent extends Component
             'form.owner' => 'required',
         ]);
 
-        // Plan enforcement: site count is limited by the subscription tier
-        // (null limit = unlimited on Enterprise).
+        // Plan enforcement: site count is capped by the subscription tier
+        // (config/plans.php; null = unlimited). Over the cap → upgrade prompt.
         $sub = Auth::user()->currentSubscription();
-        $limits = $sub->tier()['limits'] ?? [];
-        // array_key_exists, NOT ?? — a null limit means UNLIMITED (Enterprise).
-        $limit = array_key_exists('sites', $limits) ? $limits['sites'] : 1;
-        if ($limit !== null && Site::where('user_id', Auth::id())->count() >= $limit) {
-            $this->dispatch('toast', level: 'error', title: 'Plan limit reached',
-                message: "Your {$sub->tier()['name']} plan allows {$limit} ".str('site')->plural($limit).'. Upgrade to add more.');
-            $this->redirect(route('account.subscription'));
+        if (! $sub->canCreateSite()) {
+            $limit = $sub->sitesLimit();
+            $reason = $sub->trialExpired()
+                ? 'Your free trial has ended — upgrade to keep creating and managing sites.'
+                : "The {$sub->tier()['name']} plan includes {$limit} ".str('site')->plural((int) $limit).". You're using {$sub->sitesUsage()}. Upgrade to add more.";
+            $this->showCreate = false;
+            $this->dispatch('upgrade-required', reason: $reason, cta: 'See plans');
 
             return;
         }

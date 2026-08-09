@@ -304,5 +304,6 @@
 <x-download-progress />
 @stack('scripts')
     <x-confirm-modal />
+    <x-upgrade-modal />
 </body>
 </html>

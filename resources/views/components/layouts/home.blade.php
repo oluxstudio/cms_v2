@@ -155,5 +155,6 @@
 @stack('scripts')
 <style>[x-cloak]{display:none!important}</style>
     <x-confirm-modal />
+    <x-upgrade-modal />
 </body>
 </html>

@@ -43,6 +43,42 @@ class AccountSubscription extends Model
         return config("plans.tiers.{$this->plan}") ?? config('plans.tiers.trial');
     }
 
+    /* ── Plan gate: limits from config/plans.php ───────────────────────── */
+
+    /** Max sites this plan allows (null = unlimited). */
+    public function sitesLimit(): ?int
+    {
+        $limits = $this->tier()['limits'] ?? [];
+
+        // array_key_exists (not ??) — a null value means UNLIMITED (Enterprise).
+        return array_key_exists('sites', $limits) ? $limits['sites'] : 1;
+    }
+
+    /** Does this plan unlock premium modules (store, bookings, invoices, …)? */
+    public function allowsPremium(): bool
+    {
+        return (bool) ($this->tier()['limits']['premium'] ?? false);
+    }
+
+    /** May the owner create another site? (respects unlimited + expired trial) */
+    public function canCreateSite(): bool
+    {
+        if ($this->trialExpired()) {
+            return false;
+        }
+        $limit = $this->sitesLimit();
+
+        return $limit === null || $this->user->sites()->count() < $limit;
+    }
+
+    /** Human sites-usage string, e.g. "1 / 1" or "3 / ∞". */
+    public function sitesUsage(): string
+    {
+        $limit = $this->sitesLimit();
+
+        return $this->user->sites()->count().' / '.($limit === null ? '∞' : $limit);
+    }
+
     public function onTrial(): bool
     {
         return $this->plan === 'trial' && $this->status === 'trialing';
