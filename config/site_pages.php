@@ -24,6 +24,7 @@ return [
     'publish'      => ['title' => 'Go live',       'description' => 'Put the site live on its own domain with free SSL.'],
     'api-docs'     => ['title' => 'API docs',      'description' => 'Every endpoint your site can call, with parameters and examples.'],
     'api-keys'     => ['title' => 'API keys',      'description' => 'Bearer tokens scoped to this site for the API and MCP agents.'],
+    'emails'       => ['title' => 'Emails',        'description' => 'The branded receipt every visitor gets on a submission — edit its copy and logo.'],
     'marketplace'  => ['title' => 'Add-ons',       'description' => 'Enable and configure installable features for this site.'],
     'team'         => ['title' => 'Team',          'description' => 'Invite people, assign roles and control what each can do.'],
     'todos'        => ['title' => 'Tasks',         'description' => 'Track the work to be done on this site.'],

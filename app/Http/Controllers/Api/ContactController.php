@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\FormSubmissionNotification;
-use App\Mail\FormSubmissionReceipt;
+use App\Mail\SubmissionReceipt;
+use App\Models\Contact;
 use App\Models\ContactSubmission;
 use App\Models\Site;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ContactController extends Controller
@@ -48,7 +51,7 @@ class ContactController extends Controller
 
         // CRM funnel: the sender becomes (or updates) a Contact.
         try {
-            \App\Models\Contact::capture($site, $data['name'], $data['email'], null,
+            Contact::capture($site, $data['name'], $data['email'], null,
                 'Sent a contact message'.(! empty($data['subject']) ? ": “{$data['subject']}”" : '.'));
         } catch (\Throwable $e) {
             report($e);
@@ -57,9 +60,9 @@ class ContactController extends Controller
         // Dashboard recent-activity — contact submissions bypass FormResponse,
         // so they log here (classic/block forms log via FormResponseObserver).
         try {
-            \App\Services\ActivityLogger::log($site->id, 'form_response', 'responded',
+            ActivityLogger::log($site->id, 'form_response', 'responded',
                 "New contact message from {$data['name']}", [
-                    'description' => $data['subject'] ?: \Illuminate\Support\Str::limit($data['message'], 120),
+                    'description' => $data['subject'] ?: Str::limit($data['message'], 120),
                     'url' => '/submissions',
                     'icon' => 'response',
                     'meta' => ['email' => $data['email'], 'form_name' => 'Contact'],
@@ -84,7 +87,7 @@ class ContactController extends Controller
             report($e);
         }
         try {
-            Mail::to($data['email'])->send(new FormSubmissionReceipt($site, 'message', $fields));
+            Mail::to($data['email'])->send(new SubmissionReceipt($site, 'message', $data['name'] ?? null, $fields));
         } catch (\Throwable $e) {
             report($e);
         }

@@ -64,6 +64,7 @@
     if ($navSite && $navSite->canManageTeam(auth()->user())) {
         $menus['Site'][] = $link('team', 'Team');
         $menus['Site'][] = $link('api-keys', 'API keys');
+        $menus['Site'][] = $link('emails', 'Emails');
     }
 
     // RBAC: hide any page the member's role doesn't grant (config/permissions.php

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\FormSubmissionNotification;
+use App\Mail\SubmissionReceipt;
 use App\Models\Alert;
 use App\Models\Contact;
 use App\Models\Site;
@@ -82,6 +83,25 @@ class InterestController extends Controller
                         'source' => $data['source'] ?? null,
                     ]),
                     url("{$site->name}/contacts"),
+                ));
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        // Visitor receipt — the branded, admin-editable acknowledgement.
+        try {
+            if (! empty($data['email'])) {
+                Mail::to($data['email'])->send(new SubmissionReceipt(
+                    $site,
+                    $about ? "interest in {$about}" : 'enquiry',
+                    $data['name'] ?? null,
+                    array_filter([
+                        'name' => $data['name'],
+                        'email' => $data['email'],
+                        'phone' => $data['phone'] ?? null,
+                        'message' => $data['message'] ?? null,
+                    ]),
                 ));
             }
         } catch (\Throwable $e) {

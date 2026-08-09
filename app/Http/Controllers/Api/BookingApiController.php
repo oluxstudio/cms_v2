@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\BookingConfirmed;
 use App\Mail\NewBookingNotification;
+use App\Mail\SubmissionReceipt;
 use App\Models\Booking;
 use App\Models\Contact;
 use App\Models\Service;
@@ -383,7 +383,17 @@ class BookingApiController extends Controller
     private function notify(Booking $booking, Site $site): void
     {
         try {
-            Mail::to($booking->customer_email)->send(new BookingConfirmed($booking->fresh('service'), $site));
+            $booking->loadMissing('service');
+            Mail::to($booking->customer_email)->send(new SubmissionReceipt(
+                $site,
+                'booking'.($booking->service ? ' for '.$booking->service->name : ''),
+                $booking->customer_name,
+                array_filter([
+                    'reference' => $booking->reference,
+                    'service' => $booking->service?->name,
+                    'when' => $booking->starts_at?->format('D j M Y, g:i A'),
+                ]),
+            ));
         } catch (\Throwable $e) {
             report($e);
         }

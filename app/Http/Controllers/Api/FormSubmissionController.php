@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\FormSubmissionNotification;
-use App\Mail\FormSubmissionReceipt;
+use App\Mail\SubmissionReceipt;
 use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Site;
@@ -82,7 +82,7 @@ class FormSubmissionController extends Controller
         }
         try {
             if ($visitor = $this->visitorEmail($form, $fields)) {
-                Mail::to($visitor)->send(new FormSubmissionReceipt($site, $form->name.' form', $fields));
+                Mail::to($visitor)->send(new SubmissionReceipt($site, $form->displayTitle().' form', $fields['name'] ?? null, $fields));
             }
         } catch (\Throwable $e) {
             report($e);

@@ -60,6 +60,14 @@ class SiteController extends Controller
         return view('api-keys', compact('site'));
     }
 
+    public function emails($siteID)
+    {
+        $site = $this->findSiteBySlug($siteID);
+        abort_unless($site->allows(Auth::user(), 'forms.manage'), 403);
+
+        return view('emails-page', compact('site'));
+    }
+
     public function alerts($siteID)
     {
         return view('alerts', ['site' => $this->findSiteBySlug($siteID)]);
