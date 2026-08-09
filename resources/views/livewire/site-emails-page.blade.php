@@ -13,17 +13,25 @@
         <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm p-6 space-y-5">
             <h3 class="text-sm font-bold text-gray-900 dark:text-white">Receipt email</h3>
 
-            {{-- Logo --}}
+            {{-- Logo — pick from Assets, paste a URL, or upload a new one --}}
             <div>
                 <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Logo</label>
-                <div class="flex items-center gap-3">
+                <div class="flex items-start gap-3">
                     <div class="w-16 h-16 rounded-xl border border-gray-200 dark:border-white/[0.08] grid place-items-center overflow-hidden bg-gray-50 dark:bg-white/[0.04] shrink-0">
                         @if($logo)<img src="{{ $logo }}" alt="logo" class="max-w-full max-h-full object-contain">@else<span class="text-xs text-gray-400">None</span>@endif
                     </div>
-                    <div class="flex flex-col gap-1.5">
-                        <input type="file" wire:model="logoUpload" accept="image/*" class="text-xs text-gray-500 file:mr-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white">
-                        <div wire:loading wire:target="logoUpload" class="text-xs text-gray-400">Uploading…</div>
-                        @if($logo)<button wire:click="removeLogo" class="self-start text-xs font-semibold text-rose-500 hover:text-rose-600">Remove logo</button>@endif
+                    <div class="flex-1 min-w-0 space-y-2">
+                        {{-- Reusable asset picker: browse the site's asset library or paste a URL --}}
+                        <x-asset-picker model="logo" :site="$site" type="image" placeholder="Logo URL, or pick from assets" />
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer">
+                                <span wire:loading.remove wire:target="logoUpload">⬆ Upload a new image</span>
+                                <span wire:loading wire:target="logoUpload">Uploading…</span>
+                                <input type="file" wire:model="logoUpload" accept="image/*" class="hidden">
+                            </label>
+                            @if($logo)<button wire:click="removeLogo" class="text-xs font-semibold text-rose-500 hover:text-rose-600">Remove</button>@endif
+                        </div>
+                        <p class="text-[11px] text-gray-400">Uploads are saved to your <a href="{{ url($site->name.'/media') }}" class="underline">Assets</a> so you can reuse them.</p>
                     </div>
                 </div>
                 @error('logoUpload')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror

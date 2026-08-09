@@ -82,3 +82,14 @@ test('the emails editor saves subject, body and requires forms.manage', function
     $outsider = User::factory()->create();
     Livewire::actingAs($outsider)->test(SiteEmailsPage::class, ['site' => $site])->assertStatus(403);
 });
+
+test('uploading a logo on the emails page stores it in the asset library', function () {
+    [$owner, $site] = receiptSite();
+    \Illuminate\Support\Facades\Storage::fake('public');
+
+    Livewire::actingAs($owner)->test(SiteEmailsPage::class, ['site' => $site])
+        ->set('logoUpload', \Illuminate\Http\Testing\File::image('logo.png', 120, 40));
+
+    expect($site->media()->count())->toBe(1)               // landed in Assets
+        ->and($site->getAttr('email.logo'))->not->toBeEmpty(); // applied to the receipt
+});

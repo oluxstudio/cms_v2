@@ -4,8 +4,8 @@ namespace App\Livewire;
 
 use App\Mail\SubmissionReceipt;
 use App\Models\Site;
+use App\Services\MediaStore;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -40,14 +40,15 @@ class SiteEmailsPage extends Component
         $this->logo = (string) $site->getAttr('email.logo', '');
     }
 
+    /** Uploaded logos land in the site's Asset library (so they're re-pickable). */
     public function updatedLogoUpload(): void
     {
         $this->validate(['logoUpload' => ['image', 'max:4096']]);
-        $path = $this->logoUpload->store('media/'.$this->site->name, 'public');
-        $this->logo = Storage::url($path);
+        $media = app(MediaStore::class)->store($this->site, $this->logoUpload);
+        $this->logo = $media->publicUrl();
         $this->logoUpload = null;
         $this->site->setAttr('email.logo', $this->logo);
-        $this->successMessage = 'Logo updated.';
+        $this->successMessage = 'Logo uploaded to your assets and applied.';
     }
 
     public function removeLogo(): void
