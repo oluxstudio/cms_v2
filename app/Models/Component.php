@@ -75,7 +75,7 @@ class Component extends Model
                 'label' => $n->label,
                 'type' => $n->type,
                 'value' => $n->value,
-                'parent' => (int) $n->parent,
+                'parent' => $n->parent,
                 'order' => (int) $n->order,
                 'description' => $n->description,
             ])->values()->all(),
