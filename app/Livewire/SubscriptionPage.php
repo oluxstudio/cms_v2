@@ -15,6 +15,19 @@ class SubscriptionPage extends Component
     /** Where the user came FROM — upgrading returns them there. */
     public string $backUrl = '';
 
+    /** Plan key whose detail panel is open (null = closed). */
+    public ?string $viewingPlan = null;
+
+    public function viewPlan(string $plan): void
+    {
+        $this->viewingPlan = isset(config('plans.tiers')[$plan]) ? $plan : null;
+    }
+
+    public function closePlan(): void
+    {
+        $this->viewingPlan = null;
+    }
+
     public function mount(): void
     {
         $prev = url()->previous();
