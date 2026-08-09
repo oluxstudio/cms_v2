@@ -6,6 +6,7 @@ use App\Mail\SubmissionReceipt;
 use App\Models\Site;
 use App\Services\MediaStore;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -77,16 +78,21 @@ class SiteEmailsPage extends Component
     /** Live preview: fill placeholders with sample data. */
     public function getPreviewProperty(): array
     {
+        $sampleFields = ['name' => 'Alex', 'email' => 'alex@example.com', 'phone' => '07700 900123', 'message' => 'Looks great — please get in touch.'];
         $map = [
             '{name}' => 'Alex',
             '{site}' => ucwords(str_replace('-', ' ', $this->site->name)),
             '{type}' => 'message',
         ];
 
-        return [
-            'subject' => strtr($this->subject, $map),
-            'body' => strtr($this->body, $map),
-        ];
+        $fill = function (string $text) use ($map, $sampleFields) {
+            $text = preg_replace_callback('/\{field:\s*([^}]+?)\s*\}/', fn ($m) => $sampleFields[strtolower(trim($m[1]))] ?? '«'.trim($m[1]).'»', $text);
+            $text = str_replace('{fields}', collect($sampleFields)->map(fn ($v, $k) => Str::headline($k).': '.$v)->implode("\n"), $text);
+
+            return strtr($text, $map);
+        };
+
+        return ['subject' => $fill($this->subject), 'body' => $fill($this->body)];
     }
 
     public function render()

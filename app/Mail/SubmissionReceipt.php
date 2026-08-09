@@ -8,6 +8,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 
 /**
  * The one branded "we received your submission" email sent to the VISITOR
@@ -51,8 +52,35 @@ class SubmissionReceipt extends Mailable
         ];
     }
 
+    /** A submitted value by field key (case-insensitive); arrays joined. */
+    private function fieldValue(string $key): string
+    {
+        foreach ($this->summary as $k => $v) {
+            if (strcasecmp((string) $k, $key) === 0) {
+                return is_array($v) ? implode(', ', $v) : (string) $v;
+            }
+        }
+
+        return '';
+    }
+
+    /** All submitted fields as "Label: value" lines (for the {fields} token). */
+    private function fieldsBlock(): string
+    {
+        return collect($this->summary)
+            ->map(fn ($v, $k) => Str::headline((string) $k).': '.(is_array($v) ? implode(', ', $v) : $v))
+            ->implode("\n");
+    }
+
+    /**
+     * Resolve placeholders: {name}/{site}/{type}, {field:<key>} for a single
+     * submitted value, and {fields} for the whole submission.
+     */
     private function fill(string $text): string
     {
+        $text = preg_replace_callback('/\{field:\s*([^}]+?)\s*\}/', fn ($m) => $this->fieldValue($m[1]), $text);
+        $text = str_replace('{fields}', $this->fieldsBlock(), $text);
+
         return strtr($text, $this->placeholders());
     }
 

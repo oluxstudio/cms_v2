@@ -93,3 +93,18 @@ test('uploading a logo on the emails page stores it in the asset library', funct
     expect($site->media()->count())->toBe(1)               // landed in Assets
         ->and($site->getAttr('email.logo'))->not->toBeEmpty(); // applied to the receipt
 });
+
+test('the template can weave in submitted field values via {field:key} and {fields}', function () {
+    [$owner, $site] = receiptSite();
+    $site->setAttr('email.receipt_subject', 'Thanks {field:name}');
+    $site->setAttr('email.receipt_body', "Hi {field:name}, we'll reply to {field:email}.\n\nYour details:\n{fields}");
+
+    $mail = new SubmissionReceipt($site, 'message', 'Jo', [
+        'name' => 'Jo Bloggs', 'email' => 'jo@example.com', 'budget' => '£1k–£5k',
+    ]);
+
+    expect($mail->envelope()->subject)->toBe('Thanks Jo Bloggs');
+    $html = $mail->render();
+    expect($html)->toContain('reply to jo@example.com')
+        ->and($html)->toContain('Budget: £1k–£5k');   // {fields} expansion
+});

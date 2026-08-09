@@ -51,12 +51,14 @@
                 <textarea wire:model.live.debounce.300ms="body" rows="8"
                           class="w-full px-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-none leading-relaxed"></textarea>
                 @error('body')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
-                <p class="text-[11px] text-gray-400 mt-2">
+                <p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
                     Placeholders:
-                    @foreach(['{name}', '{site}', '{type}'] as $ph)
+                    @foreach(['{name}', '{site}', '{type}', '{field:email}', '{fields}'] as $ph)
                         <code class="mx-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300">{{ $ph }}</code>
                     @endforeach
-                    — a summary of what the visitor submitted is added automatically.
+                    <br>
+                    <b>{field:key}</b> inserts one submitted value (e.g. <code class="px-1 rounded bg-gray-100 dark:bg-white/[0.06]">{field:phone}</code>);
+                    <b>{fields}</b> lists everything they submitted. A summary is also appended automatically.
                 </p>
             </div>
 
