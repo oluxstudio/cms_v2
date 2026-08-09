@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Mail\TutorialWelcome;
 use App\Models\AccountSubscription;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 use Stripe\Checkout\Session;
 use Stripe\StripeClient;
 use Stripe\Webhook;
@@ -108,12 +110,23 @@ class PlatformBilling
             return;
         }
         $sub = $user->currentSubscription();
+
+        // A genuine new activation (not an idempotent re-run of the same active
+        // plan) — used to send the welcome/tutorial email exactly once.
+        $isNewActivation = ! ($sub->plan === $plan && $sub->status === 'active');
+
         $sub->update(array_filter([
             'plan' => $plan,
             'status' => 'active',
-            'started_at' => $sub->plan === $plan && $sub->status === 'active' ? null : now(),
+            'started_at' => $isNewActivation ? now() : null,
             'stripe_customer_id' => $session->customer ?? null,
             'stripe_subscription_id' => $session->subscription ?? null,
         ], fn ($v) => $v !== null));
+
+        if ($isNewActivation) {
+            $tier = config("plans.tiers.{$plan}");
+            Mail::to($user->email)
+                ->send(new TutorialWelcome($user, $tier['name'] ?? ''));
+        }
     }
 }

@@ -431,7 +431,7 @@
                 <span>∞ Content updates, live instantly</span>
             </div>
             <div class="hero-ctas">
-                <a class="btn btn-invert" href="{{ route('register') }}">Start your free trial</a>
+                <a class="btn btn-invert" href="{{ route('plan.start') }}">Start your free trial</a>
                 <a class="btn bg-[var(--penta)] light:bg-[var(--primary-3)] text-black light:text-white " href="#pricing">See pricing</a>
             </div>
             <div class="stack stack-space ">
@@ -546,7 +546,7 @@
                     <ul>
                         @foreach ($t['features'] as $f)<li>{{ $f }}</li>@endforeach
                     </ul>
-                    <a class="btn {{ ($t['highlight'] ?? false) ? 'btn-primary' : 'btn-ghost' }}" href="{{ route('register') }}">
+                    <a class="btn {{ ($t['highlight'] ?? false) ? 'btn-primary' : 'btn-ghost' }}" href="{{ route('plan.start', ['plan' => $key]) }}">
                         {{ $t['price_cents'] === 0 ? 'Start free trial' : 'Get started' }}
                     </a>
                 </div>
@@ -595,7 +595,7 @@
             <div class="band">
                 <h2>From first page to first payment.</h2>
                 <p>Set up your site tonight — take your first booking tomorrow.</p>
-                <a class="btn" href="{{ route('register') }}">Start your free trial</a>
+                <a class="btn" href="{{ route('plan.start') }}">Start your free trial</a>
             </div>
         </div>
     </section>

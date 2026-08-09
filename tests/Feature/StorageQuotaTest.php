@@ -18,14 +18,15 @@ function quotaAccount(string $plan = 'trial'): array
 }
 
 test('storage limit comes from the plan config and usage sums media bytes', function () {
-    [$owner, $site] = quotaAccount('trial');       // 20 MB
-    expect($owner->currentSubscription()->storageLimitMb())->toBe(20);
+    [$owner, $site] = quotaAccount('trial');
+    $capMb = config('plans.tiers.trial.limits.storage_mb');
+    expect($owner->currentSubscription()->storageLimitMb())->toBe($capMb);
 
     Media::create(['site_id' => $site->id, 'name' => 'a.png', 'file_type' => 'image', 'url' => '/storage/x.png', 'size' => '5 MB', 'bytes' => 5 * 1024 * 1024]);
     Media::create(['site_id' => $site->id, 'name' => 'b.png', 'file_type' => 'image', 'url' => '/storage/y.png', 'size' => '3 MB', 'bytes' => 3 * 1024 * 1024]);
 
     expect($owner->currentSubscription()->storageUsedBytes())->toBe(8 * 1024 * 1024)
-        ->and($owner->currentSubscription()->storageRemainingBytes())->toBe(12 * 1024 * 1024);
+        ->and($owner->currentSubscription()->storageRemainingBytes())->toBe(($capMb - 8) * 1024 * 1024);
 
     // Enterprise = unlimited.
     [$ent] = quotaAccount('enterprise');
@@ -35,9 +36,10 @@ test('storage limit comes from the plan config and usage sums media bytes', func
 
 test('an upload that exceeds the plan quota is skipped with an upgrade prompt', function () {
     Storage::fake('public');
-    [$owner, $site] = quotaAccount('trial');       // 20 MB cap
-    // Fill 18 MB already used.
-    Media::create(['site_id' => $site->id, 'name' => 'big.png', 'file_type' => 'image', 'url' => '/storage/big.png', 'size' => '18 MB', 'bytes' => 18 * 1024 * 1024]);
+    [$owner, $site] = quotaAccount('trial');
+    $capMb = config('plans.tiers.trial.limits.storage_mb');
+    // Fill the account to within 2 MB of the cap.
+    Media::create(['site_id' => $site->id, 'name' => 'big.png', 'file_type' => 'image', 'url' => '/storage/big.png', 'size' => 'full', 'bytes' => ($capMb - 2) * 1024 * 1024]);
 
     $before = $site->media()->count();
     Livewire::actingAs($owner)->test(MediaPage::class, ['site' => $site])

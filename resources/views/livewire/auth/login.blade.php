@@ -25,6 +25,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
 
     // — Register fields
     public string $name = '';
+    public string $registerPhone = '';
     public string $registerEmail = '';
     public string $registerPassword = '';
     public string $registerPasswordConfirmation = '';
@@ -49,13 +50,20 @@ new #[Layout('components.layouts.bare')] class extends Component {
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $this->redirectIntended(default: route('home', absolute: false), navigate: true);
+        // A plan chosen on the landing page sends the user straight to checkout.
+        $plan = session('intended_plan');
+        $default = $plan
+            ? route('account.subscription', ['plan' => $plan], absolute: false)
+            : route('home', absolute: false);
+
+        $this->redirectIntended(default: $default, navigate: true);
     }
 
     public function register(): void
     {
         $validated = $this->validate([
             'name'                         => ['required', 'string', 'max:255'],
+            'registerPhone'                => ['required', 'string', 'max:32'],
             'registerEmail'                => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class . ',email'],
             'registerPassword'             => ['required', 'string', 'min:8', 'same:registerPasswordConfirmation'],
             'registerPasswordConfirmation' => ['required', 'string'],
@@ -65,6 +73,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
 
         $user = User::create([
             'name'     => $validated['name'],
+            'phone'    => $validated['registerPhone'],
             'email'    => $validated['registerEmail'],
             'password' => Hash::make($validated['registerPassword']),
         ]);
@@ -72,7 +81,14 @@ new #[Layout('components.layouts.bare')] class extends Component {
         event(new Registered($user));
         Auth::login($user);
 
-        $this->redirectIntended(default: route('home', absolute: false), navigate: true);
+        // A plan chosen on the landing page routes the new user to checkout
+        // once their email is verified; otherwise land on the app home.
+        $plan = session('intended_plan');
+        $default = $plan
+            ? route('account.subscription', ['plan' => $plan], absolute: false)
+            : route('home', absolute: false);
+
+        $this->redirectIntended(default: $default, navigate: true);
     }
 
     protected function ensureIsNotRateLimited(): void
@@ -102,9 +118,9 @@ new #[Layout('components.layouts.bare')] class extends Component {
         {{-- ════════════════════════════════════
              FORM PANEL — slides left ↔ right
         ════════════════════════════════════ --}}
-        <div class="absolute top-0 bottom-0 w-1/2 flex flex-col justify-center px-10 py-20 z-10
-                    transition-all duration-500 ease-in-out"
-             :class="mode === 'login' ? 'left-0' : 'left-1/2'">
+        <div class="relative w-full px-6 py-12 md:absolute md:top-0 md:bottom-0 md:w-1/2 md:px-10 md:py-20
+                    flex flex-col justify-center z-10 transition-all duration-500 ease-in-out"
+             :class="mode === 'login' ? 'md:left-0' : 'md:left-1/2'">
 
             {{-- Logo --}}
             <div class="flex items-center gap-2 mb-8">
@@ -252,6 +268,14 @@ new #[Layout('components.layouts.bare')] class extends Component {
                     @error('name') <p class="text-xs text-red-500 -mt-1 px-1">{{ $message }}</p> @enderror
 
                     <div class="relative">
+                        <label class="absolute left-4 top-2 text-xs text-gray-400 pointer-events-none">Phone</label>
+                        <input wire:model="registerPhone" type="tel" required autocomplete="tel"
+                            placeholder="+44 7700 900000"
+                            class="w-full px-4 pt-6 pb-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm bg-white transition-all @error('registerPhone') border-red-400 @enderror" />
+                    </div>
+                    @error('registerPhone') <p class="text-xs text-red-500 -mt-1 px-1">{{ $message }}</p> @enderror
+
+                    <div class="relative">
                         <label class="absolute left-4 top-2 text-xs text-gray-400 pointer-events-none">Email</label>
                         <input wire:model="registerEmail" type="email" required autocomplete="email"
                             placeholder="you@example.com"
@@ -299,7 +323,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
         {{-- ════════════════════════════════════
              HERO PANEL — slides right ↔ left
         ════════════════════════════════════ --}}
-        <div class="absolute top-0 bottom-0 w-1/2 transition-all duration-500 ease-in-out"
+        <div class="hidden md:block absolute top-0 bottom-0 w-1/2 transition-all duration-500 ease-in-out"
              :class="mode === 'login' ? 'left-1/2' : 'left-0'">
             <div class="absolute inset-0 m-3 rounded-2xl overflow-hidden"
                  style="background:linear-gradient(160deg,var(--primary) 0%,var(--primary-3) 62%,var(--primary-4) 100%)">
@@ -354,7 +378,8 @@ new #[Layout('components.layouts.bare')] class extends Component {
         --surface: #1b1620; --line-inv: rgba(255,255,255,.12);
         background: var(--bg); font-family: 'garet', sans-serif; color: var(--on-bg);
     }
-    .auth-card { background: var(--surface); border: 1px solid var(--line-inv); min-height: 710px; }
+    .auth-card { background: var(--surface); border: 1px solid var(--line-inv); }
+    @media (min-width: 768px) { .auth-card { min-height: 710px; } }
     .auth-screen h1 { font-family: 'junegull', 'trebuchet ms', sans-serif; text-transform: uppercase; color: var(--on-bg); font-weight: 400; }
     .auth-logo-text { font-family: 'junegull', sans-serif; color: var(--on-bg); }
     .auth-screen label, .auth-screen .text-xs, .auth-screen .text-sm { font-family: 'comforta', sans-serif; }

@@ -35,6 +35,14 @@ class SubscriptionPage extends Component
         $this->backUrl = ($prev && $prev !== url()->current() && str_starts_with($prev, url('/')))
             ? $prev
             : route('home');
+
+        // A plan chosen on the landing page (?plan= or the remembered intent)
+        // opens straight to that tier's detail so the user can confirm & pay.
+        $intended = request()->query('plan') ?: session('intended_plan');
+        if ($intended && isset(config('plans.tiers')[$intended]) && $intended !== 'trial') {
+            $this->viewingPlan = $intended;
+        }
+        session()->forget('intended_plan');
     }
 
     public function choose(string $plan)

@@ -12,6 +12,7 @@ test('the register url lands on the combined login/register screen', function ()
 test('new users can register', function () {
     LivewireVolt::test('auth.login')
         ->set('name', 'Test User')
+        ->set('registerPhone', '+44 7700 900000')
         ->set('registerEmail', 'test@example.com')
         ->set('registerPassword', 'password123')
         ->set('registerPasswordConfirmation', 'password123')

@@ -135,6 +135,28 @@ Route::get('/preview/{siteName}/{pageUrl}', [PublicPageController::class, 'show'
 Route::view('/', 'landing')->name('landing');
 Route::redirect('/welcome', '/');
 
+// Public "getting started" tutorial — linked from the post-payment email.
+Route::view('/tutorial', 'tutorial')->name('tutorial');
+
+// Landing "choose a plan" CTA. Signed-in users go straight to checkout;
+// guests are sent to sign up with the chosen plan remembered in the session,
+// so after email verification + registration they land on checkout.
+Route::get('/get-started/{plan?}', function (Request $request, ?string $plan = null) {
+    if ($plan && ! array_key_exists($plan, config('plans.tiers'))) {
+        $plan = null;
+    }
+
+    if ($plan) {
+        $request->session()->put('intended_plan', $plan);
+    }
+
+    if ($request->user()) {
+        return redirect()->route('account.subscription', $plan ? ['plan' => $plan] : []);
+    }
+
+    return redirect()->route('register');
+})->name('plan.start');
+
 // ── Auth-protected app routes
 Route::middleware('auth')->group(function () {
     // The app home (site picker). Keeps the 'home' route name so every
