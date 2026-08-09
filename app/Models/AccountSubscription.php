@@ -79,6 +79,45 @@ class AccountSubscription extends Model
         return $this->user->sites()->count().' / '.($limit === null ? '∞' : $limit);
     }
 
+    /* ── Storage (asset disk space) ────────────────────────────────────── */
+
+    /** Storage cap in MB for this plan (null = unlimited). */
+    public function storageLimitMb(): ?int
+    {
+        $limits = $this->tier()['limits'] ?? [];
+
+        return array_key_exists('storage_mb', $limits) ? $limits['storage_mb'] : 20;
+    }
+
+    public function storageLimitBytes(): ?int
+    {
+        $mb = $this->storageLimitMb();
+
+        return $mb === null ? null : $mb * 1024 * 1024;
+    }
+
+    /** Bytes used across every asset in the account's sites. */
+    public function storageUsedBytes(): int
+    {
+        return (int) Media::whereIn('site_id', $this->user->sites()->select('id'))->sum('bytes');
+    }
+
+    /** Bytes still free (null = unlimited). */
+    public function storageRemainingBytes(): ?int
+    {
+        $limit = $this->storageLimitBytes();
+
+        return $limit === null ? null : max(0, $limit - $this->storageUsedBytes());
+    }
+
+    /** Can the account absorb an upload of $bytes more? */
+    public function canStore(int $bytes): bool
+    {
+        $remaining = $this->storageRemainingBytes();
+
+        return $remaining === null || $bytes <= $remaining;
+    }
+
     public function onTrial(): bool
     {
         return $this->plan === 'trial' && $this->status === 'trialing';

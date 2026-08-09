@@ -24,6 +24,19 @@
         <x-stat-tile label="Audio" :value="$counts['audio'] ?? 0" color="#10b981" icon="M9 19V6l11-2v13M9 19a2 2 0 11-4 0 2 2 0 014 0zm11-2a2 2 0 11-4 0 2 2 0 014 0z" />
         <x-stat-tile label="Fonts" :value="$counts['font'] ?? 0" color="#8b5cf6" icon="M4 7V5a1 1 0 011-1h14a1 1 0 011 1v2M9 20h6M12 4v16" />
         <x-stat-tile label="Others" :value="$counts['document']" color="#f59e0b" icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.6a1 1 0 01.7.3l5.4 5.4a1 1 0 01.3.7V19a2 2 0 01-2 2z" />
+
+        {{-- Storage: used vs plan quota + free space --}}
+        <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] p-4">
+            <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Storage</span>
+                <span class="text-[11px] font-semibold {{ ($storage['pct'] ?? 0) >= 90 ? 'text-rose-500' : 'text-gray-500 dark:text-gray-400' }}">{{ $storage['pct'] }}%</span>
+            </div>
+            <p class="text-sm font-bold text-gray-900 dark:text-white">{{ $storage['used_h'] }} <span class="font-normal text-gray-400">/ {{ $storage['limit_h'] }}</span></p>
+            <div class="mt-2 h-2 rounded-full bg-gray-100 dark:bg-white/[0.06] overflow-hidden">
+                <div class="h-full rounded-full transition-all {{ ($storage['pct'] ?? 0) >= 90 ? 'bg-rose-500' : (($storage['pct'] ?? 0) >= 70 ? 'bg-amber-500' : 'bg-emerald-500') }}" style="width:{{ max(2, $storage['pct']) }}%"></div>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1.5">{{ $storage['free_h'] }} free for new assets</p>
+        </div>
     </x-slot:stats>
 
 <div

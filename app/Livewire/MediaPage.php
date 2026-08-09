@@ -99,8 +99,16 @@ class MediaPage extends Component
         ]);
 
         $store = app(MediaStore::class);
+        $sub = $this->site->user->currentSubscription();
         $count = 0;
+        $skipped = 0;
         foreach ($this->uploads as $file) {
+            // Stop when the account's storage quota can't fit the next file.
+            if (! $sub->canStore((int) $file->getSize())) {
+                $skipped++;
+
+                continue;
+            }
             $store->store($this->site, $file);
             $count++;
         }
@@ -108,6 +116,13 @@ class MediaPage extends Component
         $this->uploads = [];
         if ($count > 0) {
             $this->successMessage = $count.' '.str('file')->plural($count).' uploaded.';
+        }
+        if ($skipped > 0) {
+            $limit = $sub->storageLimitMb();
+            $this->dispatch('upgrade-required',
+                reason: $skipped.' '.str('file')->plural($skipped).' skipped — your plan includes '.
+                    ($limit === null ? 'unlimited storage' : $limit.' MB of asset storage').' and it\'s full. Upgrade for more space, or remove some assets.',
+                cta: 'Get more storage');
         }
     }
 
@@ -135,10 +150,23 @@ class MediaPage extends Component
 
         $recent = (clone $base)->where('created_at', '>=', now()->startOfWeek())->count();
 
+        $sub = $this->site->user->currentSubscription();
+        $limitBytes = $sub->storageLimitBytes();
+        $usedBytes = $sub->storageUsedBytes();
+        $storage = [
+            'used' => $usedBytes,
+            'limit' => $limitBytes,                                   // null = unlimited
+            'used_h' => MediaModel::humanSize($usedBytes),
+            'limit_h' => $limitBytes === null ? '∞' : MediaModel::humanSize($limitBytes),
+            'free_h' => $limitBytes === null ? '∞' : MediaModel::humanSize(max(0, $limitBytes - $usedBytes)),
+            'pct' => $limitBytes ? min(100, (int) round($usedBytes / $limitBytes * 100)) : 0,
+        ];
+
         return view('livewire.media-page', [
             'mediaItems' => $mediaItems,
             'counts' => $counts,
             'recent' => $recent,
+            'storage' => $storage,
         ]);
     }
 

@@ -21,7 +21,7 @@ class Media extends Model
         'ttf' => 'font', 'otf' => 'font', 'woff' => 'font', 'woff2' => 'font', 'eot' => 'font',
     ];
 
-    protected $fillable = ['site_id', 'site_template_id', 'name', 'file_type', 'url', 'size', 'alt_text'];
+    protected $fillable = ['site_id', 'site_template_id', 'name', 'file_type', 'url', 'size', 'bytes', 'alt_text'];
 
     public function site()
     {

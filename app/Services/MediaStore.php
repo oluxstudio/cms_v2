@@ -24,6 +24,7 @@ class MediaStore
             'file_type' => Media::guessType($file->getClientMimeType() ?: $file->getMimeType(), $file->getClientOriginalName()),
             'url' => Storage::url($path),
             'size' => Media::humanSize((int) $file->getSize()),
+            'bytes' => (int) $file->getSize(),
             'alt_text' => null,
         ]);
     }
