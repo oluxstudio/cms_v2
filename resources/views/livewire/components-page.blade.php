@@ -13,6 +13,7 @@
                 <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search components…"
                        class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-56">
             </div>
+            <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />
             @if ($canManage)
             <button wire:click="open(0)"
                     class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
@@ -35,58 +36,123 @@
         <x-tile accent="cocoa" :value="$this->components->filter(fn ($c) => $c->nodes->where('type', 'collection')->isNotEmpty())->count()" label="linked to collections" sub="via collection nodes" />
     </div>
 
-    {{-- Components list --}}
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        @forelse ($this->components as $c)
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border {{ $editingId === $c->id ? 'border-indigo-400 ring-2 ring-indigo-500/20' : 'border-gray-100 dark:border-white/[0.05]' }} shadow-sm p-4 flex flex-col">
-            <div class="min-w-0">
-                <p class="text-sm font-bold text-gray-900 dark:text-white truncate">🧩 {{ $c->name }}</p>
-                <p class="text-[11px] text-gray-400 mt-0.5">
-                    {{ $c->nodes->count() }} {{ Str::plural('node', $c->nodes->count()) }}
-                    · {{ $c->pages->count() }} {{ Str::plural('page', $c->pages->count()) }}
-                    @if ($c->nodes->where('type', 'collection')->isNotEmpty())
-                        · {{ $c->nodes->where('type', 'collection')->count() }} collection {{ Str::plural('link', $c->nodes->where('type', 'collection')->count()) }}
-                    @endif
-                </p>
-            </div>
-            @if ($c->description)
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">{{ Str::limit($c->description, 90) }}</p>
-            @endif
-            {{-- Tag chips --}}
-            @if ($c->tags)
-            <div class="flex flex-wrap gap-1.5 mt-2">
-                @foreach ($c->tags as $tag)
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">#{{ $tag }}</span>
-                @endforeach
-            </div>
-            @endif
-            {{-- Node chips preview --}}
-            <div class="flex flex-wrap gap-1.5 mt-3 flex-1 content-start">
-                @foreach ($c->nodes->take(6) as $n)
-                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400">
-                        {{ $n->label }} <span class="opacity-60">· {{ $n->type }}</span></span>
-                @endforeach
-                @if ($c->nodes->count() > 6)<span class="text-[10px] text-gray-400">+{{ $c->nodes->count() - 6 }}</span>@endif
-            </div>
-            <div class="flex gap-2 mt-4">
-                <button wire:click="view('{{ $c->id }}')"
-                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">View</button>
-                @if ($canManage)
-                <button wire:click="open('{{ $c->id }}')"
-                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">Edit</button>
-                <button wire:click="deleteComponent('{{ $c->id }}')" data-confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
-                        class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
-                @endif
-            </div>
-        </div>
-        @empty
-        <div class="sm:col-span-2 lg:col-span-3 flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05]">
+    {{-- Tag filter chips --}}
+    @if (count($this->componentTags))
+    <div class="flex flex-wrap items-center gap-2 mb-5">
+        <button wire:click="setTag('')" @class([
+            'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
+            'bg-indigo-600 text-white border-indigo-600' => $filterTag === '',
+            'bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== '',
+        ])>All</button>
+        @foreach ($this->componentTags as $tag)
+        <button wire:click="setTag('{{ $tag }}')" @class([
+            'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
+            'bg-indigo-600 text-white border-indigo-600' => $filterTag === $tag,
+            'bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== $tag,
+        ])>#{{ $tag }}</button>
+        @endforeach
+    </div>
+    @endif
+
+    {{-- Components list — grid / list / compact (shared layout switcher) --}}
+    @if ($this->components->isEmpty())
+        <div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05]">
             <span class="text-3xl mb-3">🧩</span>
-            <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">{{ $search !== '' ? 'No components match.' : 'No components yet.' }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">{{ ($search !== '' || $filterTag !== '') ? 'No components match.' : 'No components yet.' }}</p>
             <p class="text-xs text-gray-400 mt-1">Create one, define its nodes, then attach it to pages or link a collection.</p>
         </div>
-        @endforelse
-    </div>
+
+    @elseif ($viewMode === 'grid')
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            @foreach ($this->components as $c)
+            <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border {{ $editingId === $c->id ? 'border-indigo-400 ring-2 ring-indigo-500/20' : 'border-gray-100 dark:border-white/[0.05]' }} shadow-sm p-4 flex flex-col">
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-gray-900 dark:text-white truncate">🧩 {{ $c->name }}</p>
+                    <p class="text-[11px] text-gray-400 mt-0.5">
+                        {{ $c->nodes->count() }} {{ Str::plural('node', $c->nodes->count()) }}
+                        · {{ $c->pages->count() }} {{ Str::plural('page', $c->pages->count()) }}
+                        @if ($c->nodes->where('type', 'collection')->isNotEmpty())
+                            · {{ $c->nodes->where('type', 'collection')->count() }} collection {{ Str::plural('link', $c->nodes->where('type', 'collection')->count()) }}
+                        @endif
+                    </p>
+                </div>
+                @if ($c->description)
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">{{ Str::limit($c->description, 90) }}</p>
+                @endif
+                @if ($c->tags)
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                    @foreach ($c->tags as $tag)
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">#{{ $tag }}</span>
+                    @endforeach
+                </div>
+                @endif
+                <div class="flex flex-wrap gap-1.5 mt-3 flex-1 content-start">
+                    @foreach ($c->nodes->take(6) as $n)
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400">
+                            {{ $n->label }} <span class="opacity-60">· {{ $n->type }}</span></span>
+                    @endforeach
+                    @if ($c->nodes->count() > 6)<span class="text-[10px] text-gray-400">+{{ $c->nodes->count() - 6 }}</span>@endif
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button wire:click="view('{{ $c->id }}')"
+                            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">View</button>
+                    @if ($canManage)
+                    <button wire:click="open('{{ $c->id }}')"
+                            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">Edit</button>
+                    <button wire:click="deleteComponent('{{ $c->id }}')" data-confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
+                            class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+
+    @else
+        {{-- list & compact (table; compact hides description/tags) --}}
+        @php $compact = $viewMode === 'compact'; $pad = $compact ? 'px-4 py-2' : 'px-5 py-3.5'; @endphp
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-100 dark:border-white/[0.05]">
+                            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Component</th>
+                            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Nodes</th>
+                            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Pages</th>
+                            @unless($compact)<th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Tags</th>@endunless
+                            <th class="px-5 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-white/[0.04]">
+                        @foreach ($this->components as $c)
+                        <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
+                            <td class="{{ $pad }}">
+                                <p class="font-semibold text-gray-900 dark:text-white">🧩 {{ $c->name }}</p>
+                                @unless($compact)@if($c->description)<p class="text-xs text-gray-400 mt-0.5 max-w-md truncate">{{ $c->description }}</p>@endif @endunless
+                            </td>
+                            <td class="{{ $pad }} text-gray-500 dark:text-gray-400">{{ $c->nodes->count() }}</td>
+                            <td class="{{ $pad }} text-gray-500 dark:text-gray-400">{{ $c->pages->count() }}</td>
+                            @unless($compact)
+                            <td class="{{ $pad }}">
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach (($c->tags ?? []) as $tag)<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">#{{ $tag }}</span>@endforeach
+                                </div>
+                            </td>
+                            @endunless
+                            <td class="{{ $pad }} text-right whitespace-nowrap">
+                                <button wire:click="view('{{ $c->id }}')" class="text-xs font-semibold text-gray-500 hover:text-indigo-600 px-2">View</button>
+                                @if ($canManage)
+                                <button wire:click="open('{{ $c->id }}')" class="text-xs font-semibold text-gray-500 hover:text-indigo-600 px-2">Edit</button>
+                                <button wire:click="deleteComponent('{{ $c->id }}')" data-confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
+                                        class="text-xs font-semibold text-gray-400 hover:text-rose-500 px-2">Delete</button>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
 
     {{-- ═══ DETAIL VIEW — every stored fact, on the reusable lightbox ═══ --}}
     @if ($viewingId !== null && $this->viewing)

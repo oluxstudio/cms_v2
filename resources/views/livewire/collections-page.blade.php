@@ -213,10 +213,47 @@
                     <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ $viewing->name }} — entries</h2>
                     <p class="text-xs text-gray-400">{{ $entries->count() }} {{ Str::plural('entry', $entries->count()) }}</p>
                 </div>
-                <button wire:click="closeEntries" class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
+                <div class="flex items-center gap-2">
+                    @if(!empty($viewing->fields))
+                    <button wire:click="openItem" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style="background:var(--primary)">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Add entry
+                    </button>
+                    @endif
+                    <button wire:click="closeEntries" class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
             </div>
+
+            {{-- Entry editor — built from the collection's field schema --}}
+            @if($editingItemId !== null)
+            <div class="p-5 border-b border-gray-100 dark:border-white/[0.05] bg-gray-50/70 dark:bg-white/[0.02]">
+                <p class="text-xs font-bold uppercase tracking-[.12em] text-gray-400 mb-3">{{ $editingItemId ? 'Edit entry' : 'New entry' }}</p>
+                <div class="grid sm:grid-cols-2 gap-3">
+                    @foreach(($viewing->fields ?? []) as $f)
+                    @php $key = $f['key']; $ftype = $f['type'] ?? 'text'; @endphp
+                    <div class="{{ $ftype === 'textarea' ? 'sm:col-span-2' : '' }}">
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1">{{ $f['label'] ?? $key }}</label>
+                        @if($ftype === 'textarea')
+                            <textarea wire:model="itemForm.{{ $key }}" rows="2" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-none"></textarea>
+                        @elseif($ftype === 'select' && !empty($f['options']))
+                            <select wire:model="itemForm.{{ $key }}" class="w-full px-3 py-2 pr-7 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
+                                <option value="">—</option>
+                                @foreach($f['options'] as $opt)<option value="{{ $opt }}">{{ $opt }}</option>@endforeach
+                            </select>
+                        @else
+                            <input wire:model="itemForm.{{ $key }}" type="{{ in_array($ftype, ['number','url','date','email']) ? $ftype : 'text' }}" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button wire:click="saveItem" class="px-4 py-2 rounded-lg text-xs font-semibold text-white" style="background:var(--primary)">Save entry</button>
+                    <button wire:click="cancelItem" class="px-4 py-2 rounded-lg text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300">Cancel</button>
+                </div>
+            </div>
+            @endif
             <div class="overflow-auto p-2">
                 @if($cols->isEmpty())
                     <p class="p-6 text-sm text-gray-400 text-center">This collection has no fields defined.</p>
@@ -238,7 +275,11 @@
                                     @foreach($cols as $f)
                                         <td class="px-3 py-2 text-gray-700 dark:text-gray-200 align-top max-w-[200px] truncate">{{ data_get($item->data, $f['key']) ?: '—' }}</td>
                                     @endforeach
-                                    <td class="px-3 py-2 text-right">
+                                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                                        <button wire:click="openItem('{{ $item->id }}')"
+                                                class="p-1 rounded text-gray-400 hover:text-indigo-500" title="Edit entry">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        </button>
                                         <button wire:click="deleteItem('{{ $item->id }}')" data-confirm="Delete this entry?"
                                                 class="p-1 rounded text-gray-400 hover:text-red-500" title="Delete entry">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>

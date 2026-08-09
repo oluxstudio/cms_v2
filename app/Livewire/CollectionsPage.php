@@ -77,7 +77,7 @@ class CollectionsPage extends Component
 
     public function closeEntries(): void
     {
-        $this->viewingId = 0;
+        $this->reset(['viewingId', 'editingItemId', 'itemForm']);
     }
 
     public function deleteItem(string $itemId): void
@@ -85,6 +85,46 @@ class CollectionsPage extends Component
         CollectionItem::where('id', $itemId)
             ->whereHas('collection', fn ($q) => $q->where('site_id', $this->site->id))
             ->delete();
+    }
+
+    // ── Entry (collection item) editing ──────────────────────────────────
+
+    public ?string $editingItemId = null;   // null when the item form is closed, '' when adding
+
+    public array $itemForm = [];             // field key => value
+
+    /** Open the entry editor — blank for a new entry, prefilled for an existing one. */
+    public function openItem(?string $itemId = null): void
+    {
+        $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->viewingId);
+        $keys = collect($collection->fields ?? [])->pluck('key')->all();
+
+        if ($itemId) {
+            $item = $collection->items()->findOrFail($itemId);
+            $this->itemForm = collect($keys)->mapWithKeys(fn ($k) => [$k => (string) data_get($item->data, $k, '')])->all();
+        } else {
+            $this->itemForm = collect($keys)->mapWithKeys(fn ($k) => [$k => ''])->all();
+        }
+        $this->editingItemId = $itemId ?? '';
+    }
+
+    public function cancelItem(): void
+    {
+        $this->reset(['editingItemId', 'itemForm']);
+    }
+
+    public function saveItem(): void
+    {
+        $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->viewingId);
+        $keys = collect($collection->fields ?? [])->pluck('key')->all();
+        $data = collect($this->itemForm)->only($keys)->map(fn ($v) => is_string($v) ? trim($v) : $v)->all();
+
+        if ($this->editingItemId) {
+            $collection->items()->findOrFail($this->editingItemId)->update(['data' => $data]);
+        } else {
+            $collection->items()->create(['site_id' => $this->site->id, 'data' => $data, 'status' => 'published']);
+        }
+        $this->reset(['editingItemId', 'itemForm']);
     }
 
     public function openCreate(): void

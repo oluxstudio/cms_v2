@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithLayoutMode;
 use App\Models\Component;
 use App\Models\Node;
 use App\Models\Site;
@@ -16,9 +17,14 @@ use Livewire\Component as LivewireComponent;
  */
 class ComponentsPage extends LivewireComponent
 {
+    use WithLayoutMode;
+
     public Site $site;
 
     public string $search = '';
+
+    /** Active tag filter ('' = all). */
+    public string $filterTag = '';
 
     // Editor state (null = closed, 0 = new)
     public ?string $editingId = null;
@@ -41,6 +47,19 @@ class ComponentsPage extends LivewireComponent
     public function mount(Site $site): void
     {
         $this->site = $site;
+        $this->initLayout('components', 'grid');
+    }
+
+    public function setTag(string $tag): void
+    {
+        $this->filterTag = $this->filterTag === $tag ? '' : $tag;
+    }
+
+    /** Distinct tags across the site's components, for the filter chips. */
+    public function getComponentTagsProperty(): array
+    {
+        return $this->site->contentComponents()->get()
+            ->flatMap(fn ($c) => $c->tags ?? [])->unique()->sort()->values()->all();
     }
 
     private function guard(): void
@@ -58,6 +77,7 @@ class ComponentsPage extends LivewireComponent
         return $this->site->contentComponents()
             ->with(['nodes', 'pages'])
             ->when($this->search !== '', fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
+            ->when($this->filterTag !== '', fn ($q) => $q->whereJsonContains('tags', $this->filterTag))
             ->get();
     }
 
