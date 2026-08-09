@@ -95,3 +95,95 @@ API with a scoped token, or a seeder command) so the CMS and the client agree on
 - To create the manifest the agent returns, either paste it into the CMS admin, or extend
   the `cms:seed-about`-style command per section, or POST it with a **site-scoped API
   token** (Settings → API Keys or the site's API keys panel).
+
+---
+
+# Prompt — create ONE CMS Component (nodes) and render a Vue block from it
+
+Use this when you want a section stored as a reusable **Component** (typed nodes,
+attached to a page) that shows on the CMS "Components" page — instead of page
+attributes. Example target: `components/about/Intro.vue`.
+
+```
+You are working in a Nuxt (Vue) client website that renders content from the Olux CMS.
+Create a CMS COMPONENT (a named bag of typed nodes) for a Vue block, attach it to the
+home page, and refactor the Vue block to render from that component's nodes — with the
+current hardcoded copy kept as fallback so the block never renders empty.
+
+## Fill these in
+- CMS_BASE:  https://cms.oluxstudio.com        (local dev: http://localhost:8000)
+- SITE:      deve-site
+- TOKEN:     <API token with components.manage on SITE — create it in the CMS under
+             Settings → API Keys, or the site's API keys panel; send as Bearer>
+- BLOCK:     components/about/Intro.vue
+- COMPONENT_NAME: "About Intro"
+
+## 1 · Create the component in the CMS (attached to the home page)
+First get the home page id:
+  GET {CMS_BASE}/api/sites/{SITE}/pages           → find the page whose url is "/", note its id
+
+Then create the component with its nodes AND attach it in one call:
+  POST {CMS_BASE}/api/sites/{SITE}/components
+  Headers: Authorization: Bearer {TOKEN}   Content-Type: application/json
+  Body:
+  {
+    "name": "About Intro",
+    "description": "Intro block of the About section",
+    "nodes": [
+      { "label": "subtitle", "type": "text", "value": "From first sketch to final click, we help your vision come alive online." },
+      { "label": "headline", "type": "text", "value": "Turning Bright Ideas into" },
+      { "label": "accent",   "type": "text", "value": "Beautiful Websites" },
+      { "label": "body",     "type": "text", "value": "A modern web studio is a creative and technical partner that designs and builds high-quality, custom digital experiences. We're a small, specialised team focused on creating websites and digital products that are visually striking, high-performing, and conversion-driven." },
+      { "label": "cta",      "type": "text", "value": "See our services" }
+    ],
+    "page_ids": ["<home page id from the step above>"]
+  }
+Node `type` is one of: text, url, image, number, boolean, color, collection.
+(Alternatively create it in the CMS admin: Components → New component → add these nodes
+ → attach to the Home page. Same result.)
+
+## 2 · Let the client read component nodes (it currently only reads attributes/collections)
+The home page payload already includes its components:
+  GET {CMS_BASE}/api/sites/{SITE}/page?url=/  →  page.components[] each with nodes[]{label,type,value}
+The site aggregator (server/api/site-data.get.ts) returns the whole `page`, so
+`data.page.components` is available. Add a helper to composables/useCmsContent.ts:
+
+  /** A component's nodes as a label→value map, or {} when absent. */
+  function componentNodes(name: string): ComputedRef<Record<string, string>> {
+    return computed(() => {
+      const c = (data.value?.page as any)?.components?.find((c: any) => c.name === name)
+      return Object.fromEntries((c?.nodes ?? []).map((n: any) => [n.label, n.value ?? '']))
+    })
+  }
+  // expose it in the return { ... , componentNodes }
+If server/api/site-data.get.ts does not already surface page.components, ensure it
+returns the full `page` object (it fetches /page?url=/ — keep the whole payload, not just attributes).
+
+## 3 · Refactor the Vue block to render from the component (fallback preserved)
+In BLOCK's <script setup>, replace the attr(...) lines with node reads that fall back
+to the current hardcoded copy:
+
+  const { componentNodes } = useCmsContent()
+  const intro = componentNodes('About Intro')
+  const introSubtitle = computed(() => intro.value.subtitle || 'From first sketch to final click, we help your vision come alive online.')
+  const introHeadline  = computed(() => intro.value.headline || 'Turning Bright Ideas into')
+  const introAccent    = computed(() => intro.value.accent   || 'Beautiful Websites')
+  const introBody      = computed(() => intro.value.body     || "A modern web studio is a creative and technical partner that designs and builds high-quality, custom digital experiences. We're a small, specialised team focused on creating websites and digital products that are visually striking, high-performing, and conversion-driven.")
+  const introCta       = computed(() => intro.value.cta      || 'See our services')
+
+The template stays the same ({{ introHeadline }} etc.). Do NOT move behaviour into the CMS.
+
+## 4 · Rendering & verify
+- Keep the block SSR/SSG: useCmsContent uses useAsyncData, so nodes resolve at server/build
+  time. Do not browser-fetch page content.
+- `npm run build` must pass. Run with NUXT_PUBLIC_CMS_BASE + NUXT_PUBLIC_CMS_SITE pointed at the
+  CMS: the block renders from the "About Intro" component; edits to its nodes in the CMS appear
+  within the site-data TTL. Point at an unreachable CMS → it falls back to the hardcoded copy, no error.
+
+## Deliverable
+- The created component (id) attached to the home page, verifiable at
+  {CMS_BASE}/api/sites/{SITE}/page?url=/ (page.components contains "About Intro" with its nodes)
+  and on the CMS Components page.
+- The componentNodes() helper + refactored BLOCK.
+- `npm run build` passes and the CMS-off fallback works.
+```
