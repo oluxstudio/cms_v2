@@ -19,12 +19,12 @@ class MediaStore
         $path = $file->store('media/'.$site->name, 'public');
 
         return Media::create([
-            'site_id'   => $site->id,
-            'name'      => $file->getClientOriginalName(),
-            'file_type' => Media::typeFromMime($file->getMimeType()),
-            'url'       => Storage::url($path),
-            'size'      => Media::humanSize((int) $file->getSize()),
-            'alt_text'  => null,
+            'site_id' => $site->id,
+            'name' => $file->getClientOriginalName(),
+            'file_type' => Media::guessType($file->getClientMimeType() ?: $file->getMimeType(), $file->getClientOriginalName()),
+            'url' => Storage::url($path),
+            'size' => Media::humanSize((int) $file->getSize()),
+            'alt_text' => null,
         ]);
     }
 }

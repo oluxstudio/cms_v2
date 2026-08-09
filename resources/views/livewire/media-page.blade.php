@@ -3,11 +3,15 @@
         'all'      => ['label' => 'All',       'count' => $counts['all']],
         'image'    => ['label' => 'Images',    'count' => $counts['image']],
         'video'    => ['label' => 'Videos',    'count' => $counts['video']],
-        'document' => ['label' => 'Documents', 'count' => $counts['document']],
+        'audio'    => ['label' => 'Audio',     'count' => $counts['audio'] ?? 0],
+        'font'     => ['label' => 'Fonts',     'count' => $counts['font'] ?? 0],
+        'document' => ['label' => 'Others',    'count' => $counts['document']],
     ];
     $typeStyles = [
         'image'    => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-400/10 dark:text-indigo-400',
         'video'    => 'bg-pink-100 text-pink-700 dark:bg-pink-400/10 dark:text-pink-400',
+        'audio'    => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400',
+        'font'     => 'bg-violet-100 text-violet-700 dark:bg-violet-400/10 dark:text-violet-400',
         'document' => 'bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400',
     ];
 @endphp
@@ -49,7 +53,7 @@
          class="relative border-2 border-dashed rounded-2xl mb-6 transition-colors">
 
         <input type="file" wire:model="uploads" multiple x-ref="input" id="media-input"
-               accept="image/*,video/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx,.zip"
+               accept="image/*,video/*,audio/*,.svg,.ttf,.otf,.woff,.woff2,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx,.zip"
                class="hidden">
 
         {{-- Whole panel is a clickable label → opens the file dialog --}}
@@ -113,10 +117,17 @@
             <div wire:click="preview('{{ $item->id }}')" class="{{ $compact ? 'w-9 h-9' : 'w-12 h-12' }} rounded-lg bg-gray-100 dark:bg-white/[0.04] overflow-hidden shrink-0 cursor-pointer relative">
                 @switch($item->file_type)
                     @case('image')
-                        <img src="{{ $item->url }}" alt="{{ $item->alt_text ?: $item->name }}" class="w-full h-full object-cover" loading="lazy">
+                        {{-- SVGs render on a light checker so transparent marks are visible --}}
+                        <img src="{{ $item->url }}" alt="{{ $item->alt_text ?: $item->name }}" class="w-full h-full {{ Str::endsWith(Str::lower($item->name), '.svg') ? 'object-contain p-1 bg-white' : 'object-cover' }}" loading="lazy">
                         @break
                     @case('video')
                         <span class="w-full h-full flex items-center justify-center text-gray-400"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+                        @break
+                    @case('audio')
+                        <span class="w-full h-full flex items-center justify-center text-emerald-500"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l11-2v13M9 19a2 2 0 11-4 0 2 2 0 014 0zm11-2a2 2 0 11-4 0 2 2 0 014 0z"/></svg></span>
+                        @break
+                    @case('font')
+                        <span class="w-full h-full flex items-center justify-center font-extrabold text-violet-500 {{ $compact ? 'text-sm' : 'text-lg' }}">Aa</span>
                         @break
                     @default
                         <span class="w-full h-full flex items-center justify-center text-[9px] uppercase text-gray-400">{{ pathinfo($item->name, PATHINFO_EXTENSION) ?: 'file' }}</span>

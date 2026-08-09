@@ -128,6 +128,8 @@ class MediaPage extends Component
             'all' => (clone $base)->count(),
             'image' => (clone $base)->where('file_type', 'image')->count(),
             'video' => (clone $base)->where('file_type', 'video')->count(),
+            'audio' => (clone $base)->where('file_type', 'audio')->count(),
+            'font' => (clone $base)->where('file_type', 'font')->count(),
             'document' => (clone $base)->where('file_type', 'document')->count(),
         ];
 
@@ -165,7 +167,7 @@ class MediaPage extends Component
     {
         $this->validate([
             'name' => 'required|min:2',
-            'file_type' => 'required|in:image,video,document',
+            'file_type' => 'required|in:'.implode(',', MediaModel::TYPES),
             'url' => 'required',
             'size' => 'nullable|max:20',
             'alt_text' => 'nullable|max:255',

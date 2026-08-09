@@ -88,7 +88,7 @@
                                     <img :src="a.url" :alt="a.alt || a.name" loading="lazy" class="absolute inset-0 w-full h-full object-cover">
                                 </template>
                                 <template x-if="a.type !== 'image'">
-                                    <span class="absolute inset-0 grid place-items-center text-2xl" x-text="a.type === 'video' ? '🎬' : '📄'"></span>
+                                    <span class="absolute inset-0 grid place-items-center text-2xl" x-text="{ video: '🎬', audio: '🎵', font: '🅰', document: '📄' }[a.type] || '📄'"></span>
                                 </template>
                                 <span class="absolute inset-x-0 bottom-0 px-1.5 py-1 text-[10px] font-semibold text-white bg-gradient-to-t from-black/70 to-transparent truncate" x-text="a.name"></span>
                             </button>

@@ -12,7 +12,14 @@ class Media extends Model
     use HasFactory;
     use HasUlids;
 
-    public const TYPES = ['image', 'video', 'document', 'font'];
+    public const TYPES = ['image', 'video', 'audio', 'font', 'document'];
+
+    /** Extension → coarse bucket for types MIME sniffing gets wrong (svg, fonts, audio). */
+    private const EXT_TYPES = [
+        'svg' => 'image', 'webp' => 'image', 'avif' => 'image', 'ico' => 'image',
+        'mp3' => 'audio', 'wav' => 'audio', 'ogg' => 'audio', 'm4a' => 'audio', 'aac' => 'audio', 'flac' => 'audio',
+        'ttf' => 'font', 'otf' => 'font', 'woff' => 'font', 'woff2' => 'font', 'eot' => 'font',
+    ];
 
     protected $fillable = ['site_id', 'site_template_id', 'name', 'file_type', 'url', 'size', 'alt_text'];
 
@@ -70,9 +77,27 @@ class Media extends Model
     /** Map a MIME type to one of our coarse media buckets. */
     public static function typeFromMime(?string $mime): string
     {
+        return static::guessType($mime, null);
+    }
+
+    /**
+     * Coarse media bucket from MIME + filename. Extension wins for the types
+     * MIME sniffing mislabels (SVG often comes back as text/*, fonts as
+     * application/octet-stream), so SVGs preview as images and fonts/audio
+     * get their own category.
+     */
+    public static function guessType(?string $mime, ?string $filename): string
+    {
+        $ext = $filename ? strtolower(pathinfo($filename, PATHINFO_EXTENSION)) : '';
+        if (isset(self::EXT_TYPES[$ext])) {
+            return self::EXT_TYPES[$ext];
+        }
+
         return match (true) {
             $mime !== null && str_starts_with($mime, 'image/') => 'image',
             $mime !== null && str_starts_with($mime, 'video/') => 'video',
+            $mime !== null && str_starts_with($mime, 'audio/') => 'audio',
+            $mime !== null && str_starts_with($mime, 'font/') => 'font',
             default => 'document',
         };
     }
