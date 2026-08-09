@@ -44,7 +44,8 @@ class SiteEmailsPage extends Component
     /** Uploaded logos land in the site's Asset library (so they're re-pickable). */
     public function updatedLogoUpload(): void
     {
-        $this->validate(['logoUpload' => ['image', 'max:4096']]);
+        // NB: the plain `image` rule rejects SVG in Laravel 11 — allow it explicitly.
+        $this->validate(['logoUpload' => ['file', 'mimes:jpg,jpeg,png,gif,webp,avif,svg', 'max:4096']]);
         $media = app(MediaStore::class)->store($this->site, $this->logoUpload);
         $this->logo = $media->publicUrl();
         $this->logoUpload = null;
