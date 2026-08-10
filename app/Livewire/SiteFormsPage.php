@@ -58,6 +58,12 @@ class SiteFormsPage extends Component
      */
     public array $fbFields = [];
 
+    /**
+     * Delivery config draft (deliveryConfig() shape): channels → per-channel
+     * settings. Email is editable; sms/whatsapp are shown disabled until built.
+     */
+    public array $fbDelivery = [];
+
     // ─────────────────────────────────────────────────────────────
     // Response-view state
     // ─────────────────────────────────────────────────────────────
@@ -68,9 +74,22 @@ class SiteFormsPage extends Component
     // Boot
     // ─────────────────────────────────────────────────────────────
 
-    public function mount(Site $site): void
+    public function mount(Site $site, ?string $openResponse = null): void
     {
         $this->site = $site;
+
+        // Deep link from the admin submission-alert email: jump to the specific
+        // response, open it, and mark it read.
+        if ($openResponse) {
+            $response = FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $site->id))
+                ->find($openResponse);
+            if ($response) {
+                $this->activeFormId = $response->form_id;
+                $this->mode = 'responses';
+                $this->openId = $response->id;
+                $response->markAsRead();
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -215,6 +234,7 @@ class SiteFormsPage extends Component
             'description' => trim($this->fbDescription) ?: null,
             'is_active' => $this->fbIsActive,
             'fields' => $this->prepareFieldsForSave($this->fbFields),
+            'delivery' => $this->prepareDeliveryForSave(),
         ];
 
         if ($this->activeFormId) {
@@ -407,7 +427,9 @@ class SiteFormsPage extends Component
                 ->paginate(25);
         }
 
-        return view('livewire.site-forms-page', compact('forms', 'activeForm', 'responses'));
+        $channels = config('form_channels.channels', []);
+
+        return view('livewire.site-forms-page', compact('forms', 'activeForm', 'responses', 'channels'));
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -435,7 +457,34 @@ class SiteFormsPage extends Component
         $this->fbDescription = '';
         $this->fbIsActive = true;
         $this->fbFields = [];
+        $this->fbDelivery = $this->hydrateDelivery(Form::defaultDelivery());
         $this->resetErrorBag();
+    }
+
+    /** Merge a stored/default delivery config into a UI-complete draft (every registry channel present). */
+    private function hydrateDelivery(array $config): array
+    {
+        $channels = $config['channels'] ?? [];
+        $email = array_merge(Form::defaultDelivery()['channels']['email'], $channels['email'] ?? []);
+        $out = ['channels' => ['email' => $email]];
+        foreach (array_keys(config('form_channels.channels', [])) as $key) {
+            if ($key === 'email') {
+                continue;
+            }
+            $out['channels'][$key] = array_merge(['enabled' => false], $channels[$key] ?? []);
+        }
+
+        return $out;
+    }
+
+    /** Normalise the draft for storage: trim the admin address to null when blank. */
+    private function prepareDeliveryForSave(): array
+    {
+        $out = $this->hydrateDelivery($this->fbDelivery);
+        $addr = trim((string) ($out['channels']['email']['admin_address'] ?? ''));
+        $out['channels']['email']['admin_address'] = $addr !== '' ? $addr : null;
+
+        return $out;
     }
 
     private function loadFormIntoBuilder(Form $form): void
@@ -458,6 +507,8 @@ class SiteFormsPage extends Component
                 ? implode(', ', $f['options'])
                 : ($f['options'] ?? ''),
         ])->toArray();
+
+        $this->fbDelivery = $this->hydrateDelivery($form->deliveryConfig());
 
         $this->resetErrorBag();
     }

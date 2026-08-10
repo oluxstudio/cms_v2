@@ -5,16 +5,17 @@ namespace App\Livewire;
 use App\Mail\SubmissionReceipt;
 use App\Models\Site;
 use App\Services\MediaStore;
+use App\Support\EmailTemplate;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 /**
- * Emails page — the site admin edits the branded receipt that every visitor
- * gets on a submission (forms, contact, interest, bookings): subject, body
- * (with {placeholders}) and the logo. Stored as site attributes; consumed by
- * the SubmissionReceipt mailable.
+ * Emails page — the site admin edits the branded receipt every visitor gets on
+ * a submission (forms, contact, interest, bookings): the subject, the logo, and
+ * an ordered set of reorderable/toggleable SECTIONS (greeting, message,
+ * submission summary, footer). Stored as site attributes; consumed by the
+ * SubmissionReceipt mailable, which shares the EmailTemplate engine used here.
  */
 class SiteEmailsPage extends Component
 {
@@ -24,7 +25,8 @@ class SiteEmailsPage extends Component
 
     public string $subject = '';
 
-    public string $body = '';
+    /** @var list<array{key:string,enabled:bool,text:?string}> ordered sections */
+    public array $sections = [];
 
     public string $logo = '';        // stored URL
 
@@ -37,7 +39,7 @@ class SiteEmailsPage extends Component
         abort_unless($site->allows(Auth::user(), 'forms.manage'), 403);
         $this->site = $site;
         $this->subject = (string) $site->getAttr('email.receipt_subject', SubmissionReceipt::defaultSubject());
-        $this->body = (string) $site->getAttr('email.receipt_body', SubmissionReceipt::defaultBody());
+        $this->sections = EmailTemplate::resolveSections($site->getAttr('email.receipt_sections'));
         $this->logo = (string) $site->getAttr('email.logo', '');
     }
 
@@ -57,7 +59,31 @@ class SiteEmailsPage extends Component
     {
         $this->logo = '';
         $this->site->forgetAttr('email.logo');
-        $this->successMessage = 'Logo removed — emails will show the site name instead.';
+        $this->successMessage = 'Logo removed — emails fall back to the app logo.';
+    }
+
+    // ── Section ordering / visibility ──────────────────────────────
+
+    public function moveSectionUp(int $index): void
+    {
+        if ($index <= 0 || ! isset($this->sections[$index])) {
+            return;
+        }
+        [$this->sections[$index - 1], $this->sections[$index]] = [$this->sections[$index], $this->sections[$index - 1]];
+    }
+
+    public function moveSectionDown(int $index): void
+    {
+        if ($index >= count($this->sections) - 1) {
+            return;
+        }
+        [$this->sections[$index], $this->sections[$index + 1]] = [$this->sections[$index + 1], $this->sections[$index]];
+    }
+
+    public function resetTemplate(): void
+    {
+        $this->sections = EmailTemplate::defaultSections();
+        $this->successMessage = 'Template reset to the default layout (not yet saved).';
     }
 
     public function save(): void
@@ -65,39 +91,54 @@ class SiteEmailsPage extends Component
         abort_unless($this->site->allows(Auth::user(), 'forms.manage'), 403);
         $this->validate([
             'subject' => ['required', 'string', 'max:255'],
-            'body' => ['required', 'string', 'max:5000'],
+            'sections' => ['array'],
+            'sections.*.key' => ['required', 'string'],
+            'sections.*.text' => ['nullable', 'string', 'max:5000'],
             'logo' => ['nullable', 'string', 'max:2048'],
         ]);
 
+        // Persist only the canonical shape (drops any stray keys).
+        $clean = collect($this->sections)->map(fn ($s) => [
+            'key' => $s['key'],
+            'enabled' => (bool) ($s['enabled'] ?? true),
+            'text' => in_array($s['key'], EmailTemplate::EDITABLE, true) ? ($s['text'] ?? null) : null,
+        ])->values()->all();
+
         $this->site->setAttr('email.receipt_subject', trim($this->subject));
-        $this->site->setAttr('email.receipt_body', trim($this->body));
+        $this->site->setAttr('email.receipt_sections', json_encode($clean));
         $this->logo === '' ? $this->site->forgetAttr('email.logo') : $this->site->setAttr('email.logo', $this->logo);
 
         $this->successMessage = 'Receipt email saved.';
     }
 
-    /** Live preview: fill placeholders with sample data. */
+    /** Live preview: fill placeholders with sample data through the shared engine. */
     public function getPreviewProperty(): array
     {
-        $sampleFields = ['name' => 'Alex', 'email' => 'alex@example.com', 'phone' => '07700 900123', 'message' => 'Looks great — please get in touch.'];
-        $map = [
-            '{name}' => 'Alex',
-            '{site}' => ucwords(str_replace('-', ' ', $this->site->name)),
-            '{type}' => 'message',
+        $sample = ['name' => 'Alex', 'email' => 'alex@example.com', 'phone' => '07700 900123', 'message' => 'Looks great — please get in touch.'];
+        $ctx = ['name' => 'Alex', 'site' => ucwords(str_replace('-', ' ', $this->site->name)), 'type' => 'message'];
+
+        $sections = collect($this->sections)
+            ->filter(fn ($s) => $s['enabled'] ?? true)
+            ->map(fn ($s) => [
+                'key' => $s['key'],
+                'label' => EmailTemplate::label($s['key']),
+                'text' => ($s['text'] ?? null) !== null ? EmailTemplate::fill($s['text'], $ctx, $sample) : null,
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'subject' => EmailTemplate::fill($this->subject, $ctx, $sample),
+            'sections' => $sections,
+            'sample' => $sample,
         ];
-
-        $fill = function (string $text) use ($map, $sampleFields) {
-            $text = preg_replace_callback('/\{field:\s*([^}]+?)\s*\}/', fn ($m) => $sampleFields[strtolower(trim($m[1]))] ?? '«'.trim($m[1]).'»', $text);
-            $text = str_replace('{fields}', collect($sampleFields)->map(fn ($v, $k) => Str::headline($k).': '.$v)->implode("\n"), $text);
-
-            return strtr($text, $map);
-        };
-
-        return ['subject' => $fill($this->subject), 'body' => $fill($this->body)];
     }
 
     public function render()
     {
-        return view('livewire.site-emails-page');
+        return view('livewire.site-emails-page', [
+            'editableKeys' => EmailTemplate::EDITABLE,
+            'labels' => collect($this->sections)->mapWithKeys(fn ($s) => [$s['key'] => EmailTemplate::label($s['key'])])->all(),
+        ]);
     }
 }

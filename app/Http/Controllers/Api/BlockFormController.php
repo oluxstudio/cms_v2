@@ -7,6 +7,7 @@ use App\Models\Block;
 use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Site;
+use App\Services\FormDelivery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -66,11 +67,16 @@ class BlockFormController extends Controller
                 'is_active' => true,
             ],
         );
-        FormResponse::create([
+        $submitted = collect($fields)->mapWithKeys(fn ($f) => [$f['name'] => $validated[$f['name']] ?? null])
+            ->filter(fn ($v) => $v !== null && $v !== '')->all();
+        $response = FormResponse::create([
             'form_id' => $inbox->id,
-            'fields' => collect($fields)->mapWithKeys(fn ($f) => [$f['name'] => $validated[$f['name']] ?? null])->all(),
+            'fields' => $submitted,
             'ip_address' => $request->ip(),
         ]);
+
+        // BlockKit forms now notify too, through the same delivery channels.
+        app(FormDelivery::class)->deliver($inbox, $response, $submitted);
 
         return response()->json([
             'message' => (string) data_get($form->props, 'success_message', 'Thanks — we got your message.'),

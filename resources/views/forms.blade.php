@@ -1,4 +1,4 @@
 <x-layouts.selected :siteName="$site->name">
     <x-slot:title>Form Responses — {{ $site->name }}</x-slot>
-    <livewire:site-forms-page :site="$site" />
+    <livewire:site-forms-page :site="$site" :openResponse="$openResponse ?? null" />
 </x-layouts.selected>

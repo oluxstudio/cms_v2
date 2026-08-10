@@ -6,7 +6,9 @@ use App\Mail\SubmissionReceipt;
 use App\Models\Form;
 use App\Models\Site;
 use App\Models\User;
+use Illuminate\Http\Testing\File;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 function receiptSite(): array
@@ -67,16 +69,20 @@ test('the receipt uses the admin-edited subject and body', function () {
     expect($rendered)->toContain('Hello Jo — thanks for your message.');
 });
 
-test('the emails editor saves subject, body and requires forms.manage', function () {
+test('the emails editor saves subject + sections and requires forms.manage', function () {
     [$owner, $site] = receiptSite();
 
-    Livewire::actingAs($owner)->test(SiteEmailsPage::class, ['site' => $site])
-        ->set('subject', 'We got it, {name}')
-        ->set('body', 'Hi {name}, thanks!')
+    $component = Livewire::actingAs($owner)->test(SiteEmailsPage::class, ['site' => $site]);
+    // The default sections load; edit the intro copy and save.
+    $sections = $component->get('sections');
+    $introIndex = collect($sections)->search(fn ($s) => $s['key'] === 'intro');
+    $component->set('subject', 'We got it, {name}')
+        ->set("sections.{$introIndex}.text", 'Hi {name}, thanks!')
         ->call('save');
 
-    expect($site->getAttr('email.receipt_subject'))->toBe('We got it, {name}')
-        ->and($site->getAttr('email.receipt_body'))->toBe('Hi {name}, thanks!');
+    expect($site->getAttr('email.receipt_subject'))->toBe('We got it, {name}');
+    $saved = json_decode($site->getAttr('email.receipt_sections'), true);
+    expect(collect($saved)->firstWhere('key', 'intro')['text'])->toBe('Hi {name}, thanks!');
 
     // A member without forms.manage is blocked.
     $outsider = User::factory()->create();
@@ -85,10 +91,10 @@ test('the emails editor saves subject, body and requires forms.manage', function
 
 test('uploading a logo on the emails page stores it in the asset library', function () {
     [$owner, $site] = receiptSite();
-    \Illuminate\Support\Facades\Storage::fake('public');
+    Storage::fake('public');
 
     Livewire::actingAs($owner)->test(SiteEmailsPage::class, ['site' => $site])
-        ->set('logoUpload', \Illuminate\Http\Testing\File::image('logo.png', 120, 40));
+        ->set('logoUpload', File::image('logo.png', 120, 40));
 
     expect($site->media()->count())->toBe(1)               // landed in Assets
         ->and($site->getAttr('email.logo'))->not->toBeEmpty(); // applied to the receipt

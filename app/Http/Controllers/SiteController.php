@@ -240,11 +240,11 @@ class SiteController extends Controller
         return view('submissions', compact('site'));
     }
 
-    public function forms($siteID)
+    public function forms($siteID, $responseId = null)
     {
         $site = $this->findSiteBySlug($siteID);
 
-        return view('forms', compact('site'));
+        return view('forms', ['site' => $site, 'openResponse' => $responseId]);
     }
 
     public function sites()

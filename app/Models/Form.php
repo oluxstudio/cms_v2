@@ -17,13 +17,53 @@ class Form extends Model
     use HasUlids;
 
     protected $fillable = [
-        'site_id', 'name', 'title', 'description', 'fields', 'is_active',
+        'site_id', 'name', 'title', 'description', 'fields', 'delivery', 'is_active',
     ];
 
     protected $casts = [
         'fields' => 'array',
+        'delivery' => 'array',
         'is_active' => 'boolean',
     ];
+
+    /** Default delivery config for a form with none stored yet (email on, both parties notified). */
+    public static function defaultDelivery(): array
+    {
+        return [
+            'channels' => [
+                'email' => [
+                    'enabled' => true,
+                    'notify_visitor' => true,
+                    'notify_admin' => true,
+                    'admin_address' => null,   // null → falls back to the site owner's email
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * The form's delivery config merged over the defaults, so absent/partial
+     * config still behaves like today. Every registry channel is represented.
+     */
+    public function deliveryConfig(): array
+    {
+        $stored = $this->delivery ?? [];
+        $channels = $stored['channels'] ?? [];
+
+        $email = array_merge(self::defaultDelivery()['channels']['email'], $channels['email'] ?? []);
+
+        $out = ['channels' => ['email' => $email]];
+
+        // Carry forward config for not-yet-implemented channels (sms/whatsapp) as stored.
+        foreach (array_keys(config('form_channels.channels', [])) as $key) {
+            if ($key === 'email') {
+                continue;
+            }
+            $out['channels'][$key] = array_merge(['enabled' => false], $channels[$key] ?? []);
+        }
+
+        return $out;
+    }
 
     // ─────────────────────────────────────────────────────────────
     // Relationships

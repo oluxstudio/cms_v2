@@ -255,4 +255,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/invoices/{invoice}/pdf', [SiteController::class, 'invoicePdf'])->middleware(['feature:invoices', 'perm:invoices.view'])->name('site.invoice.pdf');
     Route::get('/{siteID}/submissions', [SiteController::class, 'submissions'])->middleware('perm:forms.view')->name('site.submissions');
     Route::get('/{siteID}/forms', [SiteController::class, 'forms'])->middleware('perm:forms.view')->name('site.forms');
+    // Deep link from the admin submission-alert email — opens a specific response.
+    Route::get('/{siteID}/forms/response/{responseId}', [SiteController::class, 'forms'])->middleware('perm:forms.view')->name('site.forms.response');
 });

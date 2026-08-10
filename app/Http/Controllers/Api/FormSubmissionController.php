@@ -3,14 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\FormSubmissionNotification;
-use App\Mail\SubmissionReceipt;
 use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Site;
+use App\Services\FormDelivery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class FormSubmissionController extends Controller
@@ -64,50 +62,18 @@ class FormSubmissionController extends Controller
             ->filter(fn ($v) => $v !== null && $v !== '')
             ->toArray();
 
-        FormResponse::create([
+        $response = FormResponse::create([
             'form_id' => $form->id,
             'fields' => $fields,
             'ip_address' => $request->ip(),
         ]);
 
-        // ── 5. Email BOTH parties (best-effort — mail never blocks the submission):
-        // the owner hears about every submission; the visitor gets a receipt copy
-        // when the form captured their email address.
-        try {
-            if ($owner = $site->user?->email) {
-                Mail::to($owner)->send(new FormSubmissionNotification($site, $form->name.' form', $fields, url("{$site->name}/forms")));
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
-        try {
-            if ($visitor = $this->visitorEmail($form, $fields)) {
-                Mail::to($visitor)->send(new SubmissionReceipt($site, $form->displayTitle().' form', $fields['name'] ?? null, $fields));
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        // ── 5. Dispatch to the form's enabled delivery channels (email now;
+        // SMS/WhatsApp later). Best-effort — never blocks the submission.
+        app(FormDelivery::class)->deliver($form, $response, $fields);
 
         return response()->json([
             'message' => 'Form submitted successfully. Thank you!',
         ], 201);
-    }
-
-    /** The visitor's email from the submission: an email-typed field, else an email-named one. */
-    private function visitorEmail(Form $form, array $fields): ?string
-    {
-        foreach ((array) ($form->fields ?? []) as $def) {
-            $key = $def['key'] ?? '';
-            if (($def['type'] ?? '') === 'email' && filter_var($fields[$key] ?? '', FILTER_VALIDATE_EMAIL)) {
-                return $fields[$key];
-            }
-        }
-        foreach ($fields as $key => $value) {
-            if (str_contains(strtolower($key), 'email') && filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                return $value;
-            }
-        }
-
-        return null;
     }
 }

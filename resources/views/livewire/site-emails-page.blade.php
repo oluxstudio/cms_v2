@@ -45,12 +45,44 @@
                 @error('subject')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
             </div>
 
-            {{-- Body --}}
+            {{-- Layout / sections — reorder, toggle, and edit each block --}}
             <div>
-                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Body</label>
-                <textarea wire:model.live.debounce.300ms="body" rows="8"
-                          class="w-full px-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-none leading-relaxed"></textarea>
-                @error('body')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Layout</label>
+                    <button wire:click="resetTemplate" type="button" class="text-[11px] font-semibold text-gray-400 hover:text-indigo-500">Reset to default</button>
+                </div>
+
+                <div class="space-y-2">
+                    @foreach ($sections as $index => $section)
+                        <div class="rounded-xl border border-gray-200 dark:border-white/[0.08] p-3
+                                    {{ ($section['enabled'] ?? true) ? '' : 'opacity-55' }}">
+                            <div class="flex items-center gap-2">
+                                <div class="flex flex-col">
+                                    <button wire:click="moveSectionUp({{ $index }})" type="button" @if($index === 0) disabled @endif
+                                            class="text-gray-400 hover:text-gray-700 disabled:opacity-30 leading-none">▲</button>
+                                    <button wire:click="moveSectionDown({{ $index }})" type="button" @if($index === count($sections) - 1) disabled @endif
+                                            class="text-gray-400 hover:text-gray-700 disabled:opacity-30 leading-none">▼</button>
+                                </div>
+                                <span class="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ $labels[$section['key']] ?? $section['key'] }}</span>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" wire:model.live="sections.{{ $index }}.enabled" class="sr-only peer">
+                                    <span class="relative h-5 w-9 rounded-full bg-gray-300 dark:bg-white/20 peer-checked:bg-indigo-600 transition-colors
+                                                 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+                                </label>
+                            </div>
+
+                            @if (in_array($section['key'], $editableKeys, true))
+                                <textarea wire:model.live.debounce.300ms="sections.{{ $index }}.text" rows="{{ $section['key'] === 'greeting' ? 1 : 3 }}"
+                                          class="mt-2 w-full px-3 py-2 text-sm rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-none leading-relaxed"></textarea>
+                            @elseif ($section['key'] === 'logo')
+                                <p class="mt-2 text-[11px] text-gray-400">Shows your logo above — or the app logo if none is set.</p>
+                            @elseif ($section['key'] === 'summary')
+                                <p class="mt-2 text-[11px] text-gray-400">Automatically lists everything the visitor submitted.</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
                 <p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
                     Placeholders:
                     @foreach(['{name}', '{site}', '{type}', '{field:email}', '{fields}'] as $ph)
@@ -58,7 +90,7 @@
                     @endforeach
                     <br>
                     <b>{field:key}</b> inserts one submitted value (e.g. <code class="px-1 rounded bg-gray-100 dark:bg-white/[0.06]">{field:phone}</code>);
-                    <b>{fields}</b> lists everything they submitted. A summary is also appended automatically.
+                    <b>{fields}</b> lists everything they submitted.
                 </p>
             </div>
 
@@ -78,17 +110,35 @@
                 </div>
                 <div class="bg-[#f3f4f6] p-5">
                     <div class="max-w-md mx-auto bg-white rounded-2xl overflow-hidden shadow-sm">
-                        <div class="px-6 py-4 border-b border-gray-100">
-                            @if($logo)<img src="{{ $logo }}" alt="logo" class="h-8 object-contain">@else<span class="text-lg font-extrabold text-gray-900">{{ ucwords(str_replace('-', ' ', $site->name)) }}</span>@endif
-                        </div>
-                        <div class="px-6 py-5 text-[13px] leading-relaxed text-gray-700 whitespace-pre-line">{{ $this->preview['body'] }}</div>
-                        <div class="px-6 pb-5">
-                            <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">What you sent</p>
-                                <p class="text-[12px] text-gray-600"><b>Name:</b> Alex · <b>Email:</b> alex@example.com</p>
-                            </div>
-                        </div>
-                        <div class="px-6 py-3 border-t border-gray-100 text-[11px] text-gray-400">Sent by {{ ucwords(str_replace('-', ' ', $site->name)) }}.</div>
+                        @php $siteName = ucwords(str_replace('-', ' ', $site->name)); @endphp
+                        @foreach ($this->preview['sections'] as $section)
+                            @switch($section['key'])
+                                @case('logo')
+                                    <div class="px-6 py-4 border-b border-gray-100">
+                                        @if($logo)<img src="{{ $logo }}" alt="logo" class="h-8 object-contain">@else<span class="text-lg font-extrabold text-gray-900">{{ $siteName }}</span>@endif
+                                    </div>
+                                    @break
+                                @case('greeting')
+                                    <div class="px-6 pt-5 pb-1 text-[14px] font-semibold text-gray-900 whitespace-pre-line">{{ $section['text'] }}</div>
+                                    @break
+                                @case('intro')
+                                    <div class="px-6 py-2 text-[13px] leading-relaxed text-gray-700 whitespace-pre-line">{{ $section['text'] }}</div>
+                                    @break
+                                @case('summary')
+                                    <div class="px-6 py-3">
+                                        <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">What you sent</p>
+                                            @foreach ($this->preview['sample'] as $k => $v)
+                                                <p class="text-[12px] text-gray-600"><b>{{ \Illuminate\Support\Str::headline($k) }}:</b> {{ $v }}</p>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @break
+                                @case('footer')
+                                    <div class="px-6 py-3 border-t border-gray-100 text-[11px] text-gray-400 whitespace-pre-line">{{ $section['text'] }}</div>
+                                    @break
+                            @endswitch
+                        @endforeach
                     </div>
                 </div>
             </div>

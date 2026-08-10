@@ -3,20 +3,20 @@
 namespace App\Mail;
 
 use App\Models\Site;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Str;
 
 /**
- * The one branded "we received your submission" email sent to the VISITOR
- * for every submission type (forms, contact, interest, bookings). Subject +
- * body are edited by the site admin on the Emails page (site attributes
- * email.receipt_subject / email.receipt_body) with {placeholders}, and the
- * site logo + name brand the message. A summary of what was submitted is
- * appended automatically.
+ * The one branded "we received your submission" email sent to the VISITOR for
+ * every submission type (forms, contact, interest, bookings). The subject and
+ * an ordered set of reorderable/toggleable sections (greeting, message,
+ * submission summary, footer, logo) are edited by the site admin on the Emails
+ * page (site attributes email.receipt_subject / email.receipt_sections) with
+ * {placeholders}. The admin's logo brands it, falling back to the app logo.
  */
 class SubmissionReceipt extends Mailable
 {
@@ -38,67 +38,70 @@ class SubmissionReceipt extends Mailable
         return 'We received your {type} — {site}';
     }
 
+    /** @deprecated body copy now lives in EmailTemplate sections; kept for back-compat. */
     public static function defaultBody(): string
     {
-        return "Hi {name},\n\nThanks for reaching out to {site}. We've received your {type} and someone will get back to you shortly.\n\n— The {site} team";
+        return "Hi {name},\n\nThanks for reaching out to {site}. We've received your {type} and someone will get back to you shortly.";
     }
 
-    private function placeholders(): array
+    private function ctx(): array
     {
         return [
-            '{name}' => $this->recipientName ?: 'there',
-            '{site}' => ucwords(str_replace('-', ' ', $this->site->name)),
-            '{type}' => $this->type,
+            'name' => $this->recipientName,
+            'site' => ucwords(str_replace('-', ' ', $this->site->name)),
+            'type' => $this->type,
         ];
-    }
-
-    /** A submitted value by field key (case-insensitive); arrays joined. */
-    private function fieldValue(string $key): string
-    {
-        foreach ($this->summary as $k => $v) {
-            if (strcasecmp((string) $k, $key) === 0) {
-                return is_array($v) ? implode(', ', $v) : (string) $v;
-            }
-        }
-
-        return '';
-    }
-
-    /** All submitted fields as "Label: value" lines (for the {fields} token). */
-    private function fieldsBlock(): string
-    {
-        return collect($this->summary)
-            ->map(fn ($v, $k) => Str::headline((string) $k).': '.(is_array($v) ? implode(', ', $v) : $v))
-            ->implode("\n");
-    }
-
-    /**
-     * Resolve placeholders: {name}/{site}/{type}, {field:<key>} for a single
-     * submitted value, and {fields} for the whole submission.
-     */
-    private function fill(string $text): string
-    {
-        $text = preg_replace_callback('/\{field:\s*([^}]+?)\s*\}/', fn ($m) => $this->fieldValue($m[1]), $text);
-        $text = str_replace('{fields}', $this->fieldsBlock(), $text);
-
-        return strtr($text, $this->placeholders());
     }
 
     public function envelope(): Envelope
     {
         $subject = (string) $this->site->getAttr('email.receipt_subject', self::defaultSubject());
 
-        return new Envelope(subject: $this->fill($subject));
+        return new Envelope(subject: EmailTemplate::fill($subject, $this->ctx(), $this->summary));
     }
 
     public function content(): Content
     {
-        $body = (string) $this->site->getAttr('email.receipt_body', self::defaultBody());
+        // Back-compat: a site that customised the legacy single "body" (before
+        // sections existed) and hasn't touched the new editor keeps that copy,
+        // shown as the intro section.
+        $stored = $this->site->getAttr('email.receipt_sections');
+        if (empty($stored) && ($legacyBody = $this->site->getAttr('email.receipt_body'))) {
+            $stored = collect(EmailTemplate::defaultSections())->map(function ($s) use ($legacyBody) {
+                if ($s['key'] === 'intro') {
+                    $s['text'] = $legacyBody;
+                }
+                if ($s['key'] === 'greeting') {
+                    $s['enabled'] = false; // the legacy body already included its own greeting
+                }
+
+                return $s;
+            })->all();
+        }
+
+        // Resolve the admin's ordered sections and fill placeholders in the
+        // editable ones so the view just renders finished text.
+        $sections = collect(EmailTemplate::resolveSections($stored))
+            ->filter(fn ($s) => $s['enabled'])
+            ->map(function ($s) {
+                if ($s['text'] !== null) {
+                    $s['text'] = EmailTemplate::fill($s['text'], $this->ctx(), $this->summary);
+                }
+
+                return $s;
+            })
+            ->values()
+            ->all();
+
+        // Admin's uploaded logo (a URL) wins; otherwise fall back to the app
+        // brand mark, served from a stable public URL so every mail client
+        // loads it like any other image.
+        $logo = $this->site->getAttr('email.logo') ?: asset('images/olux-logo.png');
 
         return new Content(view: 'emails.branded-receipt', with: [
             'site' => $this->site,
-            'logo' => $this->site->getAttr('email.logo') ?: null,
-            'body' => $this->fill($body),
+            'logo' => $logo,
+            'sections' => $sections,
             'summary' => $this->summary,
         ]);
     }
