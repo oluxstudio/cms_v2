@@ -48,6 +48,13 @@ class SiteAppExporter
         File::ensureDirectoryExists($work.'/public');
         File::put($work.'/public/content.json', json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
+        // 2b · Bake the analytics beacon target so the exported site self-tracks
+        //      (read by app/plugins/track.client.ts).
+        File::put($work.'/public/analytics-config.json', json_encode([
+            'trackBase' => rtrim((string) config('analytics.track_base'), '/'),
+            'site' => $site->name,
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
         // 3 · The site's media files — root-relative /storage/media/... URLs
         //     keep working when served from the app's own public dir.
         $media = public_path('storage/media/'.$site->name);

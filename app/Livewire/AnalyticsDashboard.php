@@ -3,44 +3,81 @@
 namespace App\Livewire;
 
 use App\Models\Site;
+use App\Services\VisitAnalytics;
 use Livewire\Component;
 
 class AnalyticsDashboard extends Component
 {
     public Site $site;
 
-    public array $channelData = [
-        ['name' => 'Email',    'value' => 5,  'color' => '#f5c842'],
-        ['name' => 'Referal',  'value' => 12, 'color' => '#4fffdc'],
-        ['name' => 'Organic',  'value' => 8,  'color' => '#7b5cf6'],
-        ['name' => 'Direct',   'value' => 6,  'color' => '#f5697b'],
-        ['name' => 'Campaign', 'value' => 8,  'color' => '#4fbfff'],
-    ];
+    /** 7d | 30d | 90d | all */
+    public string $range = '30d';
 
-    public array $deviceData = [
-        ['name' => 'Desktops', 'value' => 12843, 'day' => -3, 'week' => -3, 'color' => '#4fffdc'],
-        ['name' => 'Tablets',  'value' => 6843,  'day' => -5, 'week' => -5, 'color' => '#4fbfff'],
-        ['name' => 'Mobiles',  'value' => 843,   'day' => -8, 'week' => -8, 'color' => '#7b5cf6'],
-    ];
+    /** Show 20 vs 10 traffic sources. */
+    public bool $allSources = false;
 
-    public array $countryData = [
-        'US' => 25234, 'IN' => 15234, 'CN' => 11234, 'GB' => 12345,
-        'CA' => 9876,  'JP' => 7890,  'DE' => 8432,  'FR' => 7621,
-        'BR' => 6543,  'AU' => 5432,  'RU' => 5678,  'KR' => 4321,
-        'MX' => 4567,  'IT' => 4230,  'ID' => 4560,  'TR' => 3340,
-        'NG' => 3456,  'SG' => 3456,  'NL' => 3765,  'ES' => 3120,
-        'SA' => 2760,  'SE' => 2890,  'MY' => 2890,  'TH' => 2870,
-        'AE' => 2987,  'ZA' => 2345,  'PL' => 2100,  'VN' => 2340,
-        'AR' => 3210,  'UA' => 1890,  'PK' => 1980,  'PH' => 1760,
-    ];
+    /** Theme palette cycled through the charts. */
+    private const PALETTE = ['#4fffdc', '#4fbfff', '#7b5cf6', '#f5697b', '#f5c842', '#d9f068', '#f97316', '#33245c', '#173a5e', '#e6d6c6'];
 
     public function mount(Site $site): void
     {
         $this->site = $site;
     }
 
+    public function setRange(string $range): void
+    {
+        $this->range = in_array($range, ['7d', '30d', '90d', 'all'], true) ? $range : '30d';
+        // Server-rendered tiles/tables refresh via Livewire; the wire:ignore
+        // charts update in place from this event.
+        $this->dispatch('analytics-updated', charts: $this->chartData());
+    }
+
+    public function toggleSources(): void
+    {
+        $this->allSources = ! $this->allSources;
+    }
+
+    /** Map a [label => count] list to {labels, series, colors} for a chart. */
+    private function series(array $counts): array
+    {
+        $labels = array_keys($counts);
+
+        return [
+            'labels' => array_map(fn ($l) => (string) $l, $labels),
+            'series' => array_map('intval', array_values($counts)),
+            'colors' => array_map(fn ($i) => self::PALETTE[$i % count(self::PALETTE)], array_keys($labels)),
+        ];
+    }
+
+    /** Just the chart datasets (for the live-update event). */
+    private function chartData(): array
+    {
+        $a = new VisitAnalytics($this->site, $this->range);
+
+        return [
+            'country' => $a->byCountry(),
+            'device' => $this->series($a->byDevice()),
+            'os' => $this->series($a->byOs()),
+            'channel' => $this->series($a->bySource()),
+        ];
+    }
+
     public function render()
     {
-        return view('livewire.analytics-dashboard');
+        $a = new VisitAnalytics($this->site, $this->range);
+        $totals = $a->totals();
+        $charts = $this->chartData();
+        $referrers = $a->topReferrers($this->allSources ? 20 : 10);
+        $geo = $a->geoBreakdown();
+
+        return view('livewire.analytics-dashboard', [
+            'totals' => $totals,
+            'charts' => $charts,
+            'referrers' => $referrers,
+            'browsers' => $a->byBrowser(),
+            'geo' => $geo,
+            'topPages' => $a->topPages(),
+            'hasData' => $totals['visits'] > 0,
+        ]);
     }
 }

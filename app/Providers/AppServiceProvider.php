@@ -77,6 +77,8 @@ class AppServiceProvider extends ServiceProvider
         $limiter::for('leads', fn ($request) => Limit::perMinute(10)->by($request->ip()));
         $limiter::for('booking-write', fn ($request) => Limit::perMinute(6)->by($request->ip()));
         $limiter::for('engagement', fn ($request) => Limit::perMinute(30)->by($request->ip()));
+        // Visitor-tracking beacon — page views can be frequent per visitor.
+        $limiter::for('track', fn ($request) => Limit::perMinute(120)->by($request->ip()));
         $limiter::for('token-api', function ($request) {
             $token = ApiToken::findByBearer($request->bearerToken());
 

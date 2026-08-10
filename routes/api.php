@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\PostApiController;
 use App\Http\Controllers\Api\SiteContentController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\TemplatePreviewController;
+use App\Http\Controllers\Api\VisitTrackController;
 use App\Models\Site;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,10 @@ use Illuminate\Support\Facades\Route;
 
 // ── Public metadata (enum vocabularies for API / MCP clients)
 Route::get('/meta', [MetaController::class, 'show'])->name('api.meta');
+
+// ── Visitor analytics beacon (client sites ping this on every page view)
+Route::post('/sites/{siteName}/track', [VisitTrackController::class, 'store'])
+    ->middleware(['throttle:track', 'site.origin'])->name('api.track');
 
 // ── Public media library
 // GET /api/media                        → all public media (filter: type, search, site, per_page)
