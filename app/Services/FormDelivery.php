@@ -58,6 +58,7 @@ class FormDelivery
                     $form->displayTitle().' form',
                     $fields['name'] ?? null,
                     $fields,
+                    $form,   // use this form's own template when it has one
                 ));
             } catch (\Throwable $e) {
                 report($e);

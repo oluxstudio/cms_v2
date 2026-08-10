@@ -17,12 +17,13 @@ class Form extends Model
     use HasUlids;
 
     protected $fillable = [
-        'site_id', 'name', 'title', 'description', 'fields', 'delivery', 'is_active',
+        'site_id', 'name', 'title', 'description', 'fields', 'delivery', 'email_template', 'is_active',
     ];
 
     protected $casts = [
         'fields' => 'array',
         'delivery' => 'array',
+        'email_template' => 'array',
         'is_active' => 'boolean',
     ];
 

@@ -149,6 +149,74 @@ test('reordering/disabling sections changes the rendered receipt', function () {
     expect($html)->not->toContain('What you sent');   // summary suppressed
 });
 
+test('a form with its own template uses it instead of the site default', function () {
+    [$owner, $site] = deliverySite();
+    // Site default subject.
+    $site->setAttr('email.receipt_subject', 'Site default subject');
+    $form = deliveryForm($site, null);
+    $form->update(['email_template' => [
+        'customized' => true,
+        'subject' => 'Custom subject for {site}',
+        'sections' => [
+            ['key' => 'logo', 'enabled' => true, 'text' => null],
+            ['key' => 'intro', 'enabled' => true, 'text' => 'This form has its OWN wording, {name}.'],
+        ],
+    ]]);
+
+    $mail = new SubmissionReceipt($site, 'Enquiry form', 'Jo', ['name' => 'Jo'], $form->fresh());
+    expect($mail->envelope()->subject)->toContain('Custom subject');
+    expect($mail->render())->toContain('This form has its OWN wording, Jo.')
+        ->and($mail->render())->not->toContain('Site default subject');
+});
+
+test('a form without a custom template falls back to the site default', function () {
+    [$owner, $site] = deliverySite();
+    $site->setAttr('email.receipt_subject', 'Site default subject {site}');
+    $form = deliveryForm($site, null); // no email_template
+
+    $mail = new SubmissionReceipt($site, 'Enquiry form', 'Jo', ['name' => 'Jo'], $form);
+    expect($mail->envelope()->subject)->toContain('Site default subject');
+});
+
+test('the form builder seeds the template from the site default and saves a customised one', function () {
+    [$owner, $site] = deliverySite();
+    $site->setAttr('email.receipt_subject', 'Seed subject {site}');
+    $form = deliveryForm($site);
+
+    $component = Livewire::actingAs($owner)->test(SiteFormsPage::class, ['site' => $site])
+        ->call('goEdit', $form->id);
+
+    // Seeded from the site default, not yet customised.
+    expect($component->get('fbTemplate.customized'))->toBeFalse()
+        ->and($component->get('fbTemplate.subject'))->toContain('Seed subject');
+
+    $sections = $component->get('fbTemplate.sections');
+    $introIndex = collect($sections)->search(fn ($s) => $s['key'] === 'intro');
+
+    $component->set('fbTemplate.customized', true)
+        ->set('fbTemplate.subject', 'Only for this form')
+        ->set("fbTemplate.sections.{$introIndex}.text", 'Form-specific hello')
+        ->call('saveForm');
+
+    $tpl = $form->fresh()->email_template;
+    expect($tpl['customized'])->toBeTrue()
+        ->and($tpl['subject'])->toBe('Only for this form')
+        ->and(collect($tpl['sections'])->firstWhere('key', 'intro')['text'])->toBe('Form-specific hello');
+});
+
+test('turning customisation off stores no per-form template (uses site default)', function () {
+    [$owner, $site] = deliverySite();
+    $form = deliveryForm($site, null);
+    $form->update(['email_template' => ['customized' => true, 'subject' => 'x', 'sections' => []]]);
+
+    Livewire::actingAs($owner)->test(SiteFormsPage::class, ['site' => $site])
+        ->call('goEdit', $form->id)
+        ->set('fbTemplate.customized', false)
+        ->call('saveForm');
+
+    expect($form->fresh()->email_template)->toBeNull();
+});
+
 test('the receipt falls back to the app logo when none is set', function () {
     [$owner, $site] = deliverySite();
     // No email.logo attribute → the branded view embeds the app logo (a cid).

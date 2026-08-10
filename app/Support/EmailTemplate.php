@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Form;
+use App\Models\Site;
 use Illuminate\Support\Str;
 
 /**
@@ -17,6 +19,61 @@ class EmailTemplate
 {
     /** Section keys whose body text the admin edits (logo + summary render dynamically). */
     public const EDITABLE = ['greeting', 'intro', 'footer'];
+
+    public static function defaultSubject(): string
+    {
+        return 'We received your {type} — {site}';
+    }
+
+    /**
+     * The SITE-WIDE default template (subject + sections): what forms fall back
+     * to and what contact/booking/interest receipts use. Honours the legacy
+     * single `email.receipt_body` for sites that customised it before sections.
+     *
+     * @return array{subject:string,sections:list<array{key:string,enabled:bool,text:?string}>}
+     */
+    public static function siteDefault(Site $site): array
+    {
+        $stored = $site->getAttr('email.receipt_sections');
+
+        if (empty($stored) && ($legacyBody = $site->getAttr('email.receipt_body'))) {
+            $stored = collect(self::defaultSections())->map(function ($s) use ($legacyBody) {
+                if ($s['key'] === 'intro') {
+                    $s['text'] = $legacyBody;
+                }
+                if ($s['key'] === 'greeting') {
+                    $s['enabled'] = false; // the legacy body already included its own greeting
+                }
+
+                return $s;
+            })->all();
+        }
+
+        return [
+            'subject' => (string) $site->getAttr('email.receipt_subject', self::defaultSubject()),
+            'sections' => self::resolveSections($stored),
+        ];
+    }
+
+    /**
+     * The template to use for a submission: the form's own customised template
+     * when set, otherwise the site default. A null form (contact/booking/etc.)
+     * always uses the site default.
+     *
+     * @return array{subject:string,sections:list<array{key:string,enabled:bool,text:?string}>}
+     */
+    public static function forForm(?Form $form, Site $site): array
+    {
+        $tpl = $form?->email_template;
+        if (is_array($tpl) && ! empty($tpl['customized'])) {
+            return [
+                'subject' => (string) ($tpl['subject'] ?? self::defaultSubject()),
+                'sections' => self::resolveSections($tpl['sections'] ?? null),
+            ];
+        }
+
+        return self::siteDefault($site);
+    }
 
     /**
      * The default template — order + enabled + default copy. Editing/reordering

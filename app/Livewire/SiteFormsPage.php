@@ -6,6 +6,7 @@ use App\Models\Contact;
 use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Site;
+use App\Support\EmailTemplate;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -63,6 +64,13 @@ class SiteFormsPage extends Component
      * settings. Email is editable; sms/whatsapp are shown disabled until built.
      */
     public array $fbDelivery = [];
+
+    /**
+     * Per-form receipt template draft: ['customized'=>bool, 'subject'=>string,
+     * 'sections'=>[...]]. Seeded from the site default; when `customized` is
+     * false the form uses the site-wide template.
+     */
+    public array $fbTemplate = [];
 
     // ─────────────────────────────────────────────────────────────
     // Response-view state
@@ -235,6 +243,7 @@ class SiteFormsPage extends Component
             'is_active' => $this->fbIsActive,
             'fields' => $this->prepareFieldsForSave($this->fbFields),
             'delivery' => $this->prepareDeliveryForSave(),
+            'email_template' => $this->prepareTemplateForSave(),
         ];
 
         if ($this->activeFormId) {
@@ -428,8 +437,11 @@ class SiteFormsPage extends Component
         }
 
         $channels = config('form_channels.channels', []);
+        $tplLabels = collect($this->fbTemplate['sections'] ?? [])->mapWithKeys(fn ($s) => [$s['key'] => EmailTemplate::label($s['key'])])->all();
+        $editableKeys = EmailTemplate::EDITABLE;
+        $siteLogo = (string) $this->site->getAttr('email.logo', '');
 
-        return view('livewire.site-forms-page', compact('forms', 'activeForm', 'responses', 'channels'));
+        return view('livewire.site-forms-page', compact('forms', 'activeForm', 'responses', 'channels', 'tplLabels', 'editableKeys', 'siteLogo'));
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -458,7 +470,101 @@ class SiteFormsPage extends Component
         $this->fbIsActive = true;
         $this->fbFields = [];
         $this->fbDelivery = $this->hydrateDelivery(Form::defaultDelivery());
+        $this->fbTemplate = $this->seedTemplate(null);
         $this->resetErrorBag();
+    }
+
+    /**
+     * Build the template draft: a customised form template when present, else
+     * the site default (pre-filled so the admin can start editing straight away).
+     */
+    private function seedTemplate(?Form $form): array
+    {
+        $tpl = $form?->email_template;
+        if (is_array($tpl) && ! empty($tpl['customized'])) {
+            return [
+                'customized' => true,
+                'subject' => (string) ($tpl['subject'] ?? EmailTemplate::defaultSubject()),
+                'sections' => EmailTemplate::resolveSections($tpl['sections'] ?? null),
+            ];
+        }
+
+        $default = EmailTemplate::siteDefault($this->site);
+
+        return [
+            'customized' => false,
+            'subject' => $default['subject'],
+            'sections' => $default['sections'],
+        ];
+    }
+
+    public function moveTplSectionUp(int $index): void
+    {
+        if ($index <= 0 || ! isset($this->fbTemplate['sections'][$index])) {
+            return;
+        }
+        [$this->fbTemplate['sections'][$index - 1], $this->fbTemplate['sections'][$index]]
+            = [$this->fbTemplate['sections'][$index], $this->fbTemplate['sections'][$index - 1]];
+    }
+
+    public function moveTplSectionDown(int $index): void
+    {
+        if ($index >= count($this->fbTemplate['sections']) - 1) {
+            return;
+        }
+        [$this->fbTemplate['sections'][$index], $this->fbTemplate['sections'][$index + 1]]
+            = [$this->fbTemplate['sections'][$index + 1], $this->fbTemplate['sections'][$index]];
+    }
+
+    /** Re-seed the template draft from the current site default. */
+    public function resetTemplateToSiteDefault(): void
+    {
+        $default = EmailTemplate::siteDefault($this->site);
+        $this->fbTemplate['subject'] = $default['subject'];
+        $this->fbTemplate['sections'] = $default['sections'];
+    }
+
+    /** Store null when not customised (→ site default), else the cleaned template. */
+    private function prepareTemplateForSave(): ?array
+    {
+        if (empty($this->fbTemplate['customized'])) {
+            return null;
+        }
+
+        $sections = collect($this->fbTemplate['sections'] ?? [])->map(fn ($s) => [
+            'key' => $s['key'],
+            'enabled' => (bool) ($s['enabled'] ?? true),
+            'text' => in_array($s['key'], EmailTemplate::EDITABLE, true) ? ($s['text'] ?? null) : null,
+        ])->values()->all();
+
+        return [
+            'customized' => true,
+            'subject' => trim((string) ($this->fbTemplate['subject'] ?? '')) ?: EmailTemplate::defaultSubject(),
+            'sections' => $sections,
+        ];
+    }
+
+    /** Live preview of the form's receipt with sample data. */
+    public function getTemplatePreviewProperty(): array
+    {
+        $sample = ['name' => 'Alex', 'email' => 'alex@example.com', 'phone' => '07700 900123', 'message' => 'Looks great — please get in touch.'];
+        $ctx = ['name' => 'Alex', 'site' => ucwords(str_replace('-', ' ', $this->site->name)), 'type' => ($this->fbTitle ?: 'form').' form'];
+
+        $sections = collect($this->fbTemplate['sections'] ?? [])
+            ->filter(fn ($s) => $s['enabled'] ?? true)
+            ->map(fn ($s) => [
+                'key' => $s['key'],
+                'label' => EmailTemplate::label($s['key']),
+                'text' => ($s['text'] ?? null) !== null ? EmailTemplate::fill($s['text'], $ctx, $sample) : null,
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'subject' => EmailTemplate::fill((string) ($this->fbTemplate['subject'] ?? ''), $ctx, $sample),
+            'sections' => $sections,
+            'sample' => $sample,
+        ];
     }
 
     /** Merge a stored/default delivery config into a UI-complete draft (every registry channel present). */
@@ -509,6 +615,7 @@ class SiteFormsPage extends Component
         ])->toArray();
 
         $this->fbDelivery = $this->hydrateDelivery($form->deliveryConfig());
+        $this->fbTemplate = $this->seedTemplate($form);
 
         $this->resetErrorBag();
     }

@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Form;
 use App\Models\Site;
 use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
@@ -25,17 +26,19 @@ class SubmissionReceipt extends Mailable
     /**
      * @param  string  $type  human label for the submission, e.g. "message", "booking", "Contact form"
      * @param  array<string,mixed>  $summary  submitted key => value pairs (optional)
+     * @param  ?Form  $form  the source form — used to pick its own template (null → site default)
      */
     public function __construct(
         public Site $site,
         public string $type,
         public ?string $recipientName = null,
         public array $summary = [],
+        public ?Form $form = null,
     ) {}
 
     public static function defaultSubject(): string
     {
-        return 'We received your {type} — {site}';
+        return EmailTemplate::defaultSubject();
     }
 
     /** @deprecated body copy now lives in EmailTemplate sections; kept for back-compat. */
@@ -55,33 +58,16 @@ class SubmissionReceipt extends Mailable
 
     public function envelope(): Envelope
     {
-        $subject = (string) $this->site->getAttr('email.receipt_subject', self::defaultSubject());
+        $subject = EmailTemplate::forForm($this->form, $this->site)['subject'];
 
         return new Envelope(subject: EmailTemplate::fill($subject, $this->ctx(), $this->summary));
     }
 
     public function content(): Content
     {
-        // Back-compat: a site that customised the legacy single "body" (before
-        // sections existed) and hasn't touched the new editor keeps that copy,
-        // shown as the intro section.
-        $stored = $this->site->getAttr('email.receipt_sections');
-        if (empty($stored) && ($legacyBody = $this->site->getAttr('email.receipt_body'))) {
-            $stored = collect(EmailTemplate::defaultSections())->map(function ($s) use ($legacyBody) {
-                if ($s['key'] === 'intro') {
-                    $s['text'] = $legacyBody;
-                }
-                if ($s['key'] === 'greeting') {
-                    $s['enabled'] = false; // the legacy body already included its own greeting
-                }
-
-                return $s;
-            })->all();
-        }
-
-        // Resolve the admin's ordered sections and fill placeholders in the
-        // editable ones so the view just renders finished text.
-        $sections = collect(EmailTemplate::resolveSections($stored))
+        // The form's own template when it has one, else the site default.
+        // Fill placeholders in the editable sections so the view just renders.
+        $sections = collect(EmailTemplate::forForm($this->form, $this->site)['sections'])
             ->filter(fn ($s) => $s['enabled'])
             ->map(function ($s) {
                 if ($s['text'] !== null) {
