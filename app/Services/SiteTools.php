@@ -2,15 +2,14 @@
 
 namespace App\Services;
 
+use App\Mail\ModuleCreatedNotification;
 use App\Models\Collection;
 use App\Models\Page;
-use App\Models\Product;
 use App\Models\Site;
 use App\Models\User;
-use App\Mail\ModuleCreatedNotification;
 use App\Modules\ModuleRegistry;
 use App\Services\Modules\DeclarativeModuleEngine;
-use App\Templates\TemplateRegistry;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -34,7 +33,7 @@ class SiteTools
     public function definitions(Site $site, User $user): array
     {
         $canManage = $site->canManageTeam($user);
-        $hasStore  = $site->hasFeature('store');
+        $hasStore = $site->hasFeature('store');
 
         $tools = [
             $this->tool('site_info', 'Get detailed information about the site: name, slug, description, creation date, URL, enabled features, team size, and overall counts.', []),
@@ -50,32 +49,28 @@ class SiteTools
             ], ['name']),
 
             $this->tool('publish_page', 'Publish or unpublish a page.', [
-                'page'      => ['type' => 'string', 'description' => 'Page name or URL.'],
+                'page' => ['type' => 'string', 'description' => 'Page name or URL.'],
                 'published' => ['type' => 'boolean', 'description' => 'true to publish, false to unpublish.'],
             ], ['page', 'published']),
 
-
-
-
-
             $this->tool('create_form', 'Create a form for collecting submissions.', [
-                'name'  => ['type' => 'string'],
+                'name' => ['type' => 'string'],
                 'title' => ['type' => 'string', 'description' => 'Optional public title.'],
             ], ['name']),
 
             $this->tool('add_form_field', 'Add a field to an existing form.', [
-                'form'     => ['type' => 'string', 'description' => 'Form name or title.'],
-                'label'    => ['type' => 'string', 'description' => 'Human-readable field label, e.g. "Email address".'],
-                'type'     => ['type' => 'string', 'enum' => ['text','email','textarea','number','tel','url','date','select','checkbox','radio'], 'description' => 'Field input type.'],
+                'form' => ['type' => 'string', 'description' => 'Form name or title.'],
+                'label' => ['type' => 'string', 'description' => 'Human-readable field label, e.g. "Email address".'],
+                'type' => ['type' => 'string', 'enum' => ['text', 'email', 'textarea', 'number', 'tel', 'url', 'date', 'select', 'checkbox', 'radio'], 'description' => 'Field input type.'],
                 'required' => ['type' => 'boolean', 'description' => 'Whether the field is required. Defaults to false.'],
-                'options'  => ['type' => 'array',  'items' => ['type' => 'string'], 'description' => 'Allowed values for select/radio fields.'],
+                'options' => ['type' => 'array',  'items' => ['type' => 'string'], 'description' => 'Allowed values for select/radio fields.'],
             ], ['form', 'label', 'type']),
 
             $this->tool('create_service', 'Add a bookable service to the appointment booking system. Enable the "bookings" feature first (toggle_feature). Visitors book these at /book.', [
-                'name'         => ['type' => 'string', 'description' => 'Service name, e.g. "Dental Checkup".'],
+                'name' => ['type' => 'string', 'description' => 'Service name, e.g. "Dental Checkup".'],
                 'duration_min' => ['type' => 'integer', 'description' => 'Appointment length in minutes (default 30).'],
-                'price'        => ['type' => 'number', 'description' => 'Price in major units; 0 for free (default 0).'],
-                'description'  => ['type' => 'string', 'description' => 'Optional short description.'],
+                'price' => ['type' => 'number', 'description' => 'Price in major units; 0 for free (default 0).'],
+                'description' => ['type' => 'string', 'description' => 'Optional short description.'],
             ], ['name']),
 
             $this->tool('add_booking_page', 'Create a "Book" page on the site with the appointment-booking calendar embedded (also enables the bookings feature). This is the in-site booking interface visitors use. Create services with create_service too.', [
@@ -84,13 +79,11 @@ class SiteTools
 
             $this->tool('list_modules', 'List every capability/module available on this site (built-in features like store/bookings/donations/forms AND any AI-created declarative modules), whether each is installed, and the user needs each covers. ALWAYS call this before deciding a capability is missing, so you reuse an existing module instead of creating a duplicate.', []),
 
-
-
         ];
 
         if ($hasStore) {
             $tools[] = $this->tool('create_product', 'Add a product to the store.', [
-                'name'  => ['type' => 'string'],
+                'name' => ['type' => 'string'],
                 'price' => ['type' => 'number', 'description' => 'Price in major units, e.g. 19.99.'],
             ], ['name', 'price']);
 
@@ -103,25 +96,23 @@ class SiteTools
                 'enabled' => ['type' => 'boolean'],
             ], ['feature', 'enabled']);
 
-
-
             $tools[] = $this->tool('create_module', 'Create a NEW declarative module ONLY when no built-in feature (store/bookings/donations), no existing module, and no plain form covers the need (check list_modules first). A module = an entity with fields + a public page where visitors submit entries and optionally browse them — use for list+submit entities like job applications, event RSVPs, testimonials, member directories. Adds an editable page and emails the site admins. You declare entities and fields only; you never write code.', [
-                'name'   => ['type' => 'string', 'description' => 'Module / entity name, e.g. "Job Applications".'],
+                'name' => ['type' => 'string', 'description' => 'Module / entity name, e.g. "Job Applications".'],
                 'fields' => [
-                    'type'        => 'array',
+                    'type' => 'array',
                     'description' => 'The fields visitors fill in (1–12).',
-                    'items'       => [
-                        'type'       => 'object',
+                    'items' => [
+                        'type' => 'object',
                         'properties' => [
-                            'label'    => ['type' => 'string'],
-                            'type'     => ['type' => 'string', 'enum' => Collection::FIELD_TYPES],
+                            'label' => ['type' => 'string'],
+                            'type' => ['type' => 'string', 'enum' => Collection::FIELD_TYPES],
                             'required' => ['type' => 'boolean'],
-                            'options'  => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'For select/radio only.'],
+                            'options' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'For select/radio only.'],
                         ],
-                        'required'   => ['label', 'type'],
+                        'required' => ['label', 'type'],
                     ],
                 ],
-                'public_list'   => ['type' => 'boolean', 'description' => 'Show submitted entries publicly (default false).'],
+                'public_list' => ['type' => 'boolean', 'description' => 'Show submitted entries publicly (default false).'],
                 'public_submit' => ['type' => 'boolean', 'description' => 'Let visitors submit entries (default true).'],
             ], ['name', 'fields']);
         }
@@ -136,10 +127,10 @@ class SiteTools
      */
     /** Tools that change state — only these are recorded as performed tasks. */
     private const MUTATING = [
-        'create_page', 'publish_page', 
+        'create_page', 'publish_page',
         'create_form', 'add_form_field',
-        'create_product', 'toggle_feature', 
-        
+        'create_product', 'toggle_feature',
+
         'create_service', 'add_booking_page', 'create_module',
     ];
 
@@ -150,33 +141,33 @@ class SiteTools
     {
         try {
             $result = match ($name) {
-                'site_info'         => $this->siteInfo($site),
-                'site_status'       => $this->siteStatus($site),
-                'list_pages'        => $this->listPages($site),
-                'list_forms'        => $this->listForms($site),
-                'create_page'       => $this->createPage($site, $input),
-                'publish_page'      => $this->publishPage($site, $input),
-                'create_form'       => $this->createForm($site, $input),
-                'add_form_field'    => $this->addFormField($site, $input),
-                'create_product'    => $this->createProduct($site, $user, $input),
-                'list_products'     => $this->listProducts($site, $user),
-                'toggle_feature'    => $this->toggleFeature($site, $user, $input),
-                'create_service'    => $this->createService($site, $input),
-                'add_booking_page'  => $this->addBookingPage($site, $input),
-                'list_modules'      => $this->listModules($site),
-                'create_module'     => $this->createModule($site, $user, $input),
-                default             => $this->err("Unknown action: {$name}."),
+                'site_info' => $this->siteInfo($site),
+                'site_status' => $this->siteStatus($site),
+                'list_pages' => $this->listPages($site),
+                'list_forms' => $this->listForms($site),
+                'create_page' => $this->createPage($site, $input),
+                'publish_page' => $this->publishPage($site, $input),
+                'create_form' => $this->createForm($site, $input),
+                'add_form_field' => $this->addFormField($site, $input),
+                'create_product' => $this->createProduct($site, $user, $input),
+                'list_products' => $this->listProducts($site, $user),
+                'toggle_feature' => $this->toggleFeature($site, $user, $input),
+                'create_service' => $this->createService($site, $input),
+                'add_booking_page' => $this->addBookingPage($site, $input),
+                'list_modules' => $this->listModules($site),
+                'create_module' => $this->createModule($site, $user, $input),
+                default => $this->err("Unknown action: {$name}."),
             };
         } catch (\Throwable $e) {
-            $result = $this->err('That action failed: ' . $e->getMessage());
+            $result = $this->err('That action failed: '.$e->getMessage());
         }
 
         // Persist every performed mutating task (drives the toast + the activity feed).
         if (in_array($name, self::MUTATING, true)) {
-            app(\App\Services\TaskLogger::class)->record(
+            app(TaskLogger::class)->record(
                 site: $site,
                 actor: $user,
-                title: \Illuminate\Support\Str::headline($name),
+                title: Str::headline($name),
                 level: $result['ok'] ? 'success' : 'error',
                 type: str_replace('_', '.', $name),
                 message: ltrim($result['message'], "\xe2\x9c\x93 \t"),
@@ -197,17 +188,17 @@ class SiteTools
 
         $lines = [
             "Site name: {$site->name}",
-            'Slug / handle: ' . ($site->slug ?? Str::slug($site->name)),
-            'Created: ' . $site->created_at?->format('M j, Y') . ' (' . $site->created_at?->diffForHumans() . ')',
-            'Pages: ' . $site->pages()->count() . ' (' . $site->pages()->where('is_published', true)->count() . ' published)',
-            'Forms: ' . $site->forms()->count(),
-            'Team members: ' . $site->members()->count(),
-            'Contacts / leads: ' . $site->contacts()->count(),
-            'Enabled features: ' . ($features->join(', ') ?: 'none'),
+            'Slug / handle: '.($site->slug ?? Str::slug($site->name)),
+            'Created: '.$site->created_at?->format('M j, Y').' ('.$site->created_at?->diffForHumans().')',
+            'Pages: '.$site->pages()->count().' ('.$site->pages()->where('is_published', true)->count().' published)',
+            'Forms: '.$site->forms()->count(),
+            'Team members: '.$site->members()->count(),
+            'Contacts / leads: '.$site->contacts()->count(),
+            'Enabled features: '.($features->join(', ') ?: 'none'),
         ];
 
         if ($site->description) {
-            array_splice($lines, 1, 0, ['Description: ' . $site->description]);
+            array_splice($lines, 1, 0, ['Description: '.$site->description]);
         }
 
         return $this->ok(implode("\n", $lines));
@@ -216,14 +207,14 @@ class SiteTools
     private function siteStatus(Site $site): array
     {
         $parts = [
-            $site->pages()->count() . ' pages',
-            $site->contacts()->count() . ' contacts',
+            $site->pages()->count().' pages',
+            $site->contacts()->count().' contacts',
         ];
         if ($site->hasFeature('store')) {
-            $parts[] = $site->products()->count() . ' products';
+            $parts[] = $site->products()->count().' products';
         }
 
-        return $this->ok('📊 ' . Str::headline($site->name) . ': ' . implode(' · ', $parts) . '.');
+        return $this->ok('📊 '.Str::headline($site->name).': '.implode(' · ', $parts).'.');
     }
 
     private function listPages(Site $site): array
@@ -232,9 +223,9 @@ class SiteTools
         if ($pages->isEmpty()) {
             return $this->ok('No pages yet. Try: create page Home.');
         }
-        $list = $pages->map(fn ($p) => $p->name . ' (' . $p->url . ', ' . ($p->is_published ? 'live' : 'draft') . ')')->join('; ');
+        $list = $pages->map(fn ($p) => $p->name.' ('.$p->url.', '.($p->is_published ? 'live' : 'draft').')')->join('; ');
 
-        return $this->ok('Pages: ' . $list . '.');
+        return $this->ok('Pages: '.$list.'.');
     }
 
     private function listForms(Site $site): array
@@ -245,9 +236,9 @@ class SiteTools
         }
 
         $list = $forms->map(function ($f) {
-            $fields  = count($f->fields ?? []);
-            $active  = $f->is_active ? 'active' : 'inactive';
-            $resps   = $f->responses_count ?? 0;
+            $fields = count($f->fields ?? []);
+            $active = $f->is_active ? 'active' : 'inactive';
+            $resps = $f->responses_count ?? 0;
 
             return "{$f->title} ({$fields} fields, {$resps} responses, {$active})";
         })->join('; ');
@@ -261,7 +252,7 @@ class SiteTools
         if ($name === '') {
             return $this->err('A page name is required.');
         }
-        $url = '/' . Str::slug($name);
+        $url = '/'.Str::slug($name);
 
         // Dedupe by name AND url so the agent can't create a second "Home"/"About"
         // (e.g. /home alongside the existing / ) — edit the existing page instead.
@@ -285,12 +276,8 @@ class SiteTools
         $published = filter_var($in['published'] ?? true, FILTER_VALIDATE_BOOL);
         $page->update(['is_published' => $published]);
 
-        return $this->ok("✓ \"{$page->name}\" is now " . ($published ? 'published (live)' : 'a draft') . '.');
+        return $this->ok("✓ \"{$page->name}\" is now ".($published ? 'published (live)' : 'a draft').'.');
     }
-
-
-
-
 
     private function createForm(Site $site, array $in): array
     {
@@ -299,11 +286,11 @@ class SiteTools
             return $this->err('A form name is required.');
         }
         $site->forms()->create([
-            'name'        => $name,
-            'title'       => $in['title'] ?? $name,
+            'name' => $name,
+            'title' => $in['title'] ?? $name,
             'description' => '',
-            'fields'      => [],
-            'is_active'   => true,
+            'fields' => [],
+            'is_active' => true,
         ]);
 
         return $this->ok("✓ Created form \"{$name}\".");
@@ -312,7 +299,7 @@ class SiteTools
     private function addFormField(Site $site, array $in): array
     {
         $needle = Str::lower(trim((string) ($in['form'] ?? ''), " \"'"));
-        $form   = $site->forms()
+        $form = $site->forms()
             ->whereRaw('LOWER(name) = ? OR LOWER(title) = ?', [$needle, $needle])
             ->first();
 
@@ -320,34 +307,33 @@ class SiteTools
             return $this->err("No form named \"{$in['form']}\" found on this site.");
         }
 
-        $allowed = ['text','email','textarea','number','tel','url','date','select','checkbox','radio'];
-        $type    = Str::lower(trim((string) ($in['type'] ?? 'text')));
+        $allowed = ['text', 'email', 'textarea', 'number', 'tel', 'url', 'date', 'select', 'checkbox', 'radio'];
+        $type = Str::lower(trim((string) ($in['type'] ?? 'text')));
         if (! in_array($type, $allowed, true)) {
             $type = 'text';
         }
 
-        $label  = trim((string) ($in['label'] ?? 'Field'));
-        $key    = Str::slug($label, '_') ?: 'field_' . Str::random(4);
+        $label = trim((string) ($in['label'] ?? 'Field'));
+        $key = Str::slug($label, '_') ?: 'field_'.Str::random(4);
         $fields = $form->fields ?? [];
 
         // Prevent duplicate keys
         if (collect($fields)->pluck('key')->contains($key)) {
-            $key .= '_' . count($fields);
+            $key .= '_'.count($fields);
         }
 
         $fields[] = array_filter([
-            'key'      => $key,
-            'label'    => $label,
-            'type'     => $type,
+            'key' => $key,
+            'label' => $label,
+            'type' => $type,
             'required' => (bool) ($in['required'] ?? false),
-            'options'  => (! empty($in['options']) && is_array($in['options'])) ? $in['options'] : null,
+            'options' => (! empty($in['options']) && is_array($in['options'])) ? $in['options'] : null,
         ], fn ($v) => $v !== null);
 
         $form->update(['fields' => $fields]);
 
         return $this->ok("✓ Added \"{$label}\" ({$type}) to form \"{$form->displayTitle()}\".");
     }
-
 
     private function createProduct(Site $site, User $user, array $in): array
     {
@@ -359,17 +345,17 @@ class SiteTools
             return $this->err('A product name is required.');
         }
         $cents = (int) round(((float) ($in['price'] ?? 0)) * 100);
-        $slug  = Str::slug($name) ?: 'product-' . Str::random(5);
+        $slug = Str::slug($name) ?: 'product-'.Str::random(5);
         if ($site->products()->where('slug', $slug)->exists()) {
-            $slug .= '-' . Str::random(4);
+            $slug .= '-'.Str::random(4);
         }
         $site->products()->create([
             'name' => $name, 'slug' => $slug, 'price_cents' => $cents,
-            'currency'  => $site->feature('store')['currency'] ?? 'usd',
+            'currency' => $site->feature('store')['currency'] ?? 'usd',
             'is_active' => true, 'sort' => 0,
         ]);
 
-        return $this->ok("✓ Added product \"{$name}\" ($" . number_format($cents / 100, 2) . ').');
+        return $this->ok("✓ Added product \"{$name}\" ($".number_format($cents / 100, 2).').');
     }
 
     private function listProducts(Site $site, User $user): array
@@ -381,7 +367,7 @@ class SiteTools
 
         return $names->isEmpty()
             ? $this->ok('No products yet. Try: create product Mug for $15.')
-            : $this->ok('Products: ' . $names->join(', ') . '.');
+            : $this->ok('Products: '.$names->join(', ').'.');
     }
 
     private function toggleFeature(Site $site, User $user, array $in): array
@@ -389,15 +375,15 @@ class SiteTools
         if (! $site->canManageTeam($user)) {
             return $this->err('Only the site owner or an admin can change features.');
         }
-        $key   = Str::lower((string) ($in['feature'] ?? ''));
+        $key = Str::lower((string) ($in['feature'] ?? ''));
         $valid = array_keys(config('features', []));
         if (! in_array($key, $valid, true)) {
-            return $this->err('Feature must be one of: ' . implode(', ', $valid) . '.');
+            return $this->err('Feature must be one of: '.implode(', ', $valid).'.');
         }
         $enabled = filter_var($in['enabled'] ?? true, FILTER_VALIDATE_BOOL);
         $enabled ? $site->enableFeature($key) : $site->disableFeature($key);
 
-        return $this->ok('✓ ' . ($enabled ? 'Enabled' : 'Disabled') . " the \"{$key}\" feature. Refresh to see the nav update.");
+        return $this->ok('✓ '.($enabled ? 'Enabled' : 'Disabled')." the \"{$key}\" feature. Refresh to see the nav update.");
     }
 
     private function createService(Site $site, array $in): array
@@ -408,12 +394,12 @@ class SiteTools
         }
 
         $svc = $site->services()->create([
-            'name'         => $name,
-            'slug'         => $name,
+            'name' => $name,
+            'slug' => $name,
             'duration_min' => max(5, (int) ($in['duration_min'] ?? 30)),
-            'price_cents'  => (int) round(((float) ($in['price'] ?? 0)) * 100),
-            'description'  => $in['description'] ?? null,
-            'is_active'    => true,
+            'price_cents' => (int) round(((float) ($in['price'] ?? 0)) * 100),
+            'description' => $in['description'] ?? null,
+            'is_active' => true,
         ]);
 
         $note = $site->hasFeature('bookings') ? '' : ' (enable the "bookings" feature so visitors can book it).';
@@ -432,15 +418,15 @@ class SiteTools
 
         $page = $site->pages()->where('url', '/booking')->first()
             ?? $site->pages()->create([
-                'name'         => 'Book',
-                'url'          => '/booking',
-                'keywords'     => 'book appointment booking',
+                'name' => 'Book',
+                'url' => '/booking',
+                'keywords' => 'book appointment booking',
                 'is_published' => true,
             ]);
 
         // Page content is now built with blocks in the builder.
 
-        \Illuminate\Support\Facades\Cache::forget("page_render:{$site->id}:{$page->url}");
+        Cache::forget("page_render:{$site->id}:{$page->url}");
 
         return $this->ok('✓ Added a "Book" page at /booking with the appointment calendar embedded. Add at least one service with create_service so visitors have something to book.');
     }
@@ -450,12 +436,12 @@ class SiteTools
     {
         $lines = [];
         foreach (ModuleRegistry::capabilityMap($site) as $m) {
-            $state   = $m['enabled'] ? 'installed' : 'available';
-            $intents = $m['intents'] ? ' — for: ' . implode(', ', array_slice($m['intents'], 0, 6)) : '';
+            $state = $m['enabled'] ? 'installed' : 'available';
+            $intents = $m['intents'] ? ' — for: '.implode(', ', array_slice($m['intents'], 0, 6)) : '';
             $lines[] = "• {$m['key']} ({$m['kind']}, {$state}) — {$m['name']}{$intents}";
         }
 
-        return $this->ok("Modules on this site:\n" . implode("\n", $lines));
+        return $this->ok("Modules on this site:\n".implode("\n", $lines));
     }
 
     /**
@@ -481,42 +467,53 @@ class SiteTools
         $fields = [];
         $usedKeys = [];
         foreach ((is_array($in['fields'] ?? null) ? $in['fields'] : []) as $f) {
-            if (! is_array($f)) continue;
+            if (! is_array($f)) {
+                continue;
+            }
             $label = trim((string) ($f['label'] ?? ''));
-            if ($label === '') continue;
+            if ($label === '') {
+                continue;
+            }
             $type = in_array($f['type'] ?? '', Collection::FIELD_TYPES, true) ? $f['type'] : 'text';
-            $key  = Str::slug($label, '_') ?: ('field_' . (count($fields) + 1));
-            $b = $key; $n = 2;
-            while (in_array($key, $usedKeys, true)) { $key = $b . '_' . $n; $n++; }
+            $key = Str::slug($label, '_') ?: ('field_'.(count($fields) + 1));
+            $b = $key;
+            $n = 2;
+            while (in_array($key, $usedKeys, true)) {
+                $key = $b.'_'.$n;
+                $n++;
+            }
             $usedKeys[] = $key;
             $opts = [];
             if (in_array($type, ['select', 'radio'], true) && is_array($f['options'] ?? null)) {
                 $opts = array_values(array_filter(array_map(fn ($o) => trim((string) $o), $f['options'])));
             }
             $fields[] = ['key' => $key, 'label' => $label, 'type' => $type, 'required' => (bool) ($f['required'] ?? false), 'options' => $opts];
-            if (count($fields) >= self::MAX_MODULE_FIELDS) break;
+            if (count($fields) >= self::MAX_MODULE_FIELDS) {
+                break;
+            }
         }
         if ($fields === []) {
             return $this->err('A module needs at least one field (e.g. Name, Email).');
         }
 
         $caps = [
-            'public_list'   => (bool) ($in['public_list'] ?? false),
+            'public_list' => (bool) ($in['public_list'] ?? false),
             'public_submit' => array_key_exists('public_submit', $in) ? (bool) $in['public_submit'] : true,
         ];
 
         $module = app(DeclarativeModuleEngine::class)->provision($site, $name, $fields, $caps, $user);
 
         // Editable site page with the module block (mirror addBookingPage).
-        $page = $site->pages()->where('url', '/' . $slug)->first()
-            ?? $site->pages()->create(['name' => $name, 'url' => '/' . $slug, 'keywords' => $slug, 'is_published' => true]);
+        $page = $site->pages()->where('url', '/'.$slug)->first()
+            ?? $site->pages()->create(['name' => $name, 'url' => '/'.$slug, 'keywords' => $slug, 'is_published' => true]);
         // Page content is now built with blocks in the builder.
 
-        \Illuminate\Support\Facades\Cache::forget("page_render:{$site->id}:{$page->url}");
+        Cache::forget("page_render:{$site->id}:{$page->url}");
 
         $this->notifyModuleCreated($site, $module, $page);
 
         $count = count($fields);
+
         return $this->ok("✓ Created a \"{$name}\" module ({$count} fields) and added a \"{$name}\" page at /{$slug}. Emailed your site admins. Manage entries under Collections.");
     }
 
@@ -532,8 +529,8 @@ class SiteTools
                 return;
             }
 
-            $pageUrl  = url('/preview/' . $site->name . $page->url);
-            $adminUrl = url($site->name . '/collections');
+            $pageUrl = url('/preview/'.$site->name.$page->url);
+            $adminUrl = url($site->name.'/collections');
 
             foreach ($recipients as $email) {
                 Mail::to($email)->queue(new ModuleCreatedNotification($site, $module->name, $module->description, $pageUrl, $adminUrl));
@@ -543,34 +540,27 @@ class SiteTools
         }
     }
 
-
     // ── Helpers ────────────────────────────────────────────────────────
-
-
-
-
-
 
     private function findPage(Site $site, string $needle): ?Page
     {
         $needle = trim($needle, " \"'");
-        $url    = '/' . ltrim(Str::slug($needle), '/');
+        $url = '/'.ltrim(Str::slug($needle), '/');
 
         return $site->pages()->where('url', $url)
             ->orWhere(fn ($q) => $q->where('site_id', $site->id)->whereRaw('LOWER(name) = ?', [Str::lower($needle)]))
             ->first();
     }
 
-
     private function tool(string $name, string $desc, array $props, array $required = []): array
     {
         return [
-            'name'         => $name,
-            'description'  => $desc,
+            'name' => $name,
+            'description' => $desc,
             'input_schema' => [
-                'type'       => 'object',
+                'type' => 'object',
                 'properties' => (object) $props,
-                'required'   => $required,
+                'required' => $required,
             ],
         ];
     }

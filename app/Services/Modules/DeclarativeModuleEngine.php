@@ -25,37 +25,37 @@ class DeclarativeModuleEngine
     public function provision(Site $site, string $name, array $fields, array $caps, ?User $user = null): Module
     {
         $slug = Str::slug($name);
-        $publicList   = (bool) ($caps['public_list'] ?? false);
+        $publicList = (bool) ($caps['public_list'] ?? false);
         $publicSubmit = (bool) ($caps['public_submit'] ?? true);
 
         $collection = $site->collections()->create([
-            'name'         => $name,
-            'slug'         => $slug,
-            'type'         => $publicList ? 'grid' : 'list',
-            'description'  => "Entries for the {$name} module.",
-            'fields'       => $fields,
-            'is_public'    => $publicList,
+            'name' => $name,
+            'slug' => $slug,
+            'type' => $publicList ? 'grid' : 'list',
+            'description' => "Entries for the {$name} module.",
+            'fields' => $fields,
+            'is_public' => $publicList,
             'allow_submit' => $publicSubmit,
         ]);
 
         $capabilities = [
-            'list'   => $publicList,
-            'get'    => $publicList,
+            'list' => $publicList,
+            'get' => $publicList,
             'submit' => $publicSubmit,
         ];
 
         return $site->modules()->create([
-            'key'           => $slug,
-            'name'          => $name,
-            'description'   => $this->describe($name, $capabilities),
-            'icon'          => 'puzzle',
+            'key' => $slug,
+            'name' => $name,
+            'description' => $this->describe($name, $capabilities),
+            'icon' => 'puzzle',
             'collection_id' => $collection->id,
-            'schema'        => $fields,
-            'capabilities'  => $capabilities,
-            'frontend'      => ['block' => 'module', 'variant' => $publicList ? 'grid' : 'list', 'title' => $name],
-            'intents'       => $this->intentsFor($name),
-            'created_by'    => $user?->id,
-            'enabled'       => true,
+            'schema' => $fields,
+            'capabilities' => $capabilities,
+            'frontend' => ['block' => 'module', 'variant' => $publicList ? 'grid' : 'list', 'title' => $name],
+            'intents' => $this->intentsFor($name),
+            'created_by' => $user?->id,
+            'enabled' => true,
         ]);
     }
 
@@ -63,7 +63,7 @@ class DeclarativeModuleEngine
     public function blockDescriptor(Module $module): array
     {
         return [
-            'type'    => $module->frontend['block'] ?? 'module',
+            'type' => $module->frontend['block'] ?? 'module',
             'variant' => $module->frontend['variant'] ?? 'grid',
         ];
     }
@@ -71,10 +71,14 @@ class DeclarativeModuleEngine
     private function describe(string $name, array $caps): string
     {
         $verbs = [];
-        if ($caps['submit'] ?? false) $verbs[] = 'collect';
-        if ($caps['list'] ?? false)   $verbs[] = 'list';
+        if ($caps['submit'] ?? false) {
+            $verbs[] = 'collect';
+        }
+        if ($caps['list'] ?? false) {
+            $verbs[] = 'list';
+        }
 
-        return $verbs ? (ucfirst(implode(' + ', $verbs)) . ' ' . Str::lower($name)) : $name;
+        return $verbs ? (ucfirst(implode(' + ', $verbs)).' '.Str::lower($name)) : $name;
     }
 
     /** Keyword intents derived from the module name (for LLM routing / dedup). */

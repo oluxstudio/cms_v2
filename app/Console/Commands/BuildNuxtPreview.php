@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Fx;
 use App\Templates\TemplateAppRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -222,8 +223,8 @@ class BuildNuxtPreview extends Command
         }
         File::ensureDirectoryExists($pluginsDir);
 
-        $css = \App\Support\Fx::css();
-        $js = \App\Support\Fx::js();
+        $css = Fx::css();
+        $js = Fx::js();
 
         $content = <<<TS
 /**

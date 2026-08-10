@@ -21,7 +21,8 @@ use ZipArchive;
  */
 class TemplatePackageImporter
 {
-    private const MANIFEST   = 'template.json';
+    private const MANIFEST = 'template.json';
+
     private const THUMB_EXTS = ['png', 'svg', 'jpg', 'jpeg', 'webp', 'avif'];
 
     public function __construct(private TemplateSecurity $security) {}
@@ -31,7 +32,7 @@ class TemplatePackageImporter
      */
     public function import(Site $site, string $zipPath): SiteTemplate
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($zipPath) !== true) {
             throw new RuntimeException('Could not open the .zip file.');
         }
@@ -40,12 +41,12 @@ class TemplatePackageImporter
             $this->security->inspectZip($zip); // size/count/path-traversal/file-type guards
 
             $manifestRaw = $this->readManifest($zip);
-            $manifest    = json_decode($manifestRaw, true);
+            $manifest = json_decode($manifestRaw, true);
             if (! is_array($manifest)) {
                 throw new RuntimeException('template.json is not valid JSON.');
             }
 
-            $name  = trim((string) ($manifest['name'] ?? ''));
+            $name = trim((string) ($manifest['name'] ?? ''));
             $pages = $manifest['pages'] ?? null;
             if ($name === '') {
                 throw new RuntimeException('template.json is missing a "name".');
@@ -65,25 +66,25 @@ class TemplatePackageImporter
             // Bake extracted asset URLs into the pages, and capture the template's
             // stylesheet so the imported template shows its images + skin.
             $pages = $this->rewriteAssetUrls($pages, $slug);
-            $css   = $this->extractCss($zip);
+            $css = $this->extractCss($zip);
 
             return $site->installedTemplates()->create([
-                'source'         => 'custom',
-                'builtin_key'    => null,
-                'name'           => $name,
-                'description'    => (string) ($manifest['description'] ?? ''),
-                'category'       => (string) ($manifest['category'] ?? 'Custom'),
-                'accent_color'   => (string) ($manifest['accentColor'] ?? '#6366f1'),
+                'source' => 'custom',
+                'builtin_key' => null,
+                'name' => $name,
+                'description' => (string) ($manifest['description'] ?? ''),
+                'category' => (string) ($manifest['category'] ?? 'Custom'),
+                'accent_color' => (string) ($manifest['accentColor'] ?? '#6366f1'),
                 'gradient_class' => (string) ($manifest['gradientClass'] ?? 'from-slate-400 to-slate-600'),
                 'thumbnail_path' => $thumbPath,
-                'payload'        => [
-                    'theme'     => is_array($manifest['theme'] ?? null) ? $manifest['theme'] : [],
-                    'css'       => $css,
-                    'pages'     => $pages,
-                    'tags'      => (array) ($manifest['tags'] ?? []),
-                    'features'  => (array) ($manifest['features'] ?? []),
-                    'version'   => (string) ($manifest['version'] ?? '1.0.0'),
-                    'author'    => (string) ($manifest['author'] ?? 'Imported'),
+                'payload' => [
+                    'theme' => is_array($manifest['theme'] ?? null) ? $manifest['theme'] : [],
+                    'css' => $css,
+                    'pages' => $pages,
+                    'tags' => (array) ($manifest['tags'] ?? []),
+                    'features' => (array) ($manifest['features'] ?? []),
+                    'version' => (string) ($manifest['version'] ?? '1.0.0'),
+                    'author' => (string) ($manifest['author'] ?? 'Imported'),
                     'createdAt' => (string) ($manifest['createdAt'] ?? now()->toDateString()),
                 ],
             ]);
@@ -152,7 +153,7 @@ class TemplatePackageImporter
             if ($this->security->isSvg($inner)) {
                 $raw = $this->security->sanitizeSvg($raw); // strip script/handlers from SVG
             }
-            $rel  = "{$base}/{$inner}";
+            $rel = "{$base}/{$inner}";
             File::ensureDirectoryExists(dirname(public_path($rel)));
             File::put(public_path($rel), $raw);
         }

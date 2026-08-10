@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
 class SyncTemplateCatalog extends Command
 {
     protected $signature = 'templates:sync';
+
     protected $description = 'Seed/refresh the template catalog from built-in templates & packages';
 
     public function handle(): int
@@ -36,15 +37,15 @@ class SyncTemplateCatalog extends Command
             $pages = $this->rewritePages($contract->pages(), $assetMap);
 
             $manifest = [
-                'name'          => $contract->name(),
-                'description'   => $contract->description(),
-                'category'      => $contract->category(),
-                'accentColor'   => $contract->accentColor(),
+                'name' => $contract->name(),
+                'description' => $contract->description(),
+                'category' => $contract->category(),
+                'accentColor' => $contract->accentColor(),
                 'gradientClass' => $contract->gradientClass(),
-                'author'        => $contract->author(),
-                'tags'          => $contract->tags(),
-                'features'      => $contract->features(),
-                'createdAt'     => $contract->createdAt(),
+                'author' => $contract->author(),
+                'tags' => $contract->tags(),
+                'features' => $contract->features(),
+                'createdAt' => $contract->createdAt(),
             ];
 
             // 3. Upsert the catalog row (preserve uuid on update).
@@ -53,17 +54,17 @@ class SyncTemplateCatalog extends Command
                 $template->uuid = (string) Str::uuid();
             }
             $template->fill([
-                'name'           => $contract->name(),
-                'description'    => $contract->description(),
-                'category'       => $contract->category(),
-                'tags'           => $contract->tags(),
-                'status'         => 'published',
-                'source'         => 'builtin',
-                'builtin_key'    => $slug,
-                'accent_color'   => $contract->accentColor(),
+                'name' => $contract->name(),
+                'description' => $contract->description(),
+                'category' => $contract->category(),
+                'tags' => $contract->tags(),
+                'status' => 'published',
+                'source' => 'builtin',
+                'builtin_key' => $slug,
+                'accent_color' => $contract->accentColor(),
                 'gradient_class' => $contract->gradientClass(),
-                'thumbnail_url'  => method_exists($contract, 'thumbnail') ? $contract->thumbnail() : null,
-                'published_at'   => $template->published_at ?? now(),
+                'thumbnail_url' => method_exists($contract, 'thumbnail') ? $contract->thumbnail() : null,
+                'published_at' => $template->published_at ?? now(),
             ])->save();
 
             // 4. Upsert the version + point latest at it.
@@ -71,10 +72,10 @@ class SyncTemplateCatalog extends Command
                 ['version' => $contract->version()],
                 [
                     'manifest' => $manifest,
-                    'payload'  => [
+                    'payload' => [
                         'theme' => method_exists($contract, 'theme') ? ($contract->theme() ?: []) : [],
                         'fonts' => method_exists($contract, 'fonts') ? $contract->fonts() : [],
-                        'css'   => method_exists($contract, 'css') ? $contract->css() : '',
+                        'css' => method_exists($contract, 'css') ? $contract->css() : '',
                         'pages' => $pages,
                     ],
                     'status' => 'published',

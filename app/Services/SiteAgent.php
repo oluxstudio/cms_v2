@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Contracts\LlmDriverInterface;
 use App\Models\Site;
 use App\Models\User;
+use App\Modules\ModuleRegistry;
 
 /**
  * LLM front-end for "prompting a site".
@@ -28,9 +29,9 @@ class SiteAgent
         $driver = config('services.llm.driver', 'anthropic');
 
         return match ($driver) {
-            'ollama'    => filled(config('services.ollama.base_url')),
-            'deepseek'  => filled(config('services.deepseek.key')),
-            default     => filled(config('services.anthropic.key')),
+            'ollama' => filled(config('services.ollama.base_url')),
+            'deepseek' => filled(config('services.deepseek.key')),
+            default => filled(config('services.anthropic.key')),
         };
     }
 
@@ -40,23 +41,26 @@ class SiteAgent
      */
     public static function reachable(): bool
     {
-        if (! static::configured()) return false;
+        if (! static::configured()) {
+            return false;
+        }
 
         $driver = config('services.llm.driver', 'anthropic');
 
         if ($driver === 'ollama') {
-            $url  = rtrim(config('services.ollama.base_url', ''), '/v1');
-            $url  = rtrim($url, '/') . '/api/tags';
-            $ch   = curl_init($url);
+            $url = rtrim(config('services.ollama.base_url', ''), '/v1');
+            $url = rtrim($url, '/').'/api/tags';
+            $ch = curl_init($url);
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 3,
+                CURLOPT_TIMEOUT => 3,
                 CURLOPT_CONNECTTIMEOUT => 2,
-                CURLOPT_NOBODY         => false,
+                CURLOPT_NOBODY => false,
             ]);
-            $res  = curl_exec($ch);
+            $res = curl_exec($ch);
             $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
+
             return $res !== false && $code === 200;
         }
 
@@ -75,25 +79,26 @@ class SiteAgent
             $driver = config('services.llm.driver', 'anthropic');
             if ($driver === 'ollama') {
                 return "Ollama is not running or not reachable.\n\n"
-                    . "Please start Ollama on your machine, then try again.\n"
-                    . "Expected at: " . config('services.ollama.base_url');
+                    ."Please start Ollama on your machine, then try again.\n"
+                    .'Expected at: '.config('services.ollama.base_url');
             }
-            return "Could not connect to the AI service. Please check your API key and network connection.";
+
+            return 'Could not connect to the AI service. Please check your API key and network connection.';
         }
 
         if (str_contains($msg, 'timed out') || str_contains($msg, 'Operation timed out')) {
-            return "The AI took too long to respond. "
-                . (config('services.llm.driver') === 'ollama'
-                    ? "Your Ollama model is running on CPU which can be slow. The request may still be processing — try a simpler prompt or wait a moment."
-                    : "Please try again.");
+            return 'The AI took too long to respond. '
+                .(config('services.llm.driver') === 'ollama'
+                    ? 'Your Ollama model is running on CPU which can be slow. The request may still be processing — try a simpler prompt or wait a moment.'
+                    : 'Please try again.');
         }
 
         if (str_contains($msg, 'does not support tools')) {
-            return "The current Ollama model does not support tool-calling. "
-                . "Please switch to qwen3:8b or qwen2.5:7b in your .env (OLLAMA_MODEL=qwen3:8b).";
+            return 'The current Ollama model does not support tool-calling. '
+                .'Please switch to qwen3:8b or qwen2.5:7b in your .env (OLLAMA_MODEL=qwen3:8b).';
         }
 
-        return "The AI assistant encountered an error. Please try again.\n\nDetails: " . $msg;
+        return "The AI assistant encountered an error. Please try again.\n\nDetails: ".$msg;
     }
 
     /**
@@ -112,21 +117,22 @@ class SiteAgent
      */
     public function ask(Site $site, User $user, string $prompt, array $history = []): array
     {
-        $system   = $this->systemPrompt($site, $user);
+        $system = $this->systemPrompt($site, $user);
         $toolDefs = $this->tools->definitions($site, $user);
 
         // Record which tools the model actually ran this turn, so the caller can
         // tell "asked a clarifying question" (no writes) from "built the app".
-        $executed    = [];
+        $executed = [];
         $executeTool = function (string $name, array $input) use ($site, $user, &$executed) {
             $executed[] = $name;
+
             return $this->tools->execute($site, $user, $name, $input);
         };
 
         $messages = [];
         foreach (array_slice($history, -8) as $turn) {
             $messages[] = [
-                'role'    => $turn['role'] === 'assistant' ? 'assistant' : 'user',
+                'role' => $turn['role'] === 'assistant' ? 'assistant' : 'user',
                 'content' => $turn['text'],
             ];
         }
@@ -153,7 +159,7 @@ class SiteAgent
 
     private function systemPrompt(Site $site, User $user): string
     {
-        $role     = $site->canManageTeam($user) ? 'owner/admin' : 'member';
+        $role = $site->canManageTeam($user) ? 'owner/admin' : 'member';
         $features = collect(array_keys(config('features', [])))
             ->filter(fn ($f) => $site->hasFeature($f))->values()->join(', ') ?: 'none';
 
@@ -185,9 +191,9 @@ class SiteAgent
      */
     private function compactPrompt(Site $site, string $role, string $features): string
     {
-        $pageCount  = $site->pages()->count();
-        $published  = $site->pages()->where('is_published', true)->count();
-        $formCount  = $site->forms()->count();
+        $pageCount = $site->pages()->count();
+        $published = $site->pages()->where('is_published', true)->count();
+        $formCount = $site->forms()->count();
         $isCmsModel = str_contains(strtolower(config('services.ollama.model', '')), 'cms-operator');
 
         $session = <<<TXT
@@ -198,7 +204,7 @@ class SiteAgent
         Act only on this site. Use tools to make real changes. Reply in 1-2 sentences.
         TXT;
 
-        $session .= "\n\n" . $this->moduleContext($site);
+        $session .= "\n\n".$this->moduleContext($site);
 
         // cms-operator already knows the CMS — just inject live state.
         if ($isCmsModel) {
@@ -206,7 +212,7 @@ class SiteAgent
         }
 
         // For other local models, include a brief critical-rules reminder.
-        return trim($session) . "\n\n" . <<<TXT
+        return trim($session)."\n\n".<<<'TXT'
 
         ## Critical rules (follow these exactly)
         - "create page with content" → create_page, THEN create_component, THEN add_node (3-6 nodes with real values). NEVER stop after create_page.
@@ -224,16 +230,16 @@ class SiteAgent
     {
         $installed = [];
         $available = [];
-        foreach (\App\Modules\ModuleRegistry::capabilityMap($site) as $m) {
+        foreach (ModuleRegistry::capabilityMap($site) as $m) {
             $line = "{$m['key']} ({$m['name']})";
             $m['enabled'] ? ($installed[] = $line) : ($available[] = $line);
         }
 
         return "## Modules / capabilities\n"
-            . 'Installed: ' . (implode(', ', $installed) ?: 'none') . "\n"
-            . 'Available to enable: ' . (implode(', ', $available) ?: 'none') . "\n"
-            . 'When the user asks for a capability, map it to one of these (call list_modules for the intent keywords). '
-            . 'Prefer built-in features; only use create_module when nothing existing fits. See references/modules.md.';
+            .'Installed: '.(implode(', ', $installed) ?: 'none')."\n"
+            .'Available to enable: '.(implode(', ', $available) ?: 'none')."\n"
+            .'When the user asks for a capability, map it to one of these (call list_modules for the intent keywords). '
+            .'Prefer built-in features; only use create_module when nothing existing fits. See references/modules.md.';
     }
 
     /**
@@ -242,16 +248,16 @@ class SiteAgent
      */
     private function loadInstructionSet(string $role, string $features, Site $site): ?string
     {
-        $base  = resource_path('ai');
+        $base = resource_path('ai');
         $parts = [
-            $base . '/System-Prompt.txt',
-            $base . '/AI-Persona.md',
-            $base . '/My-AI-Instructions.md',
-            $base . '/Prompt-Handling.md',
-            $base . '/skills/cms-operator/SKILL.md',
-            $base . '/skills/cms-operator/references/node-types.md',
-            $base . '/skills/cms-operator/references/crud-recipes.md',
-            $base . '/skills/cms-operator/references/modules.md',
+            $base.'/System-Prompt.txt',
+            $base.'/AI-Persona.md',
+            $base.'/My-AI-Instructions.md',
+            $base.'/Prompt-Handling.md',
+            $base.'/skills/cms-operator/SKILL.md',
+            $base.'/skills/cms-operator/references/node-types.md',
+            $base.'/skills/cms-operator/references/crud-recipes.md',
+            $base.'/skills/cms-operator/references/modules.md',
         ];
 
         $chunks = [];
@@ -263,9 +269,9 @@ class SiteAgent
         }
 
         $session = "## This session\nSelected site: \"{$site->name}\" (slug). "
-            . "User role: {$role}. Enabled features: {$features}.\n"
-            . 'Act only on this site. Use tools to make real changes; confirm in one or two plain sentences.'
-            . "\n\n" . $this->moduleContext($site);
+            ."User role: {$role}. Enabled features: {$features}.\n"
+            .'Act only on this site. Use tools to make real changes; confirm in one or two plain sentences.'
+            ."\n\n".$this->moduleContext($site);
 
         return implode("\n\n---\n\n", [...$chunks, $session]);
     }

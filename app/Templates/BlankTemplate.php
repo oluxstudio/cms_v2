@@ -4,17 +4,58 @@ namespace App\Templates;
 
 class BlankTemplate implements TemplateContract
 {
-    public function key(): string          { return 'blank'; }
-    public function name(): string         { return 'Blank Site'; }
-    public function description(): string  { return 'A clean 3-page starting point (Home, About, Contact) with placeholder layouts and lorem content — ready to make your own.'; }
-    public function category(): string     { return 'Starter'; }
-    public function gradientClass(): string { return 'from-gray-400 to-gray-600'; }
-    public function accentColor(): string  { return '#6366f1'; }
-    public function author(): string       { return 'Olux Studio'; }
-    public function version(): string      { return '1.1.0'; }
-    public function createdAt(): string    { return '2025-01-01'; }
-    public function tags(): array          { return ['Blank', 'Starter', 'Custom']; }
-    public function features(): array      {
+    public function key(): string
+    {
+        return 'blank';
+    }
+
+    public function name(): string
+    {
+        return 'Blank Site';
+    }
+
+    public function description(): string
+    {
+        return 'A clean 3-page starting point (Home, About, Contact) with placeholder layouts and lorem content — ready to make your own.';
+    }
+
+    public function category(): string
+    {
+        return 'Starter';
+    }
+
+    public function gradientClass(): string
+    {
+        return 'from-gray-400 to-gray-600';
+    }
+
+    public function accentColor(): string
+    {
+        return '#6366f1';
+    }
+
+    public function author(): string
+    {
+        return 'Olux Studio';
+    }
+
+    public function version(): string
+    {
+        return '1.1.0';
+    }
+
+    public function createdAt(): string
+    {
+        return '2025-01-01';
+    }
+
+    public function tags(): array
+    {
+        return ['Blank', 'Starter', 'Custom'];
+    }
+
+    public function features(): array
+    {
         return [
             'Home, About and Contact pages pre-wired',
             'Section layouts for hero, text, profile, FAQ and contact form',
@@ -27,13 +68,13 @@ class BlankTemplate implements TemplateContract
     public function theme(): array
     {
         return [
-            'font'      => 'Inter',
-            'accent'    => '#6366f1',
-            'navy'      => '#111827',
-            'surface'   => '#f8fafc',
-            'text'      => '#1a1f36',
-            'muted'     => '#6b7280',
-            'radius'    => '12px',
+            'font' => 'Inter',
+            'accent' => '#6366f1',
+            'navy' => '#111827',
+            'surface' => '#f8fafc',
+            'text' => '#1a1f36',
+            'muted' => '#6b7280',
+            'radius' => '12px',
             'base_size' => '16px',
         ];
     }
@@ -45,16 +86,16 @@ class BlankTemplate implements TemplateContract
         return [
             // ── Home: header · hero · header-paragraph · contact form · footer ──
             [
-                'name'     => 'Home',
-                'url'      => '/',
+                'name' => 'Home',
+                'url' => '/',
                 'keywords' => 'home',
-                'blocks'   => [
+                'blocks' => [
                     ['type' => 'navbar', 'variant' => 'simple'],
                     [
                         'type' => 'hero', 'variant' => 'centered', 'name' => 'Hero',
                         'nodes' => [
                             ['label' => 'Headline',  'type' => 'text', 'value' => 'Welcome to {site_name}',          'order' => 0],
-                            ['label' => 'Subtitle',  'type' => 'text', 'value' => 'A clean starting point for your new site. ' . $lorem, 'order' => 1],
+                            ['label' => 'Subtitle',  'type' => 'text', 'value' => 'A clean starting point for your new site. '.$lorem, 'order' => 1],
                             ['label' => 'CTA Label', 'type' => 'text', 'value' => 'Get Started',                     'order' => 2],
                             ['label' => 'CTA URL',   'type' => 'url',  'value' => '/contact',                        'order' => 3],
                         ],
@@ -63,7 +104,7 @@ class BlankTemplate implements TemplateContract
                         'type' => 'text', 'variant' => 'centered', 'name' => 'Introduction',
                         'nodes' => [
                             ['label' => 'Headline', 'type' => 'text', 'value' => 'A short headline about your business', 'order' => 0],
-                            ['label' => 'Body',     'type' => 'text', 'value' => $lorem . ' ' . $lorem,                  'order' => 1],
+                            ['label' => 'Body',     'type' => 'text', 'value' => $lorem.' '.$lorem,                  'order' => 1],
                         ],
                     ],
                     [
@@ -80,17 +121,17 @@ class BlankTemplate implements TemplateContract
 
             // ── About Us: header · profile-description panel · faq · footer ──
             [
-                'name'     => 'About Us',
-                'url'      => '/about',
+                'name' => 'About Us',
+                'url' => '/about',
                 'keywords' => 'about',
-                'blocks'   => [
+                'blocks' => [
                     ['type' => 'navbar', 'variant' => 'simple'],
                     [
                         'type' => 'profile', 'variant' => 'left', 'name' => 'Profile',
                         'nodes' => [
                             ['label' => 'Name', 'type' => 'text',  'value' => 'About {site_name}',   'order' => 0],
                             ['label' => 'Role', 'type' => 'text',  'value' => 'Who we are',           'order' => 1],
-                            ['label' => 'Bio',  'type' => 'text',  'value' => $lorem . ' ' . $lorem,  'order' => 2],
+                            ['label' => 'Bio',  'type' => 'text',  'value' => $lorem.' '.$lorem,  'order' => 2],
                             ['label' => 'Avatar', 'type' => 'image', 'value' => '',                   'order' => 3],
                         ],
                     ],
@@ -110,10 +151,10 @@ class BlankTemplate implements TemplateContract
 
             // ── Contact Us: header · contact form · footer ──
             [
-                'name'     => 'Contact Us',
-                'url'      => '/contact',
+                'name' => 'Contact Us',
+                'url' => '/contact',
                 'keywords' => 'contact',
-                'blocks'   => [
+                'blocks' => [
                     ['type' => 'navbar', 'variant' => 'simple'],
                     [
                         'type' => 'contact', 'variant' => 'split', 'name' => 'Contact Info',

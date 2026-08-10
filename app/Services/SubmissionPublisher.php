@@ -23,9 +23,7 @@ class SubmissionPublisher
     /** The template's display name — swapped for {site_name} in package nodes. */
     private ?string $manifestName = null;
 
-    public function __construct(private SfcRewriter $rewriter)
-    {
-    }
+    public function __construct(private SfcRewriter $rewriter) {}
 
     public function publish(TemplateSubmission $submission): void
     {
@@ -170,8 +168,8 @@ class SubmissionPublisher
 
         foreach ([
             'accent' => $match(['primary', 'accent'], 'color-'),
-            'text'   => $match(['default', 'text'], 'color-'),
-            'navy'   => $match(['secondary', 'dark', 'navy'], 'color-'),
+            'text' => $match(['default', 'text'], 'color-'),
+            'navy' => $match(['secondary', 'dark', 'navy'], 'color-'),
         ] as $key => $vars) {
             if ($vars !== []) {
                 $map[$key] = array_keys($vars);
@@ -244,7 +242,7 @@ class SubmissionPublisher
             $layoutBlocks[] = $this->blockDef($key, $b);
         }
         File::put("$dir/layouts/default.json", json_encode([
-            'name'   => $manifest['name'].' layout',
+            'name' => $manifest['name'].' layout',
             'blocks' => $layoutBlocks,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
@@ -280,22 +278,22 @@ class SubmissionPublisher
 
         $blockTotal = array_sum(array_map(fn ($p) => count($p['blocks']), $manifest['pages']));
         File::put("$dir/template.json", json_encode([
-            'key'         => $key,
-            'name'        => $manifest['name'],
+            'key' => $key,
+            'name' => $manifest['name'],
             'description' => 'Marketplace template — replicates the '.$manifest['name'].' app exactly, with editable content.',
-            'category'    => 'Marketplace',
+            'category' => 'Marketplace',
             'accentColor' => $colors['accent'] ?? '#6366f1',
-            'author'      => 'Olux Marketplace',
-            'version'     => '1.0.0',
-            'createdAt'   => now()->toDateString(),
-            'tags'        => array_merge(['App'], $manifest['behaviours'] ?? []),
-            'features'    => [
+            'author' => 'Olux Marketplace',
+            'version' => '1.0.0',
+            'createdAt' => now()->toDateString(),
+            'tags' => array_merge(['App'], $manifest['behaviours'] ?? []),
+            'features' => [
                 count($manifest['pages']).' page(s) · '.$blockTotal.' content blocks',
                 'Pixel-exact replica of the original app',
                 'Content, order and visibility editable in Configure',
             ],
-            'renderer'    => $key,   // the published Nuxt app under templates/{key}
-            'pages'       => $slugs,
+            'renderer' => $key,   // the published Nuxt app under templates/{key}
+            'pages' => $slugs,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
@@ -332,11 +330,11 @@ class SubmissionPublisher
         $brand = $this->manifestName ?? null;
 
         return [
-            'type'  => "app:{$templateKey}:{$block['blockKey']}",
-            'name'  => $block['name'],
+            'type' => "app:{$templateKey}:{$block['blockKey']}",
+            'name' => $block['name'],
             'nodes' => array_map(fn ($n) => [
                 'label' => $n['label'],
-                'type'  => $n['type'],
+                'type' => $n['type'],
                 'value' => $brand && $n['type'] === 'text'
                     ? str_ireplace($brand, '{site_name}', $n['value'])
                     : $n['value'],
@@ -362,10 +360,10 @@ class SubmissionPublisher
         }
 
         return [
-            'name'       => $page['name'],
-            'url'        => $page['url'],
-            'layout'     => 'default',   // every page is based on a template layout
-            'keywords'   => strtolower($page['name']),
+            'name' => $page['name'],
+            'url' => $page['url'],
+            'layout' => 'default',   // every page is based on a template layout
+            'keywords' => strtolower($page['name']),
             // Page attributes travel with the template (head title today;
             // description/og fields follow the same channel when extracted).
             'attributes' => array_filter([
@@ -373,7 +371,7 @@ class SubmissionPublisher
                     ? str_ireplace($brand, '{site_name}', $page['title'])
                     : ($page['title'] ?? null),
             ]),
-            'blocks'     => $blocks,
+            'blocks' => $blocks,
         ];
     }
 }

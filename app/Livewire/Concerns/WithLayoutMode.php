@@ -15,13 +15,15 @@ namespace App\Livewire\Concerns;
  */
 trait WithLayoutMode
 {
-    public string $viewMode   = 'list';
+    public string $viewMode = 'list';
+
     public string $layoutPage = '';
-    public array  $layoutModes = ['grid', 'list', 'compact'];
+
+    public array $layoutModes = ['grid', 'list', 'compact'];
 
     public function initLayout(string $page, string $default = 'list', array $modes = ['grid', 'list', 'compact']): void
     {
-        $this->layoutPage  = $page;
+        $this->layoutPage = $page;
         $this->layoutModes = $modes;
 
         $mode = $this->site->getAttr("layout:{$page}", $default);

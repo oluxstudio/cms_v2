@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Form;
 use App\Models\Site;
@@ -24,7 +25,7 @@ use Illuminate\Support\Str;
  */
 class FormApiController extends Controller
 {
-    use \App\Http\Controllers\Api\Concerns\ResolvesApiSite;
+    use ResolvesApiSite;
 
     private function record(Form $form): array
     {

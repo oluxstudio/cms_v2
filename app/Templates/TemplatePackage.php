@@ -60,17 +60,60 @@ class TemplatePackage implements TemplateContract
     }
 
     // ── TemplateContract metadata ──
-    public function key(): string           { return (string) ($this->m('key') ?: basename($this->dir)); }
-    public function name(): string          { return (string) $this->m('name', $this->key()); }
-    public function description(): string   { return (string) $this->m('description', ''); }
-    public function category(): string      { return (string) $this->m('category', 'Custom'); }
-    public function gradientClass(): string { return (string) $this->m('gradientClass', 'from-slate-400 to-slate-600'); }
-    public function accentColor(): string   { return (string) $this->m('accentColor', '#6366f1'); }
-    public function author(): string        { return (string) $this->m('author', 'Olux Studio'); }
-    public function version(): string       { return (string) $this->m('version', '1.0.0'); }
-    public function createdAt(): string     { return (string) $this->m('createdAt', '2026-01-01'); }
-    public function tags(): array           { return (array) $this->m('tags', []); }
-    public function features(): array       { return (array) $this->m('features', []); }
+    public function key(): string
+    {
+        return (string) ($this->m('key') ?: basename($this->dir));
+    }
+
+    public function name(): string
+    {
+        return (string) $this->m('name', $this->key());
+    }
+
+    public function description(): string
+    {
+        return (string) $this->m('description', '');
+    }
+
+    public function category(): string
+    {
+        return (string) $this->m('category', 'Custom');
+    }
+
+    public function gradientClass(): string
+    {
+        return (string) $this->m('gradientClass', 'from-slate-400 to-slate-600');
+    }
+
+    public function accentColor(): string
+    {
+        return (string) $this->m('accentColor', '#6366f1');
+    }
+
+    public function author(): string
+    {
+        return (string) $this->m('author', 'Olux Studio');
+    }
+
+    public function version(): string
+    {
+        return (string) $this->m('version', '1.0.0');
+    }
+
+    public function createdAt(): string
+    {
+        return (string) $this->m('createdAt', '2026-01-01');
+    }
+
+    public function tags(): array
+    {
+        return (array) $this->m('tags', []);
+    }
+
+    public function features(): array
+    {
+        return (array) $this->m('features', []);
+    }
 
     /** Page defs, read from pages/{slug}.json in the manifest's declared order. */
     public function pages(): array
@@ -117,8 +160,8 @@ class TemplatePackage implements TemplateContract
     public function theme(): array
     {
         $colors = $this->readJson('tokens/colors.json') ?: [];
-        $sizes  = $this->readJson('tokens/sizes.json') ?: [];
-        $fonts  = $this->readJson('fonts/fonts.json') ?: [];
+        $sizes = $this->readJson('tokens/sizes.json') ?: [];
+        $fonts = $this->readJson('fonts/fonts.json') ?: [];
 
         $theme = array_merge($colors, $sizes);
         if (! empty($fonts['primary']['family'])) {
@@ -142,12 +185,34 @@ class TemplatePackage implements TemplateContract
     }
 
     /** The Nuxt app that renders sites made from this template ('' = generic blank). */
-    public function renderer(): string        { return (string) $this->m('renderer', ''); }
+    public function renderer(): string
+    {
+        return (string) $this->m('renderer', '');
+    }
 
     // ── Package resources (consumed by the install lifecycle, Phase 2) ──
-    public function dir(): string            { return $this->dir; }
-    public function fonts(): array           { return $this->readJson('fonts/fonts.json') ?: []; }
-    public function css(): string            { return File::exists($this->dir.'/css/template.css') ? File::get($this->dir.'/css/template.css') : ''; }
-    public function assetsDir(): ?string     { return File::isDirectory($this->dir.'/assets') ? $this->dir.'/assets' : null; }
-    public function playgroundPath(): ?string { return File::exists($this->dir.'/playground.html') ? $this->dir.'/playground.html' : null; }
+    public function dir(): string
+    {
+        return $this->dir;
+    }
+
+    public function fonts(): array
+    {
+        return $this->readJson('fonts/fonts.json') ?: [];
+    }
+
+    public function css(): string
+    {
+        return File::exists($this->dir.'/css/template.css') ? File::get($this->dir.'/css/template.css') : '';
+    }
+
+    public function assetsDir(): ?string
+    {
+        return File::isDirectory($this->dir.'/assets') ? $this->dir.'/assets' : null;
+    }
+
+    public function playgroundPath(): ?string
+    {
+        return File::exists($this->dir.'/playground.html') ? $this->dir.'/playground.html' : null;
+    }
 }

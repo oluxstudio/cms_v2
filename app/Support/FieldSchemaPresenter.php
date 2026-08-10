@@ -18,40 +18,46 @@ class FieldSchemaPresenter
     public static function field(array $f): array
     {
         return [
-            'key'         => $f['key'],
-            'label'       => $f['label'],
-            'type'        => $f['type'],
-            'required'    => (bool) ($f['required'] ?? false),
+            'key' => $f['key'],
+            'label' => $f['label'],
+            'type' => $f['type'],
+            'required' => (bool) ($f['required'] ?? false),
             'placeholder' => $f['placeholder'] ?? null,
-            'min'         => ($f['min'] ?? '') !== '' ? $f['min'] : null,
-            'max'         => ($f['max'] ?? '') !== '' ? $f['max'] : null,
-            'options'     => $f['options'] ?? [],
-            'rules'       => self::clientRules($f),
+            'min' => ($f['min'] ?? '') !== '' ? $f['min'] : null,
+            'max' => ($f['max'] ?? '') !== '' ? $f['max'] : null,
+            'options' => $f['options'] ?? [],
+            'rules' => self::clientRules($f),
         ];
     }
 
     public static function clientRules(array $f): array
     {
         $rules = [];
-        $type  = $f['type'] ?? 'text';
+        $type = $f['type'] ?? 'text';
 
-        if ($f['required'] ?? false) $rules[] = 'required';
+        if ($f['required'] ?? false) {
+            $rules[] = 'required';
+        }
 
         match ($type) {
-            'email'    => ($rules[] = 'email'),
-            'url'      => ($rules[] = 'url'),
-            'number'   => ($rules[] = 'numeric'),
-            'date'     => ($rules[] = 'date'),
-            'tel'      => ($rules[] = 'phone'),
+            'email' => ($rules[] = 'email'),
+            'url' => ($rules[] = 'url'),
+            'number' => ($rules[] = 'numeric'),
+            'date' => ($rules[] = 'date'),
+            'tel' => ($rules[] = 'phone'),
             'checkbox' => ($rules[] = 'boolean'),
-            default    => null,
+            default => null,
         };
 
-        if (! empty($f['min'])) $rules[] = "min:{$f['min']}";
-        if (! empty($f['max'])) $rules[] = "max:{$f['max']}";
+        if (! empty($f['min'])) {
+            $rules[] = "min:{$f['min']}";
+        }
+        if (! empty($f['max'])) {
+            $rules[] = "max:{$f['max']}";
+        }
 
         if (in_array($type, ['select', 'radio']) && ! empty($f['options'])) {
-            $rules[] = 'in:' . implode(',', $f['options']);
+            $rules[] = 'in:'.implode(',', $f['options']);
         }
 
         return $rules;

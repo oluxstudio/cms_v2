@@ -49,7 +49,7 @@ class TemplateRatings
         $rows = TemplateRating::where('template_id', $template->id);
         $template->update([
             'rating_count' => $rows->count(),
-            'rating_avg'   => round((float) $rows->avg('stars'), 2),
+            'rating_avg' => round((float) $rows->avg('stars'), 2),
         ]);
     }
 }

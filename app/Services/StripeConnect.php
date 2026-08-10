@@ -7,6 +7,7 @@ use App\Models\TemplatePurchase;
 use App\Models\User;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Stripe\Event;
 use Stripe\StripeClient;
 use Stripe\Webhook;
 
@@ -34,7 +35,7 @@ class StripeConnect
         }
 
         return new StripeClient([
-            'api_key'        => config('services.stripe_platform.secret'),
+            'api_key' => config('services.stripe_platform.secret'),
             'stripe_version' => config('services.stripe.api_version'),
         ]);
     }
@@ -48,19 +49,19 @@ class StripeConnect
 
         if (! $user->stripe_account_id) {
             $account = $client->accounts->create([
-                'type'         => 'express',
-                'email'        => $user->email,
+                'type' => 'express',
+                'email' => $user->email,
                 'capabilities' => ['transfers' => ['requested' => true]],
-                'metadata'     => ['user_id' => $user->id],
+                'metadata' => ['user_id' => $user->id],
             ]);
             $user->update(['stripe_account_id' => $account->id]);
         }
 
         $link = $client->accountLinks->create([
-            'account'     => $user->stripe_account_id,
-            'return_url'  => $returnUrl,
+            'account' => $user->stripe_account_id,
+            'return_url' => $returnUrl,
             'refresh_url' => $refreshUrl,
-            'type'        => 'account_onboarding',
+            'type' => 'account_onboarding',
         ]);
 
         return $link->url;
@@ -92,38 +93,38 @@ class StripeConnect
         }
 
         $price = (int) $template->price_cents;
-        $fee   = $this->commerce->feeCents($price);
+        $fee = $this->commerce->feeCents($price);
 
         $purchase = TemplatePurchase::create([
-            'uuid'                 => (string) Str::uuid(),
-            'template_id'          => $template->id,
-            'template_version_id'  => $template->latest_version_id,
-            'user_id'              => $buyer->id,
-            'price_cents'          => $price,
-            'currency'             => $template->currency ?: 'usd',
-            'platform_fee_cents'   => $fee,
+            'uuid' => (string) Str::uuid(),
+            'template_id' => $template->id,
+            'template_version_id' => $template->latest_version_id,
+            'user_id' => $buyer->id,
+            'price_cents' => $price,
+            'currency' => $template->currency ?: 'usd',
+            'platform_fee_cents' => $fee,
             'creator_amount_cents' => $price - $fee,
-            'status'               => 'pending',
+            'status' => 'pending',
         ]);
 
         $session = $this->client()->checkout->sessions->create([
-            'mode'        => 'payment',
-            'line_items'  => [[
-                'quantity'   => 1,
+            'mode' => 'payment',
+            'line_items' => [[
+                'quantity' => 1,
                 'price_data' => [
-                    'currency'     => $purchase->currency,
-                    'unit_amount'  => $price,
+                    'currency' => $purchase->currency,
+                    'unit_amount' => $price,
                     'product_data' => ['name' => $template->name],
                 ],
             ]],
             'payment_intent_data' => [
                 'application_fee_amount' => $fee,
-                'transfer_data'          => ['destination' => $creator->stripe_account_id],
+                'transfer_data' => ['destination' => $creator->stripe_account_id],
             ],
             'customer_email' => $buyer->email,
-            'metadata'       => ['purchase_uuid' => $purchase->uuid],
-            'success_url'    => $successUrl,
-            'cancel_url'     => $cancelUrl,
+            'metadata' => ['purchase_uuid' => $purchase->uuid],
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
         ]);
 
         $purchase->update(['stripe_checkout_session_id' => $session->id]);
@@ -133,7 +134,7 @@ class StripeConnect
 
     // ── Webhooks ────────────────────────────────────────────────────────
 
-    public function verifyWebhook(string $payload, string $sigHeader): \Stripe\Event
+    public function verifyWebhook(string $payload, string $sigHeader): Event
     {
         return Webhook::constructEvent($payload, $sigHeader, config('services.stripe_platform.webhook_secret'));
     }
@@ -145,14 +146,14 @@ class StripeConnect
 
         match ($type) {
             'checkout.session.completed' => $this->completePurchase($obj),
-            'charge.refunded'            => $this->refund((string) ($obj['payment_intent'] ?? '')),
-            default                      => null,
+            'charge.refunded' => $this->refund((string) ($obj['payment_intent'] ?? '')),
+            default => null,
         };
     }
 
     private function completePurchase(array $session): void
     {
-        $uuid     = $session['metadata']['purchase_uuid'] ?? null;
+        $uuid = $session['metadata']['purchase_uuid'] ?? null;
         $purchase = $uuid
             ? TemplatePurchase::where('uuid', $uuid)->first()
             : TemplatePurchase::where('stripe_checkout_session_id', $session['id'] ?? '')->first();
@@ -162,9 +163,9 @@ class StripeConnect
         }
 
         $purchase->update([
-            'status'                   => 'paid',
+            'status' => 'paid',
             'stripe_payment_intent_id' => $session['payment_intent'] ?? null,
-            'purchased_at'             => now(),
+            'purchased_at' => now(),
         ]);
         $this->commerce->grantFromPurchase($purchase);
     }

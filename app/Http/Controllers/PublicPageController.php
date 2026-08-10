@@ -16,17 +16,17 @@ class PublicPageController extends Controller
      */
     public function show(Request $request, string $siteName, string $pageUrl)
     {
-        $site = Site::where("name", $siteName)->firstOrFail();
-        $url = "/".ltrim($pageUrl, "/");
+        $site = Site::where('name', $siteName)->firstOrFail();
+        $url = '/'.ltrim($pageUrl, '/');
 
-        $preview = $request->boolean("preview") && $site->accessibleBy(Auth::user());
-        Page::where("site_id", $site->id)
-            ->where("url", $url)
-            ->when(! $preview, fn ($q) => $q->where("is_published", true))
+        $preview = $request->boolean('preview') && $site->accessibleBy(Auth::user());
+        Page::where('site_id', $site->id)
+            ->where('url', $url)
+            ->when(! $preview, fn ($q) => $q->where('is_published', true))
             ->firstOrFail();
 
         $target = $site->previewUrl($url);
-        abort_unless($target, 404, "Renderer not built. Run: php artisan nuxt:preview-build");
+        abort_unless($target, 404, 'Renderer not built. Run: php artisan nuxt:preview-build');
 
         return redirect($target);
     }

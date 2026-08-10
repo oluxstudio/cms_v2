@@ -24,20 +24,20 @@ class SubscriptionController extends Controller
 
         try {
             $data = $request->validate([
-                'email'  => ['required', 'email', 'max:255'],
-                'name'   => ['nullable', 'string', 'max:255'],
+                'email' => ['required', 'email', 'max:255'],
+                'name' => ['nullable', 'string', 'max:255'],
                 'source' => ['nullable', 'string', 'max:255'],
             ]);
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation failed.',
-                'errors'  => $e->errors(),
+                'errors' => $e->errors(),
             ], 422);
         }
 
         $existing = Subscription::where('site_id', $site->id)
-                                ->where('email', $data['email'])
-                                ->first();
+            ->where('email', $data['email'])
+            ->first();
 
         if ($existing) {
             if ($existing->isActive()) {
@@ -48,8 +48,8 @@ class SubscriptionController extends Controller
 
             // Re-activate an unsubscribed record
             $existing->update([
-                'status'     => 'active',
-                'name'       => $data['name'] ?? $existing->name,
+                'status' => 'active',
+                'name' => $data['name'] ?? $existing->name,
                 'ip_address' => $request->ip(),
             ]);
 
@@ -59,12 +59,12 @@ class SubscriptionController extends Controller
         }
 
         Subscription::create([
-            'site_id'    => $site->id,
-            'email'      => $data['email'],
-            'name'       => $data['name'] ?? null,
-            'source'     => $data['source'] ?? $request->header('Referer'),
+            'site_id' => $site->id,
+            'email' => $data['email'],
+            'name' => $data['name'] ?? null,
+            'source' => $data['source'] ?? $request->header('Referer'),
             'ip_address' => $request->ip(),
-            'status'     => 'active',
+            'status' => 'active',
         ]);
 
         return response()->json([
@@ -86,8 +86,8 @@ class SubscriptionController extends Controller
         ]);
 
         Subscription::where('site_id', $site->id)
-                    ->where('email', $data['email'])
-                    ->update(['status' => 'unsubscribed']);
+            ->where('email', $data['email'])
+            ->update(['status' => 'unsubscribed']);
 
         return response()->json(['message' => 'You have been unsubscribed.']);
     }

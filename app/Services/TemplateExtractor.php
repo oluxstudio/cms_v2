@@ -18,13 +18,13 @@ class TemplateExtractor
 {
     /** CDN keyword → behaviour label, matched against nuxt.config head URLs. */
     private const BEHAVIOURS = [
-        'swiper'      => 'carousel',
-        'aos'         => 'scroll-animations',
-        'glightbox'   => 'lightbox',
-        'bootstrap'   => 'bootstrap',
-        'isotope'     => 'filterable-grid',
+        'swiper' => 'carousel',
+        'aos' => 'scroll-animations',
+        'glightbox' => 'lightbox',
+        'bootstrap' => 'bootstrap',
+        'isotope' => 'filterable-grid',
         'purecounter' => 'counters',
-        'typed'       => 'typing-effect',
+        'typed' => 'typing-effect',
     ];
 
     /** Item object key → node field label. */
@@ -45,14 +45,14 @@ class TemplateExtractor
         }
 
         $manifest = [
-            'key'          => $key,
-            'name'         => Str::headline($key),
+            'key' => $key,
+            'name' => Str::headline($key),
             'extracted_at' => now()->toIso8601String(),
-            'theme'        => $this->theme($root),
-            'fonts'        => [],
-            'behaviours'   => [],
-            'assets'       => $this->assets($root),
-            'pages'        => [],
+            'theme' => $this->theme($root),
+            'fonts' => [],
+            'behaviours' => [],
+            'assets' => $this->assets($root),
+            'pages' => [],
         ];
 
         [$manifest['fonts'], $manifest['behaviours']] = $this->headMeta($root);
@@ -80,10 +80,10 @@ class TemplateExtractor
         $url = $slug === 'index' ? '/' : '/'.Str::slug($slug);
 
         $page = [
-            'name'   => $slug === 'index' ? 'Home' : Str::headline($slug),
-            'title'  => SfcParser::useHeadTitle($sections['script']),
-            'url'    => $url,
-            'file'   => 'app/pages/'.basename($file),
+            'name' => $slug === 'index' ? 'Home' : Str::headline($slug),
+            'title' => SfcParser::useHeadTitle($sections['script']),
+            'url' => $url,
+            'file' => 'app/pages/'.basename($file),
             'layout' => ['header' => null, 'footer' => null],
             'blocks' => [],
         ];
@@ -115,10 +115,10 @@ class TemplateExtractor
 
         $block = [
             'component' => $component,
-            'blockKey'  => $blockKey,
-            'name'      => Str::headline($base),
-            'nodes'     => [],
-            'items'     => null,
+            'blockKey' => $blockKey,
+            'name' => Str::headline($base),
+            'nodes' => [],
+            'items' => null,
         ];
 
         // ── Fixed nodes from the template, with digit-free labels ──
@@ -135,9 +135,9 @@ class TemplateExtractor
             }
             $block['nodes'][] = [
                 'label' => $f['label'],
-                'type'  => $f['kind'] === 'image' ? 'image' : 'text',
+                'type' => $f['kind'] === 'image' ? 'image' : 'text',
                 'value' => $f['value'],
-                'kind'  => $f['kind'] === 'image' ? 'attr:src' : $f['kind'],
+                'kind' => $f['kind'] === 'image' ? 'attr:src' : $f['kind'],
                 'order' => $order++,
             ];
         }
@@ -146,9 +146,9 @@ class TemplateExtractor
         foreach (SfcParser::scalarStrings($sections['script']) as $var => $value) {
             $block['nodes'][] = [
                 'label' => Str::headline($var),
-                'type'  => 'text',
+                'type' => 'text',
                 'value' => $value,
-                'kind'  => 'const:'.$var,
+                'kind' => 'const:'.$var,
                 'order' => $order++,
             ];
         }
@@ -171,15 +171,15 @@ class TemplateExtractor
             $scalar = $fieldKeys === ['_value'];
 
             $groups[] = [
-                'var'         => $var,
-                'prefix'      => $prefix,
-                'scalar'      => $scalar,
-                'fields'      => $scalar
+                'var' => $var,
+                'prefix' => $prefix,
+                'scalar' => $scalar,
+                'fields' => $scalar
                     ? [['key' => '_value', 'label' => '']]
                     : array_map(fn ($k) => ['key' => $k, 'label' => self::FIELD_LABELS[$k] ?? Str::headline($k)], $fieldKeys),
                 'imagePrefix' => $fields['itemImagePrefix'],
-                'count'       => count($rows),
-                'values'      => $rows,
+                'count' => count($rows),
+                'values' => $rows,
             ];
 
             // Emit item nodes in the "{Prefix} {n} {Field}" convention the
@@ -190,9 +190,9 @@ class TemplateExtractor
                     $isImg = ! $scalar && $fieldLabel === 'Image';
                     $block['nodes'][] = [
                         'label' => $scalar ? $prefix.' '.($i + 1) : $prefix.' '.($i + 1).' '.$fieldLabel,
-                        'type'  => $isImg ? 'image' : 'text',
+                        'type' => $isImg ? 'image' : 'text',
                         'value' => $isImg && $fields['itemImagePrefix'] ? $fields['itemImagePrefix'].$v : $v,
-                        'kind'  => 'item:'.$k,
+                        'kind' => 'item:'.$k,
                         'order' => $order++,
                     ];
                 }
@@ -209,13 +209,14 @@ class TemplateExtractor
      * extraction manifest recorded. CTA fields get label + linkLabel.
      *
      * @param  array<int,array<string,mixed>>  $fixed  SfcParser::templateFields()['fixed']
-     * @return array<int,array<string,mixed>>  same rows + 'label' (and 'linkLabel')
+     * @return array<int,array<string,mixed>> same rows + 'label' (and 'linkLabel')
      */
     public static function labelFixedFields(array $fixed): array
     {
         $counters = [];
         $suffix = function (string $label) use (&$counters): string {
             $n = $counters[$label] = ($counters[$label] ?? 0) + 1;
+
             // Letter suffixes: digits in labels would trigger item clustering.
             return $n === 1 ? $label : $label.' '.chr(64 + $n); // B, C, …
         };
@@ -246,8 +247,8 @@ class TemplateExtractor
                     $f['label'] = $suffix(match ($f['tag']) {
                         'h1', 'h2' => 'Headline',
                         'h3', 'h4', 'h5' => 'Subheadline',
-                        'span'     => 'Caption',
-                        default    => 'Text',
+                        'span' => 'Caption',
+                        default => 'Text',
                     });
                     break;
                 default:

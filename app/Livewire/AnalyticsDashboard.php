@@ -2,8 +2,8 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
 use App\Models\Site;
+use Livewire\Component;
 
 class AnalyticsDashboard extends Component
 {

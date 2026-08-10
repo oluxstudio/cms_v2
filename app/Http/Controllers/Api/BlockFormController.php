@@ -40,10 +40,10 @@ class BlockFormController extends Controller
         foreach ($fields as $f) {
             $r = [$f['required'] ? 'required' : 'nullable'];
             $r[] = match ($f['field_type'] ?? 'text') {
-                'email'  => 'email',
+                'email' => 'email',
                 'number' => 'numeric',
-                'date'   => 'date',
-                default  => 'string',
+                'date' => 'date',
+                default => 'string',
             };
             if ($f['type'] === 'checkbox') {
                 $r = [$f['required'] ? 'accepted' : 'nullable'];
@@ -58,17 +58,17 @@ class BlockFormController extends Controller
         $inbox = Form::firstOrCreate(
             ['site_id' => $site->id, 'name' => 'blockkit-'.$form->id],
             [
-                'title'       => (string) data_get($form->meta, 'label', 'Form'),
+                'title' => (string) data_get($form->meta, 'label', 'Form'),
                 'description' => 'BlockKit form — schema lives in the page block tree.',
-                'fields'      => collect($fields)->map(fn ($f) => [
+                'fields' => collect($fields)->map(fn ($f) => [
                     'key' => $f['name'], 'label' => $f['name'], 'type' => $f['field_type'] ?? $f['type'],
                 ])->values()->all(),
-                'is_active'   => true,
+                'is_active' => true,
             ],
         );
         FormResponse::create([
-            'form_id'    => $inbox->id,
-            'fields'     => collect($fields)->mapWithKeys(fn ($f) => [$f['name'] => $validated[$f['name']] ?? null])->all(),
+            'form_id' => $inbox->id,
+            'fields' => collect($fields)->mapWithKeys(fn ($f) => [$f['name'] => $validated[$f['name']] ?? null])->all(),
             'ip_address' => $request->ip(),
         ]);
 
@@ -86,10 +86,10 @@ class BlockFormController extends Controller
                 $name = (string) data_get($child->props, 'name', '');
                 if ($name !== '') {
                     $out[] = [
-                        'name'       => $name,
-                        'type'       => $child->type,
+                        'name' => $name,
+                        'type' => $child->type,
                         'field_type' => data_get($child->props, 'field_type'),
-                        'required'   => (bool) data_get($child->props, 'required', false),
+                        'required' => (bool) data_get($child->props, 'required', false),
                     ];
                 }
             } elseif ($child->isLayout()) {

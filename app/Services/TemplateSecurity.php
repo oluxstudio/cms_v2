@@ -20,11 +20,11 @@ class TemplateSecurity
      */
     public function inspectZip(ZipArchive $zip): void
     {
-        $lim       = config('templates.limits');
-        $allowed   = array_map('strtolower', $lim['allowed_ext']);
-        $maxFiles  = (int) $lim['max_files'];
-        $maxTotal  = (int) $lim['max_total_mb'] * 1024 * 1024;
-        $maxFile   = (int) $lim['max_file_mb'] * 1024 * 1024;
+        $lim = config('templates.limits');
+        $allowed = array_map('strtolower', $lim['allowed_ext']);
+        $maxFiles = (int) $lim['max_files'];
+        $maxTotal = (int) $lim['max_total_mb'] * 1024 * 1024;
+        $maxFile = (int) $lim['max_file_mb'] * 1024 * 1024;
 
         if ($zip->numFiles > $maxFiles) {
             throw new RuntimeException("Archive has too many files ({$zip->numFiles} > {$maxFiles}).");
@@ -90,18 +90,18 @@ class TemplateSecurity
      */
     public function sanitizePages(array $pages): array
     {
-        $maxPages   = (int) config('templates.limits.max_pages');
-        $out        = [];
+        $maxPages = (int) config('templates.limits.max_pages');
+        $out = [];
 
         foreach (array_slice($pages, 0, $maxPages) as $page) {
             if (! is_array($page)) {
                 continue;
             }
             $clean = [
-                'name'     => $this->str($page['name'] ?? 'Page', 120),
-                'url'      => $this->str($page['url'] ?? '/', 200),
+                'name' => $this->str($page['name'] ?? 'Page', 120),
+                'url' => $this->str($page['url'] ?? '/', 200),
                 'keywords' => $this->str($page['keywords'] ?? '', 255),
-                'blocks'   => [],
+                'blocks' => [],
             ];
 
             foreach (array_slice((array) ($page['blocks'] ?? []), 0, 60) as $block) {
@@ -126,17 +126,17 @@ class TemplateSecurity
                     }
                     $nodes[] = [
                         'label' => $this->str($n['label'] ?? 'Field', 120),
-                        'type'  => $ntype,
+                        'type' => $ntype,
                         'value' => $this->str((string) ($n['value'] ?? ''), 5000),
                         'order' => (int) ($n['order'] ?? 0),
                     ];
                 }
 
                 $clean['blocks'][] = [
-                    'type'    => $type,
+                    'type' => $type,
                     'variant' => $variant,
-                    'name'    => $this->str($block['name'] ?? '', 120),
-                    'nodes'   => $nodes,
+                    'name' => $this->str($block['name'] ?? '', 120),
+                    'nodes' => $nodes,
                 ];
             }
 

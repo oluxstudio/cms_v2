@@ -25,7 +25,7 @@ class SocialAuthController extends Controller
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Exception $e) {
             return redirect()->route('login')->withErrors([
-                'email' => 'Unable to authenticate with ' . ucfirst($provider) . '. Please try again.',
+                'email' => 'Unable to authenticate with '.ucfirst($provider).'. Please try again.',
             ]);
         }
 
@@ -40,18 +40,18 @@ class SocialAuthController extends Controller
             if ($user) {
                 // Link social account to existing user
                 $user->update([
-                    'social_id'   => $socialUser->getId(),
+                    'social_id' => $socialUser->getId(),
                     'social_type' => $provider,
-                    'avatar'      => $socialUser->getAvatar(),
+                    'avatar' => $socialUser->getAvatar(),
                 ]);
             } else {
                 // Create new user
                 $user = User::create([
-                    'name'              => $socialUser->getName(),
-                    'email'             => $socialUser->getEmail(),
-                    'social_id'         => $socialUser->getId(),
-                    'social_type'       => $provider,
-                    'avatar'            => $socialUser->getAvatar(),
+                    'name' => $socialUser->getName(),
+                    'email' => $socialUser->getEmail(),
+                    'social_id' => $socialUser->getId(),
+                    'social_type' => $provider,
+                    'avatar' => $socialUser->getAvatar(),
                     'email_verified_at' => now(),
                 ]);
 

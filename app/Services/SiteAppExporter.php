@@ -89,7 +89,7 @@ class SiteAppExporter
         $zipPath = storage_path('app/site-apps/'.$site->name.'.zip');
         File::delete($zipPath);
 
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
             throw new \RuntimeException('Could not create the zip archive.');
         }

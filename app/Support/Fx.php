@@ -112,7 +112,7 @@ JS;
     {
         $out = '';
         foreach (['fx_enter' => 'data-fx-enter', 'fx_leave' => 'data-fx-leave', 'fx_click' => 'data-fx-click',
-                  'fx_duration' => 'data-fx-duration', 'fx_delay' => 'data-fx-delay', 'fx_parallax' => 'data-fx-parallax'] as $k => $attr) {
+            'fx_duration' => 'data-fx-duration', 'fx_delay' => 'data-fx-delay', 'fx_parallax' => 'data-fx-parallax'] as $k => $attr) {
             if (($style[$k] ?? '') !== '' && ($style[$k] ?? null) !== null) {
                 $out .= ' '.$attr.'="'.e((string) $style[$k]).'"';
             }

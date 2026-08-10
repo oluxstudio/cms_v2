@@ -17,11 +17,11 @@ interface LlmDriverInterface
      * Run a prompt against the model, executing any tool calls via the callback,
      * and return the final assistant text.
      *
-     * @param  string    $systemPrompt  Full assembled system prompt
-     * @param  array     $messages      Prior turns: [['role' => 'user|assistant', 'content' => '...'], ...]
-     * @param  array     $tools         Anthropic-format tool definitions from SiteTools::definitions()
-     * @param  callable  $executeTool   fn(string $name, array $input): array{ok:bool,message:string}
-     * @return string    Final assistant text after all tool-use rounds complete
+     * @param  string  $systemPrompt  Full assembled system prompt
+     * @param  array  $messages  Prior turns: [['role' => 'user|assistant', 'content' => '...'], ...]
+     * @param  array  $tools  Anthropic-format tool definitions from SiteTools::definitions()
+     * @param  callable  $executeTool  fn(string $name, array $input): array{ok:bool,message:string}
+     * @return string Final assistant text after all tool-use rounds complete
      */
     public function chat(
         string $systemPrompt,

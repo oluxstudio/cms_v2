@@ -61,6 +61,7 @@ class TemplateLint
 
                 if (count($nodes) === 0) {
                     $f[] = $this->finding('warning', "Block · {$name}", 'No editable fields extracted — content is hardcoded in markup the extractor could not classify.');
+
                     continue;
                 }
 

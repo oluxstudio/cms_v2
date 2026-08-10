@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-
 /**
  * Shapes a template payload block (plain arrays from a template.json / payload) into
  * the SAME renderable payload the live site API emits (see SiteContentController::

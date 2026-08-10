@@ -7,6 +7,7 @@ use App\Contracts\LlmDriverInterface;
 use App\Services\Llm\AnthropicDriver;
 use App\Services\Llm\DeepSeekDriver;
 use App\Services\Llm\OllamaDriver;
+use GuzzleHttp\Client;
 use Illuminate\Support\ServiceProvider;
 use OpenAI;
 
@@ -42,7 +43,7 @@ class LlmServiceProvider extends ServiceProvider
                     client: OpenAI::factory()
                         ->withBaseUri('https://api.deepseek.com/v1')
                         ->withApiKey(config('services.deepseek.key', ''))
-                        ->withHttpClient(new \GuzzleHttp\Client(['timeout' => 120, 'connect_timeout' => 10]))
+                        ->withHttpClient(new Client(['timeout' => 120, 'connect_timeout' => 10]))
                         ->make(),
                     model: config('services.deepseek.model', 'deepseek-chat'),
                 ),
@@ -51,14 +52,14 @@ class LlmServiceProvider extends ServiceProvider
                     client: OpenAI::factory()
                         ->withBaseUri(config('services.ollama.base_url', 'http://localhost:11434/v1'))
                         ->withApiKey('ollama') // Ollama ignores the key; SDK requires one
-                        ->withHttpClient(new \GuzzleHttp\Client(['timeout' => 300, 'connect_timeout' => 10]))
+                        ->withHttpClient(new Client(['timeout' => 300, 'connect_timeout' => 10]))
                         ->make(),
                     model: config('services.ollama.model', 'qwen3:8b'),
                 ),
 
                 default => new AnthropicDriver(
                     client: Anthropic::client(config('services.anthropic.key', '')),
-                    model:  config('services.anthropic.model', 'claude-opus-4-5'),
+                    model: config('services.anthropic.model', 'claude-opus-4-5'),
                 ),
             };
         });

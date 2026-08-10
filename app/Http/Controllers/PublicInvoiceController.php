@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\Site;
 use App\Services\Stripe\StripeGateway;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 /**
@@ -55,7 +56,7 @@ class PublicInvoiceController extends Controller
     {
         [$site, $invoice] = $this->invoice($siteName, $token);
 
-        return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.invoice', compact('site', 'invoice'))
+        return Pdf::loadView('pdf.invoice', compact('site', 'invoice'))
             ->setPaper('a4')
             ->download("{$invoice->number}.pdf");
     }
@@ -66,8 +67,8 @@ class PublicInvoiceController extends Controller
         [$site, $invoice] = $this->invoice($siteName, $token);
 
         return view('public.invoice.portal', [
-            'site'     => $site,
-            'invoice'  => $invoice,
+            'site' => $site,
+            'invoice' => $invoice,
             'invoices' => $invoice->siblingInvoices(),
         ]);
     }
@@ -86,16 +87,16 @@ class PublicInvoiceController extends Controller
             $site,
             collect($invoice->items)->map(fn ($i) => [
                 'price_data' => [
-                    'currency'     => $invoice->currency,
+                    'currency' => $invoice->currency,
                     'product_data' => ['name' => $i['description'] ?: 'Item'],
-                    'unit_amount'  => max(1, (int) $i['unit_cents']),
+                    'unit_amount' => max(1, (int) $i['unit_cents']),
                 ],
                 'quantity' => max(1, (int) ($i['qty'] ?? 1)),
             ])->when($invoice->tax_cents > 0, fn ($items) => $items->push([
                 'price_data' => [
-                    'currency'     => $invoice->currency,
+                    'currency' => $invoice->currency,
                     'product_data' => ['name' => 'Tax'],
-                    'unit_amount'  => $invoice->tax_cents,
+                    'unit_amount' => $invoice->tax_cents,
                 ],
                 'quantity' => 1,
             ]))->values()->all(),

@@ -37,14 +37,14 @@ class DeepSeekDriver implements LlmDriverInterface
         $openAiTools = $this->convertTools($tools);
 
         // Qwen3 supports /no_think to suppress verbose reasoning. DeepSeek-R1 always reasons (no equivalent flag).
-        $systemContent = $this->isQwen3() ? $systemPrompt . "\n/no_think" : $systemPrompt;
+        $systemContent = $this->isQwen3() ? $systemPrompt."\n/no_think" : $systemPrompt;
 
         $apiMessages = array_merge(
             [['role' => 'system', 'content' => $systemContent]],
             array_map(fn ($m) => ['role' => $m['role'], 'content' => $m['content']], $messages),
         );
 
-        $finalText      = '';
+        $finalText = '';
         $toolsCalledAll = [];
 
         for ($i = 0; $i < 16; $i++) {
@@ -53,29 +53,29 @@ class DeepSeekDriver implements LlmDriverInterface
             // ── Tool call turn ─────────────────────────────────────────────
             if ($finishReason === 'tool_calls' && ! empty($toolCalls)) {
                 $apiMessages[] = [
-                    'role'       => 'assistant',
-                    'content'    => $content ?? '',
+                    'role' => 'assistant',
+                    'content' => $content ?? '',
                     'tool_calls' => array_map(fn ($tc) => [
-                        'id'       => $tc['id'],
-                        'type'     => 'function',
+                        'id' => $tc['id'],
+                        'type' => 'function',
                         'function' => [
-                            'name'      => $tc['function']['name'],
+                            'name' => $tc['function']['name'],
                             'arguments' => $tc['function']['arguments'],
                         ],
                     ], $toolCalls),
                 ];
 
                 foreach ($toolCalls as $toolCall) {
-                    $args   = json_decode($toolCall['function']['arguments'], true) ?? [];
+                    $args = json_decode($toolCall['function']['arguments'], true) ?? [];
                     $result = $executeTool($toolCall['function']['name'], $args);
 
-                    $apiMessages[]    = [
-                        'role'         => 'tool',
+                    $apiMessages[] = [
+                        'role' => 'tool',
                         'tool_call_id' => $toolCall['id'],
-                        'name'         => $toolCall['function']['name'],
+                        'name' => $toolCall['function']['name'],
                         // Tool results may be plain {message} strings (SiteTools)
                         // or structured payloads (BlockAgent) — DeepSeek needs a string.
-                        'content'      => is_string($result['message'] ?? null)
+                        'content' => is_string($result['message'] ?? null)
                             ? $result['message']
                             : json_encode($result, JSON_UNESCAPED_SLASHES),
                     ];
@@ -83,6 +83,7 @@ class DeepSeekDriver implements LlmDriverInterface
                 }
 
                 $finalText = '';
+
                 continue;
             }
 
@@ -92,19 +93,20 @@ class DeepSeekDriver implements LlmDriverInterface
                 : ($content ?? '');
 
             // Nudge: if create_page ran but no component was created, keep going.
-            $createdPage      = in_array('create_page',     $toolsCalledAll, true);
+            $createdPage = in_array('create_page', $toolsCalledAll, true);
             $createdComponent = in_array('create_component', $toolsCalledAll, true);
 
             if ($createdPage && ! $createdComponent && $i < 14) {
                 $apiMessages[] = ['role' => 'assistant', 'content' => $finalText ?: 'Done.'];
                 $apiMessages[] = [
-                    'role'    => 'user',
+                    'role' => 'user',
                     'content' => 'You created the page but have not added any components or content nodes yet. '
-                        . 'Continue now: call create_component to add a named section, '
-                        . 'then call add_node multiple times to fill it with real, topic-appropriate content. '
-                        . 'Do not stop until the page has meaningful content.',
+                        .'Continue now: call create_component to add a named section, '
+                        .'then call add_node multiple times to fill it with real, topic-appropriate content. '
+                        .'Do not stop until the page has meaningful content.',
                 ];
                 $finalText = '';
+
                 continue;
             }
 
@@ -125,19 +127,21 @@ class DeepSeekDriver implements LlmDriverInterface
     private function streamChat(array $messages, array $tools): array
     {
         $stream = $this->client->chat()->createStreamed([
-            'model'    => $this->model,
+            'model' => $this->model,
             'messages' => $messages,
-            'tools'    => $tools,
-            
+            'tools' => $tools,
+
         ]);
 
-        $text         = '';
+        $text = '';
         $finishReason = 'stop';
-        $toolMap      = []; // index => ['id','function'=>['name','arguments']]
+        $toolMap = []; // index => ['id','function'=>['name','arguments']]
 
         foreach ($stream as $response) {
             $choice = $response->choices[0] ?? null;
-            if (! $choice) continue;
+            if (! $choice) {
+                continue;
+            }
 
             if ($choice->finishReason !== null) {
                 $finishReason = $choice->finishReason;
@@ -195,11 +199,11 @@ class DeepSeekDriver implements LlmDriverInterface
     private function convertTools(array $anthropicTools): array
     {
         $tools = array_map(fn ($t) => [
-            'type'     => 'function',
+            'type' => 'function',
             'function' => [
-                'name'        => $t['name'],
+                'name' => $t['name'],
                 'description' => $t['description'],
-                'parameters'  => $t['input_schema'],
+                'parameters' => $t['input_schema'],
             ],
         ], $anthropicTools);
 
@@ -223,6 +227,7 @@ class DeepSeekDriver implements LlmDriverInterface
     private function usesThinkBlocks(): bool
     {
         $m = strtolower($this->model);
+
         return str_contains($m, 'qwen3') || str_contains($m, 'deepseek-r1');
     }
 
@@ -234,6 +239,7 @@ class DeepSeekDriver implements LlmDriverInterface
     private function isQwen3(): bool
     {
         $m = strtolower($this->model);
+
         return str_contains($m, 'qwen3') || $m === 'cms-operator' || str_starts_with($m, 'cms-operator');
     }
 }

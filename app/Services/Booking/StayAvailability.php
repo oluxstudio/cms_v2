@@ -4,6 +4,7 @@ namespace App\Services\Booking;
 
 use App\Models\Booking;
 use App\Models\Service;
+use App\Models\ServiceResource;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
@@ -45,7 +46,7 @@ class StayAvailability
     }
 
     /** Is one SPECIFIC room/house free for the range? */
-    public function resourceFree(\App\Models\ServiceResource $resource, CarbonInterface $in, CarbonInterface $out): bool
+    public function resourceFree(ServiceResource $resource, CarbonInterface $in, CarbonInterface $out): bool
     {
         return ! Booking::where('resource_id', $resource->id)
             ->active()
@@ -107,7 +108,7 @@ class StayAvailability
     public function calendar(Service $service, CarbonInterface $month): array
     {
         $start = $month->copy()->startOfMonth();
-        $end   = $month->copy()->endOfMonth();
+        $end = $month->copy()->endOfMonth();
 
         // One query: every active booking overlapping the month.
         $bookings = Booking::where('service_id', $service->id)
@@ -123,7 +124,7 @@ class StayAvailability
             $night = $d->format('Y-m-d');
             $held = $bookings->filter(fn ($b) => $b->starts_at->format('Y-m-d') <= $night
                                               && $b->ends_at->format('Y-m-d') > $night)
-                             ->sum('quantity');
+                ->sum('quantity');
             $out[$night] = max(0, $total - $held);
         }
 

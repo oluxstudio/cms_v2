@@ -29,13 +29,13 @@ class TripAvailability
             ->orderBy('departs_at')
             ->get()
             ->map(fn (ServiceDeparture $d) => [
-                'id'            => $d->id,
-                'origin'        => $d->origin,
-                'destination'   => $d->destination,
-                'departs_at'    => $d->departs_at->toIso8601String(),
+                'id' => $d->id,
+                'origin' => $d->origin,
+                'destination' => $d->destination,
+                'departs_at' => $d->departs_at->toIso8601String(),
                 'departs_label' => $d->departs_at->format('D, M j · g:i A'),
-                'seats_left'    => $d->seatsLeft(),
-                'price_cents'   => $d->effectivePriceCents(),
+                'seats_left' => $d->seatsLeft(),
+                'price_cents' => $d->effectivePriceCents(),
             ])
             ->filter(fn ($d) => $d['seats_left'] > 0)
             ->values()

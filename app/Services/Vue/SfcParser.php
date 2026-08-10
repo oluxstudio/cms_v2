@@ -149,6 +149,7 @@ class SfcParser
             // Skip string literals so brackets inside them don't count.
             if ($ch === "'" || $ch === '"' || $ch === '`') {
                 $i = self::skipString($src, $i);
+
                 continue;
             }
             if ($ch === $open) {
@@ -172,6 +173,7 @@ class SfcParser
         for ($i = $pos + 1; $i < $len; $i++) {
             if ($src[$i] === '\\') {
                 $i++;
+
                 continue;
             }
             if ($src[$i] === $q) {
@@ -253,7 +255,7 @@ class SfcParser
      * Static editable fields in a block template, outside v-for regions.
      *
      * @return array{fixed: array<int,array<string,string>>, itemImagePrefix: ?string}
-     *  fixed rows: [tag, kind(text|html|image|cta), label-hint, value, attrs…]
+     *                                                                                 fixed rows: [tag, kind(text|html|image|cta), label-hint, value, attrs…]
      */
     public static function templateFields(string $template): array
     {
@@ -287,6 +289,7 @@ class SfcParser
                 if ($vforDepth === 0 && preg_match('/\ssrc="(\/assets\/[^"]+)"/', $attrs, $m)) {
                     $fixed[] = ['tag' => 'img', 'kind' => 'image', 'value' => $m[1], 'start' => $pos, 'end' => $pos + strlen($full)];
                 }
+
                 continue;
             }
             if (in_array($tag, self::VOID_TAGS, true)) {
@@ -299,6 +302,7 @@ class SfcParser
                     $vforDepth++;
                 }
                 $stack[] = ['tag' => $tag, 'attrs' => $attrs, 'content' => $pos + strlen($full), 'vfor' => $isVfor, 'start' => $pos];
+
                 continue;
             }
             if ($closing) {

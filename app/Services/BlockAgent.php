@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
+use App\Contracts\LlmDriverInterface;
 use App\Models\Block;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\User;
-use App\Contracts\LlmDriverInterface;
 
 /**
  * The AI half of jigsaw parity: Polux operating the SAME six block operations
@@ -54,10 +54,10 @@ class BlockAgent
         }
 
         return [
-            'ok'      => true,
-            'text'    => $text,
+            'ok' => true,
+            'text' => $text,
             'mutated' => array_intersect($executed, self::MUTATING) !== [],
-            'tools'   => $executed,
+            'tools' => $executed,
         ];
     }
 
@@ -242,10 +242,10 @@ PROMPT;
         $blockInput = [
             'type' => 'object',
             'properties' => [
-                'type'     => ['type' => 'string', 'enum' => ['container', 'flex', 'grid', 'masonry', 'form', 'card', 'modal', 'header', 'content', 'tile', 'media', 'list', 'lightbox', 'button', 'input', 'textarea', 'select', 'checkbox', 'divider'], 'description' => 'A catalogue block type'],
-                'props'    => ['type' => 'object'],
-                'style'    => ['type' => 'object'],
-                'meta'     => ['type' => 'object', 'properties' => ['label' => ['type' => 'string']], 'required' => ['label']],
+                'type' => ['type' => 'string', 'enum' => ['container', 'flex', 'grid', 'masonry', 'form', 'card', 'modal', 'header', 'content', 'tile', 'media', 'list', 'lightbox', 'button', 'input', 'textarea', 'select', 'checkbox', 'divider'], 'description' => 'A catalogue block type'],
+                'props' => ['type' => 'object'],
+                'style' => ['type' => 'object'],
+                'meta' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string']], 'required' => ['label']],
                 'children' => ['type' => 'array', 'items' => ['type' => 'object'], 'description' => 'Nested child blocks (layout blocks only), same shape as this object'],
             ],
             'required' => ['type', 'props', 'meta'],
@@ -259,8 +259,8 @@ PROMPT;
                     'type' => 'object',
                     'properties' => [
                         'parent_id' => ['type' => 'string'],
-                        'position'  => ['type' => 'integer', 'description' => '0-based index among the parent\'s children'],
-                        'blocks'    => ['type' => 'array', 'items' => $blockInput],
+                        'position' => ['type' => 'integer', 'description' => '0-based index among the parent\'s children'],
+                        'blocks' => ['type' => 'array', 'items' => $blockInput],
                     ],
                     'required' => ['parent_id', 'position', 'blocks'],
                 ],
@@ -272,9 +272,9 @@ PROMPT;
                     'type' => 'object',
                     'properties' => [
                         'block_id' => ['type' => 'string'],
-                        'props'    => ['type' => 'object'],
-                        'style'    => ['type' => 'object'],
-                        'meta'     => ['type' => 'object'],
+                        'props' => ['type' => 'object'],
+                        'style' => ['type' => 'object'],
+                        'meta' => ['type' => 'object'],
                     ],
                     'required' => ['block_id'],
                 ],
@@ -285,9 +285,9 @@ PROMPT;
                 'input_schema' => [
                     'type' => 'object',
                     'properties' => [
-                        'block_id'      => ['type' => 'string'],
+                        'block_id' => ['type' => 'string'],
                         'new_parent_id' => ['type' => 'string'],
-                        'position'      => ['type' => 'integer'],
+                        'position' => ['type' => 'integer'],
                     ],
                     'required' => ['block_id', 'new_parent_id', 'position'],
                 ],

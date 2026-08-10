@@ -14,7 +14,7 @@ class TemplateRegistry
     public static function all(): array
     {
         $classes = [
-            new BlankTemplate(),
+            new BlankTemplate,
         ];
 
         $byKey = [];

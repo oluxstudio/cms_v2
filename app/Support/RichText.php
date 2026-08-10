@@ -28,7 +28,7 @@ class RichText
             return $html; // plain text: nothing to do
         }
 
-        $doc = new \DOMDocument();
+        $doc = new \DOMDocument;
         // Wrap so multiple root nodes + encoding survive; suppress warnings on junk HTML.
         @$doc->loadHTML(
             '<?xml encoding="utf-8"?><div id="rt-root">'.$html.'</div>',

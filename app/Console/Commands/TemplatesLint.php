@@ -35,9 +35,9 @@ class TemplatesLint extends Command
         $this->newLine();
         foreach ($result['findings'] as $f) {
             $tag = match ($f['level']) {
-                'error'   => '<fg=red>ERROR  </>',
+                'error' => '<fg=red>ERROR  </>',
                 'warning' => '<fg=yellow>WARN   </>',
-                default   => '<fg=green>INFO   </>',
+                default => '<fg=green>INFO   </>',
             };
             $this->line("  {$tag} {$f['area']} — {$f['message']}");
         }

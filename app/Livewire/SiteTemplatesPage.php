@@ -178,7 +178,9 @@ class SiteTemplatesPage extends Component
     /** Use (apply) the template — APPENDS its pages, theme, font & assets to the site. */
     public function applyTemplate()
     {
-        $this->dispatch('toast', level: 'error', title: 'Unavailable', message: 'Legacy template installing was removed — build with blocks and save your own templates in the builder.'); return null;
+        $this->dispatch('toast', level: 'error', title: 'Unavailable', message: 'Legacy template installing was removed — build with blocks and save your own templates in the builder.');
+
+        return null;
     }
 
     /** Stop using the template — removes exactly what it added; defaults remain. */

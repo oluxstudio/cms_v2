@@ -15,16 +15,14 @@ use Illuminate\Http\Request;
  */
 class BlockKitController extends Controller
 {
-    public function __construct(private BlockTreeService $trees)
-    {
-    }
+    public function __construct(private BlockTreeService $trees) {}
 
     public function tree(Request $request, Page $page): JsonResponse
     {
         $this->authorizePage($request, $page);
 
         return response()->json([
-            'tree'      => $this->trees->tree($page),
+            'tree' => $this->trees->tree($page),
             'catalogue' => ['types' => config('blockkit.types'), 'style' => config('blockkit.style')],
         ]);
     }
@@ -34,13 +32,13 @@ class BlockKitController extends Controller
         $this->authorizePage($request, $page);
         $data = $request->validate([
             'parent_id' => 'required|string',
-            'position'  => 'required|integer|min:0',
-            'blocks'    => 'required|array|min:1',
+            'position' => 'required|integer|min:0',
+            'blocks' => 'required|array|min:1',
         ]);
 
         return $this->attempt(fn () => [
             'created' => $this->trees->insertBlocks($page, $data['parent_id'], $data['position'], $data['blocks']),
-            'tree'    => $this->trees->tree($page),
+            'tree' => $this->trees->tree($page),
         ]);
     }
 
@@ -49,9 +47,9 @@ class BlockKitController extends Controller
         $this->authorizePage($request, $page);
         $data = $request->validate([
             'block_id' => 'required|string',
-            'props'    => 'sometimes|array',
-            'style'    => 'sometimes|array',
-            'meta'     => 'sometimes|array',
+            'props' => 'sometimes|array',
+            'style' => 'sometimes|array',
+            'meta' => 'sometimes|array',
         ]);
 
         return $this->attempt(fn () => [
@@ -63,14 +61,14 @@ class BlockKitController extends Controller
     {
         $this->authorizePage($request, $page);
         $data = $request->validate([
-            'block_id'      => 'required|string',
+            'block_id' => 'required|string',
             'new_parent_id' => 'required|string',
-            'position'      => 'required|integer|min:0',
+            'position' => 'required|integer|min:0',
         ]);
 
         return $this->attempt(fn () => [
             'moved' => $this->trees->moveBlock($page, $data['block_id'], $data['new_parent_id'], $data['position'])->id,
-            'tree'  => $this->trees->tree($page),
+            'tree' => $this->trees->tree($page),
         ]);
     }
 
@@ -84,7 +82,7 @@ class BlockKitController extends Controller
 
         return $this->attempt(fn () => [
             'deleted' => $this->trees->deleteBlocks($page, $data['block_ids'], (bool) ($data['confirmed'] ?? false)),
-            'tree'    => $this->trees->tree($page),
+            'tree' => $this->trees->tree($page),
         ]);
     }
 

@@ -32,11 +32,11 @@ class TaskLogger
     ): TaskLog {
         return $site->taskLogs()->create([
             'user_id' => $actor?->id,
-            'level'   => $level,
-            'type'    => $type,
-            'title'   => $title,
+            'level' => $level,
+            'type' => $type,
+            'title' => $title,
             'message' => $message,
-            'meta'    => $meta ?: null,
+            'meta' => $meta ?: null,
         ]);
     }
 
@@ -55,14 +55,14 @@ class TaskLogger
         array $meta = [],
     ): Alert {
         return $site->alerts()->create([
-            'user_id'  => $user?->id,
-            'level'    => $level,
-            'type'     => $type,
+            'user_id' => $user?->id,
+            'level' => $level,
+            'type' => $type,
             'audience' => $audience,
-            'title'    => $title,
-            'body'     => $body,
-            'link'     => $link,
-            'meta'     => $meta ?: null,
+            'title' => $title,
+            'body' => $body,
+            'link' => $link,
+            'meta' => $meta ?: null,
         ]);
     }
 

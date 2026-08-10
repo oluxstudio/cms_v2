@@ -8,7 +8,6 @@ use App\Models\Media;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Site;
-use Nuwave\Lighthouse\Execution\ResolveInfo;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 
 /**

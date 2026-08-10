@@ -35,11 +35,11 @@ class TemplateCatalog
         }
 
         match ($sort) {
-            'new'        => $q->orderByDesc('published_at')->orderByDesc('id'),
-            'price-low'  => $q->orderBy('price_cents')->orderByDesc('id'),
+            'new' => $q->orderByDesc('published_at')->orderByDesc('id'),
+            'price-low' => $q->orderBy('price_cents')->orderByDesc('id'),
             'price-high' => $q->orderByDesc('price_cents')->orderByDesc('id'),
-            'rating'     => $q->orderByDesc('rating_avg')->orderByDesc('rating_count'),
-            default      => $q->orderByDesc('installs_count')->orderByDesc('id'),
+            'rating' => $q->orderByDesc('rating_avg')->orderByDesc('rating_count'),
+            default => $q->orderByDesc('installs_count')->orderByDesc('id'),
         };
 
         return $q->paginate($perPage);

@@ -2,32 +2,42 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
-use App\Models\Site;
-use App\Models\Page;
 use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Media;
+use App\Models\Page;
+use App\Models\Site;
 use App\Models\SiteActivityLog;
 use App\Models\Todo;
+use Livewire\Component;
 
 class SiteDashboard extends Component
 {
     public Site $site;
 
-    public int $pagesCount      = 0;
-    public int $formsCount      = 0;
-    public int $mediaCount      = 0;
-    public int $responsesCount  = 0;
-    public int $publishedCount  = 0;
-    public int $contactsCount   = 0;
-    public int $productivity    = 0;
+    public int $pagesCount = 0;
 
-    public array $recentPages        = [];
-    public array $recentResponses    = [];
-    public array $recentContacts     = [];
-    public array $team               = [];
-    public array $chartData          = [];
+    public int $formsCount = 0;
+
+    public int $mediaCount = 0;
+
+    public int $responsesCount = 0;
+
+    public int $publishedCount = 0;
+
+    public int $contactsCount = 0;
+
+    public int $productivity = 0;
+
+    public array $recentPages = [];
+
+    public array $recentResponses = [];
+
+    public array $recentContacts = [];
+
+    public array $team = [];
+
+    public array $chartData = [];
 
     /** Activity feed — from site_activity_logs */
     public array $recentActivities = [];
@@ -49,11 +59,11 @@ class SiteDashboard extends Component
         $this->site = $site;
         $this->quickLinks = json_decode((string) $site->getAttr($this->quickLinksKey(), '[]'), true) ?: [];
 
-        $this->pagesCount      = Page::where('site_id', $site->id)->count();
-        $this->publishedCount  = Page::where('site_id', $site->id)->where('is_published', true)->count();
-        $this->formsCount      = Form::where('site_id', $site->id)->count();
-        $this->mediaCount      = Media::where('site_id', $site->id)->count();
-        $this->contactsCount   = $site->contacts()->count();
+        $this->pagesCount = Page::where('site_id', $site->id)->count();
+        $this->publishedCount = Page::where('site_id', $site->id)->where('is_published', true)->count();
+        $this->formsCount = Form::where('site_id', $site->id)->count();
+        $this->mediaCount = Media::where('site_id', $site->id)->count();
+        $this->contactsCount = $site->contacts()->count();
 
         $this->productivity = $this->pagesCount > 0
             ? (int) round($this->publishedCount / $this->pagesCount * 100)
@@ -88,6 +98,7 @@ class SiteDashboard extends Component
 
         $this->chartData = collect(range(6, 0))->map(function ($daysAgo) use ($site) {
             $date = now()->subDays($daysAgo);
+
             return [
                 'label' => $date->format('D'),
                 'value' => Page::where('site_id', $site->id)
@@ -104,27 +115,27 @@ class SiteDashboard extends Component
             ->get()
             ->map(function ($log) {
                 [$badgeLabel, $badgeBg, $badgeFg] = $log->actionBadge();
-                [$iconBg, $iconFg]                = $log->iconColors();
+                [$iconBg, $iconFg] = $log->iconColors();
 
                 return [
-                    'id'           => $log->id,
-                    'entity_type'  => $log->entity_type,
-                    'entity_id'    => $log->entity_id,
-                    'action'       => $log->action,
-                    'title'        => $log->title,
-                    'description'  => $log->description,
-                    'url'          => $log->url,         // relative path, e.g. /pages
-                    'icon_path'    => $log->iconPath(),
-                    'icon_bg'      => $iconBg,
-                    'icon_fg'      => $iconFg,
-                    'badge_label'  => $badgeLabel,
-                    'badge_bg'     => $badgeBg,
-                    'badge_fg'     => $badgeFg,
-                    'user_name'    => $log->user?->name ?? 'System',
-                    'user_init'    => $log->user ? strtoupper(substr($log->user->name, 0, 1)) : 'S',
-                    'user_color'   => $log->user ? null : '#6b7280',
-                    'created_at'   => $log->created_at->diffForHumans(),
-                    'meta'         => $log->meta ?? [],
+                    'id' => $log->id,
+                    'entity_type' => $log->entity_type,
+                    'entity_id' => $log->entity_id,
+                    'action' => $log->action,
+                    'title' => $log->title,
+                    'description' => $log->description,
+                    'url' => $log->url,         // relative path, e.g. /pages
+                    'icon_path' => $log->iconPath(),
+                    'icon_bg' => $iconBg,
+                    'icon_fg' => $iconFg,
+                    'badge_label' => $badgeLabel,
+                    'badge_bg' => $badgeBg,
+                    'badge_fg' => $badgeFg,
+                    'user_name' => $log->user?->name ?? 'System',
+                    'user_init' => $log->user ? strtoupper(substr($log->user->name, 0, 1)) : 'S',
+                    'user_color' => $log->user ? null : '#6b7280',
+                    'created_at' => $log->created_at->diffForHumans(),
+                    'meta' => $log->meta ?? [],
                 ];
             })
             ->toArray();
@@ -138,17 +149,17 @@ class SiteDashboard extends Component
             ->limit(6)
             ->get()
             ->map(fn ($t) => [
-                'id'            => $t->id,
-                'title'         => $t->title,
-                'status'        => $t->status,
-                'priority'      => $t->priority,
-                'due_at'        => $t->due_at?->format('M j') ?? null,
-                'due_passed'    => $t->due_at?->isPast() ?? false,
-                'assigned_to'   => $t->assignee?->name ?? null,
+                'id' => $t->id,
+                'title' => $t->title,
+                'status' => $t->status,
+                'priority' => $t->priority,
+                'due_at' => $t->due_at?->format('M j') ?? null,
+                'due_passed' => $t->due_at?->isPast() ?? false,
+                'assigned_to' => $t->assignee?->name ?? null,
                 'assigned_init' => $t->assignee ? strtoupper(substr($t->assignee->name, 0, 1)) : null,
-                'progress'      => $t->progress(),
-                'items_total'   => $t->items->count(),
-                'items_done'    => $t->items->where('done', true)->count(),
+                'progress' => $t->progress(),
+                'items_total' => $t->items->count(),
+                'items_done' => $t->items->where('done', true)->count(),
             ])
             ->toArray();
     }

@@ -28,27 +28,27 @@ class ModuleRegistry
 
         foreach (FeatureRegistry::all() as $key => $def) {
             $out[$key] = [
-                'key'            => $key,
-                'name'           => $def['name'] ?? Str::headline($key),
-                'description'    => $def['description'] ?? '',
-                'icon'           => $def['icon'] ?? 'puzzle',
-                'intents'        => $def['intents'] ?? [],
+                'key' => $key,
+                'name' => $def['name'] ?? Str::headline($key),
+                'description' => $def['description'] ?? '',
+                'icon' => $def['icon'] ?? 'puzzle',
+                'intents' => $def['intents'] ?? [],
                 'frontend_block' => $def['frontend_block'] ?? null,
-                'enabled'        => null,
-                'kind'           => 'builtin',
+                'enabled' => null,
+                'kind' => 'builtin',
             ];
         }
 
         // Forms is always available (not a toggle), so surface it for routing.
         $out['forms'] = [
-            'key'            => 'forms',
-            'name'           => 'Forms',
-            'description'    => 'Collect submissions with custom forms (contact, enquiry, signup).',
-            'icon'           => 'inbox',
-            'intents'        => ['form', 'contact', 'enquiry', 'inquiry', 'signup', 'sign up', 'subscribe', 'newsletter', 'feedback', 'submission', 'lead'],
+            'key' => 'forms',
+            'name' => 'Forms',
+            'description' => 'Collect submissions with custom forms (contact, enquiry, signup).',
+            'icon' => 'inbox',
+            'intents' => ['form', 'contact', 'enquiry', 'inquiry', 'signup', 'sign up', 'subscribe', 'newsletter', 'feedback', 'submission', 'lead'],
             'frontend_block' => 'contact',
-            'enabled'        => null,
-            'kind'           => 'builtin',
+            'enabled' => null,
+            'kind' => 'builtin',
         ];
 
         return $out;
@@ -60,18 +60,19 @@ class ModuleRegistry
         $builtins = collect(static::builtins())->map(function ($m) use ($site) {
             // Forms is always on; other built-ins follow the feature toggle.
             $m['enabled'] = $m['key'] === 'forms' ? true : $site->hasFeature($m['key']);
+
             return $m;
         });
 
         $declarative = $site->modules()->get()->map(fn ($mod) => [
-            'key'            => $mod->key,
-            'name'           => $mod->name,
-            'description'    => $mod->description ?? '',
-            'icon'           => $mod->icon ?? 'puzzle',
-            'intents'        => $mod->intents ?? [],
+            'key' => $mod->key,
+            'name' => $mod->name,
+            'description' => $mod->description ?? '',
+            'icon' => $mod->icon ?? 'puzzle',
+            'intents' => $mod->intents ?? [],
             'frontend_block' => $mod->frontend['block'] ?? 'module',
-            'enabled'        => (bool) $mod->enabled,
-            'kind'           => 'declarative',
+            'enabled' => (bool) $mod->enabled,
+            'kind' => 'declarative',
         ]);
 
         return $builtins->values()->merge($declarative->values());
@@ -81,12 +82,12 @@ class ModuleRegistry
     public static function capabilityMap(Site $site): array
     {
         return static::forSite($site)->map(fn ($m) => [
-            'key'     => $m['key'],
-            'name'    => $m['name'],
-            'desc'    => $m['description'],
+            'key' => $m['key'],
+            'name' => $m['name'],
+            'desc' => $m['description'],
             'intents' => $m['intents'],
             'enabled' => $m['enabled'],
-            'kind'    => $m['kind'],
+            'kind' => $m['kind'],
         ])->all();
     }
 
@@ -119,6 +120,7 @@ class ModuleRegistry
                     return true;
                 }
             }
+
             return false;
         });
     }

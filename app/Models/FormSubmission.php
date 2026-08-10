@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class FormSubmission extends Model
 {
@@ -18,8 +18,8 @@ class FormSubmission extends Model
     ];
 
     protected $casts = [
-        'fields'     => 'array',
-        'read_at'    => 'datetime',
+        'fields' => 'array',
+        'read_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

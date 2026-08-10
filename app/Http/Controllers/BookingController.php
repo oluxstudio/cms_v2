@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Mail\BookingConfirmed;
 use App\Mail\NewBookingNotification;
 use App\Models\Booking;
+use App\Models\Contact;
 use App\Models\Service;
 use App\Models\Site;
+use App\Services\ActivityLogger;
 use App\Services\BookingService;
 use App\Services\Stripe\StripeGateway;
 use Carbon\Carbon;
@@ -87,7 +89,7 @@ class BookingController extends Controller
 
         // CRM funnel: the customer becomes (or updates) a Contact.
         try {
-            \App\Models\Contact::capture($site, $result->customer_name, $result->customer_email, $result->customer_phone,
+            Contact::capture($site, $result->customer_name, $result->customer_email, $result->customer_phone,
                 "Booked {$svc->name} ({$result->reference}).");
         } catch (\Throwable $e) {
             report($e);
@@ -153,7 +155,7 @@ class BookingController extends Controller
         $booking->update(['paid_cents' => $paidCents]);
         $booking->markConfirmed();
         try {
-            \App\Services\ActivityLogger::bookingEvent($booking->fresh('service'), 'confirmed');
+            ActivityLogger::bookingEvent($booking->fresh('service'), 'confirmed');
         } catch (\Throwable $e) {
             report($e);
         }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Services\Vue\SfcParser;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 /**
  * Rewrites a published template app's block components to consume
@@ -265,7 +266,7 @@ class SfcRewriter
         // Wrap standalone string consts (e.g. a shared FAQ answer):
         //   const answer = '…' → const answer = olux.tRef('Answer', '…')
         foreach (SfcParser::scalarStrings($script) as $var => $value) {
-            $label = var_export(\Illuminate\Support\Str::headline($var), true);
+            $label = var_export(Str::headline($var), true);
             $script = preg_replace(
                 '/(const\s+'.preg_quote($var, '/').'\s*=\s*)(\'(?:[^\'\\\\]|\\\\.)+\'|"(?:[^"\\\\]|\\\\.)+")/',
                 '$1olux.tRef('.$label.', $2)',
@@ -323,6 +324,7 @@ class SfcRewriter
                 do {
                     $i++;
                 } while ($i < $len && ($src[$i] !== $ch || $src[$i - 1] === '\\'));
+
                 continue;
             }
             if ($ch === '[') {

@@ -2,6 +2,11 @@
 
 namespace App\Services;
 
+use App\Support\Css;
+use App\Support\Fx;
+use App\Support\RichText;
+use App\Support\ThemeTokens;
+
 /**
  * Turns a composed block tree into one self-contained HTML page:
  * semantic tags, per-block classes, responsive grid breakpoints.
@@ -25,6 +30,7 @@ class BlockHtmlExporter
     }
 
     private static array $css = [];
+
     private static int $i = 0;
 
     /**
@@ -37,7 +43,9 @@ class BlockHtmlExporter
         $rules = '';
         // Precedence: image/gradient win over the colour (overlay is a tint, not a base).
         $hasBgLayer = (($p['gradient'] ?? '') !== '') || (($p['bg_image'] ?? '') !== '');
-        if (($bg = $p['background'] ?? null) && $bg !== 'transparent' && ! $hasBgLayer) $rules .= "background-color:{$bg};";
+        if (($bg = $p['background'] ?? null) && $bg !== 'transparent' && ! $hasBgLayer) {
+            $rules .= "background-color:{$bg};";
+        }
         $bgLayers = [];
         if (($p['overlay'] ?? '') !== '') {
             $ov = self::alphaColor($p['overlay'], (int) ($p['overlay_opacity'] ?? 50));
@@ -45,27 +53,41 @@ class BlockHtmlExporter
         }
         // Gradient overlay: a second tint layer with its own opacity.
         if (($p['overlay_gradient'] ?? '') !== '') {
-            $bgLayers[] = \App\Support\Css::fadeGradient($p['overlay_gradient'], (int) ($p['overlay_gradient_opacity'] ?? 50));
+            $bgLayers[] = Css::fadeGradient($p['overlay_gradient'], (int) ($p['overlay_gradient_opacity'] ?? 50));
         }
-        if (($p['gradient'] ?? '') !== '') $bgLayers[] = $p['gradient'];
+        if (($p['gradient'] ?? '') !== '') {
+            $bgLayers[] = $p['gradient'];
+        }
         // background-image (media ref resolved upstream, or plain URL) — bottom layer.
         if (($p['bg_image'] ?? '') !== '') {
             $bgLayers[] = "url('".str_replace(["'", '"', '\\'], '', $p['bg_image'])."')";
         }
-        if ($bgLayers) $rules .= 'background-image:'.implode(',', $bgLayers).';';
-        foreach (['bg_size' => 'background-size', 'bg_position' => 'background-position', 'bg_repeat' => 'background-repeat',
-                  'bg_attachment' => 'background-attachment', 'bg_clip' => 'background-clip', 'bg_origin' => 'background-origin',
-                  'bg_blend' => 'background-blend-mode'] as $bk => $bprop) {
-            if (($p[$bk] ?? '') !== '') $rules .= "{$bprop}:{$p[$bk]};";
+        if ($bgLayers) {
+            $rules .= 'background-image:'.implode(',', $bgLayers).';';
         }
-        if (($p['bg_clip'] ?? '') === 'text') $rules .= '-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent;';
+        foreach (['bg_size' => 'background-size', 'bg_position' => 'background-position', 'bg_repeat' => 'background-repeat',
+            'bg_attachment' => 'background-attachment', 'bg_clip' => 'background-clip', 'bg_origin' => 'background-origin',
+            'bg_blend' => 'background-blend-mode'] as $bk => $bprop) {
+            if (($p[$bk] ?? '') !== '') {
+                $rules .= "{$bprop}:{$p[$bk]};";
+            }
+        }
+        if (($p['bg_clip'] ?? '') === 'text') {
+            $rules .= '-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent;';
+        }
         // CSS filters: blur (px) + percentage filters — emitted only when set.
         $filters = '';
-        if (($p['blur'] ?? '') !== '') $filters .= 'blur('.max(0, (int) $p['blur']).'px) ';
-        foreach (['brightness', 'contrast', 'saturate', 'grayscale'] as $fk) {
-            if (($p[$fk] ?? '') !== '') $filters .= "{$fk}(".max(0, (int) $p[$fk]).'%) ';
+        if (($p['blur'] ?? '') !== '') {
+            $filters .= 'blur('.max(0, (int) $p['blur']).'px) ';
         }
-        if ($filters !== '') $rules .= 'filter:'.trim($filters).';';
+        foreach (['brightness', 'contrast', 'saturate', 'grayscale'] as $fk) {
+            if (($p[$fk] ?? '') !== '') {
+                $filters .= "{$fk}(".max(0, (int) $p[$fk]).'%) ';
+            }
+        }
+        if ($filters !== '') {
+            $rules .= 'filter:'.trim($filters).';';
+        }
         // backdrop-filter: blur — frosts what shows THROUGH the block.
         if (($p['backdrop_blur'] ?? '') !== '') {
             $bb = 'blur('.max(0, (int) $p['backdrop_blur']).'px)';
@@ -89,15 +111,15 @@ class BlockHtmlExporter
         $rules = implode("\n", self::$css);
         // Theme variables: declare as :root custom properties and resolve
         // every "$name" reference to var(--bk-name) — same as the renderer.
-        if ($vars = \App\Support\ThemeTokens::rootCss($themeVariables)) {
+        if ($vars = ThemeTokens::rootCss($themeVariables)) {
             $rules = ":root{{$vars}}\n".$rules;
         }
-        $rules = \App\Support\ThemeTokens::vars($rules);
-        $body = \App\Support\ThemeTokens::vars($body);
+        $rules = ThemeTokens::vars($rules);
+        $body = ThemeTokens::vars($body);
         $safe = e($title);
         // Effects engine + user scripts (block meta.script / page custom_js).
-        $fxCss = \App\Support\Fx::css();
-        $fxJs = \App\Support\Fx::js();
+        $fxCss = Fx::css();
+        $fxJs = Fx::js();
         $userScripts = implode("\n", self::$scripts);
 
         return <<<HTML
@@ -157,7 +179,7 @@ HTML;
         $cls = 'b'.(self::$i++);
         $rules = '';
         $tag = 'div';
-        $fx = \App\Support\Fx::attrs($n['style'] ?? []); // data-fx-* on every surface
+        $fx = Fx::attrs($n['style'] ?? []); // data-fx-* on every surface
         $inner = '';
 
         $padMap = ['none' => '0', 'xs' => '6px', 'sm' => '12px', 'md' => '20px', 'lg' => '32px', 'xl' => '48px'];
@@ -174,7 +196,9 @@ HTML;
                 $rules .= "display:block;padding:{$pad};border:0;border-radius:14px;max-width:min(560px,92vw);box-shadow:0 24px 70px rgba(10,15,40,.3);";
                 $rules .= self::backgroundRules($p);
                 $inner .= '<form method="dialog" style="text-align:right"><button aria-label="Close" style="border:0;background:none;font-size:18px;cursor:pointer">✕</button></form>';
-                if (! empty($p['title'])) $inner .= '<h3>'.e($p['title']).'</h3>';
+                if (! empty($p['title'])) {
+                    $inner .= '<h3>'.e($p['title']).'</h3>';
+                }
                 $inner .= $kids();
 
                 return '<dialog id="'.e($n['id'] ?? $cls).'" class="'.$cls.'"'.$fx.'>'.$inner.'</dialog>'.self::push($cls, $rules.$styleCss);
@@ -186,82 +210,138 @@ HTML;
                     // Mobile-first responsive direction: string, or {base, md, lg} → media queries.
                     $d = $p['direction'] ?? 'row';
                     if (is_array($d)) {
-                        $dBase = $d['base'] ?? 'column'; $dMd = $d['md'] ?? $dBase; $dLg = $d['lg'] ?? $dMd;
+                        $dBase = $d['base'] ?? 'column';
+                        $dMd = $d['md'] ?? $dBase;
+                        $dLg = $d['lg'] ?? $dMd;
                         $rules .= "display:flex;flex-direction:{$dBase};";
-                        if ($dMd !== $dBase) self::$css[] = "@media(min-width:820px){.{$cls}{flex-direction:{$dMd}}}";
-                        if ($dLg !== $dMd) self::$css[] = "@media(min-width:1100px){.{$cls}{flex-direction:{$dLg}}}";
+                        if ($dMd !== $dBase) {
+                            self::$css[] = "@media(min-width:820px){.{$cls}{flex-direction:{$dMd}}}";
+                        }
+                        if ($dLg !== $dMd) {
+                            self::$css[] = "@media(min-width:1100px){.{$cls}{flex-direction:{$dLg}}}";
+                        }
                     } else {
                         $rules .= 'display:flex;flex-direction:'.$d.';';
                     }
                     $rules .= 'flex-wrap:'.($p['flex_wrap'] ?? 'nowrap').';';
                     foreach (['justify_content' => 'justify-content', 'align_items' => 'align-items', 'align_content' => 'align-content'] as $prop => $cssProp) {
-                        if (($p[$prop] ?? '') !== '') $rules .= "{$cssProp}:{$p[$prop]};";
+                        if (($p[$prop] ?? '') !== '') {
+                            $rules .= "{$cssProp}:{$p[$prop]};";
+                        }
                     }
                     $rules .= "gap:{$gap};padding:{$pad};";
                 } elseif (($p['display'] ?? '') === 'flex') {
                     // container display:flex — same properties as the Flex block.
                     $d = $p['direction'] ?? 'row';
                     if (is_array($d)) {
-                        $dBase = $d['base'] ?? 'column'; $dMd = $d['md'] ?? $dBase; $dLg = $d['lg'] ?? $dMd;
+                        $dBase = $d['base'] ?? 'column';
+                        $dMd = $d['md'] ?? $dBase;
+                        $dLg = $d['lg'] ?? $dMd;
                         $rules .= "display:flex;flex-direction:{$dBase};";
-                        if ($dMd !== $dBase) self::$css[] = "@media(min-width:820px){.{$cls}{flex-direction:{$dMd}}}";
-                        if ($dLg !== $dMd) self::$css[] = "@media(min-width:1100px){.{$cls}{flex-direction:{$dLg}}}";
+                        if ($dMd !== $dBase) {
+                            self::$css[] = "@media(min-width:820px){.{$cls}{flex-direction:{$dMd}}}";
+                        }
+                        if ($dLg !== $dMd) {
+                            self::$css[] = "@media(min-width:1100px){.{$cls}{flex-direction:{$dLg}}}";
+                        }
                     } else {
                         $rules .= 'display:flex;flex-direction:'.$d.';';
                     }
                     $rules .= 'flex-wrap:'.($p['flex_wrap'] ?? 'nowrap').';';
                     foreach (['justify_content' => 'justify-content', 'align_items' => 'align-items', 'align_content' => 'align-content'] as $prop => $cssProp) {
-                        if (($p[$prop] ?? '') !== '') $rules .= "{$cssProp}:{$p[$prop]};";
+                        if (($p[$prop] ?? '') !== '') {
+                            $rules .= "{$cssProp}:{$p[$prop]};";
+                        }
                     }
                     $rules .= "gap:{$gap};padding:{$pad};";
                 } elseif (($p['display'] ?? '') === 'grid') {
                     // container display:grid — same responsive columns as the Grid block.
                     $cc = $p['columns'] ?? ['base' => 1];
                     $cmap = is_array($cc) ? $cc : ['base' => (int) $cc];
-                    $cb = $cmap['base'] ?? 1; $cm = $cmap['md'] ?? $cb; $cl = $cmap['lg'] ?? $cm;
+                    $cb = $cmap['base'] ?? 1;
+                    $cm = $cmap['md'] ?? $cb;
+                    $cl = $cmap['lg'] ?? $cm;
                     $rules .= "display:grid;grid-template-columns:repeat({$cb},1fr);gap:{$gap};padding:{$pad};";
-                    if ($cm !== $cb) self::$css[] = "@media(min-width:820px){.{$cls}{grid-template-columns:repeat({$cm},1fr)}}";
-                    if ($cl !== $cm) self::$css[] = "@media(min-width:1100px){.{$cls}{grid-template-columns:repeat({$cl},1fr)}}";
+                    if ($cm !== $cb) {
+                        self::$css[] = "@media(min-width:820px){.{$cls}{grid-template-columns:repeat({$cm},1fr)}}";
+                    }
+                    if ($cl !== $cm) {
+                        self::$css[] = "@media(min-width:1100px){.{$cls}{grid-template-columns:repeat({$cl},1fr)}}";
+                    }
                 } else {
                     $rules .= "display:flex;flex-direction:column;gap:{$gap};padding:{$pad};";
                 }
                 $rules .= self::backgroundRules($p);
                 if (($p['z_index'] ?? '') !== '') {
                     $rules .= 'z-index:'.((int) $p['z_index']).';';
-                    if (($p['position'] ?? '') === '') $rules .= 'position:relative;';
+                    if (($p['position'] ?? '') === '') {
+                        $rules .= 'position:relative;';
+                    }
                 }
-                if (($p['display'] ?? '') !== '' && $p['display'] !== 'flex') $rules .= "display:{$p['display']};";
-                if (($p['position'] ?? '') !== '') $rules .= "position:{$p['position']};";
-                foreach ((array) ($p['inset'] ?? []) as $side => $v) { if ($v !== '' && $v !== null && in_array($side, ['top','right','bottom','left'], true)) $rules .= "{$side}:{$v};"; }
-                if (($p['overflow'] ?? '') !== '') $rules .= "overflow:{$p['overflow']};";
-                if (($p['opacity'] ?? '') !== '') $rules .= 'opacity:'.max(0, min(100, (int) $p['opacity'])) / 100 .';';
-                if (($p['width'] ?? '') !== '')  $rules .= "width:{$p['width']};";
-                if (($p['height'] ?? '') !== '') $rules .= "height:{$p['height']};";
+                if (($p['display'] ?? '') !== '' && $p['display'] !== 'flex') {
+                    $rules .= "display:{$p['display']};";
+                }
+                if (($p['position'] ?? '') !== '') {
+                    $rules .= "position:{$p['position']};";
+                }
+                foreach ((array) ($p['inset'] ?? []) as $side => $v) {
+                    if ($v !== '' && $v !== null && in_array($side, ['top', 'right', 'bottom', 'left'], true)) {
+                        $rules .= "{$side}:{$v};";
+                    }
+                }
+                if (($p['overflow'] ?? '') !== '') {
+                    $rules .= "overflow:{$p['overflow']};";
+                }
+                if (($p['opacity'] ?? '') !== '') {
+                    $rules .= 'opacity:'.max(0, min(100, (int) $p['opacity'])) / 100 .';';
+                }
+                if (($p['width'] ?? '') !== '') {
+                    $rules .= "width:{$p['width']};";
+                }
+                if (($p['height'] ?? '') !== '') {
+                    $rules .= "height:{$p['height']};";
+                }
                 // Per-side margin prop — each side a unit, token, $variable or AUTO (centering).
                 if (is_array($p['margin'] ?? null)) {
                     $rules .= 'margin:'.implode(' ', array_map(fn ($sd) => $padMap[$p['margin'][$sd] ?? ''] ?? (($p['margin'][$sd] ?? '') !== '' ? $p['margin'][$sd] : '0'), ['top', 'right', 'bottom', 'left'])).';';
                 }
-                if (($p['max_width'] ?? '') === 'xl') $rules .= 'max-width:1120px;margin-left:auto;margin-right:auto;';
-                if ($type === 'panel' || $type === 'card') $rules .= 'border-radius:12px;';
-                if ($type === 'card') $rules .= 'box-shadow:0 6px 24px rgba(20,30,60,.08);';
-                if (! empty($p['title'])) $inner .= '<h3>'.e($p['title']).'</h3>';
+                if (($p['max_width'] ?? '') === 'xl') {
+                    $rules .= 'max-width:1120px;margin-left:auto;margin-right:auto;';
+                }
+                if ($type === 'panel' || $type === 'card') {
+                    $rules .= 'border-radius:12px;';
+                }
+                if ($type === 'card') {
+                    $rules .= 'box-shadow:0 6px 24px rgba(20,30,60,.08);';
+                }
+                if (! empty($p['title'])) {
+                    $inner .= '<h3>'.e($p['title']).'</h3>';
+                }
                 $inner .= $kids();
                 break;
 
             case 'header':
                 $tag = 'h'.max(1, min(6, (int) substr($p['level'] ?? 'h2', 1) ?: 2));
-                $inner = \App\Support\RichText::clean($p['content'] ?? ''); // inline rich text (allow-listed)
-                if (($p['color'] ?? '') !== '') $rules .= "color:{$p['color']};"; // unset → inherits from parent
+                $inner = RichText::clean($p['content'] ?? ''); // inline rich text (allow-listed)
+                if (($p['color'] ?? '') !== '') {
+                    $rules .= "color:{$p['color']};";
+                } // unset → inherits from parent
                 $rules .= 'text-align:'.($p['align'] ?? 'left').';line-height:1.15;';
-                if (($p['text_gradient'] ?? '') !== '') $rules .= "background-image:{$p['text_gradient']};-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;";
+                if (($p['text_gradient'] ?? '') !== '') {
+                    $rules .= "background-image:{$p['text_gradient']};-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;";
+                }
                 break;
 
             case 'content':
                 $tag = 'p';
-                $inner = \App\Support\RichText::clean($p['content'] ?? ''); // inline rich text (allow-listed)
-                if (($p['color'] ?? '') !== '') $rules .= "color:{$p['color']};"; // unset → inherits
+                $inner = RichText::clean($p['content'] ?? ''); // inline rich text (allow-listed)
+                if (($p['color'] ?? '') !== '') {
+                    $rules .= "color:{$p['color']};";
+                } // unset → inherits
                 $rules .= 'font-size:'.($p['size'] ?? '15px').';line-height:1.62;text-align:'.($p['align'] ?? 'left').';';
-                if (($p['text_gradient'] ?? '') !== '') $rules .= "background-image:{$p['text_gradient']};-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;";
+                if (($p['text_gradient'] ?? '') !== '') {
+                    $rules .= "background-image:{$p['text_gradient']};-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;";
+                }
                 break;
 
             case 'button':
@@ -309,7 +389,9 @@ HTML;
                         : (($r !== '' && $r !== 'auto') ? 'aspect-ratio:'.str_replace(':', '/', $r).';object-fit:cover;width:100%;' : '');
                     $inner = '<img src="'.e($src).'" alt="'.e($p['alt'] ?? '').'" style="border-radius:10px;'.$imgCss.'" loading="lazy">';
                 }
-                if (($p['ratio'] ?? '') !== 'original') $rules .= 'width:100%;';
+                if (($p['ratio'] ?? '') !== 'original') {
+                    $rules .= 'width:100%;';
+                }
                 break;
 
             case 'grid': case 'masonry':
@@ -339,6 +421,7 @@ HTML;
                 $attrs = $target !== ''
                     ? ' method="'.e(strtolower($p['method'] ?? 'post')).'" action="'.e($target).'"'
                     : ' data-bk-form data-success="'.$msg.'"'; // no endpoint yet → friendly inline confirm
+
                 return "<form class=\"{$cls}\"{$fx}{$attrs}>{$inner}</form>".self::push($cls, $rules.$styleCss);
 
             case 'input':
@@ -357,7 +440,9 @@ HTML;
 
             case 'list':
                 $tag = ($p['ordered'] ?? false) ? 'ol' : 'ul';
-                if ($tag === 'ul') $cls .= ' bk-list';
+                if ($tag === 'ul') {
+                    $cls .= ' bk-list';
+                }
                 $inner = implode('', array_map(fn ($i) => '<li>'.e($i).'</li>', (array) ($p['items'] ?? [])));
                 break;
 
@@ -367,14 +452,16 @@ HTML;
                 break;
 
             case 'divider':
-                return "<hr style=\"border:0;border-top:1px solid #e3e7f2;margin:12px 0\">";
+                return '<hr style="border:0;border-top:1px solid #e3e7f2;margin:12px 0">';
 
             default:
                 $inner .= $kids();
                 $rules .= "padding:{$pad};";
         }
 
-        if ($isRoot) $rules .= 'min-height:100vh;';
+        if ($isRoot) {
+            $rules .= 'min-height:100vh;';
+        }
 
         // Per-block custom script hook (id target for the script IIFE).
         $idAttr = '';
@@ -391,36 +478,73 @@ HTML;
     {
         $radMap = ['none' => '0', 'sm' => '6px', 'md' => '12px', 'lg' => '20px', 'full' => '9999px'];
         $sides = function ($v) use ($padMap) {
-            if (is_string($v)) return $padMap[$v] ?? $v;
-            if (! is_array($v)) return null;
+            if (is_string($v)) {
+                return $padMap[$v] ?? $v;
+            }
+            if (! is_array($v)) {
+                return null;
+            }
+
             return implode(' ', array_map(fn ($side) => $padMap[$v[$side] ?? ''] ?? ($v[$side] ?? '0'), ['top', 'right', 'bottom', 'left']));
         };
         $css = '';
-        if (($s['width'] ?? '') !== '')  $css .= "width:{$s['width']};";
-        if (($s['height'] ?? '') !== '') $css .= "height:{$s['height']};";
-        foreach (['min_width' => 'min-width', 'max_width' => 'max-width', 'min_height' => 'min-height', 'max_height' => 'max-height'] as $sk => $cssProp) {
-            if (($s[$sk] ?? '') !== '') $css .= "{$cssProp}:{$s[$sk]};";
+        if (($s['width'] ?? '') !== '') {
+            $css .= "width:{$s['width']};";
         }
-        if (($m = $sides($s['margin'] ?? null)) !== null)  $css .= "margin:{$m};";
-        if (($pd = $sides($s['padding'] ?? null)) !== null) $css .= "padding:{$pd};";
-        if (($s['background'] ?? '') !== '') $css .= "background:{$s['background']};";
-        if (($s['color'] ?? '') !== '')      $css .= "color:{$s['color']};";
-        if (($s['radius'] ?? '') !== '')     $css .= 'border-radius:'.($radMap[$s['radius']] ?? $s['radius']).';';
+        if (($s['height'] ?? '') !== '') {
+            $css .= "height:{$s['height']};";
+        }
+        foreach (['min_width' => 'min-width', 'max_width' => 'max-width', 'min_height' => 'min-height', 'max_height' => 'max-height'] as $sk => $cssProp) {
+            if (($s[$sk] ?? '') !== '') {
+                $css .= "{$cssProp}:{$s[$sk]};";
+            }
+        }
+        if (($m = $sides($s['margin'] ?? null)) !== null) {
+            $css .= "margin:{$m};";
+        }
+        if (($pd = $sides($s['padding'] ?? null)) !== null) {
+            $css .= "padding:{$pd};";
+        }
+        if (($s['background'] ?? '') !== '') {
+            $css .= "background:{$s['background']};";
+        }
+        if (($s['color'] ?? '') !== '') {
+            $css .= "color:{$s['color']};";
+        }
+        if (($s['radius'] ?? '') !== '') {
+            $css .= 'border-radius:'.($radMap[$s['radius']] ?? $s['radius']).';';
+        }
         // Positioning on ANY block — style.position/inset/z_index/opacity, like CSS.
-        if (($s['position'] ?? '') !== '') $css .= "position:{$s['position']};";
+        if (($s['position'] ?? '') !== '') {
+            $css .= "position:{$s['position']};";
+        }
         foreach ((array) ($s['inset'] ?? []) as $side => $v) {
-            if ($v !== '' && $v !== null && in_array($side, ['top', 'right', 'bottom', 'left'], true)) $css .= "{$side}:{$v};";
+            if ($v !== '' && $v !== null && in_array($side, ['top', 'right', 'bottom', 'left'], true)) {
+                $css .= "{$side}:{$v};";
+            }
         }
         if (($s['z_index'] ?? '') !== '') {
             $css .= (($s['position'] ?? '') === '' ? 'position:relative;' : '').'z-index:'.((int) $s['z_index']).';';
         }
-        if (($s['opacity'] ?? '') !== '') $css .= 'opacity:'.(max(0, min(100, (int) $s['opacity'])) / 100).';';
-        if (($s['overflow'] ?? '') !== '') $css .= "overflow:{$s['overflow']};";
+        if (($s['opacity'] ?? '') !== '') {
+            $css .= 'opacity:'.(max(0, min(100, (int) $s['opacity'])) / 100).';';
+        }
+        if (($s['overflow'] ?? '') !== '') {
+            $css .= "overflow:{$s['overflow']};";
+        }
         $fc = (array) ($s['flex_child'] ?? []);
-        if (isset($fc['grow']))   $css .= "flex-grow:{$fc['grow']};";
-        if (isset($fc['shrink'])) $css .= "flex-shrink:{$fc['shrink']};";
-        if (($fc['basis'] ?? '') !== '')      $css .= "flex-basis:{$fc['basis']};";
-        if (($fc['align_self'] ?? '') !== '') $css .= "align-self:{$fc['align_self']};";
+        if (isset($fc['grow'])) {
+            $css .= "flex-grow:{$fc['grow']};";
+        }
+        if (isset($fc['shrink'])) {
+            $css .= "flex-shrink:{$fc['shrink']};";
+        }
+        if (($fc['basis'] ?? '') !== '') {
+            $css .= "flex-basis:{$fc['basis']};";
+        }
+        if (($fc['align_self'] ?? '') !== '') {
+            $css .= "align-self:{$fc['align_self']};";
+        }
 
         return $css;
     }
@@ -428,7 +552,9 @@ HTML;
     private static function push(string $cls, string $rules): string
     {
         $first = explode(' ', $cls)[0];
-        if ($rules !== '') self::$css[] = ".{$first}{{$rules}}";
+        if ($rules !== '') {
+            self::$css[] = ".{$first}{{$rules}}";
+        }
 
         return '';
     }

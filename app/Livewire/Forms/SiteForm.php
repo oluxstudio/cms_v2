@@ -7,7 +7,6 @@ use Livewire\Form;
 
 class SiteForm extends Form
 {
-    
     #[Validate('required|min:4|alpha_dash')]
     public $name = '';
 

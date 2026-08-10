@@ -24,8 +24,8 @@ class FormSchemaController extends Controller
         $site = Site::where('name', $siteName)->firstOrFail();
 
         $form = Form::where('site_id', $site->id)
-                    ->where('name', $formName)
-                    ->first();
+            ->where('name', $formName)
+            ->first();
 
         if (! $form) {
             return response()->json(['message' => 'Form not found.'], 404);
@@ -36,10 +36,10 @@ class FormSchemaController extends Controller
         }
 
         return response()->json([
-            'name'        => $form->name,
-            'title'       => $form->displayTitle(),
+            'name' => $form->name,
+            'title' => $form->displayTitle(),
             'description' => $form->description,
-            'fields'      => FieldSchemaPresenter::fields($form->fields ?? []),
+            'fields' => FieldSchemaPresenter::fields($form->fields ?? []),
         ]);
     }
 }

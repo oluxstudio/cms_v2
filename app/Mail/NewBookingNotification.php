@@ -24,17 +24,17 @@ class NewBookingNotification extends Mailable
     {
         $status = match (true) {
             $this->booking->status !== 'confirmed' => 'awaiting your confirmation',
-            $this->booking->paid_cents > 0              => 'paid & confirmed',
-            default                                      => 'confirmed',
+            $this->booking->paid_cents > 0 => 'paid & confirmed',
+            default => 'confirmed',
         };
 
-        return new Envelope(subject: "New booking on ".ucwords(str_replace('-', ' ', $this->site->name))." — {$this->booking->reference} ({$status})");
+        return new Envelope(subject: 'New booking on '.ucwords(str_replace('-', ' ', $this->site->name))." — {$this->booking->reference} ({$status})");
     }
 
     public function content(): Content
     {
         return new Content(markdown: 'emails.new-booking', with: [
-            'summary'  => (new BookingConfirmed($this->booking, $this->site))->summaryLine(),
+            'summary' => (new BookingConfirmed($this->booking, $this->site))->summaryLine(),
             'adminUrl' => url("{$this->site->name}/bookings"),
         ]);
     }
