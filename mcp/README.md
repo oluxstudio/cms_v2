@@ -53,14 +53,22 @@ Or Claude Desktop (`claude_desktop_config.json`):
 
 ## Tools
 
-Read: `whoami`, `get_site_content`, `list_pages`, `list_components`,
-`list_posts`, `get_post`, `list_collections`, `list_forms`, `list_media`,
-`list_bookings`.
+Read: `whoami`, `get_meta`, `get_site_content`, `list_pages`,
+`list_components`, `list_posts`, `get_post`, `list_collections`, `list_forms`,
+`list_media`, `list_bookings`.
 
 Write (token needs the matching `*.manage` ability): `create_post`,
 `update_post`, `create_component`, `update_component`, `create_page`,
-`update_page`, `create_form`, `add_collection_item`, `add_media_url`,
+`update_page`, `create_form`, `create_collection`, `update_collection`,
+`add_collection_item`, `update_collection_item`, `add_media_url`,
 `update_booking`.
 
 Destructive (require `confirm: true`): `delete_post`, `delete_component`,
-`delete_page`, `delete_form`.
+`delete_page`, `delete_form`, `delete_collection`, `delete_collection_item`.
+
+## Grounding resource
+
+The server exposes an MCP resource `olux://content-model` — a cheatsheet of how
+the CMS content model (pages, components, nodes, collections, forms, posts)
+maps to the tools, with recipes (build a blog, a contact form, a page section
+with a repeating list). MCP clients can read it to ground their prompts.

@@ -54,6 +54,9 @@ const s = `/sites/${SITE}`;
 server.tool("whoami", "Who does the configured token act as — user, scoped site, abilities, expiry.", {}, async () =>
   ok(await api("GET", "/me")));
 
+server.tool("get_meta", "The valid enum vocabularies the write tools accept: node types, form/collection field types, post + item statuses.", {}, async () =>
+  ok(await api("GET", "/meta")));
+
 server.tool("get_site_content", "The whole site content tree (pages → components → nodes) plus site attributes.", {}, async () =>
   ok(await api("GET", `${s}/content`)));
 
@@ -127,14 +130,39 @@ server.tool("create_form", "Create a form; its schema immediately powers the pub
   fields: z.array(z.object({
     key: z.string(), label: z.string().optional(),
     type: z.enum(["text", "email", "tel", "number", "url", "date", "textarea", "select", "radio", "checkbox"]).optional(),
-    required: z.boolean().optional(), options: z.array(z.string()).optional(),
+    required: z.boolean().optional(), placeholder: z.string().optional(), options: z.array(z.string()).optional(),
+    min: z.number().optional(), max: z.number().optional(),
   })),
 }, async (args) => ok(await api("POST", `${s}/forms`, args)));
 
-server.tool("add_collection_item", "Add an item to a collection (status defaults to published).", {
+const collectionFieldSchema = z.object({
+  key: z.string(), label: z.string().optional(),
+  type: z.enum(["text", "email", "tel", "number", "url", "date", "textarea", "select", "radio", "checkbox"]).optional(),
+  required: z.boolean().optional(), placeholder: z.string().optional(), options: z.array(z.string()).optional(),
+  min: z.number().optional(), max: z.number().optional(),
+});
+
+server.tool("create_collection", "Create a structured content collection (a field schema + items). Add items afterwards with add_collection_item.", {
+  name: z.string(), type: z.string().optional(), description: z.string().optional(),
+  fields: z.array(collectionFieldSchema).optional(),
+  is_public: z.boolean().optional(), allow_submit: z.boolean().optional(),
+}, async (args) => ok(await api("POST", `${s}/collections`, args)));
+
+server.tool("update_collection", "Update a collection's name/description/fields/visibility. A fields array replaces the schema.", {
+  id: z.string(), name: z.string().optional(), type: z.string().optional(), description: z.string().optional(),
+  fields: z.array(collectionFieldSchema).optional(), is_public: z.boolean().optional(), allow_submit: z.boolean().optional(),
+}, async ({ id, ...rest }) => ok(await api("PATCH", `${s}/collections/${id}`, rest)));
+
+server.tool("add_collection_item", "Add an item to a collection (status defaults to published). data keys should match the collection's field keys.", {
   collection_id: z.string(), data: z.record(z.string(), z.unknown()),
   status: z.enum(["published", "pending", "archived"]).optional(),
 }, async ({ collection_id, ...rest }) => ok(await api("POST", `${s}/collections/${collection_id}/items`, rest)));
+
+server.tool("update_collection_item", "Update one item's data or status.", {
+  collection_id: z.string(), item_id: z.string(),
+  data: z.record(z.string(), z.unknown()).optional(),
+  status: z.enum(["published", "pending", "archived"]).optional(),
+}, async ({ collection_id, item_id, ...rest }) => ok(await api("PATCH", `${s}/collections/${collection_id}/items/${item_id}`, rest)));
 
 server.tool("add_media_url", "Register an external asset by URL in the media library.", {
   url: z.string(), name: z.string().optional(), type: z.enum(["image", "video", "document", "font"]).optional(), alt: z.string().optional(),
@@ -171,6 +199,63 @@ server.tool("delete_form", "DELETE a form and ALL its responses. Requires confir
   needsConfirm(confirm);
   return ok(await api("DELETE", `${s}/forms/${encodeURIComponent(name)}`));
 });
+
+server.tool("delete_collection", "DELETE a collection and ALL its items. Requires confirm: true.", { id: z.string(), confirm: z.boolean().optional() }, async ({ id, confirm }) => {
+  needsConfirm(confirm);
+  return ok(await api("DELETE", `${s}/collections/${id}`));
+});
+
+server.tool("delete_collection_item", "DELETE one item from a collection. Requires confirm: true.", { collection_id: z.string(), item_id: z.string(), confirm: z.boolean().optional() }, async ({ collection_id, item_id, confirm }) => {
+  needsConfirm(confirm);
+  return ok(await api("DELETE", `${s}/collections/${collection_id}/items/${item_id}`));
+});
+
+/* ── Grounding resource — how the content model maps to the tools ───────── */
+
+const CONTENT_MODEL = `# Olux CMS content model — a map for building content
+
+A **Site** owns Pages, Components, Collections, Forms and Posts.
+
+- **Page** — a route (unique \`url\` per site) with SEO/EAV \`attributes\`. Page
+  content is the ordered Components attached to it. Tools: create_page /
+  update_page / delete_page. Attach a component to pages with the component's
+  \`page_ids\`.
+- **Component** — a named bag of typed **Nodes**; reusable, standalone or
+  page-attached. Use it for a section's SCALAR content (headings, body copy,
+  a CTA label, a single image). Node \`type\` ∈ node_types from get_meta
+  (text, url, image, number, boolean, color, collection). Flat nodes use
+  \`parent: "0"\`. Tools: create_component / update_component (a nodes array
+  REPLACES all nodes) / delete_component.
+- **Collection** — a field schema + repeating **items**. Use it for LISTS
+  (team members, FAQs, stats, gallery). Create the schema with
+  create_collection (\`fields[]\`), then add rows with add_collection_item
+  (\`data\` keys = field keys). Field \`type\` ∈ collection_field_types.
+- **Form** — a field schema that immediately powers the public schema + submit
+  endpoints; visitor submissions land in the CRM. Tools: create_form (name is
+  slugged + unique). Field \`type\` ∈ form_field_types.
+- **Post** — a blog article (title → auto slug, body HTML, draft|published).
+  Tools: create_post / update_post / delete_post.
+
+## Recipes
+- **Blog** → create_post ×N (set status:"published" to go live).
+- **Contact form** → create_form { name, fields:[{key:"name"},{key:"email",type:"email",required:true},{key:"message",type:"textarea"}] }.
+- **A page section with a repeating list** (e.g. About + team) →
+  create_component for the scalar copy, create_collection + add_collection_item
+  for the list, create_page (or reuse home), then attach the component via
+  its \`page_ids\`.
+
+## Rules of thumb
+- Call get_meta once to learn the exact enum vocabularies before writing.
+- Scalar/one-off content → Component nodes. Repeating rows → Collection items.
+- Deletes require \`confirm: true\`. The token's abilities + site scope are
+  enforced server-side; a 403 means the token lacks that \`*.manage\` ability.`;
+
+server.resource(
+  "content-model",
+  "olux://content-model",
+  { mimeType: "text/markdown", description: "How the Olux CMS content model (pages, components, nodes, collections, forms, posts) maps to these tools, with recipes." },
+  async (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: CONTENT_MODEL }] }),
+);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

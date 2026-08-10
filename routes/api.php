@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\FormSchemaController;
 use App\Http\Controllers\Api\FormSubmissionController;
 use App\Http\Controllers\Api\InterestController;
 use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\PageApiController;
 use App\Http\Controllers\Api\PostApiController;
@@ -36,6 +37,9 @@ use Illuminate\Support\Facades\Route;
 | Public URL: POST /api/sites/{siteName}/form/{formName}  etc.
 |
 */
+
+// ── Public metadata (enum vocabularies for API / MCP clients)
+Route::get('/meta', [MetaController::class, 'show'])->name('api.meta');
 
 // ── Public media library
 // GET /api/media                        → all public media (filter: type, search, site, per_page)
