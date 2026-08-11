@@ -1,15 +1,23 @@
 <?php
 
+use App\Http\Middleware\AuthenticateApiToken;
+use App\Http\Middleware\EnsureFeatureEnabled;
+use App\Http\Middleware\EnsureSitePermission;
+use App\Http\Middleware\HoneypotGuard;
+use App\Http\Middleware\ResolveTokenSite;
+use App\Http\Middleware\ServeLiveSite;
+use App\Http\Middleware\VerifySiteOrigin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use SocialiteProviders\Manager\ServiceProvider;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web:      __DIR__.'/../routes/web.php',
-        api:      __DIR__.'/../routes/api.php',
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        health:   '/up',
+        health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
         // The app runs behind a reverse proxy (nginx, or Caddy in edge mode):
@@ -19,19 +27,21 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Custom-domain serving: resolve the Host header to a live Site and
         // serve its renderer — must run globally, before any routing.
-        $middleware->prepend(\App\Http\Middleware\ServeLiveSite::class);
+        $middleware->prepend(ServeLiveSite::class);
 
         // Per-site feature gate: ->middleware('feature:store')
         $middleware->alias([
-            'feature'    => \App\Http\Middleware\EnsureFeatureEnabled::class,
+            'feature' => EnsureFeatureEnabled::class,
             // Bearer-token auth for third-party API access: ->middleware('auth.token')
-            'auth.token' => \App\Http\Middleware\AuthenticateApiToken::class,
+            'auth.token' => AuthenticateApiToken::class,
+            // Resolve the site from the key for the /api/site/... namespace: ->middleware('token.site')
+            'token.site' => ResolveTokenSite::class,
             // Silent spam trap for visitor forms: ->middleware('honeypot')
-            'honeypot'   => \App\Http\Middleware\HoneypotGuard::class,
+            'honeypot' => HoneypotGuard::class,
             // Cross-site abuse guard for visitor write endpoints: ->middleware('site.origin')
-            'site.origin' => \App\Http\Middleware\VerifySiteOrigin::class,
+            'site.origin' => VerifySiteOrigin::class,
             // Role-permission gate for site admin pages: ->middleware('perm:pages.view')
-            'perm'       => \App\Http\Middleware\EnsureSitePermission::class,
+            'perm' => EnsureSitePermission::class,
         ]);
 
         // Stripe webhooks post without a CSRF token; verified via signature instead.
@@ -45,7 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withProviders([
-        \SocialiteProviders\Manager\ServiceProvider::class,
+        ServiceProvider::class,
     ])
     ->withExceptions(function (Exceptions $exceptions) {
         //

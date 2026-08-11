@@ -33,6 +33,10 @@ claude mcp add olux-cms \
   -- node /absolute/path/to/mcp/dist/index.js
 ```
 
+`OLUX_SITE` is optional when the token is **site-scoped** — the server resolves
+the site from the key via `/api/me` at startup. Set it explicitly only for an
+unscoped token that can reach several sites.
+
 Or Claude Desktop (`claude_desktop_config.json`):
 
 ```json

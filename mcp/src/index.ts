@@ -20,10 +20,24 @@ import { z } from "zod";
 
 const BASE = (process.env.OLUX_CMS_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const TOKEN = process.env.OLUX_CMS_TOKEN ?? "";
-const SITE = process.env.OLUX_SITE ?? "";
+let SITE = process.env.OLUX_SITE ?? "";
+
+// OLUX_SITE is optional: a site-scoped token already knows its site, so we
+// resolve it from /api/me when it isn't set explicitly.
+if (!SITE && TOKEN) {
+  try {
+    const res = await fetch(`${BASE}/api/me`, { headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/json" } });
+    if (res.ok) {
+      const me = await res.json();
+      SITE = me.site ?? (Array.isArray(me.sites) && me.sites.length === 1 ? me.sites[0] : "");
+    }
+  } catch {
+    /* fall through to the error below */
+  }
+}
 
 if (!SITE) {
-  console.error("OLUX_SITE is required (the site name the tools operate on).");
+  console.error("Set OLUX_SITE, or use a site-scoped OLUX_CMS_TOKEN so the site resolves automatically.");
   process.exit(1);
 }
 

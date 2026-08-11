@@ -194,3 +194,79 @@ Route::middleware(['auth.token', 'throttle:token-api'])->group(function () {
     Route::patch('/sites/{siteName}/collections/{id}/items/{itemId}', [CollectionApiController::class, 'updateItem'])->name('api.collections.items.update');
     Route::delete('/sites/{siteName}/collections/{id}/items/{itemId}', [CollectionApiController::class, 'destroyItem'])->name('api.collections.items.destroy');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Token-context API — /api/site/...
+|--------------------------------------------------------------------------
+| The client only sends its key (Authorization: Bearer <CMS_SITE_KEY>); the
+| site is resolved from the key by the token.site middleware and injected as
+| the {siteName} route parameter, so these reuse the SAME controllers as the
+| /api/sites/{siteName}/... routes above — no site name needed in the URL.
+*/
+Route::prefix('site')->middleware(['auth.token', 'token.site', 'throttle:token-api'])->group(function () {
+
+    // Which site does this key act on? (introspection)
+    Route::get('/', function (Request $request) {
+        $token = $request->attributes->get('api_token');
+        $site = $token->site ?? Site::where('name', $request->route('siteName'))->first();
+
+        return response()->json([
+            'site' => $site?->name,
+            'user' => $token->user?->name,
+            'token' => $token->name,
+            'abilities' => $token->abilities,   // null = all the user's permissions
+            'expires_at' => $token->expires_at?->toIso8601String(),
+        ]);
+    })->name('api.site.self');
+
+    // ── Reads (site from key) ──────────────────────────────────────────
+    Route::get('/content', [SiteContentController::class, 'show']);
+    Route::get('/page', [SiteContentController::class, 'page']);
+    Route::get('/media', [MediaController::class, 'siteIndex']);
+    Route::get('/components', [ComponentApiController::class, 'index']);
+    Route::get('/components/{id}', [ComponentApiController::class, 'show']);
+    Route::get('/collections', [CollectionApiController::class, 'index']);
+    Route::get('/collections/{id}', [CollectionApiController::class, 'show']);
+    Route::get('/forms', [FormApiController::class, 'index']);
+    Route::get('/pages', [PageApiController::class, 'index']);
+    Route::get('/pages/{id}', [PageApiController::class, 'show']);
+    Route::get('/posts', [PostApiController::class, 'index']);
+    Route::get('/posts/{slug}', [PostApiController::class, 'show']);
+    Route::get('/posts/{slug}/comments', [CommentApiController::class, 'index']);
+
+    // ── Writes (same abilities as the /api/sites/... equivalents) ───────
+    Route::post('/components', [ComponentApiController::class, 'store']);
+    Route::patch('/components/{id}', [ComponentApiController::class, 'update']);
+    Route::delete('/components/{id}', [ComponentApiController::class, 'destroy']);
+
+    Route::post('/collections', [CollectionApiController::class, 'store']);
+    Route::patch('/collections/{id}', [CollectionApiController::class, 'update']);
+    Route::delete('/collections/{id}', [CollectionApiController::class, 'destroy']);
+    Route::post('/collections/{id}/items', [CollectionApiController::class, 'storeItem']);
+    Route::patch('/collections/{id}/items/{itemId}', [CollectionApiController::class, 'updateItem']);
+    Route::delete('/collections/{id}/items/{itemId}', [CollectionApiController::class, 'destroyItem']);
+
+    Route::post('/forms', [FormApiController::class, 'store']);
+    Route::patch('/forms/{formName}', [FormApiController::class, 'update']);
+    Route::delete('/forms/{formName}', [FormApiController::class, 'destroy']);
+
+    Route::post('/pages', [PageApiController::class, 'store']);
+    Route::patch('/pages/{id}', [PageApiController::class, 'update']);
+    Route::delete('/pages/{id}', [PageApiController::class, 'destroy']);
+
+    Route::post('/posts', [PostApiController::class, 'store']);
+    Route::patch('/posts/{slug}', [PostApiController::class, 'update']);
+    Route::delete('/posts/{slug}', [PostApiController::class, 'destroy']);
+
+    Route::post('/media', [MediaController::class, 'store']);
+    Route::patch('/media/{id}', [MediaController::class, 'update']);
+    Route::delete('/media/{id}', [MediaController::class, 'destroy']);
+
+    Route::get('/posts/{slug}/comments/moderate', [CommentApiController::class, 'moderate']);
+    Route::patch('/comments/{id}', [CommentApiController::class, 'update']);
+    Route::delete('/comments/{id}', [CommentApiController::class, 'destroy']);
+
+    Route::get('/bookings', [BookingAdminApiController::class, 'index']);
+    Route::patch('/bookings/{id}', [BookingAdminApiController::class, 'update']);
+});
