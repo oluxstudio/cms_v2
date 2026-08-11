@@ -29,18 +29,7 @@ class FormApiController extends Controller
 
     private function record(Form $form): array
     {
-        return [
-            'id' => $form->id,
-            'name' => $form->name,
-            'title' => $form->displayTitle(),
-            'description' => $form->description,
-            'is_active' => (bool) $form->is_active,
-            'fields' => $form->fields ?? [],
-            'responses' => $form->responses()->count(),
-            'submit_url' => route('api.form', ['siteName' => $form->site->name, 'formName' => $form->name]),
-            'created_at' => $form->created_at?->toIso8601String(),
-            'updated_at' => $form->updated_at?->toIso8601String(),
-        ];
+        return $form->toApiArray(withResponses: true);
     }
 
     public function index(string $siteName): JsonResponse

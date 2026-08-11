@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Block;
+use App\Models\Collection;
+use App\Models\Form;
 use App\Models\Media;
 use App\Models\Page;
 use App\Models\Site;
@@ -27,6 +29,9 @@ class SiteContentController extends Controller
         return response()->json([
             'site' => $this->siteMeta($site),
             'pages' => $site->livePages()->get()->map(fn ($page) => $this->pagePayload($page, $site))->values(),
+            // Full site-wide sets so a client has everything to join by id.
+            'collections' => $this->siteCollections($site),
+            'forms' => $this->siteForms($site),
         ]);
     }
 
@@ -47,6 +52,8 @@ class SiteContentController extends Controller
         return response()->json([
             'site' => $this->siteMeta($site),
             'page' => $this->pagePayload($page, $site),
+            'collections' => $this->siteCollections($site),
+            'forms' => $this->siteForms($site),
         ]);
     }
 
@@ -64,6 +71,8 @@ class SiteContentController extends Controller
 
     private function pagePayload(Page $page, Site $site): array
     {
+        $components = $page->components()->with('nodes')->get();
+
         return [
             'name' => $page->name,
             'url' => $page->url,
@@ -71,12 +80,56 @@ class SiteContentController extends Controller
             'description' => $page->getAttr('description', ''),
             'attributes' => $page->attrMap(),
             // Classic components attached to this page (ordered), each with
-            // ALL of its nodes + linked collections.
-            'components' => $page->components()->with('nodes')->get()
+            // ALL of its nodes (flat + nested tree) + linked collections.
+            'components' => $components
                 ->map(fn ($c) => $c->payload() + ['order' => (int) $c->pivot->order])
                 ->values()->all(),
+            // Collections this page uses (referenced by its components), full.
+            'collections' => $this->pageCollections($components),
+            // Forms this page uses (its BlockKit form blocks), full.
+            'forms' => $this->pageForms($page, $site),
             'block_tree' => $this->blockTree($page, $site),
         ];
+    }
+
+    /** Full collections referenced by the page's components' collection-nodes. */
+    private function pageCollections($components): array
+    {
+        $ids = $components
+            ->flatMap(fn ($c) => $c->nodes->where('type', 'collection')->pluck('value'))
+            ->filter()->unique()->values();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        return Collection::whereIn('id', $ids)->with('items')->get()
+            ->map(fn (Collection $c) => $c->toApiArray())->values()->all();
+    }
+
+    /** Full forms referenced by the page's BlockKit form blocks. */
+    private function pageForms(Page $page, Site $site): array
+    {
+        $blockIds = Block::where('page_id', $page->id)->where('type', 'form')->pluck('id');
+        if ($blockIds->isEmpty()) {
+            return [];
+        }
+        $names = $blockIds->map(fn ($id) => 'blockkit-'.$id);
+
+        return Form::where('site_id', $site->id)->whereIn('name', $names)->get()
+            ->map(fn (Form $f) => $f->toApiArray())->values()->all();
+    }
+
+    private function siteCollections(Site $site): array
+    {
+        return $site->collections()->where('is_public', true)->with('items')->get()
+            ->map(fn (Collection $c) => $c->toApiArray())->values()->all();
+    }
+
+    private function siteForms(Site $site): array
+    {
+        return $site->forms()->where('is_active', true)->get()
+            ->map(fn (Form $f) => $f->toApiArray())->values()->all();
     }
 
     /**

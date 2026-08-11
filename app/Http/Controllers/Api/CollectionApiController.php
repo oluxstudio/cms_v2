@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
-use App\Models\CollectionItem;
 use App\Models\Site;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,29 +29,10 @@ class CollectionApiController extends Controller
 {
     use ResolvesApiSite;
 
-    /** @param bool $everything include private fields + all items regardless of status */
+    /** @param bool $everything include all items regardless of status (else published only) */
     private function record(Collection $c, bool $everything = false): array
     {
-        $items = $everything ? $c->items : $c->items->where('status', 'published')->values();
-
-        return [
-            'id' => $c->id,
-            'name' => $c->name,
-            'slug' => $c->slug,
-            'type' => $c->type,
-            'description' => $c->description,
-            'fields' => $c->fields ?? [],
-            'is_public' => (bool) $c->is_public,
-            'allow_submit' => (bool) $c->allow_submit,
-            'items' => $items->map(fn (CollectionItem $i) => [
-                'id' => $i->id,
-                'data' => $i->data ?? [],
-                'status' => $i->status,
-                'created_at' => $i->created_at?->toIso8601String(),
-            ])->values(),
-            'created_at' => $c->created_at?->toIso8601String(),
-            'updated_at' => $c->updated_at?->toIso8601String(),
-        ];
+        return $c->toApiArray(withItems: true, everything: $everything);
     }
 
     public function index(string $siteName): JsonResponse

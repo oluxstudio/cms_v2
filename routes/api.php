@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\BlockFormController;
 use App\Http\Controllers\Api\BookingAdminApiController;
 use App\Http\Controllers\Api\BookingApiController;
 use App\Http\Controllers\Api\CollectionApiController;
+use App\Http\Controllers\Api\CommentApiController;
 use App\Http\Controllers\Api\ComponentApiController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\EstimatorController;
@@ -93,6 +94,11 @@ Route::get('/sites/{siteName}/posts/{slug}', [PostApiController::class, 'show'])
 Route::post('/sites/{siteName}/posts/{slug}/view', [PostApiController::class, 'view'])->middleware('throttle:engagement')->name('api.posts.view');
 Route::post('/sites/{siteName}/posts/{slug}/like', [PostApiController::class, 'like'])->middleware('throttle:engagement')->name('api.posts.like');
 
+// ── Post comments (public: read approved + submit for moderation)
+Route::get('/sites/{siteName}/posts/{slug}/comments', [CommentApiController::class, 'index'])->name('api.comments.index');
+Route::post('/sites/{siteName}/posts/{slug}/comments', [CommentApiController::class, 'store'])
+    ->middleware(['throttle:leads', 'site.origin', 'honeypot'])->name('api.comments.store');
+
 // ── Estimator (instant trade cost/time quotes + lead capture)
 Route::get('/sites/{siteName}/estimator/config', [EstimatorController::class, 'config'])->name('api.estimator.config');
 Route::post('/sites/{siteName}/estimator', [EstimatorController::class, 'estimate'])->name('api.estimator.quote');
@@ -154,6 +160,11 @@ Route::middleware(['auth.token', 'throttle:token-api'])->group(function () {
     Route::post('/sites/{siteName}/components', [ComponentApiController::class, 'store'])->name('api.components.store');
     Route::patch('/sites/{siteName}/components/{id}', [ComponentApiController::class, 'update'])->name('api.components.update');
     Route::delete('/sites/{siteName}/components/{id}', [ComponentApiController::class, 'destroy'])->name('api.components.destroy');
+
+    // Comment moderation (posts.manage).
+    Route::get('/sites/{siteName}/posts/{slug}/comments/moderate', [CommentApiController::class, 'moderate'])->name('api.comments.moderate');
+    Route::patch('/sites/{siteName}/comments/{id}', [CommentApiController::class, 'update'])->name('api.comments.update');
+    Route::delete('/sites/{siteName}/comments/{id}', [CommentApiController::class, 'destroy'])->name('api.comments.destroy');
 
     // Posts CRUD (writes; public reads live above).
     Route::post('/sites/{siteName}/posts', [PostApiController::class, 'store'])->name('api.posts.store');

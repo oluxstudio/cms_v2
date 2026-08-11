@@ -100,6 +100,31 @@ class Form extends Model
         return $this->responses()->whereNull('read_at')->count();
     }
 
+    /**
+     * Canonical API shape — shared by the forms endpoint and the site-content
+     * payload. `responses` (a count) is included only for management views.
+     */
+    public function toApiArray(bool $withResponses = false): array
+    {
+        $out = [
+            'id' => $this->id,
+            'name' => $this->name,
+            'title' => $this->displayTitle(),
+            'description' => $this->description,
+            'is_active' => (bool) $this->is_active,
+            'fields' => $this->fields ?? [],
+            'submit_url' => route('api.form', ['siteName' => $this->site->name, 'formName' => $this->name]),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
+
+        if ($withResponses) {
+            $out['responses'] = $this->responses()->count();
+        }
+
+        return $out;
+    }
+
     // Validation helpers (buildValidationRules / buildValidationMessages /
     // fieldValidationSummary) are provided by the HasFieldSchema trait.
 }

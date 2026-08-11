@@ -79,6 +79,9 @@ class Component extends Model
                 'order' => (int) $n->order,
                 'description' => $n->description,
             ])->values()->all(),
+            // Nested form of the same nodes (assembled via `parent`) so clients
+            // can render the tree directly without stitching the flat list.
+            'node_tree' => self::buildNodeTree($this->nodes),
             'collections' => $this->collections()->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->values()->all(),
         ];
 
@@ -89,5 +92,37 @@ class Component extends Model
         }
 
         return $out;
+    }
+
+    /**
+     * Assemble a flat node collection into a nested tree using each node's
+     * `parent` (root nodes have parent '0'/0/''/null). Children are ordered.
+     */
+    public static function buildNodeTree($nodes): array
+    {
+        $isRoot = fn ($p) => $p === null || $p === '' || $p === '0' || $p === 0;
+
+        $byParent = [];
+        foreach ($nodes as $n) {
+            $key = $isRoot($n->parent) ? '__root__' : (string) $n->parent;
+            $byParent[$key][] = $n;
+        }
+
+        $build = function ($parentKey) use (&$build, &$byParent) {
+            $rows = $byParent[$parentKey] ?? [];
+            usort($rows, fn ($a, $b) => (int) $a->order <=> (int) $b->order);
+
+            return array_map(fn ($n) => [
+                'id' => $n->id,
+                'label' => $n->label,
+                'type' => $n->type,
+                'value' => $n->value,
+                'order' => (int) $n->order,
+                'description' => $n->description,
+                'children' => $build((string) $n->id),
+            ], $rows);
+        };
+
+        return $build('__root__');
     }
 }

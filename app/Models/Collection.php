@@ -49,4 +49,39 @@ class Collection extends Model
     {
         return $this->name ?: ucwords(str_replace(['-', '_'], ' ', (string) $this->slug));
     }
+
+    /**
+     * The canonical API shape — one definition shared by the collections
+     * endpoint and the site-content payload.
+     *
+     * @param  bool  $withItems  include the items array
+     * @param  bool  $everything  include all items regardless of status (else published only)
+     */
+    public function toApiArray(bool $withItems = true, bool $everything = false): array
+    {
+        $out = [
+            'id' => $this->id,
+            'name' => $this->name,
+            'slug' => $this->slug,
+            'type' => $this->type,
+            'description' => $this->description,
+            'fields' => $this->fields ?? [],
+            'is_public' => (bool) $this->is_public,
+            'allow_submit' => (bool) $this->allow_submit,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
+        ];
+
+        if ($withItems) {
+            $items = $everything ? $this->items : $this->items->where('status', 'published')->values();
+            $out['items'] = $items->map(fn (CollectionItem $i) => [
+                'id' => $i->id,
+                'data' => $i->data ?? [],
+                'status' => $i->status,
+                'created_at' => $i->created_at?->toIso8601String(),
+            ])->values()->all();
+        }
+
+        return $out;
+    }
 }

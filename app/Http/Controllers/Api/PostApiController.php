@@ -55,7 +55,9 @@ class PostApiController extends Controller
     {
         $post = $this->post($this->site($siteName), $slug)->load('author:id,name');
 
-        return response()->json($this->summary($post) + ['body' => (string) $post->body]);
+        // Detail view embeds the full HTML body + approved comments (and moves
+        // the count to `comments_count`).
+        return response()->json($post->toApiArray(withBody: true, withComments: true));
     }
 
     /** Count a visit — the template site pings this from the post page. */
@@ -78,17 +80,7 @@ class PostApiController extends Controller
 
     private function summary(Post $p): array
     {
-        return [
-            'title' => $p->title,
-            'slug' => $p->slug,
-            'excerpt' => $p->excerpt,
-            'cover_image' => $p->cover_image,
-            'author' => $p->author?->name,
-            'published_at' => $p->published_at?->toIso8601String(),
-            'views' => (int) $p->views,
-            'likes' => (int) $p->likes,
-            'comments' => (int) $p->comments,
-        ];
+        return $p->toApiArray();
     }
 
     /* ── CRUD (Bearer token · posts.manage) ─────────────────────────────── */
