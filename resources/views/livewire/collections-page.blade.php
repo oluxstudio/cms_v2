@@ -187,6 +187,24 @@
                                        hint="Off (recommended): new submissions are held as pending until you approve them here." />
                     @endif
                 </div>
+
+                {{-- Attach the collection to pages --}}
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400 mb-2">Show on pages <span class="font-normal normal-case tracking-normal text-gray-400">— optional; can be placed on many</span></p>
+                    @if ($sitePages->isEmpty())
+                        <p class="text-xs text-gray-400">This site has no pages yet.</p>
+                    @else
+                        <div class="flex flex-wrap gap-2">
+                            @foreach ($sitePages as $p)
+                                <label class="flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer select-none text-xs font-semibold transition-colors
+                                              {{ in_array((string) $p->id, array_map('strval', $pageIds), true) ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300' : 'border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400' }}">
+                                    <input type="checkbox" wire:model.live="pageIds" value="{{ $p->id }}" class="hidden">
+                                    {{ $p->name }} <span class="font-mono font-normal opacity-60">{{ $p->url }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             </div>
             <div class="flex gap-3 pt-1">
                 <button wire:click="$set('showModal', false)"
@@ -226,6 +244,42 @@
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
+            </div>
+
+            {{-- ── Grouped components (the collection's members) ── --}}
+            <div class="p-5 border-b border-gray-100 dark:border-white/[0.05]">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs font-bold uppercase tracking-[.12em] text-gray-400">Components <span class="text-gray-300 dark:text-gray-600">({{ $members->count() }})</span></p>
+                    @if($available->isNotEmpty())
+                    <div class="flex items-center gap-2" x-data="{ pick: '' }">
+                        <select x-model="pick" class="px-2.5 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200">
+                            <option value="">Add a component…</option>
+                            @foreach($available as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
+                        </select>
+                        <button x-on:click="if(pick){ $wire.addComponent(pick); pick='' }"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style="background:var(--primary)">Add</button>
+                    </div>
+                    @endif
+                </div>
+
+                @if($members->isEmpty())
+                    <p class="text-xs text-gray-400">No components yet — add existing ones above, or set a component's collection on the Components page.</p>
+                @else
+                    <div class="space-y-1.5">
+                        @foreach($members as $i => $m)
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 dark:border-white/[0.06]">
+                            <div class="flex flex-col leading-none">
+                                <button wire:click="moveComponent('{{ $m->id }}', -1)" @if($i === 0) disabled @endif class="text-gray-400 hover:text-gray-700 disabled:opacity-30">▲</button>
+                                <button wire:click="moveComponent('{{ $m->id }}', 1)" @if($i === $members->count() - 1) disabled @endif class="text-gray-400 hover:text-gray-700 disabled:opacity-30">▼</button>
+                            </div>
+                            <span class="flex-1 text-sm text-gray-800 dark:text-gray-200 truncate">{{ $m->name }}
+                                <span class="text-xs text-gray-400">· {{ $m->nodes_count }} {{ Str::plural('node', $m->nodes_count) }}</span>
+                            </span>
+                            <button wire:click="removeComponent('{{ $m->id }}')" class="text-xs font-semibold text-rose-500 hover:text-rose-600">Remove</button>
+                        </div>
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
             {{-- Entry editor — built from the collection's field schema --}}

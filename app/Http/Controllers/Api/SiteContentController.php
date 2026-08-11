@@ -84,21 +84,27 @@ class SiteContentController extends Controller
             'components' => $components
                 ->map(fn ($c) => $c->payload() + ['order' => (int) $c->pivot->order])
                 ->values()->all(),
-            // Collections this page uses (referenced by its components), full.
-            'collections' => $this->pageCollections($components),
+            // Collections on this page (attached + referenced), full with components.
+            'collections' => $this->pageCollections($page, $components),
             // Forms this page uses (its BlockKit form blocks), full.
             'forms' => $this->pageForms($page, $site),
             'block_tree' => $this->blockTree($page, $site),
         ];
     }
 
-    /** Full collections referenced by the page's components' collection-nodes. */
-    private function pageCollections($components): array
+    /**
+     * Collections on this page: those directly ATTACHED to it (page_collection)
+     * plus any referenced by its components' collection-nodes (back-compat),
+     * deduped by id — each full, with its grouped components + items.
+     */
+    private function pageCollections(Page $page, $components): array
     {
-        $ids = $components
+        $attachedIds = $page->collections()->pluck('collections.id');
+        $referencedIds = $components
             ->flatMap(fn ($c) => $c->nodes->where('type', 'collection')->pluck('value'))
-            ->filter()->unique()->values();
+            ->filter();
 
+        $ids = $attachedIds->merge($referencedIds)->filter()->unique()->values();
         if ($ids->isEmpty()) {
             return [];
         }

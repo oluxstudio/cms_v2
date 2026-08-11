@@ -42,6 +42,9 @@ class ComponentsPage extends LivewireComponent
     /** Page ids this component is attached to. */
     public array $pageIds = [];
 
+    /** The collection this component belongs to ('' = none). */
+    public string $collectionId = '';
+
     public string $errorMessage = '';
 
     public function mount(Site $site): void
@@ -114,15 +117,16 @@ class ComponentsPage extends LivewireComponent
                 'value' => (string) $n->value, 'description' => (string) $n->description,
             ])->values()->all();
             $this->pageIds = $c->pages->pluck('id')->map(fn ($v) => (string) $v)->all();
+            $this->collectionId = (string) ($c->collection_id ?? '');
         } else {
-            $this->reset(['cName', 'cDescription', 'cTags', 'pageIds']);
+            $this->reset(['cName', 'cDescription', 'cTags', 'pageIds', 'collectionId']);
             $this->nodes = [['label' => '', 'type' => 'text', 'value' => '', 'description' => '']];
         }
     }
 
     public function close(): void
     {
-        $this->reset(['editingId', 'cName', 'cDescription', 'cTags', 'nodes', 'pageIds']);
+        $this->reset(['editingId', 'cName', 'cDescription', 'cTags', 'nodes', 'pageIds', 'collectionId']);
     }
 
     /** Parse the comma-separated tags box → clean unique array. */
@@ -181,12 +185,17 @@ class ComponentsPage extends LivewireComponent
             }
         }
 
+        // Validate the chosen collection belongs to this site (else clear it).
+        $collectionId = $this->collectionId !== '' && $this->site->collections()->whereKey($this->collectionId)->exists()
+            ? $this->collectionId : null;
+
         if ($this->editingId) {
             $component = $this->site->contentComponents()->findOrFail($this->editingId);
             $component->update([
                 'name' => trim($this->cName),
                 'description' => trim($this->cDescription) ?: null,
                 'tags' => $this->parsedTags() ?: null,
+                'collection_id' => $collectionId,
             ]);
         } else {
             $component = Component::create([
@@ -197,7 +206,13 @@ class ComponentsPage extends LivewireComponent
                 'source' => 'app',
                 'description' => trim($this->cDescription) ?: null,
                 'tags' => $this->parsedTags() ?: null,
+                'collection_id' => $collectionId,
             ]);
+        }
+
+        // Give it a slot at the end of the collection when it has none yet.
+        if ($collectionId && $component->collection_order === null) {
+            $component->update(['collection_order' => (int) Component::where('collection_id', $collectionId)->max('collection_order') + 1]);
         }
 
         // Replace nodes wholesale — order = row order in the editor.

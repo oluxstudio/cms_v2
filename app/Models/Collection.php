@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -45,6 +46,20 @@ class Collection extends Model
         return $this->hasMany(CollectionItem::class);
     }
 
+    /** The components grouped by this collection (e.g. testimonial 1, 2, 3…), ordered. */
+    public function components(): HasMany
+    {
+        return $this->hasMany(Component::class)->orderByRaw('collection_order is null, collection_order')->orderBy('id');
+    }
+
+    /** Pages this collection is attached to (ordered placement + settings). */
+    public function pages(): BelongsToMany
+    {
+        return $this->belongsToMany(Page::class, 'page_collection')
+            ->withPivot(['order', 'settings'])
+            ->withTimestamps();
+    }
+
     public function displayTitle(): string
     {
         return $this->name ?: ucwords(str_replace(['-', '_'], ' ', (string) $this->slug));
@@ -68,6 +83,9 @@ class Collection extends Model
             'fields' => $this->fields ?? [],
             'is_public' => (bool) $this->is_public,
             'allow_submit' => (bool) $this->allow_submit,
+            // The components grouped by this collection (each with nodes + node_tree).
+            'components' => $this->components()->with('nodes')->get()
+                ->map(fn (Component $c) => $c->payload())->values()->all(),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

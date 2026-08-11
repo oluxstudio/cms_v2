@@ -17,7 +17,7 @@ class Component extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['site_id', 'site_template_id', 'name', 'author', 'created_by', 'source', 'description', 'tags'];
+    protected $fillable = ['site_id', 'site_template_id', 'collection_id', 'collection_order', 'name', 'author', 'created_by', 'source', 'description', 'tags'];
 
     protected $casts = ['tags' => 'array'];
 
@@ -30,6 +30,12 @@ class Component extends Model
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    /** The collection this component belongs to (groups it with siblings), if any. */
+    public function collection(): BelongsTo
+    {
+        return $this->belongsTo(Collection::class);
     }
 
     /** The component's content fields, in display order. */
@@ -65,6 +71,7 @@ class Component extends Model
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
+            'collection_id' => $this->collection_id,
             'tags' => array_values($this->tags ?? []),
             'source' => $this->source ?? 'app',
             'created_by' => $this->creator?->name ?? $this->author,

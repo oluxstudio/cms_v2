@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Livewire\Concerns\WithLayoutMode;
 use App\Models\Collection as CollectionModel;
 use App\Models\CollectionItem;
+use App\Models\Component as ComponentModel;
 use App\Models\Site;
 use Livewire\Component;
 
@@ -33,6 +34,9 @@ class CollectionsPage extends Component
 
     public bool $autoPublish = false;   // submissions go live instantly (else pending review)
 
+    /** Page ids this collection is placed on. */
+    public array $pageIds = [];
+
     public function mount(Site $site): void
     {
         $this->site = $site;
@@ -60,6 +64,13 @@ class CollectionsPage extends Component
             : null;
         $entries = $viewing ? $viewing->items()->latest()->limit(200)->get() : collect();
 
+        // Grouped components for the viewed collection + the site components
+        // still free to add to it.
+        $members = $viewing ? $viewing->components()->withCount('nodes')->get() : collect();
+        $available = $viewing
+            ? ComponentModel::where('site_id', $this->site->id)->whereNull('collection_id')->orderBy('name')->get(['id', 'name'])
+            : collect();
+
         return view('livewire.collections-page', [
             'collections' => $collections,
             'total' => $total,
@@ -67,6 +78,9 @@ class CollectionsPage extends Component
             'recent' => $recent,
             'viewing' => $viewing,
             'entries' => $entries,
+            'members' => $members,
+            'available' => $available,
+            'sitePages' => $this->site->pages()->orderBy('name')->get(['id', 'name', 'url']),
         ]);
     }
 
@@ -129,20 +143,21 @@ class CollectionsPage extends Component
 
     public function openCreate(): void
     {
-        $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish']);
+        $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish', 'pageIds']);
         $this->type = 'list';
         $this->showModal = true;
     }
 
     public function openEdit(string $id): void
     {
-        $collection = CollectionModel::findOrFail($id);
+        $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($id);
         $this->editingId = $id;
         $this->name = $collection->name;
         $this->type = $collection->type;
         $this->description = $collection->description ?? '';
         $this->allowSubmit = (bool) $collection->allow_submit;
         $this->autoPublish = (bool) $collection->auto_publish;
+        $this->pageIds = $collection->pages()->pluck('pages.id')->map(fn ($v) => (string) $v)->all();
         $this->showModal = true;
     }
 
@@ -155,7 +170,8 @@ class CollectionsPage extends Component
         ]);
 
         if ($this->editingId) {
-            CollectionModel::findOrFail($this->editingId)->update([
+            $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->editingId);
+            $collection->update([
                 'name' => $this->name,
                 'type' => $this->type,
                 'description' => $this->description,
@@ -163,7 +179,7 @@ class CollectionsPage extends Component
                 'auto_publish' => $this->autoPublish,
             ]);
         } else {
-            CollectionModel::create([
+            $collection = CollectionModel::create([
                 'site_id' => $this->site->id,
                 'name' => $this->name,
                 'type' => $this->type,
@@ -173,8 +189,64 @@ class CollectionsPage extends Component
             ]);
         }
 
+        $this->syncPages($collection);
+
         $this->showModal = false;
-        $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish']);
+        $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish', 'pageIds']);
+    }
+
+    /** Attach the collection to the selected pages (order preserved/appended). */
+    private function syncPages(CollectionModel $collection): void
+    {
+        $valid = $this->site->pages()->whereIn('id', $this->pageIds)->pluck('id');
+        $attach = [];
+        foreach ($valid as $pageId) {
+            $current = $collection->pages()->where('pages.id', $pageId)->first();
+            $order = $current->pivot->order
+                ?? ((int) \DB::table('page_collection')->where('page_id', $pageId)->max('order') + 1);
+            $attach[$pageId] = ['order' => $order];
+        }
+        $collection->pages()->sync($attach);
+    }
+
+    // ── Member components (the components this collection groups) ─────────
+
+    /** Add an existing standalone component to the viewed collection. */
+    public function addComponent(string $componentId): void
+    {
+        $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->viewingId);
+        $component = ComponentModel::where('site_id', $this->site->id)->findOrFail($componentId);
+        $component->update([
+            'collection_id' => $collection->id,
+            'collection_order' => (int) ComponentModel::where('collection_id', $collection->id)->max('collection_order') + 1,
+        ]);
+    }
+
+    /** Remove a component from the collection (it becomes standalone again). */
+    public function removeComponent(string $componentId): void
+    {
+        ComponentModel::where('site_id', $this->site->id)->where('collection_id', $this->viewingId)
+            ->where('id', $componentId)
+            ->update(['collection_id' => null, 'collection_order' => null]);
+    }
+
+    /** Reorder a member component within the collection. */
+    public function moveComponent(string $componentId, int $dir): void
+    {
+        $members = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->viewingId)
+            ->components()->get();
+        $index = $members->search(fn ($c) => $c->id === $componentId);
+        $to = $index + $dir;
+        if ($index === false || ! isset($members[$to])) {
+            return;
+        }
+        $a = $members[$index];
+        $b = $members[$to];
+        // Swap their order values (normalise nulls to positions first).
+        $members->values()->each(fn ($c, $i) => $c->collection_order ??= $i);
+        [$a->collection_order, $b->collection_order] = [$b->collection_order, $a->collection_order];
+        $a->save();
+        $b->save();
     }
 
     /** Delete a collection — confirmation happens in the shared modal (data-confirm). */

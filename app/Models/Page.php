@@ -78,4 +78,13 @@ class Page extends Model
             ->withTimestamps()
             ->orderBy('page_component.order');
     }
+
+    /** Collections (groups of components) placed on this page (ordered). */
+    public function collections(): BelongsToMany
+    {
+        return $this->belongsToMany(Collection::class, 'page_collection')
+            ->withPivot(['order', 'settings'])
+            ->withTimestamps()
+            ->orderBy('page_collection.order');
+    }
 }
