@@ -29,6 +29,13 @@
                 <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search components…"
                        class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-64">
             </div>
+            {{-- Filter by collection --}}
+            <select wire:model.live="filterCollection"
+                    class="py-2 pl-3 pr-8 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                <option value="">All collections</option>
+                <option value="none">Standalone (no collection)</option>
+                @foreach ($this->siteCollections as $col)<option value="{{ $col->id }}">{{ $col->name }}</option>@endforeach
+            </select>
             <div class="ml-auto flex items-center gap-3">
                 <span class="text-xs text-gray-400 dark:text-gray-500">{{ $this->components->count() }} result{{ $this->components->count() !== 1 ? 's' : '' }}</span>
                 <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />

@@ -37,6 +37,9 @@ class CollectionsPage extends Component
     /** Page ids this collection is placed on. */
     public array $pageIds = [];
 
+    /** Search for the "add component to collection" selector. */
+    public string $memberSearch = '';
+
     public function mount(Site $site): void
     {
         $this->site = $site;
@@ -68,7 +71,9 @@ class CollectionsPage extends Component
         // still free to add to it.
         $members = $viewing ? $viewing->components()->withCount('nodes')->get() : collect();
         $available = $viewing
-            ? ComponentModel::where('site_id', $this->site->id)->whereNull('collection_id')->orderBy('name')->get(['id', 'name'])
+            ? ComponentModel::where('site_id', $this->site->id)->whereNull('collection_id')
+                ->when($this->memberSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->memberSearch.'%'))
+                ->orderBy('name')->get(['id', 'name'])
             : collect();
 
         return view('livewire.collections-page', [
@@ -91,7 +96,7 @@ class CollectionsPage extends Component
 
     public function closeEntries(): void
     {
-        $this->reset(['viewingId', 'editingItemId', 'itemForm']);
+        $this->reset(['viewingId', 'editingItemId', 'itemForm', 'memberSearch']);
     }
 
     public function deleteItem(string $itemId): void

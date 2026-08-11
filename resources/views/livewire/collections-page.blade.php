@@ -248,10 +248,11 @@
 
             {{-- ── Grouped components (the collection's members) ── --}}
             <div class="p-5 border-b border-gray-100 dark:border-white/[0.05]">
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <p class="text-xs font-bold uppercase tracking-[.12em] text-gray-400">Components <span class="text-gray-300 dark:text-gray-600">({{ $members->count() }})</span></p>
-                    @if($available->isNotEmpty())
                     <div class="flex items-center gap-2" x-data="{ pick: '' }">
+                        <input wire:model.live.debounce.300ms="memberSearch" type="text" placeholder="Search components…"
+                               class="px-2.5 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 placeholder-gray-400 w-40">
                         <select x-model="pick" class="px-2.5 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200">
                             <option value="">Add a component…</option>
                             @foreach($available as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
@@ -259,8 +260,10 @@
                         <button x-on:click="if(pick){ $wire.addComponent(pick); pick='' }"
                                 class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style="background:var(--primary)">Add</button>
                     </div>
-                    @endif
                 </div>
+                @if($available->isEmpty() && $memberSearch !== '')
+                    <p class="text-[11px] text-gray-400 mb-2">No standalone components match "{{ $memberSearch }}".</p>
+                @endif
 
                 @if($members->isEmpty())
                     <p class="text-xs text-gray-400">No components yet — add existing ones above, or set a component's collection on the Components page.</p>

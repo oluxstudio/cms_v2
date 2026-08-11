@@ -26,6 +26,9 @@ class ComponentsPage extends LivewireComponent
     /** Active tag filter ('' = all). */
     public string $filterTag = '';
 
+    /** Collection filter: '' = all, 'none' = standalone, else a collection id. */
+    public string $filterCollection = '';
+
     // Editor state (null = closed, 0 = new)
     public ?string $editingId = null;
 
@@ -81,6 +84,9 @@ class ComponentsPage extends LivewireComponent
             ->with(['nodes', 'pages'])
             ->when($this->search !== '', fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
             ->when($this->filterTag !== '', fn ($q) => $q->whereJsonContains('tags', $this->filterTag))
+            ->when($this->filterCollection === 'none', fn ($q) => $q->whereNull('collection_id'))
+            ->when($this->filterCollection !== '' && $this->filterCollection !== 'none',
+                fn ($q) => $q->where('collection_id', $this->filterCollection))
             ->get();
     }
 

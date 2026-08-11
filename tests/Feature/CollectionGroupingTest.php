@@ -92,6 +92,37 @@ test('the components page assigns a component to a collection', function () {
         ->and($cmp->collection_order)->not->toBeNull();
 });
 
+test('the components page can filter the edit list by collection', function () {
+    [$owner, $site] = groupingSite();
+    $col = Collection::create(['site_id' => $site->id, 'name' => 'Testimonials', 'type' => 'list', 'is_public' => true]);
+    testimonial($site, $col, 'Grouped Member', 0);
+    Component::create(['site_id' => $site->id, 'name' => 'Lonely Standalone', 'author' => 'System', 'source' => 'app']);
+
+    // Filter to the collection → only its member shows.
+    Livewire::actingAs($owner)->test(ComponentsPage::class, ['site' => $site])
+        ->set('filterCollection', $col->id)
+        ->assertSee('Grouped Member')
+        ->assertDontSee('Lonely Standalone');
+
+    // Filter to standalone → only the standalone shows.
+    Livewire::actingAs($owner)->test(ComponentsPage::class, ['site' => $site])
+        ->set('filterCollection', 'none')
+        ->assertSee('Lonely Standalone')
+        ->assertDontSee('Grouped Member');
+});
+
+test('the add-to-collection selector filters available components by search', function () {
+    [$owner, $site] = groupingSite();
+    $col = Collection::create(['site_id' => $site->id, 'name' => 'Testimonials', 'type' => 'list', 'is_public' => true]);
+    Component::create(['site_id' => $site->id, 'name' => 'Alpha widget', 'author' => 'System', 'source' => 'app']);
+    Component::create(['site_id' => $site->id, 'name' => 'Beta widget', 'author' => 'System', 'source' => 'app']);
+
+    Livewire::actingAs($owner)->test(CollectionsPage::class, ['site' => $site])
+        ->call('viewEntries', $col->id)
+        ->set('memberSearch', 'Alpha')
+        ->assertViewHas('available', fn ($a) => $a->count() === 1 && $a->first()->name === 'Alpha widget');
+});
+
 test('the collections page attaches a collection to pages and adds a member component', function () {
     [$owner, $site] = groupingSite();
     $col = Collection::create(['site_id' => $site->id, 'name' => 'Testimonials', 'type' => 'list', 'is_public' => true]);
