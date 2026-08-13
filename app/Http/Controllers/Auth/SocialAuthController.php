@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
@@ -23,7 +24,16 @@ class SocialAuthController extends Controller
 
         try {
             $socialUser = Socialite::driver($provider)->user();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Log the real reason (previously swallowed) so failures are diagnosable:
+            //   invalid_client → wrong client secret; InvalidStateException → lost session/state.
+            report($e);
+            Log::warning('Social login failed', [
+                'provider' => $provider,
+                'type' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             return redirect()->route('login')->withErrors([
                 'email' => 'Unable to authenticate with '.ucfirst($provider).'. Please try again.',
             ]);
