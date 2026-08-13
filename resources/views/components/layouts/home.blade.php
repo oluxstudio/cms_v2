@@ -156,5 +156,6 @@
 <style>[x-cloak]{display:none!important}</style>
     <x-confirm-modal />
     <x-upgrade-modal />
+    <livewire:welcome-onboarding />
 </body>
 </html>

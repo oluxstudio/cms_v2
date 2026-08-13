@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Livewire\Forms\SiteForm;
 use App\Models\Site;
 use App\Services\AccountActivity;
+use App\Services\SampleSiteSeeder;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -20,6 +21,16 @@ class SiteComponent extends Component
     public string $search = '';
 
     public bool $showCreate = false;
+
+    /** Scaffold a populated starter (pages, components, testimonials, contact form). */
+    public bool $addSample = true;
+
+    /** Opened from the onboarding checklist's "Create site" step. */
+    #[On('open-create-site')]
+    public function openCreate(): void
+    {
+        $this->showCreate = true;
+    }
 
     public function mount(): void
     {
@@ -113,11 +124,17 @@ class SiteComponent extends Component
         $site->update(['template' => 'blank']);
         $site->pages()->firstOrCreate(['url' => '/'], ['name' => 'Home', 'keywords' => '', 'is_published' => true]);
 
+        // Optional starter content so the site isn't a blank canvas (onboarding).
+        if ($this->addSample) {
+            app(SampleSiteSeeder::class)->seed($site);
+        }
+
         AccountActivity::siteCreated($site);
 
         $this->form->reset();
         $this->showCreate = false;
         $this->loadSites();
+        $this->dispatch('onboarding-updated'); // advance the checklist
     }
 
     public function delete(string $id): void

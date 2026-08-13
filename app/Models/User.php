@@ -28,7 +28,7 @@ class User extends Authenticatable
         'social_id', 'social_type', 'avatar',
         'email_verified_at',
         'job_title', 'department', 'timezone', 'language',
-        'date_format', 'theme',
+        'date_format', 'theme', 'onboarding',
         'notif_email', 'notif_inapp', 'notif_push',
         'template_limit',
         'two_factor_enabled',
@@ -47,7 +47,40 @@ class User extends Authenticatable
             'notif_push' => 'boolean',
             'two_factor_enabled' => 'boolean',
             'stripe_charges_enabled' => 'boolean',
+            'onboarding' => 'array',
         ];
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Onboarding (first-run welcome + checklist state)
+    // ─────────────────────────────────────────────────────────────
+
+    /** A brand-new user who hasn't seen (or skipped) the welcome yet. */
+    public function needsWelcome(): bool
+    {
+        return empty(($this->onboarding ?? [])['welcomed_at']);
+    }
+
+    /** The user dismissed (or completed) the checklist. */
+    public function onboardingDismissed(): bool
+    {
+        return filled(($this->onboarding ?? [])['dismissed_at'] ?? null);
+    }
+
+    public function onboardingRole(): ?string
+    {
+        return ($this->onboarding ?? [])['role'] ?? null;
+    }
+
+    public function onboardingGoal(): ?string
+    {
+        return ($this->onboarding ?? [])['goal'] ?? null;
+    }
+
+    /** Merge keys into the onboarding JSON and persist. */
+    public function setOnboarding(array $merge): void
+    {
+        $this->update(['onboarding' => array_merge($this->onboarding ?? [], $merge)]);
     }
 
     public function apiTokens(): HasMany

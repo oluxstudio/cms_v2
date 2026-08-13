@@ -69,6 +69,13 @@
                     <textarea wire:model="form.description" rows="3" placeholder="Optional…"
                               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none resize-none"></textarea>
                 </div>
+                <label class="flex items-start gap-2.5 rounded-lg border border-gray-200 px-3 py-2.5 cursor-pointer select-none">
+                    <input type="checkbox" wire:model="addSample" class="mt-0.5">
+                    <span>
+                        <span class="block text-sm font-semibold text-gray-800">Add sample content</span>
+                        <span class="block text-xs text-gray-400">Starter pages, a hero, testimonials and a contact form — so it's not a blank canvas. Edit or delete anytime.</span>
+                    </span>
+                </label>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" wire:click="$set('showCreate', false)"
                             class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg cursor-pointer">
@@ -103,7 +110,13 @@
                 <p class="text-gray-700 font-medium text-sm">No results for "{{ $search }}"</p>
                 <p class="text-gray-400 text-xs mt-1">Try a different name, domain, or description.</p>
             @else
-                <p class="text-gray-500 text-sm">No sites found. Create your first site!</p>
+                <h3 class="text-xl font-extrabold text-gray-900 dark:text-white">Create your first site</h3>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1 max-w-sm">Your site is where your pages, content and leads live. Start with sample content so it looks great from day one.</p>
+                <button wire:click="$set('showCreate', true)"
+                        class="mt-5 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    Create your first site
+                </button>
             @endif
         </div>
     @else
