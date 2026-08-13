@@ -47,14 +47,26 @@ test('activating a paid plan sends the tutorial welcome email once', function ()
     Mail::assertSent(TutorialWelcome::class, 1);
 });
 
-test('new users can register with a phone number', function () {
-    LivewireVolt::test('auth.login')
+test('new users can register with a phone number (via the code step)', function () {
+    Mail::fake();
+    $email = 'jane'.uniqid().'@example.com';
+
+    $component = LivewireVolt::test('auth.login')
         ->set('name', 'Jane Doe')
         ->set('registerPhone', '+44 7700 900123')
-        ->set('registerEmail', 'jane'.uniqid().'@example.com')
+        ->set('registerEmail', $email)
         ->set('registerPassword', 'password123')
         ->set('registerPasswordConfirmation', 'password123')
-        ->call('register');
+        ->call('startVerification');
 
-    expect(User::where('phone', '+44 7700 900123')->exists())->toBeTrue();
+    $code = null;
+    Mail::assertSent(App\Mail\VerificationCode::class, function ($m) use (&$code) {
+        $code = $m->code;
+
+        return true;
+    });
+
+    $component->set('code', $code)->call('verifyCode');
+
+    expect(User::where('phone', '+44 7700 900123')->where('email', $email)->exists())->toBeTrue();
 });

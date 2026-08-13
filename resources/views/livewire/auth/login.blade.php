@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\SignupVerification;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +32,11 @@ new #[Layout('components.layouts.bare')] class extends Component {
     public string $registerPasswordConfirmation = '';
     public bool   $showRegisterPassword = false;
 
+    // — Email verification (OTP) — the account is only created after the code is entered
+    public ?string $pendingToken = null;
+    public string $pendingEmail = '';
+    public string $code = '';
+
     public function login(): void
     {
         $this->validate([
@@ -59,7 +65,11 @@ new #[Layout('components.layouts.bare')] class extends Component {
         $this->redirectIntended(default: $default, navigate: true);
     }
 
-    public function register(): void
+    /**
+     * Step 1 — validate the details and email a code. NO account is created yet:
+     * the pending sign-up is held server-side until the code is verified.
+     */
+    public function startVerification(): void
     {
         $validated = $this->validate([
             'name'                         => ['required', 'string', 'max:255'],
@@ -71,24 +81,57 @@ new #[Layout('components.layouts.bare')] class extends Component {
             'registerPassword.same' => 'Passwords do not match.',
         ]);
 
-        $user = User::create([
+        $this->pendingToken = app(SignupVerification::class)->start([
             'name'     => $validated['name'],
             'phone'    => $validated['registerPhone'],
             'email'    => $validated['registerEmail'],
-            'password' => Hash::make($validated['registerPassword']),
+            'password' => $validated['registerPassword'],
+        ]);
+        $this->pendingEmail = $validated['registerEmail'];
+        $this->code = '';
+    }
+
+    /**
+     * Step 2 — verify the code and only NOW create the (already-verified) account.
+     */
+    public function verifyCode(): void
+    {
+        $this->validate(['code' => ['required', 'string']]);
+
+        $data = app(SignupVerification::class)->verify($this->pendingToken, $this->code);
+
+        $user = User::create([
+            'name'              => $data['name'],
+            'phone'             => $data['phone'],
+            'email'             => $data['email'],
+            'password'          => Hash::make($data['password']),
+            'email_verified_at' => now(),
         ]);
 
         event(new Registered($user));
         Auth::login($user);
+        $this->reset('pendingToken', 'pendingEmail', 'code');
 
-        // A plan chosen on the landing page routes the new user to checkout
-        // once their email is verified; otherwise land on the app home.
         $plan = session('intended_plan');
         $default = $plan
             ? route('account.subscription', ['plan' => $plan], absolute: false)
             : route('home', absolute: false);
 
         $this->redirectIntended(default: $default, navigate: true);
+    }
+
+    public function resendCode(): void
+    {
+        if ($this->pendingToken) {
+            app(SignupVerification::class)->resend($this->pendingToken);
+            session()->flash('code-resent', 'A new code is on its way.');
+        }
+    }
+
+    /** Back to the sign-up form (wrong email, etc.). */
+    public function restartSignup(): void
+    {
+        $this->reset('pendingToken', 'pendingEmail', 'code');
     }
 
     protected function ensureIsNotRateLimited(): void
@@ -258,7 +301,8 @@ new #[Layout('components.layouts.bare')] class extends Component {
                 <h1 class="text-[26px] mb-1">Create Account</h1>
                 <p class="text-sm text-gray-400 mb-6">Sign up to get started with Olux CMS</p>
 
-                <form wire:submit="register" class="flex flex-col gap-3.5">
+                @if (! $pendingToken)
+                <form wire:submit="startVerification" class="flex flex-col gap-3.5">
                     <div class="relative">
                         <label class="absolute left-4 top-2 text-xs text-gray-400 pointer-events-none">Full Name</label>
                         <input wire:model="name" type="text" required autocomplete="name"
@@ -307,10 +351,44 @@ new #[Layout('components.layouts.bare')] class extends Component {
                     @error('registerPasswordConfirmation') <p class="text-xs text-red-500 -mt-1 px-1">{{ $message }}</p> @enderror
 
                     <button type="submit" class="w-full py-3.5 text-white font-semibold rounded-xl transition-all mt-1 auth-submit">
-                        <span wire:loading.remove wire:target="register">Create Account</span>
-                        <span wire:loading wire:target="register">Creating…</span>
+                        <span wire:loading.remove wire:target="startVerification">Send verification code</span>
+                        <span wire:loading wire:target="startVerification">Sending…</span>
                     </button>
                 </form>
+                @else
+                {{-- Step 2 — verify the emailed code (the account is created only after this) --}}
+                <div class="flex flex-col gap-3.5">
+                    <p class="text-sm text-gray-500 -mt-2">
+                        We emailed a 6-digit code to
+                        <span class="font-semibold text-gray-700">{{ \Illuminate\Support\Str::mask($pendingEmail, '•', 1, max(1, strpos($pendingEmail, '@') - 1)) }}</span>.
+                        Enter it below to finish creating your account.
+                    </p>
+                    @if (session('code-resent'))
+                        <p class="text-xs text-emerald-600 -mt-1 px-1">{{ session('code-resent') }}</p>
+                    @endif
+                    <form wire:submit="verifyCode" class="flex flex-col gap-3.5">
+                        <div class="relative">
+                            <label class="absolute left-4 top-2 text-xs text-gray-400 pointer-events-none">Verification code</label>
+                            <input wire:model="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                                placeholder="123456" autofocus
+                                class="w-full px-4 pt-6 pb-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-lg tracking-[0.5em] font-semibold bg-white transition-all @error('code') border-red-400 @enderror" />
+                        </div>
+                        @error('code') <p class="text-xs text-red-500 -mt-1 px-1">{{ $message }}</p> @enderror
+
+                        <button type="submit" class="w-full py-3.5 text-white font-semibold rounded-xl transition-all mt-1 auth-submit">
+                            <span wire:loading.remove wire:target="verifyCode">Verify &amp; create account</span>
+                            <span wire:loading wire:target="verifyCode">Verifying…</span>
+                        </button>
+                    </form>
+                    <div class="flex items-center justify-between text-sm">
+                        <button type="button" wire:click="resendCode" class="font-medium text-indigo-600 hover:text-indigo-700">
+                            <span wire:loading.remove wire:target="resendCode">Resend code</span>
+                            <span wire:loading wire:target="resendCode">Sending…</span>
+                        </button>
+                        <button type="button" wire:click="restartSignup" class="text-gray-400 hover:text-gray-600">Change email</button>
+                    </div>
+                </div>
+                @endif
 
                 <p class="text-center text-sm text-gray-400 mt-5">
                     Already have an account?
