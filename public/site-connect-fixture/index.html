@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-olx-version="0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Riverside Salon (Site Connect fixture)</title>
+  <style>
+    :root { --olx-primary:#111; --olx-surface:#fff; --olx-text:#222; --olx-font-body:system-ui; }
+    body { font-family: var(--olx-font-body); color: var(--olx-text); background: var(--olx-surface); margin: 0; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem; }
+    .hero { padding: 2.5rem; border-radius: 16px; background: #f4f4f5; margin-bottom: 2rem; }
+    .hero h1 { margin: 0 0 .5rem; }
+    .btn { display: inline-block; margin-top: 1rem; padding: .7rem 1.2rem; border-radius: 10px;
+           background: var(--olx-primary); color: #fff; text-decoration: none; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem; }
+    form { display: grid; gap: .6rem; max-width: 420px; }
+    input, textarea { padding: .6rem; border: 1px solid #d1d5db; border-radius: 8px; font: inherit; }
+    [data-olx-form-message] { color: #15803d; font-weight: 600; }
+    img { max-width: 100%; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- COMPONENT: hero. data-olx-id is filled in by the CMS on export; for the
+         fixture, replace the value below with your published hero component id. -->
+    <section class="hero" data-olx-id="REPLACE_WITH_COMPONENT_ID">
+      <h1 data-olx-field="heading">Original hardcoded heading</h1>
+      <p data-olx-field="subheading">Original subheading text.</p>
+      <img data-olx-field="image" alt="" src="https://placehold.co/600x300">
+      <a class="btn" data-olx-field="cta.href" href="#">
+        <span data-olx-field="cta.label">Book</span>
+      </a>
+    </section>
+
+    <!-- COLLECTION: services. The [data-olx-item] node is the template that gets
+         cloned once per published item. -->
+    <section data-olx-id="REPLACE_WITH_COLLECTION_ID">
+      <h2>Our services</h2>
+      <div class="grid">
+        <div class="card" data-olx-item>
+          <h3 data-olx-field="title">Service name</h3>
+          <p data-olx-field="price">£0</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FORM: contact. action is rewritten to the CMS submit URL on hydrate. -->
+    <section data-olx-id="REPLACE_WITH_FORM_ID">
+      <h2>Get in touch</h2>
+      <form method="post" action="#">
+        <input name="name" placeholder="Your name">
+        <input name="email" type="email" placeholder="Email">
+        <textarea name="message" placeholder="Message"></textarea>
+        <button type="submit" class="btn">Send</button>
+      </form>
+    </section>
+
+  </div>
+
+  <!-- Point data-site-token at the key from `php artisan connect:token <site>`.
+       data-debug logs what the connector does to the console. -->
+  <script
+    src="http://localhost:8000/connect.js"
+    data-site-name="REPLACE_WITH_SITE_NAME"
+    data-site-token="REPLACE_WITH_TOKEN"
+    data-debug
+    defer></script>
+</body>
+</html>

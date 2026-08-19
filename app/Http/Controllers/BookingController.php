@@ -2,18 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\BookingConfirmed;
-use App\Mail\NewBookingNotification;
 use App\Models\Booking;
 use App\Models\Contact;
 use App\Models\Service;
 use App\Models\Site;
 use App\Services\ActivityLogger;
+use App\Services\Booking\BookingNotifications;
 use App\Services\BookingService;
 use App\Services\Stripe\StripeGateway;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Public blade booking flow — SLOT services only (the block-built renderer
@@ -95,19 +93,9 @@ class BookingController extends Controller
             report($e);
         }
 
-        // Confirmation email (best-effort — never block the booking on mail failure).
-        try {
-            Mail::to($result->customer_email)->send(new BookingConfirmed($result->fresh('service'), $site));
-        } catch (\Throwable $e) {
-            report($e);
-        }
-        try {
-            if ($owner = $site->user?->email) {
-                Mail::to($owner)->send(new NewBookingNotification($result->fresh('service'), $site));
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        // Form-response record + customer/admin emails (best-effort; the admin
+        // recipient is configurable on the "booking" form's delivery settings).
+        app(BookingNotifications::class)->send($result->fresh('service'), $site, confirmed: true);
 
         return redirect()->route('public.book.success', ['siteName' => $site->name, 'ref' => $result->reference]);
     }
@@ -159,18 +147,10 @@ class BookingController extends Controller
         } catch (\Throwable $e) {
             report($e);
         }
-        try {
-            Mail::to($booking->customer_email)->send(new BookingConfirmed($booking->fresh('service'), $site));
-        } catch (\Throwable $e) {
-            report($e);
-        }
-        try {
-            if ($owner = $site->user?->email) {
-                Mail::to($owner)->send(new NewBookingNotification($booking->fresh('service'), $site));
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        // Form-response record + customer confirmation + admin alert
+        // (recipient configurable on the "booking" form's delivery settings).
+        app(BookingNotifications::class)
+            ->send($booking->fresh('service'), $site, confirmed: true);
     }
 
     /** Stripe webhook: payment confirms the booking; expiry frees the hold. */

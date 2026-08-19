@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Component;
 use App\Models\Node;
 use App\Models\Site;
+use App\Services\ContentVersioner;
+use App\Services\SiteConnect\AssetImporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -71,6 +73,7 @@ class ComponentApiController extends Controller
         $site = $this->manageableSite($request, $siteName, 'components.manage');
         $component = Component::where('site_id', $site->id)->findOrFail($id);
         $data = $this->validated($request, updating: true);
+        app(ContentVersioner::class)->capture($component, $request->attributes->get('api_token_user')?->name);
 
         $attrs = [];
         if (array_key_exists('name', $data)) {
@@ -116,6 +119,9 @@ class ComponentApiController extends Controller
             'nodes.*.type' => ['required_with:nodes', 'in:'.implode(',', Node::TYPES)],
             'nodes.*.value' => ['nullable', 'string', 'max:5000'],
             'nodes.*.parent' => ['nullable', 'integer', 'min:0'],
+            // Nesting: index of the parent node WITHIN this payload (parents
+            // are ULIDs server-side, so clients can't reference them directly).
+            'nodes.*.parent_index' => ['nullable', 'integer', 'min:0'],
             'nodes.*.order' => ['nullable', 'integer', 'min:0'],
             'nodes.*.description' => ['nullable', 'string', 'max:255'],
             'page_ids' => ['sometimes', 'nullable', 'array'],
@@ -123,19 +129,37 @@ class ComponentApiController extends Controller
         ]);
     }
 
-    /** Replace the component's nodes with the given definitions. */
+    /**
+     * Replace the component's nodes with the given definitions. `parent_index`
+     * nests a node under another node of the same payload (created ids are
+     * resolved in a second pass — a payload can't know server-side ULIDs).
+     */
     private function syncNodes(Component $component, array $nodes): void
     {
         $component->nodes()->delete();
+        $importer = app(AssetImporter::class);
+        $created = [];
         foreach (array_values($nodes) as $i => $n) {
-            $component->nodes()->create([
+            $value = (string) ($n['value'] ?? '');
+            if (($n['type'] ?? '') === 'image' && $value !== '') {
+                // Asset values are pulled into the media library so the CMS
+                // serves its own copy (@media ref) instead of hot-linking.
+                $value = $importer->importNodeValue($component->site, $value);
+            }
+            $created[$i] = $component->nodes()->create([
                 'label' => $n['label'],
                 'type' => $n['type'],
-                'value' => $n['value'] ?? '',
+                'value' => $value,
                 'parent' => (int) ($n['parent'] ?? 0),
                 'order' => (int) ($n['order'] ?? $i),
                 'description' => $n['description'] ?? null,
             ]);
+        }
+        foreach (array_values($nodes) as $i => $n) {
+            $idx = $n['parent_index'] ?? null;
+            if ($idx !== null && isset($created[$idx]) && $idx !== $i) {
+                $created[$i]->update(['parent' => $created[$idx]->id]);
+            }
         }
     }
 

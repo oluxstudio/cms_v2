@@ -15,8 +15,9 @@ use Livewire\WithPagination;
  *   <livewire:media-picker :site-id="$siteId" />
  *
  * Open from anywhere (Alpine/JS):  $dispatch('open-media-picker', { context: {...} })
- * On selection it dispatches:      media-picked { context, ref, url }
- * — `ref` is the portable "@media/{filename}" reference, `url` the stored URL.
+ * On selection it dispatches:      media-picked { context, mediaRef, url }
+ * — `mediaRef` is the portable "@media/{filename}" reference, `url` the stored
+ * URL. (Named `mediaRef` because `ref` is a reserved dispatch param in Livewire.)
  */
 class MediaPicker extends Component
 {
@@ -67,7 +68,9 @@ class MediaPicker extends Component
         if (! $media) {
             return;
         }
-        $this->dispatch('media-picked', context: $this->context, ref: $media->ref(), url: $media->url);
+        // NOTE: the param must not be named `ref` — Livewire consumes a `ref`
+        // dispatch param as a component-ref TARGET and silently drops the event.
+        $this->dispatch('media-picked', context: $this->context, mediaRef: $media->ref(), url: $media->url);
         $this->open = false;
     }
 

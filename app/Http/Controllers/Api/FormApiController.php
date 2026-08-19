@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Form;
 use App\Models\Site;
+use App\Services\ContentVersioner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -101,6 +102,7 @@ class FormApiController extends Controller
     {
         $site = $this->manageableSite($request, $siteName, 'forms.manage');
         $form = Form::where('site_id', $site->id)->where('name', $formName)->firstOrFail();
+        app(ContentVersioner::class)->capture($form, $request->attributes->get('api_token_user')?->name);
         $data = $this->validated($request, creating: false);
 
         if (isset($data['name'])) {

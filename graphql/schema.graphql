@@ -31,6 +31,59 @@ type Site {
     media(limit: Int = 25, type: String): [Media!]! @field(resolver: "App\\GraphQL\\SiteGraph@media")
     "Active forms with their field schemas and submit URLs."
     forms(limit: Int = 25): [Form!]! @field(resolver: "App\\GraphQL\\SiteGraph@forms")
+    "One collection by key (slug)."
+    collection(key: String!): Collection @field(resolver: "App\\GraphQL\\SiteGraph@collection")
+    "The page.json contract document for one page — same shape as the REST page.json."
+    pageDocument(slug: String!): PageDocument @field(resolver: "App\\GraphQL\\SiteGraph@pageDocument")
+}
+
+"The page.json contract, delivered over GraphQL. Mirrors the REST page.json exactly."
+type PageDocument {
+    schemaVersion: Int!
+    slug: String!
+    title: String!
+    "Theme (fonts/colors/spacing) as a JSON object."
+    theme: JSON
+    components: [ContentBlock!]!
+    collections: [ContentCollection!]!
+    posts: [ContentPost!]!
+    forms: [ContentForm!]!
+}
+
+type ContentBlock {
+    id: ID!
+    key: String!
+    position: Int!
+    "Flattened editable fields (heading, image, cta, …) as JSON."
+    fields: JSON
+}
+
+type ContentCollection {
+    id: ID!
+    key: String!
+    position: Int!
+    schema: [String!]!
+    "Published items (id + data) as JSON."
+    items: JSON
+}
+
+type ContentPost {
+    id: ID!
+    slug: String!
+    title: String!
+    excerpt: String
+    body: String
+    publishedAt: String
+    featuredImage: JSON
+}
+
+type ContentForm {
+    id: ID!
+    key: String!
+    position: Int!
+    submitUrl: String!
+    successMessage: String
+    fields: JSON
 }
 
 type Page {

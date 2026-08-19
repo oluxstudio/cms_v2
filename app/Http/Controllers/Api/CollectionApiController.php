@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Models\Site;
+use App\Services\ContentVersioner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -87,6 +88,7 @@ class CollectionApiController extends Controller
     {
         $site = $this->manageableSite($request, $siteName, 'collections.manage');
         $collection = $site->collections()->findOrFail($id);
+        app(ContentVersioner::class)->capture($collection, $request->attributes->get('api_token_user')?->name);
         $data = $this->validated($request, creating: false);
 
         if (isset($data['name'])) {
@@ -120,6 +122,7 @@ class CollectionApiController extends Controller
     {
         $site = $this->manageableSite($request, $siteName, 'collections.manage');
         $collection = $site->collections()->findOrFail($id);
+        app(ContentVersioner::class)->capture($collection, $request->attributes->get('api_token_user')?->name);
         $data = $this->itemValidated($request, creating: true);
 
         $item = $collection->items()->create([
@@ -134,7 +137,9 @@ class CollectionApiController extends Controller
     public function updateItem(Request $request, string $siteName, string $id, string $itemId): JsonResponse
     {
         $site = $this->manageableSite($request, $siteName, 'collections.manage');
-        $item = $site->collections()->findOrFail($id)->items()->findOrFail($itemId);
+        $collection = $site->collections()->findOrFail($id);
+        app(ContentVersioner::class)->capture($collection, $request->attributes->get('api_token_user')?->name);
+        $item = $collection->items()->findOrFail($itemId);
         $item->fill($this->itemValidated($request, creating: false))->save();
 
         return response()->json(['ok' => true, 'item' => ['id' => $item->id, 'data' => $item->data, 'status' => $item->status]]);
@@ -142,7 +147,9 @@ class CollectionApiController extends Controller
 
     public function destroyItem(Request $request, string $siteName, string $id, string $itemId): JsonResponse
     {
-        $this->manageableSite($request, $siteName, 'collections.manage')->collections()->findOrFail($id)->items()->findOrFail($itemId)->delete();
+        $collection = $this->manageableSite($request, $siteName, 'collections.manage')->collections()->findOrFail($id);
+        app(ContentVersioner::class)->capture($collection, $request->attributes->get('api_token_user')?->name);
+        $collection->items()->findOrFail($itemId)->delete();
 
         return response()->json(['ok' => true]);
     }

@@ -51,7 +51,19 @@ class ResolveTokenSite
             }
         }
 
-        $request->route()->setParameter('siteName', $site->name);
+        // siteName must be the FIRST route parameter: scalar params are passed
+        // to controller methods positionally, and every shared controller
+        // signature is (…, string $siteName, …other params). Appending it after
+        // the URL's own params (e.g. /collections/{id}) would shift them all.
+        $route = $request->route();
+        $urlParams = $route->parameters();
+        foreach (array_keys($urlParams) as $key) {
+            $route->forgetParameter($key);
+        }
+        $route->setParameter('siteName', $site->name);
+        foreach ($urlParams as $key => $value) {
+            $route->setParameter($key, $value);
+        }
 
         return $next($request);
     }

@@ -354,6 +354,12 @@ class Site extends Model
         return $this->hasOne(SiteGithubSettings::class);
     }
 
+    /** Site Connect wiring (mode, domain allow-list, ingest/publish times). */
+    public function connection(): HasOne
+    {
+        return $this->hasOne(SiteConnection::class);
+    }
+
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);

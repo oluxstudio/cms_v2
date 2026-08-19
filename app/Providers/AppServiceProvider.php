@@ -59,6 +59,16 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
+        // Local dev only: treat oluxstudio@gmail.com as a brand-new user on every
+        // login so the first-run welcome + checklist can be re-experienced.
+        Event::listen(function (Login $event) {
+            if (app()->environment('local')
+                && $event->user instanceof User
+                && $event->user->email === 'oluxstudio@gmail.com') {
+                $event->user->update(['onboarding' => null]);
+            }
+        });
+
         $this->defineApiRateLimits();
     }
 
@@ -83,6 +93,18 @@ class AppServiceProvider extends ServiceProvider
             $token = ApiToken::findByBearer($request->bearerToken());
 
             return Limit::perMinute(120)->by($token ? 'tok:'.$token->id : $request->ip());
+        });
+        // Site Connect ingest: the token sits in public client HTML, so this
+        // endpoint is open to anyone who views source — much tighter ceiling,
+        // per-minute AND per-day.
+        $limiter::for('connect-ingest', function ($request) {
+            $token = ApiToken::findByBearer($request->bearerToken());
+            $key = $token ? 'tok:'.$token->id : $request->ip();
+
+            return [
+                Limit::perMinute((int) config('site_connect.ingest.per_minute', 15))->by($key),
+                Limit::perDay((int) config('site_connect.ingest.per_day', 300))->by('daily:'.$key),
+            ];
         });
     }
 }

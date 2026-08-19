@@ -36,6 +36,8 @@ class SignupVerification
         $code = $this->newCode();
         $ttl = (int) config('signup.ttl_minutes', 15);
 
+        $this->sendCode($data['email'], $code, $ttl); // send first — if it fails, nothing is stored
+
         Cache::put($this->key($token), [
             'name' => $data['name'],
             'phone' => $data['phone'] ?? null,
@@ -46,8 +48,6 @@ class SignupVerification
             'code_sent_at' => now()->timestamp,
             'expires_at' => now()->addMinutes($ttl)->timestamp,
         ], now()->addMinutes($ttl));
-
-        Mail::to($data['email'])->send(new VerificationCode($code, $ttl));
 
         return $token;
     }
@@ -101,11 +101,24 @@ class SignupVerification
         $this->guardHourlyCap($entry['email']);
 
         $code = $this->newCode();
+        $this->sendCode($entry['email'], $code, (int) config('signup.ttl_minutes', 15));
+
         $entry['code_hash'] = hash('sha256', $code);
         $entry['code_sent_at'] = now()->timestamp;
         $this->reput($token, $entry);
+    }
 
-        Mail::to($entry['email'])->send(new VerificationCode($code, (int) config('signup.ttl_minutes', 15)));
+    /** Send the code, turning a mail-transport failure into a friendly error (no 500). */
+    private function sendCode(string $email, string $code, int $ttl): void
+    {
+        try {
+            Mail::to($email)->send(new VerificationCode($code, $ttl));
+        } catch (\Throwable $e) {
+            report($e);
+            throw ValidationException::withMessages([
+                'registerEmail' => "We couldn't send a code to {$email}. Please double-check the address and try again.",
+            ]);
+        }
     }
 
     private function newCode(): string

@@ -1,5 +1,10 @@
 <?php
 
+use App\Models\ApiToken;
+use App\Models\Site;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -11,7 +16,7 @@
 |
 */
 
-pest()->extend(Tests\TestCase::class)
+pest()->extend(TestCase::class)
  // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
 
@@ -44,4 +49,23 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Mint a hashed, site-scoped Site Connect api_token for tests and return the raw
+ * bearer value. Shared across the Site Connect suites.
+ */
+function connectToken(Site $site, array $abilities = ['connect:ingest', 'content:read']): string
+{
+    $raw = 'olx_live_'.Str::random(40);
+    ApiToken::create([
+        'user_id' => $site->user_id,
+        'site_id' => $site->id,
+        'name' => 'test',
+        'token' => hash('sha256', $raw),
+        'token_preview' => substr($raw, 0, 12),
+        'abilities' => $abilities,
+    ]);
+
+    return $raw;
 }

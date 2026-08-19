@@ -6,6 +6,27 @@
     <title>{{ $title ?? ($siteName ?? 'Dashboard') }}</title>
     {{-- Apply dark class before any CSS paints — prevents flash of light theme --}}
     <script>if(localStorage.getItem('olux_theme')==='dark')document.documentElement.classList.add('dark');</script>
+    <script>
+        // Right-rail drawer state, shared by the header buttons, the aside and
+        // the mobile FAB. Pinned open by CSS at ≥4xl; a drawer below that.
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('rail', {
+                open: false,   // drawer visible (<4xl only — ≥4xl the rail is always shown)
+                hub: true,     // Alerts/Messages/Todos hub section
+                llm: false,    // assistant expanded (input bar is always pinned at the bottom)
+                tab: 'alerts',
+                openTab(tab) {
+                    if (this.open && this.hub && this.tab === tab) { this.close(); return; }
+                    this.tab = tab;
+                    this.hub = true;
+                    this.open = true;
+                    if (window.Livewire) Livewire.dispatch('rail-tab', { tab });
+                },
+                openChat() { this.open = true; this.hub = false; this.llm = true; },
+                close() { this.open = false; this.llm = false; this.hub = true; },
+            });
+        });
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
     <style>
@@ -46,6 +67,18 @@
     // Right rail data (computed once here so the markup stays clean).
     $promptSiteId = $siteId ?? ($currentSite?->id);
     $railAlerts   = $currentSite ? $currentSite->contacts()->latest()->take(5)->get() : collect();
+
+    // Unread counts for the header rail-buttons (same scoping as SiteRail::counts).
+    $railCounts = null;
+    if ($currentSite && auth()->check()) {
+        $railUser = auth()->user();
+        $railCounts = [
+            'alerts' => \App\Models\Alert::visibleTo($currentSite, $railUser)->whereNull('read_at')->count(),
+            'messages' => \App\Models\Message::visibleTo($currentSite, $railUser)->whereNull('read_at')
+                ->where('sender_id', '!=', $railUser->id)->count(),
+            'todos' => \App\Models\Todo::visibleTo($currentSite, $railUser)->where('status', 'open')->count(),
+        ];
+    }
 
     // Template apps available for the in-page "Generate" form (renderer to bundle).
     $genTemplates = collect(\App\Templates\TemplateAppRegistry::all())
@@ -190,6 +223,56 @@
                     <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                     <span class="text-gray-500 dark:text-gray-400 truncate" aria-current="page">{{ $crumbMeta['title'] }}</span>
                 </nav>
+
+                {{-- Rail tabs, right side of the breadcrumb bar: labeled pills
+                     on ultra-wide (control the pinned rail), badge icons below
+                     4xl (toggle the drawer). --}}
+                @if ($railCounts !== null && !empty($promptSiteId))
+                <div class="shrink-0 flex items-center">
+                    @php
+                        $railTabs = [
+                            'alerts'   => ['Alerts', '#ef4444', 'M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'],
+                            'messages' => ['Messages', '#6366f1', 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.4-4 8-9 8a9.9 9.9 0 01-4-.8L3 20l1.3-3.9A7.4 7.4 0 013 12c0-4.4 4-8 9-8s9 3.6 9 8z'],
+                            'todos'    => ['Todos', '#10b981', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ];
+                    @endphp
+
+                    {{-- ≥4xl: pill tab bar --}}
+                    <div class="hidden 4xl:flex gap-1 bg-white/70 dark:bg-white/[0.05] rounded-2xl p-1">
+                        @foreach ($railTabs as $railKey => [$railLabel, $railColor, $railPath])
+                            <button type="button"
+                                    @click="$store.rail.tab = '{{ $railKey }}'; Livewire.dispatch('rail-tab', { tab: '{{ $railKey }}' })"
+                                    class="fx flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-colors"
+                                    :class="$store.rail.tab === '{{ $railKey }}'
+                                        ? 'bg-gray-900 text-white shadow dark:bg-white dark:text-gray-900'
+                                        : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/[0.05]'">
+                                {{ $railLabel }}
+                                @if (($railCounts[$railKey] ?? 0) > 0)
+                                    <span class="text-[10px] font-bold px-1.5 rounded-full text-white" style="background:{{ $railColor }}">{{ $railCounts[$railKey] }}</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+
+                    {{-- <4xl: icon-only badges toggling the drawer --}}
+                    <div class="4xl:hidden flex items-center gap-0.5">
+                        @foreach ($railTabs as $railKey => [$railLabel, $railColor, $railPath])
+                            <button type="button" @click="$store.rail.openTab('{{ $railKey }}')"
+                                    class="relative w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-white/[0.06] transition-colors"
+                                    :class="$store.rail.open && $store.rail.hub && $store.rail.tab === '{{ $railKey }}' ? 'bg-white dark:bg-white/[0.08] text-gray-900 dark:text-white shadow-sm' : ''"
+                                    title="{{ $railLabel }}">
+                                <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $railPath }}"/>
+                                </svg>
+                                @if (($railCounts[$railKey] ?? 0) > 0)
+                                    <span class="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-0.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+                                          style="background:{{ $railColor }}">{{ $railCounts[$railKey] > 99 ? '99+' : $railCounts[$railKey] }}</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
 
             {{-- Page content / detail pane --}}
@@ -212,35 +295,64 @@
         </main>
 
 
-        {{-- ── Right rail (every selected-site page) ── --}}
+        {{-- ── Right rail: pinned at ≥4xl, slide-over drawer below ── --}}
         @auth
         @if(!empty($promptSiteId))
-        <aside class="hidden xl:flex flex-col w-[440px] min-w-0 border-l border-gray-200 dark:border-white/[0.05]
+        <aside class="flex-col w-[440px] max-sm:w-full min-w-0 border-l border-gray-200 dark:border-white/[0.05]
                       bg-[#f7f3ee] dark:bg-[#16171d] overflow-hidden"
-               x-data="{ llm: true }">
+               :class="$store.rail.open
+                   ? 'flex max-4xl:fixed max-4xl:right-0 max-4xl:top-0 max-4xl:bottom-0 max-4xl:z-50 max-4xl:shadow-2xl'
+                   : 'hidden 4xl:flex'"
+               x-cloak>
 
-            {{-- Alerts · Messages · Todos hub (real data, RBAC-scoped; click opens in #MainContent) --}}
-            <div class="flex-1 min-h-0">
+            {{-- Drawer header (below 4xl only): close --}}
+            <div class="4xl:hidden shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-white/[0.05]">
+                <span class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider"
+                      x-text="$store.rail.hub ? $store.rail.tab : 'Polux · AI Assistant'"></span>
+                <button type="button" @click="$store.rail.close()" title="Close panel"
+                        class="fx w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-rose-600 hover:bg-white dark:hover:bg-white/[0.05]">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            {{-- Alerts · Messages · Todos hub. flex-1 next to an expanded
+                 assistant (also flex-1) = the 50/50 split. --}}
+            <div x-show="$store.rail.hub" class="flex-1 min-h-0">
                 <livewire:site-rail :site-id="$promptSiteId" :key="'site-rail-'.$promptSiteId" />
             </div>
 
-            {{-- ── LLM section (closable) ── --}}
-            <div class="flex flex-col border-t border-gray-200 dark:border-white/[0.05]"
-                 :class="llm ? 'flex-1 min-h-0' : 'shrink-0'">
+            {{-- ── Assistant: input bar pinned at the bottom; expands to fill
+                 the rail when a prompt is sent (50/50 when the hub is open too).
+                 The collapsed bar only exists ≥4xl — below that the FAB opens it. ── --}}
+            <div class="flex-col border-t border-gray-200 dark:border-white/[0.05]"
+                 :class="$store.rail.llm ? 'flex flex-1 min-h-0' : 'hidden 4xl:flex 4xl:shrink-0'"
+                 @submit="$store.rail.llm = true">
                 <div class="shrink-0 flex items-center justify-between px-4 py-2.5">
                     <span class="flex items-center gap-2 text-xs font-bold text-gray-900 dark:text-white">
                         <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 fx-pulse"></span> Polux · AI Assistant
                     </span>
-                    <button type="button" @click="llm = !llm" class="fx w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-white/[0.05]"
-                            :title="llm ? 'Collapse' : 'Expand'">
-                        <svg class="w-4 h-4 transition-transform" :class="llm ? '' : 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <button type="button" @click="$store.rail.llm = !$store.rail.llm" class="fx w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-white/[0.05]"
+                            :title="$store.rail.llm ? 'Collapse' : 'Expand'">
+                        <svg class="w-4 h-4 transition-transform" :class="$store.rail.llm ? '' : 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                 </div>
-                <div x-show="llm" class="flex-1 min-h-0 overflow-hidden">
+                {{-- Collapsed: capped height clips the chat log so only the
+                     bottom input bar shows. Expanded: fills the section. --}}
+                <div class="min-h-0 overflow-hidden"
+                     :class="$store.rail.llm ? 'flex-1' : 'h-24 shrink-0'">
                     <livewire:site-prompt :site-id="$promptSiteId" :key="'site-prompt-'.$promptSiteId" />
                 </div>
             </div>
         </aside>
+
+        {{-- Below 4xl there is no inline assistant bar — this FAB opens it. --}}
+        <button type="button" x-show="!$store.rail.open" x-cloak @click="$store.rail.openChat()"
+                class="4xl:hidden fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full text-white shadow-lg flex items-center justify-center"
+                style="background:var(--primary)" title="Ask Polux">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.4-4 8-9 8a9.9 9.9 0 01-4-.8L3 20l1.3-3.9A7.4 7.4 0 013 12c0-4.4 4-8 9-8s9 3.6 9 8z"/>
+            </svg>
+        </button>
         @endif
         @endauth
     </div>

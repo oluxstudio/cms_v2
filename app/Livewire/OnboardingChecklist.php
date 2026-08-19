@@ -43,6 +43,21 @@ class OnboardingChecklist extends Component
         $steps = $user ? Onboarding::steps($user) : [];
         $progress = $user ? Onboarding::progress($user) : ['done' => 0, 'total' => 0, 'complete' => false];
 
-        return view('livewire.onboarding-checklist', compact('steps', 'progress'));
+        // Plan/trial context for the welcome hero's subscription card.
+        $sub = $user?->currentSubscription();
+        $plan = $sub ? [
+            'label' => $sub->badgeLabel(),
+            'tier' => $sub->tier()['name'] ?? 'Free',
+            'on_trial' => $sub->onTrial(),
+            'expired' => $sub->trialExpired(),
+            'days_left' => $sub->onTrial() ? $sub->trialDaysLeft() : null,
+        ] : null;
+
+        return view('livewire.onboarding-checklist', [
+            'steps' => $steps,
+            'progress' => $progress,
+            'firstName' => $user ? trim(explode(' ', (string) $user->name)[0]) : '',
+            'plan' => $plan,
+        ]);
     }
 }

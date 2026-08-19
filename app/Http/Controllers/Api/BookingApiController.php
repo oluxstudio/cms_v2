@@ -3,19 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\NewBookingNotification;
-use App\Mail\SubmissionReceipt;
 use App\Models\Booking;
 use App\Models\Contact;
 use App\Models\Service;
 use App\Models\Site;
+use App\Services\Booking\BookingNotifications;
 use App\Services\BookingService;
 use App\Services\Stripe\StripeGateway;
 use App\Support\Money;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Public booking API — powers the in-site BookingWidget AND any external
@@ -187,6 +185,9 @@ class BookingApiController extends Controller
             // Where the CLIENT site wants the customer back after Stripe checkout
             // (its own appointment/booking page). Host-checked before use.
             'return_url' => ['nullable', 'url', 'max:500'],
+            // Which CMS form the client's booking UI was built from — the
+            // booking's form response + admin notification route through it.
+            'form' => ['nullable', 'string', 'max:120'],
         ], match ($svc->kind) {
             'stay' => [
                 'check_in' => ['required', 'date'],
@@ -233,6 +234,11 @@ class BookingApiController extends Controller
 
         if ($custom) {
             $result->update(['params' => ($result->params ?? []) + ['fields' => $custom]]);
+        }
+        if (! empty($data['form'])) {
+            // Persisted so the paid path (webhook/return) routes through the
+            // same form when it confirms later.
+            $result->update(['params' => ($result->params ?? []) + ['form' => $data['form']]]);
         }
 
         // CRM funnel: every booking customer becomes (or updates) a Contact.
@@ -382,28 +388,9 @@ class BookingApiController extends Controller
 
     private function notify(Booking $booking, Site $site): void
     {
-        try {
-            $booking->loadMissing('service');
-            Mail::to($booking->customer_email)->send(new SubmissionReceipt(
-                $site,
-                'booking'.($booking->service ? ' for '.$booking->service->name : ''),
-                $booking->customer_name,
-                array_filter([
-                    'reference' => $booking->reference,
-                    'service' => $booking->service?->name,
-                    'when' => $booking->starts_at?->format('D j M Y, g:i A'),
-                ]),
-            ));
-        } catch (\Throwable $e) {
-            report($e);
-        }
-        // The OWNER hears about every new booking too.
-        try {
-            if ($owner = $site->user?->email) {
-                Mail::to($owner)->send(new NewBookingNotification($booking->fresh('service'), $site));
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        // Records the booking as a form response + emails customer & admin
+        // (recipient configurable on the "booking" form's delivery settings).
+        app(BookingNotifications::class)
+            ->send($booking, $site, confirmed: $booking->status === 'confirmed');
     }
 }

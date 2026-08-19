@@ -11,7 +11,8 @@
 <x-page-layout title="Forms" subtitle="Collect submissions from your visitors.">
     @php
         $fActive = $forms->where('is_active', true)->count();
-        $fFields = $forms->sum(fn ($f) => is_array($f->fields) ? count($f->fields) : 0);
+        $fResponses = $forms->sum('responses_count');
+        $fUnread = $forms->sum('unread_count');
     @endphp
     <x-slot:stats>
         <x-stat-tile label="Forms" :value="$forms->count()" color="#6366f1"
@@ -19,10 +20,10 @@
         <x-stat-tile label="Active" :value="$fActive" :sub="$forms->count().' total'" color="#10b981"
             :bar="$forms->count() ? round($fActive / $forms->count() * 100) : 0"
             icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        <x-stat-tile label="Inactive" :value="$forms->count() - $fActive" color="#9ca3af"
-            icon="M18.36 6.64A9 9 0 1120.77 15M15 12H3m0 0l4-4m-4 4l4 4" />
-        <x-stat-tile label="Total fields" :value="$fFields" color="#f59e0b"
-            icon="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        <x-stat-tile label="Responses" :value="number_format($fResponses)" color="#f59e0b"
+            icon="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        <x-stat-tile label="New responses" :value="$fUnread" :sub="$fUnread ? 'awaiting review' : 'all read'" color="#ef4444"
+            icon="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
     </x-slot:stats>
 
     <div class="flex items-center justify-between">
@@ -67,11 +68,15 @@
         </div>
 
     @else
+        {{-- Form cards (unread-first) + a site-wide recent-responses rail --}}
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-5 items-start">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             @foreach ($forms as $form)
                 <div class="relative flex flex-col bg-white dark:bg-[#1d1e2a]
-                            rounded-2xl border border-gray-100 dark:border-white/[0.06]
-                            shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                            rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden
+                            {{ $form->unread_count > 0
+                                ? 'border-2 border-rose-300 dark:border-rose-500/40 bg-gradient-to-br from-rose-50/60 dark:from-rose-500/[0.06] to-white dark:to-[#1d1e2a]'
+                                : 'border border-gray-100 dark:border-white/[0.06]' }}">
 
                     {{-- Status + unread badge --}}
                     <div class="absolute top-3 right-3 flex items-center gap-1.5">
@@ -82,8 +87,9 @@
                             </span>
                         @endif
                         @if ($form->unread_count > 0)
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full
-                                         bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300">
+                            <span class="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full
+                                         bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                                 {{ $form->unread_count }} new
                             </span>
                         @endif
@@ -178,6 +184,43 @@
                 </div>
             @endforeach
         </div>
+
+        {{-- ── Recent responses (site-wide, newest first) ── --}}
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-100 dark:border-white/[0.06] flex items-center justify-between">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-white">Recent responses</h2>
+                @if ($fUnread > 0)
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300">{{ $fUnread }} new</span>
+                @endif
+            </div>
+            @forelse ($recentResponses as $r)
+                @php $who = $r->extractContactData(); @endphp
+                <button wire:click="openResponse('{{ $r->id }}')"
+                        class="w-full text-left px-4 py-3 flex items-start gap-2.5 border-b border-gray-50 dark:border-white/[0.03] last:border-0
+                               hover:bg-indigo-50/50 dark:hover:bg-white/[0.04] transition-colors {{ $r->read_at ? '' : 'bg-rose-50/40 dark:bg-rose-500/[0.05]' }}">
+                    <span class="mt-1.5 w-2 h-2 rounded-full shrink-0 {{ $r->read_at ? 'bg-gray-200 dark:bg-white/10' : 'bg-rose-500 animate-pulse' }}"></span>
+                    <span class="min-w-0 flex-1">
+                        <span class="flex items-center justify-between gap-2">
+                            <span class="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">
+                                {{ $who['name'] ?? $who['email'] ?? 'Anonymous' }}
+                            </span>
+                            <time class="text-[10px] text-gray-400 shrink-0">{{ $r->created_at->diffForHumans(null, true) }}</time>
+                        </span>
+                        <span class="mt-0.5 flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-semibold px-1.5 py-px rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 shrink-0">
+                                {{ $r->form?->displayTitle() ?? 'Form' }}
+                            </span>
+                            <span class="text-[11px] text-gray-400 truncate">
+                                {{ Str::limit(collect($r->fields ?? [])->filter(fn ($v) => is_scalar($v))->implode(' · '), 60) }}
+                            </span>
+                        </span>
+                    </span>
+                </button>
+            @empty
+                <p class="px-4 py-10 text-center text-xs text-gray-400">No responses yet — they'll appear here the moment a visitor submits a form or books.</p>
+            @endforelse
+        </div>
+        </div> {{-- /cards + rail grid --}}
     @endif
 </x-page-layout>
 @endif {{-- /list --}}

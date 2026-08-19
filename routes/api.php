@@ -17,9 +17,14 @@ use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\PageApiController;
 use App\Http\Controllers\Api\PostApiController;
+use App\Http\Controllers\Api\ServiceApiController;
 use App\Http\Controllers\Api\SiteContentController;
+use App\Http\Controllers\Api\SitePublishController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\TemplatePreviewController;
+use App\Http\Controllers\Api\V1\ConnectController;
+use App\Http\Controllers\Api\V1\IngestController;
+use App\Http\Controllers\Api\V1\PageJsonController;
 use App\Http\Controllers\Api\VisitTrackController;
 use App\Models\Site;
 use Illuminate\Http\Request;
@@ -58,6 +63,27 @@ Route::get('/sites/{siteName}/media', [MediaController::class, 'siteIndex'])->na
 // GET /api/sites/{siteName}/page?url=/  → a single page's content tree
 Route::get('/sites/{siteName}/content', [SiteContentController::class, 'show'])->name('api.site.content');
 Route::get('/sites/{siteName}/page', [SiteContentController::class, 'page'])->name('api.site.page');
+// Previewable content (components/collections/forms/posts with ids) for a preview UI.
+Route::get('/sites/{siteName}/preview', [SiteContentController::class, 'preview'])->name('api.site.preview');
+
+// ── Site Connect: per-page JSON contract a client site hydrates from (Part 3).
+// GET /api/v1/sites/{siteName}/pages/{slug}.json  → the published page.json
+// Public + read-only (the site's own published content); tenant-scoped by name.
+Route::get('/v1/sites/{siteName}/pages/{slug}.json', [PageJsonController::class, 'show'])
+    ->where('slug', '[A-Za-z0-9\-]+')
+    ->middleware('throttle:token-api')
+    ->name('api.v1.page-json');
+
+// connect.js control plane — which mode to run + where the page.json lives.
+// Authenticated by the site's Bearer token (site resolved from the key).
+Route::get('/v1/connect/status', [ConnectController::class, 'status'])
+    ->middleware(['auth.token', 'token.site', 'throttle:token-api'])
+    ->name('api.v1.connect.status');
+
+// Ingest a page snapshot from connect.js (collect mode). Requires connect:ingest.
+Route::post('/v1/connect/ingest', [IngestController::class, 'store'])
+    ->middleware(['auth.token', 'token.site', 'throttle:connect-ingest'])
+    ->name('api.v1.connect.ingest');
 
 // ── Template preview (render a template's design BEFORE installing it to a site)
 // GET /api/templates/preview/{ref}      → {ref} = SiteTemplate id | catalog slug | built-in key
@@ -269,4 +295,15 @@ Route::prefix('site')->middleware(['auth.token', 'token.site', 'throttle:token-a
 
     Route::get('/bookings', [BookingAdminApiController::class, 'index']);
     Route::patch('/bookings/{id}', [BookingAdminApiController::class, 'update']);
+
+    // Booking catalogue + availability (bookings.manage) — lets client tooling
+    // (cms-seed.mjs) manage services like the rest of the content models.
+    Route::get('/services', [ServiceApiController::class, 'index']);
+    Route::post('/services', [ServiceApiController::class, 'store']);
+    Route::patch('/services/{slug}', [ServiceApiController::class, 'update']);
+    Route::delete('/services/{slug}', [ServiceApiController::class, 'destroy']);
+    Route::patch('/booking-settings', [ServiceApiController::class, 'updateSettings']);
+
+    // Publish page.json for all live pages (publish.manage).
+    Route::post('/connect/publish', SitePublishController::class)->name('api.site.connect.publish');
 });

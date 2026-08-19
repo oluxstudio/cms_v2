@@ -8,6 +8,7 @@ use App\Models\Collection;
 use App\Models\Form;
 use App\Models\Media;
 use App\Models\Page;
+use App\Models\Post;
 use App\Models\Site;
 use App\Services\BlockTreeService;
 use App\Support\RichText;
@@ -54,6 +55,28 @@ class SiteContentController extends Controller
             'page' => $this->pagePayload($page, $site),
             'collections' => $this->siteCollections($site),
             'forms' => $this->siteForms($site),
+        ]);
+    }
+
+    /**
+     * GET /api/sites/{siteName}/preview
+     * The site's real content (components, collections, forms, posts) with stable
+     * ids — the data a preview/editor uses to recognise + load each item.
+     */
+    public function preview(string $siteName): JsonResponse
+    {
+        $site = Site::where('name', $siteName)->firstOrFail();
+
+        return response()->json([
+            'site' => $this->siteMeta($site),
+            'components' => $site->contentComponents()->with('nodes')->get()
+                ->map(fn ($c) => $c->payload())->values(),
+            'collections' => $site->collections()->with('items')->get()
+                ->map(fn (Collection $c) => $c->toApiArray())->values(),
+            'forms' => $site->forms()->where('is_active', true)->get()
+                ->map(fn (Form $f) => $f->toApiArray())->values(),
+            'posts' => Post::where('site_id', $site->id)->where('status', 'published')
+                ->latest('published_at')->get()->map(fn ($p) => $p->toApiArray())->values(),
         ]);
     }
 

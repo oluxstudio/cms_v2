@@ -10,6 +10,7 @@ use App\Models\TodoItem;
 use App\Services\TaskLogger;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -55,6 +56,15 @@ class SiteRail extends Component
         return Todo::visibleTo($this->site, Auth::user())
             ->with(['items', 'assignee:id,name'])
             ->orderByRaw("status = 'done'")->orderByDesc('id')->take(40)->get();
+    }
+
+    /** Header rail-buttons (layout) switch the active tab from outside. */
+    #[On('rail-tab')]
+    public function setTab(string $tab): void
+    {
+        if (in_array($tab, ['alerts', 'messages', 'todos'], true)) {
+            $this->tab = $tab;
+        }
     }
 
     public function counts(): array

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Site;
+use App\Services\ContentVersioner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -132,6 +133,7 @@ class PostApiController extends Controller
     {
         $site = $this->manageableSite($request, $siteName, 'posts.manage');
         $post = Post::where('site_id', $site->id)->where('slug', $slug)->firstOrFail();
+        app(ContentVersioner::class)->capture($post, $request->attributes->get('api_token_user')?->name);
         $data = $this->validated($request, creating: false);
 
         $post->fill($data);

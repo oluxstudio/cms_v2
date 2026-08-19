@@ -84,7 +84,7 @@
         .alt .eyebrow { color: var(--primary); }
         .alt .h2 { color: var(--on-bg); }
         .alt .sub { color: var(--on-bg-soft); }
-        .btn { display: inline-block; padding: 15px 46px !important; border-radius: 12px; font-weight: 700; font-size: 19px; transition: transform .15s, box-shadow .15s, background .15s; }
+        .btn { display: inline-block; padding: 8px 30px !important; border-radius: 12px; font-weight: 700; font-size: 19px; transition: transform .15s, box-shadow .15s, background .15s; }
         .btn { font-family: 'comforta', sans-serif; }
         .btn-primary { background: linear-gradient(120deg, var(--primary), var(--primary-2)); color: #fff; box-shadow: 0 12px 26px -12px rgba(227,135,4,.55); }
         .btn-primary:hover { filter: brightness(1.1); transform: translateY(-2px); }
@@ -101,7 +101,7 @@
 
         /* ── Nav: sticky, logo left, links center, CTA at the end ── */
         nav { position: sticky; top: 0; z-index: 60; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line-inv); color: var(--on-bg); }
-        .nav-inner { display: flex; align-items: center; gap: 26px; height: 96px; }
+        .nav-inner { display: flex; align-items: center; gap: 26px; height: 70px; }
         .logo { font-family: 'junegull', sans-serif; font-size: 21px; }
         .logo b { color: var(--accent-on-bg); }
         /* Image logo: render as pure WHITE so it reads on the orange nav */
@@ -383,7 +383,7 @@
     {{-- ── Nav ── --}}
     <nav>
         <div class="my-2 wrap nav-inner justify-between">
-            <a class="logo flex max-w-26 lg:max-w-36" href="/">
+            <a class="logo flex max-w-26 lg:max-w-30" href="/">
 				<img class="w-full" src="{{Vite::asset('resources/images/logo.webp')}}" alt="Olux Studio" />
 				<b>.</b>
 			</a>

@@ -31,6 +31,7 @@
             $link('collections', 'Collections'),
             $link('components', 'Components'),
             $link('media', 'Assets'),
+            $link('connect', 'Preview'),
         ],
         'Audience' => [
             $link('forms', 'Forms'),

@@ -3,8 +3,9 @@
 @endphp
 <div class="h-full flex flex-col min-h-0">
 
-    {{-- Tabs --}}
-    <div class="shrink-0 p-3">
+    {{-- Tabs — hidden: the layout's breadcrumb bar hosts the tab controls now
+         (pills ≥4xl, badge icons below) and drives `tab` via the rail-tab event. --}}
+    <div class="hidden shrink-0 p-3">
         <div class="flex gap-1 bg-white/70 dark:bg-white/[0.05] rounded-2xl p-1">
             @foreach (['alerts'=>['Alerts','#ef4444'], 'messages'=>['Messages','#6366f1'], 'todos'=>['Todos','#10b981']] as $key => [$label,$badge])
                 <button type="button" wire:click="$set('tab','{{ $key }}')"

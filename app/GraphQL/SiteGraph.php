@@ -8,6 +8,8 @@ use App\Models\Media;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Site;
+use App\Services\SiteConnect\PageJsonGenerator;
+use Illuminate\Support\Str;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 
 /**
@@ -100,6 +102,67 @@ class SiteGraph
                         'created_at' => $i->created_at?->toIso8601String(),
                     ])->values()->all(),
             ])->values()->all();
+    }
+
+    /** One collection by key (slug), with published items. */
+    public function collection(Site $site, array $args, GraphQLContext $context): ?array
+    {
+        $all = $this->widened($context, $site, 'collections.view');
+        $c = $site->collections()->with('items')
+            ->where('slug', $args['key'])
+            ->when(! $all, fn ($q) => $q->where('is_public', true))
+            ->first();
+
+        if (! $c) {
+            return null;
+        }
+
+        return [
+            'id' => $c->id, 'name' => $c->name, 'slug' => $c->slug, 'type' => $c->type,
+            'description' => $c->description, 'fields' => $c->fields ?? [],
+            'items' => ($all ? $c->items : $c->items->where('status', 'published'))
+                ->map(fn ($i) => ['id' => $i->id, 'data' => $i->data ?? [], 'status' => $i->status, 'created_at' => $i->created_at?->toIso8601String()])
+                ->values()->all(),
+        ];
+    }
+
+    /**
+     * The page.json contract document for one page — the SAME shape the REST
+     * page.json endpoint serves (components/collections/posts/forms with
+     * key + position + flattened fields). One content model, two delivery formats.
+     */
+    public function pageDocument(Site $site, array $args): ?array
+    {
+        $slug = $args['slug'];
+        $url = $slug === 'index' ? '/' : '/'.str_replace('-', '/', $slug);
+        $page = Page::where('site_id', $site->id)
+            ->where(fn ($q) => $q->where('url', $url)->orWhere('url', '/'.$slug))
+            ->first()
+            ?? $site->livePages()->get()->first(fn (Page $p) => $this->pageSlug($p) === $slug);
+
+        if (! $page) {
+            return null;
+        }
+
+        $doc = app(PageJsonGenerator::class)->generate($page);
+
+        return [
+            'schemaVersion' => $doc['schemaVersion'],
+            'slug' => $doc['pageData']['slug'],
+            'title' => $doc['pageData']['name'],
+            'theme' => $doc['siteData']['theme'],
+            'components' => $doc['componentData'],
+            'collections' => $doc['collectionData'],
+            'posts' => $doc['postData'],
+            'forms' => $doc['formData'],
+        ];
+    }
+
+    private function pageSlug(Page $page): string
+    {
+        $url = trim((string) $page->url, '/');
+
+        return $url === '' ? 'index' : Str::slug(str_replace('/', '-', $url));
     }
 
     public function media(Site $site, array $args): array

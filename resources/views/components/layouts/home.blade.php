@@ -130,6 +130,13 @@
                         </svg>
                         Profile & Settings
                     </a>
+                    <a href="{{ route('how-it-works') }}"
+                       class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-700 transition-colors font-medium">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        How it works
+                    </a>
                     <div class="my-1 border-t border-gray-100 dark:border-gray-800"></div>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

@@ -40,10 +40,11 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
 
     // — API tokens
     public string $new_token_name  = '';
-    public ?int $new_token_site = null;      // null = all my sites
+    public array $new_token_sites = [];      // site ids; [] = all my sites, several = one token per site
     public ?string $new_token_expiry = null; // days ('30'|'90'|'365') or null = never
     public array $new_token_abilities = [];  // [] = all my permissions
-    public ?string $generated_token = null;
+    /** @var array<int,array{site:?string,token:string}> shown once after generation */
+    public array $generated_tokens = [];
 
     // — UI state
     public bool   $showDeleteConfirm = false;
@@ -144,31 +145,38 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
     {
         $this->validate([
             'new_token_name' => ['required', 'string', 'max:80'],
-            'new_token_site' => ['nullable', 'integer'],
+            'new_token_sites' => ['array'],
             'new_token_expiry' => ['nullable', 'in:30,90,365'],
             'new_token_abilities' => ['array'],
         ]);
 
-        $raw = Str::random(64);
+        // Only sites the user can actually access; [] = one unscoped token.
+        $sites = \App\Models\Site::whereIn('id', $this->new_token_sites)->get()
+            ->filter(fn ($s) => $s->accessibleBy(Auth::user()));
+        $targets = $sites->isEmpty() ? collect([null]) : $sites;
 
-        Auth::user()->apiTokens()->create([
-            'name' => $this->new_token_name,
-            'token' => hash('sha256', $raw),
-            'token_preview' => substr($raw, 0, 8),
-            'site_id' => $this->new_token_site ?: null,
-            'abilities' => $this->new_token_abilities !== [] ? array_values($this->new_token_abilities) : null,
-            'expires_at' => $this->new_token_expiry ? now()->addDays((int) $this->new_token_expiry) : null,
-        ]);
+        $this->generated_tokens = [];
+        foreach ($targets as $site) {
+            $raw = Str::random(64);
+            Auth::user()->apiTokens()->create([
+                'name' => $this->new_token_name,
+                'token' => hash('sha256', $raw),
+                'token_preview' => substr($raw, 0, 8),
+                'site_id' => $site?->id,
+                'abilities' => $this->new_token_abilities !== [] ? array_values($this->new_token_abilities) : null,
+                'expires_at' => $this->new_token_expiry ? now()->addDays((int) $this->new_token_expiry) : null,
+            ]);
+            \App\Services\AccountActivity::apiKeyCreated(Auth::id(), $this->new_token_name, $site?->name);
+            $this->generated_tokens[] = ['site' => $site?->name, 'token' => $raw];
+        }
 
-        \App\Services\AccountActivity::apiKeyCreated(Auth::id(), $this->new_token_name,
-            $this->new_token_site ? \App\Models\Site::find($this->new_token_site)?->name : null);
-
-        $this->generated_token = $raw;
         $this->new_token_name = '';
-        $this->new_token_site = null;
+        $this->new_token_sites = [];
         $this->new_token_expiry = null;
         $this->new_token_abilities = [];
-        $this->successMessage = 'Token generated — copy it now, it will not be shown again.';
+        $this->successMessage = count($this->generated_tokens) > 1
+            ? count($this->generated_tokens).' tokens generated — copy them now, they will not be shown again.'
+            : 'Token generated — copy it now, it will not be shown again.';
     }
 
     public function revokeToken(string $id): void
@@ -606,10 +614,13 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                             </div>
                         </div>
 
-                        @if($generated_token)
-                        <div class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                            <p class="text-xs font-semibold text-amber-800 mb-2">⚠️ Copy this token now — it will not be shown again.</p>
-                            <code class="text-xs font-mono text-amber-900 bg-amber-100 px-3 py-2 rounded-lg block break-all">{{ $generated_token }}</code>
+                        @if($generated_tokens)
+                        <div class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                            <p class="text-xs font-semibold text-amber-800">⚠️ Copy {{ count($generated_tokens) > 1 ? 'these tokens' : 'this token' }} now — {{ count($generated_tokens) > 1 ? 'they' : 'it' }} will not be shown again.</p>
+                            @foreach ($generated_tokens as $gen)
+                                @if ($gen['site'])<p class="text-[11px] font-bold text-amber-700">{{ $gen['site'] }}</p>@endif
+                                <code class="text-xs font-mono text-amber-900 bg-amber-100 px-3 py-2 rounded-lg block break-all">{{ $gen['token'] }}</code>
+                            @endforeach
                         </div>
                         @endif
 
@@ -617,12 +628,6 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                         <div class="mb-5 p-4 bg-gray-50 dark:bg-white/[0.03] rounded-xl space-y-3">
                             <div class="flex flex-wrap gap-2">
                                 <div class="flex-1 min-w-[160px]"><x-field.text model="new_token_name" placeholder="Token name (e.g. CI Deploy)" /></div>
-                                <select wire:model="new_token_site" class="px-3 py-2 pr-7 text-sm rounded-xl bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200">
-                                    <option value="">All my sites</option>
-                                    @foreach (\App\Models\Site::all()->filter(fn ($s) => $s->accessibleBy(Auth::user())) as $s)
-                                        <option value="{{ $s->id }}">Only: {{ $s->name }}</option>
-                                    @endforeach
-                                </select>
                                 <select wire:model="new_token_expiry" class="px-3 py-2 pr-7 text-sm rounded-xl bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200">
                                     <option value="">Never expires</option>
                                     <option value="30">Expires in 30 days</option>
@@ -630,10 +635,22 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                                     <option value="365">Expires in 1 year</option>
                                 </select>
                             </div>
+                            {{-- Site scope: none ticked = all sites; several = one token minted per site --}}
+                            <details class="text-xs" open>
+                                <summary class="cursor-pointer text-gray-500 dark:text-gray-400 font-semibold">Limit to sites <span class="font-normal text-gray-400">— none ticked = all my sites; tick several to mint one token per site</span></summary>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-2">
+                                    @foreach (\App\Models\Site::all()->filter(fn ($s) => $s->accessibleBy(Auth::user())) as $s)
+                                        <label class="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
+                                            <input type="checkbox" wire:model="new_token_sites" value="{{ $s->id }}" class="rounded border-gray-300"> {{ $s->name }}
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </details>
                             <details class="text-xs">
                                 <summary class="cursor-pointer text-gray-500 dark:text-gray-400 font-semibold">Limit abilities <span class="font-normal text-gray-400">— none ticked = everything you can do</span></summary>
                                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-2">
-                                    @foreach (collect(config('permissions.groups', []))->flatMap(fn ($perms) => array_keys($perms)) as $perm)
+                                    {{-- Site Connect abilities included so client-site tokens can be minted least-privilege (same pair the connect:token CLI issues). --}}
+                                    @foreach (collect(config('permissions.groups', []))->flatMap(fn ($perms) => array_keys($perms))->merge(config('site_connect.abilities', []))->unique() as $perm)
                                         <label class="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
                                             <input type="checkbox" wire:model="new_token_abilities" value="{{ $perm }}" class="rounded border-gray-300"> {{ $perm }}
                                         </label>

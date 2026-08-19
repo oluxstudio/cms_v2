@@ -5,7 +5,7 @@
 
         <div class="relative w-full max-w-md bg-white dark:bg-[#1d1e2a] rounded-2xl shadow-2xl border border-gray-100 dark:border-white/[0.08] overflow-hidden">
             {{-- Header --}}
-            <div class="px-6 pt-6 pb-4" style="background:linear-gradient(120deg,#4f46e5,#7c3aed);">
+            <div class="px-6 pt-6 pb-4" style="background:linear-gradient(120deg,var(--primary),var(--primary-2));">
                 <p class="text-[12px] font-semibold uppercase tracking-[.12em] text-white/70">Welcome to Olux</p>
                 <h2 class="mt-1 text-2xl font-extrabold text-white">Hi {{ $firstName ?: 'there' }} 👋</h2>
                 <p class="mt-1 text-sm text-white/80">Two quick questions so we can tailor your setup — or skip and dive in.</p>
@@ -29,8 +29,12 @@
 
                 <div class="flex items-center justify-between pt-1">
                     <button wire:click="skip" class="text-sm font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Skip for now</button>
-                    <button wire:click="start" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm">Let's go →</button>
+                    <button wire:click="start" class="px-5 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm transition-transform hover:-translate-y-0.5"
+                            style="background:linear-gradient(120deg,var(--primary),var(--primary-2))">Let's go →</button>
                 </div>
+                <p class="text-center text-xs text-gray-400 pt-1">
+                    New to Olux? <a href="{{ route('how-it-works') }}" class="font-semibold" style="color:var(--primary)">See how it works</a>
+                </p>
             </div>
         </div>
     </div>

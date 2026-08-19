@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BlockKitController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\ConnectPreviewController;
 use App\Http\Controllers\DonateController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\PublicInvoiceController;
@@ -16,6 +17,20 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
+
+// ── Site Connect connector script — public, CDN-cacheable, served from the CMS
+// domain so client sites embed <script src="https://cms.../connect.js">.
+Route::get('/connect.js', function () {
+    $path = resource_path('site-connect/connect.js');
+    abort_unless(File::exists($path), 404);
+
+    return response(File::get($path), 200, [
+        'Content-Type' => 'application/javascript; charset=utf-8',
+        // CDN-cacheable in production; always-fresh elsewhere so edits to the
+        // connector propagate without a hard refresh during development.
+        'Cache-Control' => app()->isProduction() ? 'public, max-age=3600' : 'no-cache, must-revalidate',
+    ]);
+})->name('site-connect.script');
 
 // ── Auth routes first (must be before the /{siteID} catch-all)
 require __DIR__.'/auth.php';
@@ -163,6 +178,13 @@ Route::middleware('auth')->group(function () {
     // existing route('home') redirect — auth flows, layouts — lands here.
     Route::get('/select-site', [SiteController::class, 'index'])->name('home');
 
+    // In-app "How it works" guide (create a site → content → leads → bookings → live).
+    Route::get('/how-it-works', function () {
+        $site = auth()->user()->sites()->latest('id')->first();
+
+        return view('how-it-works', ['site' => $site]);
+    })->name('how-it-works');
+
     // Account subscription — the 5-tier plan page (trial → paid upgrades).
     Route::view('/account/subscription', 'subscription')->name('account.subscription');
     // Stripe Checkout return: verify the session server-side, activate, go back.
@@ -218,6 +240,16 @@ Route::middleware('auth')->group(function () {
 
         return view('block-editor-page', ['site' => $site]);
     })->name('blocks');
+    // Site Connect — review ingested pages + the faithful preview replica (iframe).
+    Route::get('/{siteID}/connect', function ($siteID) {
+        $site = Site::where('name', $siteID)->firstOrFail();
+        abort_unless($site->allows(Auth::user(), 'components.view'), 403);
+
+        return view('connect-review-page', ['site' => $site]);
+    })->name('site.connect');
+    Route::get('/{siteID}/connect/export', [ConnectPreviewController::class, 'export'])
+        ->name('site.connect.export');
+
     Route::get('/{siteID}', [SiteController::class, 'dashboard'])->name('site.dashboard');
     Route::get('/{siteID}/dashboard', [SiteController::class, 'dashboard']);
     Route::get('/{siteID}/pages', [SiteController::class, 'pages'])->middleware('perm:pages.view')->name('pages');

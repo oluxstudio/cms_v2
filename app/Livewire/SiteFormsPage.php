@@ -313,6 +313,20 @@ class SiteFormsPage extends Component
     // CRUD — responses
     // ─────────────────────────────────────────────────────────────
 
+    /** Jump from the "Recent responses" rail straight into a response (marks it read). */
+    public function openResponse(string $id): void
+    {
+        $response = FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))->find($id);
+        if (! $response) {
+            return;
+        }
+        $this->activeFormId = $response->form_id;
+        $this->mode = 'responses';
+        $this->openId = $response->id;
+        $this->resetPage();
+        $response->markAsRead();
+    }
+
     public function toggleOpen(string $id): void
     {
         $this->openId = ($this->openId === $id) ? null : $id;
@@ -416,7 +430,17 @@ class SiteFormsPage extends Component
                 $form->last_at = $form->responses()->latest()->value('created_at');
 
                 return $form;
-            });
+            })
+            // Forms with NEW responses surface first, then by latest activity.
+            ->sortByDesc(fn (Form $f) => [$f->unread_count > 0, (string) $f->last_at, (string) $f->created_at])
+            ->values();
+
+        // Site-wide latest submissions for the list view's "Recent responses" rail.
+        $recentResponses = $this->mode === 'list'
+            ? FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $this->site->id))
+                ->with('form:id,title,name')
+                ->latest()->take(8)->get()
+            : collect();
 
         $activeForm = null;
         if ($this->activeFormId && in_array($this->mode, ['detail', 'responses', 'form'])) {
@@ -441,7 +465,7 @@ class SiteFormsPage extends Component
         $editableKeys = EmailTemplate::EDITABLE;
         $siteLogo = (string) $this->site->getAttr('email.logo', '');
 
-        return view('livewire.site-forms-page', compact('forms', 'activeForm', 'responses', 'channels', 'tplLabels', 'editableKeys', 'siteLogo'));
+        return view('livewire.site-forms-page', compact('forms', 'activeForm', 'responses', 'recentResponses', 'channels', 'tplLabels', 'editableKeys', 'siteLogo'));
     }
 
     // ─────────────────────────────────────────────────────────────
