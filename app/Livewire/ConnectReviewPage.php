@@ -8,6 +8,7 @@ use App\Models\Component;
 use App\Models\ContentVersion;
 use App\Models\Form;
 use App\Models\Node;
+use App\Models\Page;
 use App\Models\Post;
 use App\Models\Site;
 use App\Services\ContentVersioner;
@@ -136,6 +137,21 @@ class ConnectReviewPage extends LivewireComponent
         $i = $context['nodeIndex'] ?? null;
         if ($i !== null && isset($this->edit['nodes'][$i])) {
             $this->edit['nodes'][$i]['value'] = $mediaRef;
+            // Picking an asset for an EXISTING node applies immediately —
+            // no separate "Save component" needed for the swap to show.
+            $nodeId = $this->edit['nodes'][$i]['id'] ?? null;
+            if ($nodeId) {
+                $node = Node::where('id', $nodeId)
+                    ->whereHas('component', fn ($q) => $q->where('site_id', $this->site->id))
+                    ->first();
+                if ($node) {
+                    if ($component = Component::where('site_id', $this->site->id)->find($node->component_id)) {
+                        app(ContentVersioner::class)->capture($component, Auth::user()?->name);
+                    }
+                    $node->update(['value' => $mediaRef]);
+                    $this->refreshPreview('Image updated');
+                }
+            }
 
             return;
         }
@@ -144,7 +160,18 @@ class ConnectReviewPage extends LivewireComponent
         $item = $context['itemIndex'] ?? null;
         $key = $context['itemKey'] ?? null;
         if ($item !== null && $key !== null && isset($this->edit['items'][$item])) {
-            $this->edit['items'][$item]['data'][$key] = str_starts_with($url, '/') ? url($url) : $url;
+            $value = str_starts_with($url, '/') ? url($url) : $url;
+            $this->edit['items'][$item]['data'][$key] = $value;
+            // Existing items apply immediately (new/unsaved rows wait for Save).
+            $itemId = $this->edit['items'][$item]['id'] ?? null;
+            $row = $itemId ? CollectionItem::where('id', $itemId)->where('site_id', $this->site->id)->first() : null;
+            if ($row) {
+                if ($col = Collection::where('site_id', $this->site->id)->find($row->collection_id)) {
+                    app(ContentVersioner::class)->capture($col, Auth::user()?->name);
+                }
+                $row->update(['data' => array_merge($row->data ?? [], [$key => $value])]);
+                $this->refreshPreview('Image updated');
+            }
         }
     }
 
@@ -155,6 +182,8 @@ class ConnectReviewPage extends LivewireComponent
         $this->selectedId = $id;
         $this->mode = 'edit';
         $this->loadEdit();
+        // Bring the editor into view (drawer/panel may be scrolled or below).
+        $this->dispatch('olx-editor-focus', target: 'top');
     }
 
     public function edit(): void
@@ -203,7 +232,7 @@ class ConnectReviewPage extends LivewireComponent
         $col = Collection::with('items')->where('site_id', $this->site->id)->find($id);
         if ($col) {
             $this->edit = ['type' => 'collection', 'id' => $col->id, 'name' => $col->name,
-                'schema' => collect($col->fields ?? [])->pluck('name')->filter()->values()->all(),
+                'schema' => collect($col->fields ?? [])->map(fn ($f) => $f['name'] ?? $f['key'] ?? null)->filter()->unique()->values()->all(),
                 'items' => $col->items->map(fn (CollectionItem $i) => ['id' => $i->id, 'data' => $i->data ?? []])->all()];
         }
     }
@@ -289,14 +318,17 @@ class ConnectReviewPage extends LivewireComponent
             $col = $item ? Collection::where('site_id', $this->site->id)->find($item->collection_id) : null;
         }
         if (! $col) {
+            $this->dispatch('toast', level: 'error', title: 'Could not remove item',
+                message: 'The item or its collection could not be found — it may already be deleted.');
+
             return;
         }
         app(ContentVersioner::class)->capture($col, Auth::user()?->name);
         CollectionItem::where('id', $itemId)->where('site_id', $this->site->id)
             ->where('collection_id', $col->id)->delete();
-        if ($this->selectedId === $col->id) {
-            $this->loadEdit();
-        }
+        // Show the collection on the right and flash its items section.
+        $this->select('collection', $col->id);
+        $this->dispatch('olx-editor-focus', target: 'items');
         $this->refreshPreview('Item removed');
     }
 
@@ -316,10 +348,13 @@ class ConnectReviewPage extends LivewireComponent
                 : null;
         }
         if (! $col) {
+            $this->dispatch('toast', level: 'error', title: 'Could not add item',
+                message: 'No collection matches this marker — check that its data-olx-key equals the collection slug.');
+
             return;
         }
         app(ContentVersioner::class)->capture($col, Auth::user()?->name);
-        $schema = collect($col->fields ?? [])->pluck('name')->filter()->values()->all();
+        $schema = collect($col->fields ?? [])->map(fn ($f) => $f['name'] ?? $f['key'] ?? null)->filter()->unique()->values()->all();
         CollectionItem::create([
             'collection_id' => $col->id,
             'site_id' => $this->site->id,
@@ -327,6 +362,8 @@ class ConnectReviewPage extends LivewireComponent
             'data' => array_merge(array_fill_keys($schema, ''), $this->schemaDefaults($col)),
         ]);
         $this->select('collection', $col->id);
+        // Jump the editor to the freshly added item so it's ready to fill in.
+        $this->dispatch('olx-editor-focus', target: 'last-item');
         $this->refreshPreview('Item added');
     }
 
@@ -428,7 +465,13 @@ class ConnectReviewPage extends LivewireComponent
     private function addMissingNodes(Component $component, array $fields): int
     {
         $added = 0;
+        $seen = [];
         foreach (array_slice($fields, 0, 20) as $spec) {
+            $specKey = strtolower((string) (is_array($spec) ? ($spec['field'] ?? '') : ''));
+            if ($specKey !== '' && isset($seen[$specKey])) {
+                continue; // duplicate field name within one payload
+            }
+            $seen[$specKey] = true;
             if (! is_array($spec)) {
                 continue;
             }
@@ -635,6 +678,7 @@ class ConnectReviewPage extends LivewireComponent
         $col = Collection::where('site_id', $this->site->id)->find($this->edit['id'] ?? null);
         $defaults = $col ? $this->schemaDefaults($col) : [];
         $this->edit['items'][] = ['id' => null, 'data' => array_merge(array_fill_keys($schema, ''), $defaults)];
+        $this->dispatch('olx-editor-focus', target: 'last-item');
     }
 
     public function removeItem(int $i): void
@@ -720,14 +764,25 @@ class ConnectReviewPage extends LivewireComponent
     }
 
     /**
-     * Republish page.json after every save and toast the result. No iframe
-     * reload needed: connect.js polls page.json in edit mode and re-applies
-     * the fresh content in place within ~1.5s.
+     * Republish page.json after every save and toast the result. Only the page
+     * being PREVIEWED publishes synchronously (that's what the poll reads);
+     * the rest republish after the response so the editor stays snappy.
+     * No iframe reload needed: connect.js re-applies content in place.
      */
     private function refreshPreview(string $what = 'Saved'): void
     {
-        foreach ($this->site->livePages()->get() as $page) {
-            app(PageJsonPublisher::class)->publish($page);
+        $pages = $this->site->livePages()->get();
+        $current = $pages->first(fn ($p) => $p->url === $this->previewPath) ?? $pages->first();
+        if ($current) {
+            app(PageJsonPublisher::class)->publish($current);
+        }
+        $rest = $pages->reject(fn ($p) => $current && $p->id === $current->id)->pluck('id')->all();
+        if ($rest !== []) {
+            dispatch(function () use ($rest) {
+                foreach (Page::whereIn('id', $rest)->get() as $page) {
+                    app(PageJsonPublisher::class)->publish($page);
+                }
+            })->afterResponse();
         }
         $this->dispatch('toast', level: 'success', title: $what,
             message: 'The preview updates in place in a moment.');

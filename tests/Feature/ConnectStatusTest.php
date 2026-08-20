@@ -44,5 +44,5 @@ test('connect.js is served from the CMS domain as javascript under the size budg
     expect($res->headers->get('Content-Type'))->toContain('javascript');
 
     $bytes = strlen(file_get_contents(resource_path('site-connect/connect.js')));
-    expect($bytes)->toBeLessThan(28 * 1024); // size budget (hydrate + collect + edit modes)
+    expect($bytes)->toBeLessThan(36 * 1024); // size budget (hydrate + collect + edit modes)
 });

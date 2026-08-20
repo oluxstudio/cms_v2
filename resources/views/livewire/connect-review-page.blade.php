@@ -28,7 +28,27 @@
                 || rows.find(r => r.dataset.nodeField.toLowerCase() === want.split('.').pop());
             if (el) { el.classList.add('olx-node-hot'); el.scrollIntoView({ block: 'nearest' }); }
         },
-     }">
+        // Bring the inspector into view when content is selected; jump to the
+        // newest item row after an add.
+        focusEditor(target) {
+            this.$nextTick(() => {
+                const panel = document.getElementById('olx-inspector');
+                if (!panel) return;
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                const flash = el => { if (!el) return; el.classList.remove('olx-flash'); void el.offsetWidth; el.classList.add('olx-flash'); };
+                const rows = panel.querySelectorAll('[data-item-row]');
+                if (target === 'last-item' && rows.length) {
+                    rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    flash(rows[rows.length - 1]);
+                } else if (target === 'items') {
+                    const list = panel.querySelector('[data-items-list]') || panel;
+                    list.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    flash(list);
+                } else { panel.scrollTop = 0; }
+            });
+        },
+     }"
+     x-on:olx-editor-focus.window="focusEditor($event.detail?.target)">
     <style>
         .olx-in { width:100%; margin-top:2px; padding:.4rem .55rem; font-size:12px; border-radius:8px;
                   background:rgba(0,0,0,.02); border:1px solid rgba(0,0,0,.1); color:inherit; }
@@ -40,6 +60,10 @@
         /* Inspector row lit up while its field is hovered in the preview */
         [data-node-field].olx-node-hot { outline:2px solid #6366f1; outline-offset:1px; border-radius:10px;
                                          background:rgba(99,102,241,.08); }
+        /* One-shot attention flash after item add/remove */
+        .olx-flash { animation: olxflash 1.2s ease; border-radius:10px; }
+        @keyframes olxflash { 0% { background: rgba(99,102,241,.22); box-shadow: 0 0 0 2px rgba(99,102,241,.55); }
+                              100% { background: transparent; box-shadow: none; } }
     </style>
 
     {{-- Toolbar --}}
@@ -94,7 +118,7 @@
 
             {{-- Inspector --}}
             @if ($selectedKind)
-            <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] p-4 overflow-y-auto">
+            <div id="olx-inspector" class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] p-4 overflow-y-auto">
                 @if (! $edit)
                     <p class="text-sm text-gray-400">Hover the preview — components outline in orange. Click one to edit it here.</p>
                 @else

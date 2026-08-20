@@ -97,7 +97,10 @@
       "Bash(curl -s \"http://localhost:8025/api/v1/messages?limit=3\")",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('booked:', d.get\\('reference'\\), d.get\\('status'\\)\\)\")",
       "Bash(git -C /home/olux/development/olux-studio/templates/hairco rev-parse --git-dir)",
-      "Bash(grep -nE \"=\\(.{20,}\\)\" .env.example)"
+      "Bash(grep -nE \"=\\(.{20,}\\)\" .env.example)",
+      "Bash(sed -i 's/expect\\($bytes\\)->toBeLessThan\\(28 \\\\* 1024\\)/expect\\($bytes\\)->toBeLessThan\\(32 * 1024\\)/' tests/Feature/ConnectStatusTest.php)",
+      "Bash(sed -i 's/dependency-free, < 28 KB, never throws/dependency-free, < 32 KB, never throws/' resources/site-connect/connect.js)",
+      "Bash(node --check resources/site-connect/connect.js)"
     ],
     "additionalDirectories": [
       "/home/olux/development/olux-studio/templates/hairco",

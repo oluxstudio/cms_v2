@@ -32,8 +32,8 @@ return [
             'color' => '#0ea5e9',
             'accent' => 'sky',
             'limits' => ['sites' => 1, 'premium' => false, 'storage_mb' => 1024],
-            'features' => ['1 site', 'Pages, posts & media', 'Forms & contacts', 'Community support'],
-            'description' => 'Everything you need to run one clean, content-driven website — pages, posts, media, forms and a built-in CRM for the contacts they capture. Premium commerce modules are not included; upgrade to Pro when you need bookings, invoices or the estimator.',
+            'features' => ['1 site', 'Pages, posts & media', 'Forms & contacts', 'Store, bookings, invoices & estimator', 'Community support'],
+            'description' => 'Everything you need to run one clean, content-driven website — pages, posts, media, forms and a built-in CRM, plus the full commerce suite: store, bookings, invoices, donations and the cost estimator. Upgrade to Pro for more sites and the block builder.',
         ],
         'pro' => [
             'name' => 'Pro',
@@ -44,8 +44,8 @@ return [
             'accent' => 'lime',
             'highlight' => true,
             'limits' => ['sites' => 5, 'premium' => true, 'storage_mb' => 5120],
-            'features' => ['5 sites', 'All premium modules', 'Bookings & invoices', 'Cost estimator', 'Email support'],
-            'description' => 'The sweet spot for a growing business. Run up to five sites with every premium module unlocked — take bookings, send invoices and quote jobs with the cost estimator — backed by email support. Most customers land here.',
+            'features' => ['5 sites', 'All premium modules', 'Block builder', 'Full commerce suite', 'Email support'],
+            'description' => 'The sweet spot for a growing business. Run up to five sites with every premium module unlocked — including the block builder — on top of the full commerce suite every plan gets, backed by email support. Most customers land here.',
         ],
         'business' => [
             'name' => 'Business',

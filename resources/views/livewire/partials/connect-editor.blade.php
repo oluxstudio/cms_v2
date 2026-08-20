@@ -84,9 +84,9 @@
         <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Items ({{ count($edit['items']) }})</p>
         <button wire:click="addItem" class="text-xs font-semibold" style="color:var(--primary)">+ Add item</button>
     </div>
-    <div class="mt-1.5 space-y-3">
+    <div class="mt-1.5 space-y-3" data-items-list>
         @foreach ($edit['items'] as $i => $item)
-            <div class="rounded-lg border border-gray-100 dark:border-white/[0.06] p-2">
+            <div data-item-row class="rounded-lg border border-gray-100 dark:border-white/[0.06] p-2">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-[11px] text-gray-400">#{{ $i + 1 }}</span>
                     <button wire:click="removeItem({{ $i }})" class="text-[11px] text-rose-500">Remove</button>

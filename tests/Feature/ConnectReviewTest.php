@@ -446,3 +446,25 @@ test('preview item controls work on collections embedded inside a component', fu
         // history captured on the LINKED collection for all three mutations
         ->and(ContentVersion::where('subject_id', $gallery->id)->count())->toBeGreaterThanOrEqual(2);
 });
+
+test('picking an asset applies immediately — no separate save needed', function () {
+    [$user, $site, $hero, $services] = previewSite();
+    $imgNode = Node::create(['component_id' => $hero->id, 'parent' => '0', 'label' => 'Image', 'type' => 'image', 'value' => '/old.jpg', 'order' => 1]);
+    Media::create(['site_id' => $site->id, 'name' => 'new.jpg', 'file_type' => 'image',
+        'url' => '/storage/media/'.$site->name.'/new.jpg', 'size' => '1 KB', 'bytes' => 1024]);
+    $item = $services->items()->first();
+
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('select', 'component', $hero->id)
+        ->call('onMediaPicked', ['scope' => 'connect', 'nodeIndex' => 1], '@media/new.jpg', '/storage/media/x/new.jpg')
+        ->assertDispatched('toast');
+    // Persisted WITHOUT calling saveComponent:
+    expect($imgNode->fresh()->value)->toBe('@media/new.jpg')
+        // and captured in history (revertible)
+        ->and(ContentVersion::where('subject_id', $hero->id)->exists())->toBeTrue();
+
+    // Collection item pick persists immediately too.
+    $lw->call('select', 'collection', $services->id)
+        ->call('onMediaPicked', ['scope' => 'connect', 'itemIndex' => 0, 'itemKey' => 'photo'], '@media/new.jpg', '/storage/x/new.jpg');
+    expect($item->fresh()->data['photo'])->toBe(url('/storage/x/new.jpg'));
+});

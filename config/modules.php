@@ -11,30 +11,31 @@ return [
 
     'tiers' => [
         // Build & design
-        'build'       => 'premium',  // the block builder — the flagship
-        'pages'       => 'basic',
-        'templates'   => 'basic',
+        'build' => 'premium',  // the block builder — the flagship
+        'pages' => 'basic',
+        'templates' => 'basic',
 
         // Content
-        'media'       => 'basic',
+        'media' => 'basic',
         'collections' => 'basic',
-        'posts'       => 'basic',
+        'posts' => 'basic',
 
         // Audience
-        'forms'       => 'basic',
-        'contacts'    => 'basic',
+        'forms' => 'basic',
+        'contacts' => 'basic',
 
         // Site
-        'analytics'   => 'basic',
-        'team'        => 'basic',
+        'analytics' => 'basic',
+        'team' => 'basic',
 
         // Commerce feature-modules (config/features.php keys).
-        // All premium today — flip any of these to 'basic' at will.
-        'store'       => 'premium',
-        'invoices'    => 'premium',
-        'donations'   => 'premium',
-        'bookings'    => 'premium',
-        'estimator'   => 'premium',
+        // ALL BASIC: every plan (including free) gets the full commerce suite —
+        // the block builder ('build') stays the premium differentiator.
+        'store' => 'basic',
+        'invoices' => 'basic',
+        'donations' => 'basic',
+        'bookings' => 'basic',
+        'estimator' => 'basic',
 
     ],
 

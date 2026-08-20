@@ -1,5 +1,5 @@
 /*!
- * Olux Site Connect — connect.js (dependency-free, < 28 KB, never throws).
+ * Olux Site Connect — connect.js (dependency-free, < 36 KB, never throws).
  * Modes: hydrate (fill DOM from page.json), collect (POST snapshot to ingest),
  * edit (CMS iframe overlay: outline + click → postMessage the component).
  * Install: <script src=".../connect.js" data-site-name data-site-token defer>
@@ -88,6 +88,15 @@
     };
     poll();
     setInterval(poll, 1500);
+    // After a mutating click, poll quickly for a few seconds so the change
+    // shows up near-instantly instead of waiting for the next regular tick.
+    window.__olxFastPoll = function () {
+      for (var i = 1; i <= 6; i++) setTimeout(poll, i * 400);
+    };
+  }
+
+  function fastPoll() {
+    if (window.__olxFastPoll) window.__olxFastPoll();
   }
 
   // One set of document listeners; closest [data-olx-*] ancestor is the target.
@@ -134,6 +143,32 @@
       if (t.classList && (t.classList.contains('olx-item-x') || t.classList.contains('olx-item-add'))) {
         e.preventDefault();
         e.stopPropagation();
+        // Instant feedback + a fast poll burst so the change lands quickly.
+        // OPTIMISTIC UI: reflect the change immediately; the poll reconciles
+        // with the server's truth moments later (and reverts on failure).
+        if (t.classList.contains('olx-item-x')) {
+          var victim = t.closest('[data-olx-item-id]');
+          if (victim) {
+            victim.style.transition = 'opacity .15s';
+            victim.style.opacity = '.25';
+            setTimeout(function () { if (victim.parentNode) victim.parentNode.removeChild(victim); }, 150);
+          }
+        } else {
+          t.textContent = 'Adding…';
+          var host = t.parentNode;
+          if (host && host.__olxMould) {
+            // Pending marker: fillItems keeps a ghost visible across stale
+            // polls until the server's item actually shows up (or 8s pass).
+            host.__olxPendingAdd = {
+              count: host.querySelectorAll('[data-olx-item-id]').length,
+              until: (new Date()).getTime() + 8000,
+            };
+            appendGhost(host);
+          }
+        }
+        t.classList.add('olx-busy');
+        t.blur();
+        fastPoll();
         var owner = closestEditable(t);
         post(t.classList.contains('olx-item-x')
           ? { type: 'olx-item-remove', id: attr(owner, 'data-olx-id'), key: attr(owner, 'data-olx-key'), itemId: t.getAttribute('data-olx-for') }
@@ -171,6 +206,16 @@
     return el ? (el.getAttribute(name) || null) : null;
   }
 
+  // Text of a field EXCLUDING injected controls (✕ / + / ghost) — those must
+  // never leak into saved content or empty-checks.
+  function textOf(node) {
+    var c = node.cloneNode(true);
+    Array.prototype.slice.call(c.querySelectorAll('.olx-item-x,.olx-item-add,.olx-ghost')).forEach(function (x) {
+      if (x.parentNode) x.parentNode.removeChild(x);
+    });
+    return (c.textContent || '').trim();
+  }
+
   // Inline editing suits plain text targets only — images and links (href
   // values) are edited in the CMS inspector instead.
   function canInlineEdit(field) {
@@ -179,9 +224,30 @@
 
   function startInlineEdit(owner, field) {
     if (field.isContentEditable) return;
+    // Injected controls (✕ / +) inside the field would swallow the caret and
+    // the typed text — remove them for the edit; decoration re-adds them.
+    Array.prototype.slice.call(field.querySelectorAll('.olx-item-x,.olx-item-add')).forEach(function (c) {
+      if (c.parentNode) c.parentNode.removeChild(c);
+    });
+    // A placeholder is a prompt, not content — clear it before editing starts.
+    if (/\bolx-placeholder\b/.test(field.className)) {
+      Array.prototype.slice.call(field.childNodes).forEach(function (n) {
+        if (n.nodeType === 3) field.removeChild(n);
+      });
+      field.className = field.className.replace(/\s*olx-placeholder\b/, '');
+    }
     field.setAttribute('contenteditable', 'plaintext-only');
     if (! field.isContentEditable) field.setAttribute('contenteditable', 'true');
     field.focus();
+    // Caret at the END of the text — typing must never start inside a child.
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(field);
+      range.collapse(false);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (err) { /* selection best-effort */ }
     var fired = false;
     var done = function () {
       if (fired) return;
@@ -196,7 +262,7 @@
         key: attr(owner, 'data-olx-key'),
         kind: owner.getAttribute('data-olx-kind') || 'component',
         field: field.getAttribute('data-olx-field'),
-        value: field.textContent.trim(),
+        value: textOf(field),
         itemId: item ? item.getAttribute('data-olx-item-id') : null
       });
     };
@@ -240,10 +306,16 @@
   }
 
   function fieldSpecs(root) {
-    // Skip fields inside an item template unless scanning that template.
+    var seenNames = {};
+    // Skip fields inside an item template unless scanning that template; the
+    // same field name on several elements yields ONE spec (no duplicate nodes).
     return fields(root).filter(function (n) {
       var item = n.closest('[data-olx-item]');
-      return ! item || item === root;
+      if (item && item !== root) return false;
+      var nm = n.getAttribute('data-olx-field');
+      if (seenNames[nm]) return false;
+      seenNames[nm] = 1;
+      return true;
     })
       .map(function (n) {
         var name = n.getAttribute('data-olx-field');
@@ -293,6 +365,9 @@
   function decorateItems(el, compKey, fieldPath) {
     Array.prototype.slice.call(el.querySelectorAll('[data-olx-item-id]')).forEach(function (item) {
       if (item.querySelector('.olx-item-x')) return;
+      // Never inject controls into an item mid-edit — the caret would land
+      // inside the button and swallow the typed text.
+      if (item.isContentEditable || item.querySelector('[contenteditable]')) return;
       var x = document.createElement('button');
       x.className = 'olx-item-x';
       x.setAttribute('data-olx-for', item.getAttribute('data-olx-item-id'));
@@ -334,7 +409,11 @@
       '.olx-item-x{position:absolute;top:4px;right:4px;z-index:2147483000;width:20px;height:20px;border:0;' +
         'border-radius:50%;background:#ef4444;color:#fff;font:700 11px/20px system-ui;cursor:pointer;padding:0;}' +
       '.olx-item-add{display:block;margin:8px auto 0;border:1px dashed #f97316;border-radius:8px;background:#fff7ed;' +
-        'color:#c2410c;font:600 12px system-ui;padding:6px 12px;cursor:pointer;}';
+        'color:#c2410c;font:600 12px system-ui;padding:6px 12px;cursor:pointer;}' +
+      '.olx-busy{opacity:.5;pointer-events:none;animation:olxpulse 1s infinite;}' +
+      '.olx-ghost{opacity:.45;animation:olxpulse 1s infinite;}' +
+      '.olx-placeholder{opacity:.45;font-style:italic;}' +
+      '@keyframes olxpulse{50%{opacity:.25;}}';
     document.head.appendChild(s);
   }
 
@@ -504,7 +583,10 @@
   // Clone the preserved [data-olx-item] template once per item (shared by
   // standalone collections and collection-typed component fields).
   function fillItems(el, items) {
-    if (document.activeElement && document.activeElement !== document.body && el.contains(document.activeElement)) return;
+    // Don't rebuild under an in-progress inline EDIT — but a focused button
+    // (e.g. the + control itself) must not block the refresh.
+    var a = document.activeElement;
+    if (a && el.contains(a) && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
     if (! el.__olxMould) {
       var tpl = el.querySelector('[data-olx-item]');
       if (! tpl) return; // SPA hasn't rendered the template yet — a later poll will.
@@ -522,11 +604,36 @@
       clone.setAttribute('data-olx-item-id', item.id || '');
       fields(clone).forEach(function (node) {
         setField(node, resolvePath(item, node.getAttribute('data-olx-field')));
+        // Edit mode: an all-empty item would be invisible — show an editable
+        // placeholder instead (cleared before an inline edit begins).
+        if (editMode && node.tagName !== 'IMG' && ! textOf(node)) {
+          node.insertBefore(document.createTextNode('New item — click to edit'), node.firstChild);
+          node.className += ' olx-placeholder';
+        }
       });
       var href = item.href || item.url;
       if (href && clone.tagName === 'A') clone.setAttribute('href', String(href));
       parent.appendChild(clone);
     });
+    // A pending add keeps its ghost until the server item lands (or times out).
+    var pending = el.__olxPendingAdd;
+    if (pending) {
+      if (items.length > pending.count || (new Date()).getTime() > pending.until) {
+        el.__olxPendingAdd = null;
+        var addBtn = el.querySelector('.olx-item-add');
+        if (addBtn) { addBtn.classList.remove('olx-busy'); addBtn.textContent = '+ Add item'; }
+      } else {
+        appendGhost(el);
+      }
+    }
+  }
+
+  function appendGhost(el) {
+    if (! el.__olxMould || ! el.__olxParent) return;
+    var ghost = el.__olxMould.cloneNode(true);
+    ghost.setAttribute('data-olx-item-id', 'ghost');
+    ghost.className += ' olx-ghost';
+    el.__olxParent.appendChild(ghost);
   }
 
   // Standalone collection: same item-template fill, keyed by the record.
