@@ -104,7 +104,17 @@
       "Bash(grep -n -B2 -A6 'features as\\\\|this->features\\\\|$features' resources/views/livewire/marketplace-page.blade.php)",
       "Bash(composer require *)",
       "Bash(./vendor/bin/pint app/Livewire/PlatformDashboard.php app/Livewire/PlatformAccountPage.php app/Livewire/AdminVerifyPage.php app/Services/TwoFactor.php app/Http/Middleware/EnsureSuperAdmin.php tests/Feature/PlatformAdminTest.php database/migrations/2026_08_21_000001_add_two_factor_columns_to_users.php)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\\\\n\" http://localhost:8000/admin)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\\\\n\" http://localhost:8000/admin)",
+      "Bash(curl -s -m 5 http://localhost:3000/)",
+      "Bash(ps -p 327747 -o args=)",
+      "Bash(curl -s -m 4 http://localhost:3000/)",
+      "Bash(curl -s -m 4 http://localhost:3003/)",
+      "Bash(ps -p 2115306 -o args=)",
+      "Bash(curl -s -m 8 -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3003/)",
+      "Bash(curl -s -m 8 http://localhost:3003/)",
+      "Bash(awk '{print $2, $11, $12, $13}')",
+      "Bash(curl -s http://localhost:8000/api/v1/connect/status -H \"Authorization: Bearer olx_live_RDY9NjVVIdLBetOV6ZsndUx25w4xJNpggv0W3rDKDGIweaT2\" -H \"Accept: application/json\")",
+      "Bash(curl -s -m 5 \"http://localhost:3003/\" -o /dev/null -w \"client: %{http_code}\\\\n\")"
     ],
     "additionalDirectories": [
       "/home/olux/development/olux-studio/templates/hairco",
