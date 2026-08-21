@@ -27,14 +27,20 @@ if [ -n "$missing" ]; then
 fi
 
 export IMAGE_TAG="${1:-latest}"
+
+# Compose file set: the Traefik override (edge network + router labels) must
+# ride along on EVERY invocation, or an `up -d` recreates the app without its
+# edge attachment and takes cms.oluxstudio.com off the router.
+COMPOSE="docker compose -f docker-compose.prod.yml"
+[ -f docker-compose.traefik.yml ] && COMPOSE="$COMPOSE -f docker-compose.traefik.yml"
 echo "── Deploying ghcr.io/oluxstudio/cms_v2:${IMAGE_TAG}"
 
-docker compose -f docker-compose.prod.yml pull app
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
-docker compose -f docker-compose.prod.yml exec -T app php artisan optimize:clear
-docker compose -f docker-compose.prod.yml exec -T app php artisan optimize
-docker compose -f docker-compose.prod.yml exec -T app php artisan queue:restart
+$COMPOSE pull app
+$COMPOSE up -d
+$COMPOSE exec -T app php artisan migrate --force
+$COMPOSE exec -T app php artisan optimize:clear
+$COMPOSE exec -T app php artisan optimize
+$COMPOSE exec -T app php artisan queue:restart
 docker image prune -f
 
 # ── Health check on the env-driven bind (defaults mirror the compose file).
@@ -42,9 +48,14 @@ bind=$(grep -oP '^APP_HTTP_BIND=\K.*' .env || true)
 port=$(grep -oP '^APP_HTTP_PORT=\K.*' .env || true)
 url="http://${bind:-127.0.0.1}:${port:-8080}"
 echo "── Health check: ${url}"
-if curl -fsS --max-time 10 -o /dev/null "$url"; then
+ok=""
+for i in $(seq 1 12); do   # up to ~60s — FrankenPHP warm-up beats a single probe
+  if curl -fsS --max-time 5 -o /dev/null "$url"; then ok=1; break; fi
+  sleep 5
+done
+if [ -n "$ok" ]; then
   echo "✓ Deployed ${IMAGE_TAG} — app responding on ${url}"
 else
-  echo "✗ App is NOT responding on ${url} — check: docker compose -f docker-compose.prod.yml logs app"
+  echo "✗ App is NOT responding on ${url} — check: $COMPOSE logs app"
   exit 1
 fi
