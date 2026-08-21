@@ -52,6 +52,9 @@ test('an enterprise account can create multiple sites', function () {
 });
 
 test('enabling a premium module is blocked on a non-premium plan', function () {
+    // No shipped module carries the premium tier today (commerce on all plans),
+    // so pin one at runtime to keep the plan gate itself under test.
+    config()->set('features.bookings.tier', 'premium');
     $user = planUser('starter'); // premium = false
     $site = Site::create(['user_id' => $user->id, 'name' => 'm-'.uniqid(), 'domain' => 'm.test', 'owner' => $user->name, 'description' => 't']);
 
@@ -62,6 +65,7 @@ test('enabling a premium module is blocked on a non-premium plan', function () {
 });
 
 test('a premium plan can enable premium modules', function () {
+    config()->set('features.bookings.tier', 'premium');
     $user = planUser('pro'); // premium = true
     $site = Site::create(['user_id' => $user->id, 'name' => 'p-'.uniqid(), 'domain' => 'p.test', 'owner' => $user->name, 'description' => 't']);
 

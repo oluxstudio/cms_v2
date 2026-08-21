@@ -85,7 +85,10 @@ it('counts only accounts active within the window', function () {
     $html = Livewire::actingAs($admin)->test(PlatformDashboard::class)->html();
     // 1 recent actor; the 20-day-old login must not count.
     expect($html)->toContain('Active accounts');
-    $active = AccountActivityLog::where('created_at', '>=', now()->subDays(10))->distinct()->pluck('actor_id');
+    // Scope to the two fixture users — other setup (2FA enrolment, admin
+    // activity) may log rows of its own depending on the environment.
+    $active = AccountActivityLog::whereIn('actor_id', [$recent->id, $stale->id])
+        ->where('created_at', '>=', now()->subDays(10))->distinct()->pluck('actor_id');
     expect($active)->toHaveCount(1)->and($active->first())->toBe($recent->id);
 });
 
