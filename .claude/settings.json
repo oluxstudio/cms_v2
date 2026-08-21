@@ -100,7 +100,11 @@
       "Bash(grep -nE \"=\\(.{20,}\\)\" .env.example)",
       "Bash(sed -i 's/expect\\($bytes\\)->toBeLessThan\\(28 \\\\* 1024\\)/expect\\($bytes\\)->toBeLessThan\\(32 * 1024\\)/' tests/Feature/ConnectStatusTest.php)",
       "Bash(sed -i 's/dependency-free, < 28 KB, never throws/dependency-free, < 32 KB, never throws/' resources/site-connect/connect.js)",
-      "Bash(node --check resources/site-connect/connect.js)"
+      "Bash(node --check resources/site-connect/connect.js)",
+      "Bash(grep -n -B2 -A6 'features as\\\\|this->features\\\\|$features' resources/views/livewire/marketplace-page.blade.php)",
+      "Bash(composer require *)",
+      "Bash(./vendor/bin/pint app/Livewire/PlatformDashboard.php app/Livewire/PlatformAccountPage.php app/Livewire/AdminVerifyPage.php app/Services/TwoFactor.php app/Http/Middleware/EnsureSuperAdmin.php tests/Feature/PlatformAdminTest.php database/migrations/2026_08_21_000001_add_two_factor_columns_to_users.php)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{redirect_url}\\\\n\" http://localhost:8000/admin)"
     ],
     "additionalDirectories": [
       "/home/olux/development/olux-studio/templates/hairco",

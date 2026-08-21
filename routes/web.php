@@ -188,12 +188,17 @@ Route::middleware('auth')->group(function () {
     // Account subscription — the 5-tier plan page (trial → paid upgrades).
     Route::view('/account/subscription', 'subscription')->name('account.subscription');
     // Stripe Checkout return: verify the session server-side, activate, go back.
-    // Platform admin — client accounts + individual pricing (super admins only).
-    Route::get('/admin/accounts', function () {
-        abort_unless(auth()->user()?->isSuper(), 403);
-
-        return view('platform-accounts');
-    })->name('admin.accounts');
+    // Platform admin (super admins only). The 'super' middleware requires a
+    // fresh authenticator-app (TOTP) check; the verify page itself sits
+    // outside it, gated inline, so enrollment/challenge is reachable.
+    Route::view('/admin/verify', 'admin-verify')->name('admin.verify');
+    Route::middleware('super')->group(function () {
+        Route::view('/admin', 'platform-dashboard')->name('admin.dashboard');
+        Route::view('/admin/accounts', 'platform-accounts')->name('admin.accounts');
+        Route::get('/admin/accounts/{user}', function (string $user) {
+            return view('platform-account', ['userId' => $user]);
+        })->name('admin.account');
+    });
 
     Route::get('/account/subscription/success', function (Request $request) {
         $back = null;

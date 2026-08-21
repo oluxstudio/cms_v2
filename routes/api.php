@@ -306,4 +306,8 @@ Route::prefix('site')->middleware(['auth.token', 'token.site', 'throttle:token-a
 
     // Publish page.json for all live pages (publish.manage).
     Route::post('/connect/publish', SitePublishController::class)->name('api.site.connect.publish');
+
+    // The site's PUBLIC connect key (publish.manage) — lets the client build
+    // inject the connect.js token without it living in the client's .env.
+    Route::get('/connect-token', \App\Http\Controllers\Api\ConnectTokenController::class)->name('api.site.connect-token');
 });

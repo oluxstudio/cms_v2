@@ -3,6 +3,7 @@
 
     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
+            <a href="{{ route('admin.dashboard') }}" wire:navigate class="text-xs font-semibold text-gray-400 hover:text-indigo-500">← Platform dashboard</a>
             <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Client accounts</h1>
             <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Subscriptions, custom per-client pricing and plan assignment.</p>
         </div>
@@ -18,9 +19,10 @@
         @php $sub = $account->currentSubscription(); $tier = $sub->tier(); @endphp
         <div class="flex flex-wrap items-center gap-4 px-5 py-4 border-b border-gray-50 dark:border-white/[0.04] last:border-0">
             <div class="min-w-0 flex-1">
-                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $account->name }}
+                <a href="{{ route('admin.account', $account->id) }}" wire:navigate
+                   class="text-sm font-semibold text-gray-900 dark:text-white truncate hover:text-indigo-600 dark:hover:text-indigo-400">{{ $account->name }}
                     @if($account->isSuper())<span class="ml-1 text-[9px] font-bold uppercase text-indigo-400">admin</span>@endif
-                </p>
+                </a>
                 <p class="text-xs text-gray-400 truncate">{{ $account->email }} · {{ $account->sites_count }} {{ Str::plural('site', $account->sites_count) }}</p>
             </div>
 

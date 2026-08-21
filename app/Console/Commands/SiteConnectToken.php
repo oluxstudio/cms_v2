@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\ApiToken;
 use App\Models\Site;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 
 /**
  * Mint a Site Connect key for a site — a hashed, site-scoped api_token limited
@@ -29,15 +28,7 @@ class SiteConnectToken extends Command
             return self::FAILURE;
         }
 
-        $raw = 'olx_live_'.Str::random(48);
-        ApiToken::create([
-            'user_id' => $site->user_id,
-            'site_id' => $site->id, // site-scoped → token.site resolves it automatically
-            'name' => $this->option('name'),
-            'token' => hash('sha256', $raw),
-            'token_preview' => substr($raw, 0, 12),
-            'abilities' => config('site_connect.abilities', ['connect:ingest', 'content:read']),
-        ]);
+        [, $raw] = ApiToken::mintConnect($site, $this->option('name'));
 
         $this->info("Site Connect key for {$site->name} (copy now — it will not be shown again):");
         $this->newLine();

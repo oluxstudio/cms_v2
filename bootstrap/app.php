@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateApiToken;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureSitePermission;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\HoneypotGuard;
 use App\Http\Middleware\ResolveTokenSite;
 use App\Http\Middleware\ServeLiveSite;
@@ -42,6 +43,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'site.origin' => VerifySiteOrigin::class,
             // Role-permission gate for site admin pages: ->middleware('perm:pages.view')
             'perm' => EnsureSitePermission::class,
+            // Platform /admin area: super admin + fresh authenticator-app code
+            'super' => EnsureSuperAdmin::class,
         ]);
 
         // Stripe webhooks post without a CSRF token; verified via signature instead.

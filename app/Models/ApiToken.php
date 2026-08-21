@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 
 /**
  * Bearer token for the management API. Stored HASHED (sha256) — the raw
@@ -15,7 +17,9 @@ class ApiToken extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['user_id', 'site_id', 'name', 'token', 'token_preview', 'abilities', 'expires_at', 'last_used_at'];
+    protected $fillable = ['user_id', 'site_id', 'name', 'token', 'token_preview', 'abilities', 'expires_at', 'last_used_at', 'plain'];
+
+    protected $hidden = ['token', 'plain'];
 
     protected $casts = [
         'abilities' => 'array',
@@ -31,6 +35,34 @@ class ApiToken extends Model
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    /**
+     * Mint a Site Connect key: site-scoped, connect abilities only, with an
+     * ENCRYPTED retrievable copy — connect keys are public-by-design (they
+     * ship in the client's HTML), so the build can fetch them on demand.
+     * Returns [$model, $raw].
+     */
+    public static function mintConnect(Site $site, string $name = 'Site Connect'): array
+    {
+        $raw = 'olx_live_'.Str::random(48);
+        $token = static::create([
+            'user_id' => $site->user_id,
+            'site_id' => $site->id,
+            'name' => $name,
+            'token' => hash('sha256', $raw),
+            'token_preview' => substr($raw, 0, 12),
+            'abilities' => config('site_connect.abilities', ['connect:ingest', 'content:read']),
+            'plain' => Crypt::encryptString($raw),
+        ]);
+
+        return [$token, $raw];
+    }
+
+    /** The raw connect key, when this token was minted retrievable. */
+    public function plainValue(): ?string
+    {
+        return $this->plain ? Crypt::decryptString($this->plain) : null;
     }
 
     /** Find the token row for a raw bearer value (hashed lookup). */
