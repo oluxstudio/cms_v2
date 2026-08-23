@@ -44,8 +44,8 @@ $COMPOSE exec -T app php artisan queue:restart
 docker image prune -f
 
 # ── Health check on the env-driven bind (defaults mirror the compose file).
-bind=$(grep -oP '^APP_HTTP_BIND=\K.*' .env || true)
-port=$(grep -oP '^APP_HTTP_PORT=\K.*' .env || true)
+bind=$(grep -oP '^APP_HTTP_BIND=\K.*' .env | head -n1 || true)
+port=$(grep -oP '^APP_HTTP_PORT=\K.*' .env | head -n1 || true)
 url="http://${bind:-127.0.0.1}:${port:-8080}"
 echo "── Health check: ${url}"
 ok=""
