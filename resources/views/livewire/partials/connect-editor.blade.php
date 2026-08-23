@@ -89,7 +89,15 @@
             <div data-item-row class="rounded-lg border border-gray-100 dark:border-white/[0.06] p-2">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-[11px] text-gray-400">#{{ $i + 1 }}</span>
-                    <button wire:click="removeItem({{ $i }})" class="text-[11px] text-rose-500">Remove</button>
+                    <span class="flex items-center gap-2">
+                        @if ($i > 0)
+                            <button wire:click="moveItem({{ $i }}, -1)" class="text-[12px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Move up">↑</button>
+                        @endif
+                        @if ($i < count($edit['items']) - 1)
+                            <button wire:click="moveItem({{ $i }}, 1)" class="text-[12px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Move down">↓</button>
+                        @endif
+                        <button wire:click="removeItem({{ $i }})" class="text-[11px] text-rose-500">Remove</button>
+                    </span>
                 </div>
                 @foreach ($edit['schema'] as $key)
                     <label class="block mb-1">

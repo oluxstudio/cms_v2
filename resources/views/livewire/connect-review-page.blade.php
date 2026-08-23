@@ -1,6 +1,7 @@
 <div class="h-[calc(100vh-8rem)] flex flex-col" wire:key="site-preview"
      data-olx-origin="{{ $clientOrigin }}"
      x-data="{
+        device: 'desktop',
         init() {
             // Client iframe → CMS: a component was clicked in edit mode.
             // Trust ONLY the configured client site's origin — any other frame
@@ -82,6 +83,23 @@
 
         <span class="text-xs text-gray-400">Click a component in the live preview to edit it.</span>
 
+        {{-- Device preview: resizes the iframe to phone / tablet / full width --}}
+        <div class="flex items-center gap-1 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] p-1 shadow-sm">
+            @foreach ([
+                'mobile' => ['Mobile', 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
+                'tablet' => ['Tablet', 'M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'],
+                'desktop' => ['Desktop', 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+            ] as $dev => [$label, $path])
+                <button type="button" @click="device = '{{ $dev }}'" title="Preview at {{ strtolower($label) }} width"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                        :class="device === '{{ $dev }}' ? 'text-white' : 'text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.08]'"
+                        :style="device === '{{ $dev }}' ? 'background:var(--primary)' : ''">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}"/></svg>
+                    <span class="hidden xl:inline">{{ $label }}</span>
+                </button>
+            @endforeach
+        </div>
+
         <div class="ml-auto flex items-center gap-2">
             <button wire:click="publish" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.1]">Publish page.json</button>
             <a href="{{ route('site.connect.export', ['siteID' => $site->name]) }}"
@@ -111,9 +129,14 @@
              preview takes the full width. --}}
         <div class="flex-1 grid {{ $selectedKind ? 'lg:grid-cols-[1fr_360px]' : '' }} gap-4 min-h-0">
 
-            {{-- Live client site (edit mode) --}}
-            <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden bg-white">
-                <iframe id="olx-frame" src="{{ $embedUrl }}" class="w-full h-full" style="border:0"></iframe>
+            {{-- Live client site (edit mode); width follows the device toggle --}}
+            <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden"
+                 :class="device === 'desktop' ? 'bg-white' : 'bg-gray-100 dark:bg-black/30'">
+                <div class="h-full mx-auto bg-white transition-all duration-300 overflow-hidden"
+                     :style="device === 'mobile' ? 'max-width:390px' : device === 'tablet' ? 'max-width:768px' : 'max-width:100%'"
+                     :class="device !== 'desktop' && 'shadow-lg'">
+                    <iframe id="olx-frame" src="{{ $embedUrl }}" class="w-full h-full" style="border:0"></iframe>
+                </div>
             </div>
 
             {{-- Inspector --}}
@@ -127,6 +150,13 @@
                         <div class="flex items-center gap-1">
                             <button wire:click="viewOnly" class="text-[11px] font-semibold px-2 py-1 rounded-lg {{ $mode === 'view' ? 'text-white' : 'text-gray-500' }}" @if($mode==='view') style="background:var(--primary)" @endif>View</button>
                             <button wire:click="edit" class="text-[11px] font-semibold px-2 py-1 rounded-lg {{ $mode === 'edit' ? 'text-white' : 'text-gray-500' }}" @if($mode==='edit') style="background:var(--primary)" @endif>Edit</button>
+                            @if ($mode === 'edit')
+                                <button wire:click="save" title="Save {{ $edit['type'] ?? 'content' }}"
+                                        class="ml-0.5 p-1.5 rounded-lg text-white hover:opacity-90" style="background:var(--primary)">
+                                    <svg wire:loading.remove wire:target="save" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                                    <svg wire:loading wire:target="save" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 3a9 9 0 019 9"/></svg>
+                                </button>
+                            @endif
                             <button wire:click="deselect" title="Close panel"
                                     class="text-sm leading-none text-gray-400 hover:text-rose-600 ml-1 px-1">✕</button>
                         </div>

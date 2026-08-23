@@ -10,7 +10,7 @@ class CollectionItem extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['collection_id', 'site_id', 'data', 'status', 'ip_address'];
+    protected $fillable = ['collection_id', 'site_id', 'data', 'position', 'status', 'ip_address'];
 
     protected $casts = ['data' => 'array'];
 

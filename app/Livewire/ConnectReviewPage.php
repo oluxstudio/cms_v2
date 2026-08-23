@@ -196,6 +196,18 @@ class ConnectReviewPage extends LivewireComponent
         $this->mode = 'view';
     }
 
+    /** Header save icon — routes to the right save for whatever is open. */
+    public function save(): void
+    {
+        match ($this->edit['type'] ?? null) {
+            'component' => $this->saveComponent(),
+            'collection' => $this->saveCollection(),
+            'form' => $this->saveForm(),
+            'post' => $this->savePost(),
+            default => null,
+        };
+    }
+
     public function deselect(): void
     {
         $this->selectedKind = $this->selectedId = null;
@@ -681,6 +693,27 @@ class ConnectReviewPage extends LivewireComponent
         $this->dispatch('olx-editor-focus', target: 'last-item');
     }
 
+    /** Reorder an item one step up (-1) or down (+1); persists immediately. */
+    public function moveItem(int $i, int $dir): void
+    {
+        $this->guard();
+        $j = $i + ($dir < 0 ? -1 : 1);
+        $items = $this->edit['items'] ?? [];
+        if (! isset($items[$i]) || ! isset($items[$j])) {
+            return;
+        }
+        [$items[$i], $items[$j]] = [$items[$j], $items[$i]];
+        $this->edit['items'] = array_values($items);
+        // Persist order for rows that exist in the DB (unsaved rows keep
+        // their place and get a position when the collection is saved).
+        foreach ($this->edit['items'] as $pos => $item) {
+            if (! empty($item['id'])) {
+                CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->update(['position' => $pos]);
+            }
+        }
+        $this->refreshPreview('Order updated');
+    }
+
     public function removeItem(int $i): void
     {
         $this->guard();
@@ -700,11 +733,11 @@ class ConnectReviewPage extends LivewireComponent
             return;
         }
         app(ContentVersioner::class)->capture($col, Auth::user()?->name);
-        foreach ($this->edit['items'] as $item) {
+        foreach ($this->edit['items'] as $pos => $item) {
             if (! empty($item['id'])) {
-                CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->update(['data' => $item['data']]);
+                CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->update(['data' => $item['data'], 'position' => $pos]);
             } else {
-                CollectionItem::create(['collection_id' => $col->id, 'site_id' => $this->site->id, 'status' => 'published', 'data' => $item['data']]);
+                CollectionItem::create(['collection_id' => $col->id, 'site_id' => $this->site->id, 'status' => 'published', 'data' => $item['data'], 'position' => $pos]);
             }
         }
         $this->loadEdit();

@@ -375,14 +375,17 @@
       if (getComputedStyle(item).position === 'static') item.style.position = 'relative';
       item.appendChild(x);
     });
-    if (! el.querySelector('.olx-item-add')) {
-      var add = document.createElement('button');
+    var add = el.querySelector('.olx-item-add');
+    if (! add) {
+      add = document.createElement('button');
       add.className = 'olx-item-add';
       add.textContent = '+ Add item';
       // Embedded lists: the CMS resolves the linked collection from these.
       if (compKey) { add.setAttribute('data-olx-comp', compKey); add.setAttribute('data-olx-fpath', fieldPath); }
-      el.appendChild(add);
     }
+    // Always (re)append: hydration re-adds item clones after the controls
+    // were injected, which used to leave the tile stranded at the front.
+    el.appendChild(add);
   }
 
   function closestEditable(node) {
@@ -396,15 +399,24 @@
     s.textContent =
       '.olx-editable{cursor:pointer;transition:outline .08s;}' +
       // Block hover: outline + translucent wash = "this content is editable".
+      // Inset box-shadow, NOT background-image — a background-image override
+      // would REPLACE the element's own CSS background photo (hero sections
+      // turned into a solid color block on hover).
       '.olx-hover{outline:2px solid #f97316 !important;outline-offset:-2px;cursor:pointer;' +
-        'background-image:linear-gradient(rgba(249,115,22,.07),rgba(249,115,22,.07)) !important;}' +
+        'box-shadow:inset 0 0 0 9999px rgba(249,115,22,.07) !important;}' +
       // Kind · key chip in the block corner (component / collection / form).
-      '.olx-hover::before{content:attr(data-olx-kind) " \\00b7 " attr(data-olx-key);position:absolute;top:0;left:0;' +
-        'z-index:2147483000;background:#f97316;color:#fff;font:700 10px/1 system-ui;padding:3px 7px;' +
-        'border-radius:0 0 8px 0;text-transform:lowercase;pointer-events:none;}' +
+      // Every geometry prop is pinned with !important: the chip shares ::before
+      // with the site's own decorative pseudo-elements (e.g. a 520px hero
+      // blob), and any inherited width/height would blow the chip up into a
+      // giant solid block.
+      '.olx-hover::before{content:attr(data-olx-kind) " \\00b7 " attr(data-olx-key) !important;' +
+        'position:absolute !important;top:0 !important;left:0 !important;right:auto !important;bottom:auto !important;' +
+        'width:max-content !important;height:auto !important;transform:none !important;border:0 !important;' +
+        'z-index:2147483000;background:#f97316 !important;color:#fff;font:700 10px/1 system-ui;padding:3px 7px;' +
+        'border-radius:0 0 8px 0 !important;text-transform:lowercase;pointer-events:none;opacity:1 !important;}' +
       // Field (node) hover inside a block: its own indigo wash + dashed edge.
       '.olx-hover [data-olx-field].olx-field-hover{outline:2px dashed #6366f1 !important;outline-offset:1px;' +
-        'background-image:linear-gradient(rgba(99,102,241,.12),rgba(99,102,241,.12)) !important;border-radius:4px;}' +
+        'box-shadow:inset 0 0 0 9999px rgba(99,102,241,.12) !important;border-radius:4px;}' +
       '[data-olx-field][contenteditable]{outline:2px dashed #f97316 !important;outline-offset:2px;cursor:text;}' +
       '.olx-item-x{position:absolute;top:4px;right:4px;z-index:2147483000;width:20px;height:20px;border:0;' +
         'border-radius:50%;background:#ef4444;color:#fff;font:700 11px/20px system-ui;cursor:pointer;padding:0;}' +

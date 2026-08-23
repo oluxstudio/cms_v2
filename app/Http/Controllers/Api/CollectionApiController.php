@@ -126,6 +126,7 @@ class CollectionApiController extends Controller
         $data = $this->itemValidated($request, creating: true);
 
         $item = $collection->items()->create([
+            'position' => ((int) $collection->items()->max('position')) + 1,
             'site_id' => $site->id,
             'data' => $data['data'],
             'status' => $data['status'] ?? 'published',

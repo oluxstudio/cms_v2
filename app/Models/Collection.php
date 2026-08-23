@@ -43,7 +43,9 @@ class Collection extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(CollectionItem::class);
+        // NULL positions (legacy rows) sort last, then by age — stable order.
+        return $this->hasMany(CollectionItem::class)
+            ->orderByRaw('position is null')->orderBy('position')->orderBy('created_at');
     }
 
     /** The components grouped by this collection (e.g. testimonial 1, 2, 3…), ordered. */
