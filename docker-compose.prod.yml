@@ -39,6 +39,15 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    # The image's built-in check probes the FrankenPHP web server (:2019),
+    # which these worker containers never start — so they'd always show
+    # "unhealthy". Check the worker process itself instead.
+    healthcheck:
+      test: ['CMD-SHELL', 'pgrep -f "artisan queue:work" > /dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   scheduler:
     image: ghcr.io/oluxstudio/cms_v2:${IMAGE_TAG:-latest}
@@ -50,6 +59,12 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'pgrep -f "artisan schedule:work" > /dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   mysql:
     image: mysql:8.0
