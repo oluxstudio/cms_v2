@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
 
-function bookingSite(): Site
+function automationSite(): Site
 {
     $site = Site::factory()->create(['user_id' => User::factory()->create()->id]);
     $site->enableFeature('bookings');
@@ -35,7 +35,7 @@ function makeBooking(Site $site, array $attrs = []): Booking
 
 it('sends the ~24h reminder exactly once', function () {
     Mail::fake();
-    $site = bookingSite();
+    $site = automationSite();
     $due = makeBooking($site);                                        // starts in 24h
     makeBooking($site, ['starts_at' => now()->addDays(5), 'ends_at' => now()->addDays(5)->addHour()]); // too far out
 
@@ -50,7 +50,7 @@ it('sends the ~24h reminder exactly once', function () {
 
 it('sends a review request after the appointment when a review link is set', function () {
     Mail::fake();
-    $site = bookingSite();
+    $site = automationSite();
     $ended = makeBooking($site, ['starts_at' => now()->subHours(5), 'ends_at' => now()->subHours(4)]);
 
     // No review URL yet → nothing goes out.
@@ -65,7 +65,7 @@ it('sends a review request after the appointment when a review link is set', fun
 
 it('sends a rebooking prompt N weeks after the last visit, unless they rebooked', function () {
     Mail::fake();
-    $site = bookingSite();
+    $site = automationSite();
     $lastVisit = makeBooking($site, ['starts_at' => now()->subWeeks(5)->subHour(), 'ends_at' => now()->subWeeks(5)]);
 
     // Another customer who already has a FUTURE booking — must be skipped.
@@ -80,7 +80,7 @@ it('sends a rebooking prompt N weeks after the last visit, unless they rebooked'
 
 it('respects the per-site toggles', function () {
     Mail::fake();
-    $site = bookingSite();
+    $site = automationSite();
     $site->saveFeatureConfig('bookings', ['remind_visitor' => false, 'rebook_weeks' => 0]);
     makeBooking($site);
     makeBooking($site, ['starts_at' => now()->subWeeks(5)->subHour(), 'ends_at' => now()->subWeeks(5)]);

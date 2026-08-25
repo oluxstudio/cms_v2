@@ -1039,14 +1039,20 @@
             $vb = $this->viewedBooking;
             $vAccent = $site->theme["accent"] ?? "#6366f1";
         @endphp
-        <div class="fixed inset-0 z-50 grid place-items-center p-6" wire:key="booking-detail"
-             style="background:rgba(10,10,12,.85); backdrop-filter:blur(6px)" wire:click.self="closeBooking">
+        {{-- right-side drawer: grey overlay over the page, card slides in from the right --}}
+        <div class="fixed inset-0 z-50 flex justify-end" wire:key="booking-detail"
+             x-data @keydown.escape.window="$wire.closeBooking()">
+            <div class="lightbox-backdrop absolute inset-0 bg-gray-900/40" wire:click="closeBooking"></div>
 
-            <div class="relative w-full max-w-lg">
-                <button type="button" wire:click="closeBooking" aria-label="Close"
-                        class="absolute -top-5 -right-5 z-10 w-12 h-12 rounded-full grid place-items-center text-white text-xl font-bold transition-transform hover:scale-110"
-                        style="background:{{ $vAccent }}; box-shadow:0 8px 24px rgba(0,0,0,.35)">✕</button>
-
+            <div class="lightbox-drawer relative h-full w-full max-w-lg bg-white dark:bg-[#1d1e2a] border-l border-gray-100 dark:border-white/[0.06] shadow-2xl flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-white/[0.06] shrink-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">Booking {{ $vb->reference }}</p>
+                    <button type="button" wire:click="closeBooking" title="Close (Esc)" aria-label="Close"
+                            class="w-8 h-8 rounded-full grid place-items-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="p-5 overflow-y-auto grow">
                 <x-booking-card :booking="$vb" :accent="$vAccent">
                     @if(! in_array($vb->status, ["confirmed", "awaiting_payment", "cancelled"], true))
                         <button type="button" wire:click="setStatus('{{ $vb->id }}', 'confirmed')"
@@ -1067,7 +1073,8 @@
                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-[#211d15] border shadow-sm hover:bg-gray-50"
                        style="border-color:rgba(51,44,31,.14)">Email customer</a>
                 </x-booking-card>
-            </div>
+                </div>{{-- /scrolling body --}}
+            </div>{{-- /drawer --}}
         </div>
     @endif
 </div>

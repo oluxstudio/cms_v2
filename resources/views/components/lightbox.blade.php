@@ -9,8 +9,11 @@
 
     - `close`  : Livewire method called by backdrop click, ✕ and Escape.
     - `header` : optional slot replacing the title/subtitle block.
+    - `drawer` : render as a RIGHT-SIDE panel (item detail views) instead of a
+                 centred modal — grey overlay over the page, panel slides in
+                 from the right, full height. Same slots/props otherwise.
     - Body scrolls on its own; header/footer stay pinned.
-    - Entrance animation lives in app.css (.lightbox-backdrop / .lightbox-panel).
+    - Entrance animation lives in app.css (.lightbox-backdrop / .lightbox-panel / .lightbox-drawer).
 --}}
 @props([
     'close' => null,
@@ -18,15 +21,28 @@
     'subtitle' => null,
     'icon' => null,
     'maxWidth' => 'max-w-2xl',
+    'drawer' => false,
 ])
 
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+@php
+    $wrapClass = $drawer
+        ? 'fixed inset-0 z-50 flex justify-end'
+        : 'fixed inset-0 z-50 flex items-center justify-center p-4';
+    $backdropClass = $drawer
+        ? 'lightbox-backdrop absolute inset-0 bg-gray-900/40'
+        : 'lightbox-backdrop absolute inset-0 bg-black/45 backdrop-blur-[2px]';
+    $panelClass = $drawer
+        ? "lightbox-drawer relative bg-white dark:bg-[#1d1e2a] border-l border-gray-100 dark:border-white/[0.06] shadow-2xl w-full {$maxWidth} h-full flex flex-col overflow-hidden"
+        : "lightbox-panel relative bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] rounded-2xl shadow-2xl w-full {$maxWidth} max-h-[88vh] flex flex-col overflow-hidden";
+@endphp
+
+<div class="{{ $wrapClass }}"
      @if ($close) x-data @keydown.escape.window="$wire.{{ $close }}()" @endif>
 
-    <div class="lightbox-backdrop absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+    <div class="{{ $backdropClass }}"
          @if ($close) wire:click="{{ $close }}" @endif></div>
 
-    <div {{ $attributes->merge(['class' => "lightbox-panel relative bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] rounded-2xl shadow-2xl w-full {$maxWidth} max-h-[88vh] flex flex-col overflow-hidden"]) }}>
+    <div {{ $attributes->merge(['class' => $panelClass]) }}>
 
         @if ($title || $icon || isset($header))
         <div class="flex items-start gap-3 px-6 pt-5 pb-4 border-b border-gray-100 dark:border-white/[0.06] shrink-0">

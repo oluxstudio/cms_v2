@@ -170,7 +170,7 @@
     {{-- ═══ DETAIL VIEW — every stored fact, on the reusable lightbox ═══ --}}
     @if ($viewingId !== null && $this->viewing)
     @php $v = $this->viewing; @endphp
-    <x-lightbox close="closeView" icon="🧩" :title="$v->name" :subtitle="$v->description" max-width="max-w-2xl">
+    <x-lightbox close="closeView" icon="🧩" :title="$v->name" :subtitle="$v->description" max-width="max-w-2xl" :drawer="true">
         <x-slot:badge>
             <span class="text-[10px] font-bold px-2.5 py-1 rounded-full {{ ($v->source ?? 'app') === 'api' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300' }}">
                 {{ ($v->source ?? 'app') === 'api' ? '🔌 API' : '🖥 App' }}</span>

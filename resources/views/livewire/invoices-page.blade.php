@@ -403,17 +403,20 @@
             $vi = $this->viewedInvoice;
             $vAccent = $site->theme['accent'] ?? '#6366f1';
         @endphp
-        <div class="fixed inset-0 z-50 grid place-items-center p-6" wire:key="invoice-detail"
-             style="background:rgba(10,10,12,.85); backdrop-filter:blur(6px)" wire:click.self="closeInvoice">
+        {{-- right-side drawer: grey overlay over the page, card slides in from the right --}}
+        <div class="fixed inset-0 z-50 flex justify-end" wire:key="invoice-detail"
+             x-data @keydown.escape.window="$wire.closeInvoice()">
+            <div class="lightbox-backdrop absolute inset-0 bg-gray-900/40" wire:click="closeInvoice"></div>
 
-            {{-- slim cream frame --}}
-            <div class="relative w-full max-w-md"
-                 style="border:.75rem solid rgba(255,249,238,.22); border-radius:28px; background:rgba(255,249,238,.22); box-shadow:0 24px 70px rgba(0,0,0,.5)">
-
-                <button type="button" wire:click="closeInvoice" aria-label="Close"
-                        class="absolute -top-9 -right-9 z-10 w-14 h-14 rounded-full grid place-items-center text-white text-2xl font-bold transition-transform hover:scale-110"
-                        style="background:{{ $vAccent }}; box-shadow:0 8px 24px rgba(0,0,0,.35)">✕</button>
-
+            <div class="lightbox-drawer relative h-full w-full max-w-md bg-white dark:bg-[#1d1e2a] border-l border-gray-100 dark:border-white/[0.06] shadow-2xl flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-white/[0.06] shrink-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">Invoice {{ $vi->number }}</p>
+                    <button type="button" wire:click="closeInvoice" title="Close (Esc)" aria-label="Close"
+                            class="w-8 h-8 rounded-full grid place-items-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="p-5 overflow-y-auto grow">
                 {{-- the card component --}}
                 <x-invoice-card :invoice="$vi" :accent="$vAccent" :view-url="url($site->name.'/invoices/'.$vi->id)">
                     <x-slot:actions>
@@ -453,7 +456,8 @@
                 <div class="mt-3 py-3 text-center text-[11px] font-semibold">
                     <span class="text-gray-400">{{ $vi->customer_email }}@if($vi->sent_at) · sent {{ $vi->sent_at->format('M j') }}@endif</span>
                 </div>
-            </div>
+                </div>{{-- /scrolling body --}}
+            </div>{{-- /drawer --}}
         </div>
     @endif
 </div>

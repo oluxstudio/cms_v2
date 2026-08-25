@@ -130,10 +130,13 @@ select:focus[data-flux-control] {
    Soft entrance: backdrop fades, panel pops up with a slight overshoot. */
 .lightbox-backdrop { animation: lb-fade .18s ease-out both; }
 .lightbox-panel { animation: lb-pop .24s cubic-bezier(.2, .9, .3, 1.15) both; }
+/* Right-side detail drawer (x-lightbox drawer / inline detail views): slides in from the right. */
+.lightbox-drawer { animation: lb-slide .28s cubic-bezier(.2, .9, .3, 1) both; }
 @keyframes lb-fade { from { opacity: 0; } }
 @keyframes lb-pop { from { opacity: 0; transform: translateY(14px) scale(.965); } }
+@keyframes lb-slide { from { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) {
-    .lightbox-backdrop, .lightbox-panel { animation: none; }
+    .lightbox-backdrop, .lightbox-panel, .lightbox-drawer { animation: none; }
 }
 
 /* ── Dashboard group tiles: vertical timeline rail ────────────────────────
