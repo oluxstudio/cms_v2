@@ -308,33 +308,269 @@
                     <div class="px-4 py-3 border-t border-gray-100 dark:border-white/[0.06]">{{ $this->bookings->links() }}</div>
                 @endif
             </div>
-            {{-- ── SERVICES — click-to-review tile ── --}}
+
+            {{-- ── SERVICES — list only; add/edit opens the right-side panel ── --}}
             @php $activeServices = $this->services->where('is_active', true)->count(); @endphp
-            <div class="mt-6 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden"
-                 x-data="{ open: false }">
-                <button type="button" @click="open = ! open" class="w-full flex items-center gap-3.5 px-5 py-4 text-left group">
+            <div class="flex items-center gap-2 mt-8 mb-3">
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">Services</p>
+                <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d7c3f5;color:#33245c">{{ $this->services->count() }}</span>
+                <div class="flex-1 border-t border-gray-100 dark:border-white/[0.06]"></div>
+                <button type="button" wire:click="newService"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white">＋ Add service</button>
+            </div>
+            <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden">
+                <div class="flex items-center gap-3.5 px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
                     <span class="w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0" style="background:#d7c3f5">⚙</span>
-                    <span class="flex-1 min-w-0">
-                        <span class="flex items-center gap-2">
-                            <span class="text-sm font-bold text-gray-900 dark:text-white">Services</span>
-                            <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d7c3f5;color:#33245c">{{ $this->services->count() }}</span>
-                        </span>
-                        <span class="block text-xs text-gray-400 truncate mt-0.5">
-                            @if($this->services->isEmpty())
-                                No services yet — click to add your first one.
-                            @else
-                                {{ $activeServices }} active · {{ $this->services->take(3)->map(fn ($s) => $s->typeIcon().' '.$s->name)->implode(' · ') }}@if($this->services->count() > 3) · +{{ $this->services->count() - 3 }} more @endif
-                            @endif
-                        </span>
-                    </span>
-                    <span class="text-[11px] font-semibold text-indigo-500 shrink-0" x-text="open ? 'Close' : 'Review'"></span>
-                    <svg class="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-transform shrink-0" :class="open ? 'rotate-180' : ''"
-                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <div class="min-w-0">
+                        <h2 class="text-sm font-bold">Services</h2>
+                        <p class="text-xs text-gray-400">{{ $activeServices }} active · click ✎ on a service to edit it in the side panel</p>
+                    </div>
+                </div>
+                <div class="p-3 space-y-2">
+                    @forelse($this->services as $svc)
+                    <div class="flex items-center gap-3 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/[0.06] px-3 py-2.5">
+                        <span class="shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded
+                            {{ ['slot' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
+                                'stay' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+                                'trip' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'][$svc->kind] ?? '' }}">{{ $svc->typeIcon() }} {{ $svc->typeLabel() }}</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold truncate {{ $svc->is_active ? '' : 'text-gray-400 line-through' }}">{{ $svc->name }}</p>
+                            <p class="text-[11px] text-gray-400">
+                                @if($svc->kind === 'stay') {{ $svc->capacity }} unit(s) · {{ $svc->formattedPrice() }}/night
+                                @elseif($svc->kind === 'trip') {{ $svc->departures_count }} departure(s) · from {{ $svc->formattedPrice() }}
+                                @else {{ $svc->duration_min }} min · {{ $svc->formattedPrice() }} @endif
+                                @if($svc->requires_payment) · 💳 paid @endif
+                            </p>
+                        </div>
+                        <button wire:click="toggleService('{{ $svc->id }}')" class="text-[11px] px-2 py-1 rounded-lg {{ $svc->is_active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-400 bg-gray-100 dark:bg-white/5' }}">{{ $svc->is_active ? 'Active' : 'Off' }}</button>
+                        <button wire:click="editService('{{ $svc->id }}')" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
+                        <button wire:click="deleteService('{{ $svc->id }}')" data-confirm="Delete this service?" class="text-gray-400 hover:text-rose-500" title="Delete">✕</button>
+                    </div>
+                    @empty
+                    <p class="text-xs text-gray-400 px-1">No services yet — click “＋ Add service” to create your first one.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- ── RESOURCES — shared staff / rooms / vehicles; add/edit in the panel ── --}}
+            <div class="mt-6 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-4">
+                <div class="flex items-center justify-between gap-3 mb-1">
+                    <h2 class="text-sm font-bold">Resources</h2>
+                    <button type="button" wire:click="newSiteResource"
+                            class="px-3 py-1.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold">＋ Add resource</button>
+                </div>
+                        <p class="text-[10px] text-gray-400 mb-2.5">Staff, rooms and vehicles shared across services — a resource booked through one service is automatically unavailable everywhere else.</p>
+                        <div class="space-y-1.5 mb-3">
+                            @forelse($this->siteResources as $r)
+                                <div class="text-xs bg-gray-50 dark:bg-white/[0.04] rounded-lg px-2.5 py-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold {{ $r->is_active ? '' : 'text-gray-400 line-through' }}">{{ $r->name }}</span>
+                                        @if($r->capacity > 1)<span class="text-gray-400">cap {{ $r->capacity }}</span>@endif
+                                        @if($r->price_cents !== null)<span class="text-gray-400">{{ \App\Support\Money::format((int) $r->price_cents, $site->currency) }}</span>@endif
+                                        <span class="ml-auto text-gray-400">{{ $r->active_bookings_count }} upcoming</span>
+                                        <button wire:click="editSiteResource('{{ $r->id }}')" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
+                                        <button wire:click="toggleSiteResource('{{ $r->id }}')"
+                                                class="text-[10px] px-1.5 py-0.5 rounded {{ $r->is_active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-400 bg-gray-100 dark:bg-white/5' }}">{{ $r->is_active ? 'On' : 'Off' }}</button>
+                                        <button wire:click="deleteSiteResource('{{ $r->id }}')"
+                                                data-confirm="Delete “{{ $r->name }}” everywhere? It is removed from every service; bookings are kept (unassigned)."
+                                                class="text-gray-300 hover:text-rose-500" title="Delete resource">✕</button>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1 mt-1.5">
+                                        @foreach($this->services as $svc)
+                                            @php $on = $r->services->contains('id', $svc->id); @endphp
+                                            <button wire:click="toggleResourceService('{{ $r->id }}', {{ $svc->id }})"
+                                                    class="text-[10px] px-1.5 py-0.5 rounded-md border transition-all
+                                                        {{ $on ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 font-semibold' : 'border-gray-200 dark:border-white/[0.08] text-gray-400' }}"
+                                                    title="{{ $on ? 'Unassign from' : 'Assign to' }} {{ $svc->name }}">{{ $on ? '✓ ' : '' }}{{ $svc->name }}</button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-xs text-gray-400">No shared resources yet.</p>
+                            @endforelse
+                        </div>
+            </div>
+
+            {{-- ── AVAILABILITY — summary; schedule & exceptions edit in the panel ── --}}
+            @php
+                $availDaysLabel = $availDays
+                    ? collect(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])->filter(fn ($d) => in_array($d, $availDays, true))->map(fn ($d) => ucfirst($d))->implode(', ')
+                    : 'No open days set';
+            @endphp
+            @php $live = app(\App\Services\BookingService::class)->settings($site); @endphp
+            <div id="availability" class="mt-6 scroll-mt-24 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <span class="w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0" style="background:#d9f068">🕑</span>
+                        <div class="min-w-0">
+                            <h2 class="text-sm font-bold">Availability</h2>
+                            <p class="text-xs text-gray-400 truncate">{{ $availDaysLabel }} · {{ $availOpen }}–{{ $availClose }}@if(count($dayHours)) · {{ count($dayHours) }} custom {{ Str::plural('day', count($dayHours)) }}@endif</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" wire:click="openPanel('schedule')"
+                                class="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white">✎ Edit schedule</button>
+                        <button type="button" wire:click="openPanel('exceptions')"
+                                class="px-3.5 py-2 rounded-xl text-xs font-bold bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:opacity-90">📅 Day &amp; slot exceptions</button>
+                    </div>
+                </div>
+
+                {{-- Scope: whole site or one service — drives both panels --}}
+                <p class="bkf-label">Scope</p>
+            <div class="flex flex-wrap items-center gap-1.5 mb-4">
+                <button type="button" wire:click="pickAvailService('')"
+                        class="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors
+                            {{ $availServiceId === '' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-white/[0.03] text-gray-500 border border-gray-100 dark:border-white/[0.06]' }}">
+                    🌐 Whole site
                 </button>
-                <div x-show="open" x-cloak x-transition.opacity.duration.150ms class="px-5 pb-5 border-t border-gray-100 dark:border-white/[0.06] pt-4">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-4">
-                    <h2 class="text-sm font-bold mb-3">{{ $editingId ? 'Edit service' : 'Add a service' }}</h2>
+                @foreach($this->services->where('is_active', true)->where('kind', 'slot') as $asvc)
+                    <button type="button" wire:click="pickAvailService('{{ $asvc->id }}')"
+                            class="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors
+                                {{ $availServiceId === (string) $asvc->id ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-white/[0.03] text-gray-500 border border-gray-100 dark:border-white/[0.06]' }}">
+                        {{ $asvc->typeIcon() }} {{ $asvc->name }}
+                    </button>
+                @endforeach
+            </div>
+
+                {{-- At-a-glance schedule for the chosen scope --}}
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="rounded-xl bg-gray-50 dark:bg-white/[0.04] px-3.5 py-3">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Open days</p>
+                        <p class="text-sm font-semibold mt-0.5">{{ $availServiceId !== '' && trim($asDays) !== '' ? strtoupper(str_replace(',', ' · ', $asDays)) : strtoupper(implode(' · ', $live['days'])) }}</p>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 dark:bg-white/[0.04] px-3.5 py-3">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Hours</p>
+                        <p class="text-sm font-semibold mt-0.5">{{ $availServiceId !== '' && $asOpen !== '' ? $asOpen : $live['open'] }}–{{ $availServiceId !== '' && $asClose !== '' ? $asClose : $live['close'] }}</p>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 dark:bg-white/[0.04] px-3.5 py-3">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Slots</p>
+                        <p class="text-sm font-semibold mt-0.5">every {{ $live['slot'] }} min</p>
+                    </div>
+                    <div class="rounded-xl bg-gray-50 dark:bg-white/[0.04] px-3.5 py-3">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Booking window</p>
+                        <p class="text-sm font-semibold mt-0.5">{{ $live['lead'] }}h lead · {{ $live['horizon'] }}d ahead</p>
+                    </div>
+                </div>
+
+                @if($this->blockedDates->isNotEmpty())
+                    <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/[0.06]">
+                        <p class="bkf-label">Upcoming exceptions <span class="font-normal normal-case tracking-normal text-gray-400">— click one to edit it</span></p>
+                        <div class="flex flex-wrap gap-1.5">
+                            @foreach($this->blockedDates as $ex)
+                                <button type="button" wire:click="openException('{{ $ex['date'] }}')"
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold transition-opacity hover:opacity-80
+                                        {{ $ex['dayOff'] ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' : (($ex['hours'] ?? null) && ! $ex['slots'] ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400') }}">
+                                    {{ \Carbon\Carbon::parse($ex['date'])->format('D, M j') }}
+                                    <span class="font-normal opacity-70">{{ $ex['dayOff'] ? 'closed' : (($ex['hours'] ?? null) ? $ex['hours'] : $ex['slots'].' slot(s)') }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+
+        {{-- ══════════ RIGHT RAIL: calendar + selected day's bookings below ══════════ --}}
+        <div class="space-y-4">
+            {{-- Calendar — colored from the SITE THEME accent so it matches the
+                 owner's brand and contrasts the white workspace tiles. --}}
+            @php
+                $accent = $site->theme['accent'] ?? '#4f46e5';
+                // HSL shade helpers: deep (darker, punchy) and vivid (max
+                // saturation, brighter) versions of the theme accent.
+                $shade = function (string $hex, float $dSat, float $dLig): string {
+                    [$r, $g, $b] = array_map(fn ($i) => hexdec(substr($hex, $i, 2)) / 255, [1, 3, 5]);
+                    $max = max($r, $g, $b); $min = min($r, $g, $b); $l = ($max + $min) / 2; $d = $max - $min;
+                    $s = $d == 0 ? 0 : $d / (1 - abs(2 * $l - 1));
+                    $h = $d == 0 ? 0 : ($max === $r ? fmod(($g - $b) / $d, 6) : ($max === $g ? ($b - $r) / $d + 2 : ($r - $g) / $d + 4)) * 60;
+                    if ($h < 0) $h += 360;
+                    $s = max(0, min(1, $s + $dSat)); $l = max(0, min(1, $l + $dLig));
+                    $c = (1 - abs(2 * $l - 1)) * $s; $x = $c * (1 - abs(fmod($h / 60, 2) - 1)); $m = $l - $c / 2;
+                    [$r, $g, $b] = match (true) {
+                        $h < 60 => [$c, $x, 0], $h < 120 => [$x, $c, 0], $h < 180 => [0, $c, $x],
+                        $h < 240 => [0, $x, $c], $h < 300 => [$x, 0, $c], default => [$c, 0, $x],
+                    };
+                    return sprintf('#%02x%02x%02x', (int) round(($r + $m) * 255), (int) round(($g + $m) * 255), (int) round(($b + $m) * 255));
+                };
+                $ok = strlen($accent) === 7;
+                $deep  = $ok ? $shade($accent, +0.10, -0.10) : $accent; // dark, saturated
+                $vivid = $ok ? $shade($accent, +0.18, +0.03) : $accent; // bright, punchy
+            @endphp
+            <style>
+                #bk-cal { --bk-cal-bg:{{ $deep }}; --bk-cal-bg2:{{ $vivid }}; --bk-cal-day:{{ $accent }};
+                          background:linear-gradient(135deg, var(--bk-cal-bg) 0%, var(--bk-cal-bg) 45%, var(--bk-cal-bg2) 100%);
+                          color:#fff; box-shadow:0 10px 25px -5px {{ $deep }}66; }
+                #bk-cal .bkcal-booked { background:var(--bk-cal-day); }
+                #bk-cal .bkcal-sel    { color:var(--bk-cal-bg); }
+                #bk-cal .bkcal-badge  { color:var(--bk-cal-bg); }
+            </style>
+            <div id="bk-cal" class="rounded-2xl p-4 text-white shadow-lg">
+                <div class="flex items-center justify-between mb-3">
+                    <button wire:click="calShift(-1)" class="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm transition-colors" aria-label="Previous month">‹</button>
+                    <h2 class="text-sm font-bold">{{ \Carbon\Carbon::parse($calMonth.'-01')->format('F Y') }}</h2>
+                    <button wire:click="calShift(1)" class="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm transition-colors" aria-label="Next month">›</button>
+                </div>
+                <div class="grid grid-cols-7 gap-1 mb-1">
+                    @foreach(['Su','Mo','Tu','We','Th','Fr','Sa'] as $dow)
+                        <span class="text-center text-[10px] font-bold text-white/50">{{ $dow }}</span>
+                    @endforeach
+                </div>
+                <div class="grid grid-cols-7 gap-1">
+                    @foreach($this->calendarDays as $cell)
+                        <button wire:click="pickDate('{{ $cell['date'] }}')"
+                                class="relative aspect-square rounded-lg text-xs transition-colors
+                                    {{ ! $cell['inMonth'] ? 'opacity-40' : '' }}
+                                    {{ $calDate === $cell['date'] ? 'bg-white bkcal-sel font-bold shadow-md' : ($cell['count'] > 0 ? 'bkcal-booked text-white font-bold ring-1 ring-white/60 shadow-md' : ($cell['isToday'] ? 'ring-1 ring-white/70 text-white font-bold hover:bg-white/15' : 'text-white/85 hover:bg-white/15')) }}">
+                                {{ $cell['day'] }}
+                                @if($cell['count'] > 0)
+                                    <span class="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-bold leading-[15px] bg-white shadow bkcal-badge">{{ $cell['count'] }}</span>
+                                @endif
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- Selected date's bookings — below the calendar --}}
+            <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-100 dark:border-white/[0.06] flex items-baseline justify-between">
+                    <h2 class="text-sm font-bold">{{ \Carbon\Carbon::parse($calDate)->isToday() ? 'Today' : \Carbon\Carbon::parse($calDate)->format('D, M j') }}</h2>
+                    <span class="text-[11px] text-gray-400">{{ $this->dayBookings->count() }} booking(s)</span>
+                </div>
+                <div class="max-h-[360px] overflow-y-auto">
+                    @forelse($this->dayBookings as $b)
+                        @php $p = (array) ($b->params ?? []); $bkind = $b->service?->kind ?? 'slot';
+                             $hue = ['#6366f1','#0ea5e9','#f59e0b','#10b981','#ec4899'][abs(crc32($b->customer_name)) % 5]; @endphp
+                        <div class="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0 cursor-pointer hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors" wire:click="viewBooking('{{ $b->id }}')" title="View details">
+                            <span class="shrink-0 w-8 h-8 rounded-full grid place-items-center text-white text-[10px] font-bold" style="background:{{ $hue }}">
+                                {{ strtoupper(\Illuminate\Support\Str::of($b->customer_name)->substr(0, 2)) }}</span>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-bold truncate">{{ $b->customer_name }}
+                                    @if($b->status === 'pending')<span class="text-amber-500 font-semibold">· pending</span>@endif</p>
+                                <p class="text-[10px] text-gray-400 truncate">
+                                    {{ $b->service?->name }}{{ ($p['resource'] ?? false) ? ' · '.$p['resource'] : '' }}
+                                    @if($bkind === 'stay') · {{ $p['nights'] ?? '?' }} night(s)
+                                    @elseif($bkind === 'trip') · {{ $p['origin'] ?? '' }} → {{ $p['destination'] ?? '' }} @endif
+                                </p>
+                            </div>
+                            <span class="shrink-0 text-[11px] font-bold tabular-nums text-gray-600 dark:text-gray-300">
+                                {{ $bkind === 'stay' ? 'stay' : $b->starts_at?->format('g:i A') }}</span>
+                        </div>
+                    @empty
+                        <p class="px-4 py-10 text-center text-xs text-gray-400">Nothing booked on this day.</p>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- ══════════ SIDE PANELS — every editor opens on the right over a grey overlay ══════════ --}}
+    @if($panel === 'service')
+    <x-lightbox close="closePanel" :drawer="true" max-width="max-w-xl" icon="⚙"
+                :title="$editingId ? 'Edit service' : 'Add a service'"
+                :subtitle="$editingId ? $name : 'Type, pricing and the customer booking form'"
+                wire:key="panel-service-{{ $editingId ?? 'new' }}">
                     <form wire:submit="saveService" class="space-y-3">
                         {{-- Type picker: built-in engines + every custom type --}}
                         <div>
@@ -454,7 +690,7 @@
                         <div class="flex gap-2">
                             <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">{{ $editingId ? 'Update' : 'Add service' }}</button>
                             @if($editingId)
-                            <button type="button" wire:click="resetForm" class="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">Cancel</button>
+                            <button type="button" wire:click="closePanel" class="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">Cancel</button>
                             @endif
                         </div>
                     </form>
@@ -577,65 +813,14 @@
                             @error('prPrice')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                         </div>
                     @endif
-                </div>
+    </x-lightbox>
+    @endif
 
-                <div class="space-y-2">
-                    @forelse($this->services as $svc)
-                    <div class="flex items-center gap-3 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/[0.06] px-3 py-2.5">
-                        <span class="shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded
-                            {{ ['slot' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
-                                'stay' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-                                'trip' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'][$svc->kind] ?? '' }}">{{ $svc->typeIcon() }} {{ $svc->typeLabel() }}</span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold truncate {{ $svc->is_active ? '' : 'text-gray-400 line-through' }}">{{ $svc->name }}</p>
-                            <p class="text-[11px] text-gray-400">
-                                @if($svc->kind === 'stay') {{ $svc->capacity }} unit(s) · {{ $svc->formattedPrice() }}/night
-                                @elseif($svc->kind === 'trip') {{ $svc->departures_count }} departure(s) · from {{ $svc->formattedPrice() }}
-                                @else {{ $svc->duration_min }} min · {{ $svc->formattedPrice() }} @endif
-                                @if($svc->requires_payment) · 💳 paid @endif
-                            </p>
-                        </div>
-                        <button wire:click="toggleService('{{ $svc->id }}')" class="text-[11px] px-2 py-1 rounded-lg {{ $svc->is_active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-400 bg-gray-100 dark:bg-white/5' }}">{{ $svc->is_active ? 'Active' : 'Off' }}</button>
-                        <button wire:click="editService('{{ $svc->id }}')" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
-                        <button wire:click="deleteService('{{ $svc->id }}')" data-confirm="Delete this service?" class="text-gray-400 hover:text-rose-500" title="Delete">✕</button>
-                    </div>
-                    @empty
-                    <p class="text-xs text-gray-400 px-1">No services yet. Add one on the left so visitors can book.</p>
-                    @endforelse
-
-                    {{-- Site-level shared RESOURCES tile --}}
-                    <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-4 !mt-4">
-                        <h2 class="text-sm font-bold mb-1">Resources</h2>
-                        <p class="text-[10px] text-gray-400 mb-2.5">Staff, rooms and vehicles shared across services — a resource booked through one service is automatically unavailable everywhere else.</p>
-                        <div class="space-y-1.5 mb-3">
-                            @forelse($this->siteResources as $r)
-                                <div class="text-xs bg-gray-50 dark:bg-white/[0.04] rounded-lg px-2.5 py-2">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-semibold {{ $r->is_active ? '' : 'text-gray-400 line-through' }}">{{ $r->name }}</span>
-                                        @if($r->capacity > 1)<span class="text-gray-400">cap {{ $r->capacity }}</span>@endif
-                                        @if($r->price_cents !== null)<span class="text-gray-400">{{ \App\Support\Money::format((int) $r->price_cents, $site->currency) }}</span>@endif
-                                        <span class="ml-auto text-gray-400">{{ $r->active_bookings_count }} upcoming</span>
-                                        <button wire:click="editSiteResource('{{ $r->id }}')" class="text-gray-400 hover:text-indigo-600" title="Edit">✎</button>
-                                        <button wire:click="toggleSiteResource('{{ $r->id }}')"
-                                                class="text-[10px] px-1.5 py-0.5 rounded {{ $r->is_active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-gray-400 bg-gray-100 dark:bg-white/5' }}">{{ $r->is_active ? 'On' : 'Off' }}</button>
-                                        <button wire:click="deleteSiteResource('{{ $r->id }}')"
-                                                data-confirm="Delete “{{ $r->name }}” everywhere? It is removed from every service; bookings are kept (unassigned)."
-                                                class="text-gray-300 hover:text-rose-500" title="Delete resource">✕</button>
-                                    </div>
-                                    <div class="flex flex-wrap gap-1 mt-1.5">
-                                        @foreach($this->services as $svc)
-                                            @php $on = $r->services->contains('id', $svc->id); @endphp
-                                            <button wire:click="toggleResourceService('{{ $r->id }}', {{ $svc->id }})"
-                                                    class="text-[10px] px-1.5 py-0.5 rounded-md border transition-all
-                                                        {{ $on ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 font-semibold' : 'border-gray-200 dark:border-white/[0.08] text-gray-400' }}"
-                                                    title="{{ $on ? 'Unassign from' : 'Assign to' }} {{ $svc->name }}">{{ $on ? '✓ ' : '' }}{{ $svc->name }}</button>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="text-xs text-gray-400">No shared resources yet.</p>
-                            @endforelse
-                        </div>
+    @if($panel === 'resource')
+    <x-lightbox close="closePanel" :drawer="true" max-width="max-w-md" icon="👥"
+                :title="$srEditingId ? 'Edit resource' : 'Add a resource'"
+                subtitle="Staff, rooms and vehicles shared across services" wire:key="panel-resource">
+        <div class="space-y-3">
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <x-field.text model="srName" placeholder="Name (e.g. Bella)" />
                             <x-field.text model="srCapacity" type="number" min="1" placeholder="Capacity" hint="Parallel bookings it can hold." />
@@ -645,38 +830,20 @@
                             <button type="button" wire:click="saveSiteResource"
                                     class="px-3 py-1.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold">{{ $srEditingId ? 'Update' : '＋ Add resource' }}</button>
                             @if($srEditingId)
-                                <button type="button" wire:click="$set('srEditingId', null)" class="px-3 py-1.5 rounded-xl text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">Cancel</button>
+                                <button type="button" wire:click="closePanel" class="px-3 py-1.5 rounded-xl text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">Cancel</button>
                             @endif
                         </div>
                         @error('srName')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
-                    </div>
-                </div>
-            </div>
-                </div>
-            </div>
+        </div>
+    </x-lightbox>
+    @endif
 
-            {{-- ── AVAILABILITY — click-to-review tile ── --}}
-            @php
-                $availDaysLabel = $availDays
-                    ? collect(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])->filter(fn ($d) => in_array($d, $availDays, true))->map(fn ($d) => ucfirst($d))->implode(', ')
-                    : 'No open days set';
-            @endphp
-            <div id="availability" class="mt-6 scroll-mt-24 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden"
-                 x-data="{ open: false }">
-                <button type="button" @click="open = ! open" class="w-full flex items-center gap-3.5 px-5 py-4 text-left group">
-                    <span class="w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0" style="background:#d9f068">🕑</span>
-                    <span class="flex-1 min-w-0">
-                        <span class="text-sm font-bold text-gray-900 dark:text-white">Availability</span>
-                        <span class="block text-xs text-gray-400 truncate mt-0.5">
-                            {{ $availDaysLabel }} · {{ $availOpen }}–{{ $availClose }}@if(count($dayHours)) · {{ count($dayHours) }} custom {{ Str::plural('day', count($dayHours)) }} @endif · schedules &amp; blocked dates
-                        </span>
-                    </span>
-                    <span class="text-[11px] font-semibold text-indigo-500 shrink-0" x-text="open ? 'Close' : 'Review'"></span>
-                    <svg class="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-transform shrink-0" :class="open ? 'rotate-180' : ''"
-                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                </button>
-                <div x-show="open" x-cloak x-transition.opacity.duration.150ms class="px-5 pb-5 border-t border-gray-100 dark:border-white/[0.06] pt-4">
-            {{-- Scope: whole site or one service --}}
+    @if($panel === 'schedule')
+    <x-lightbox close="closePanel" :drawer="true" max-width="max-w-xl" icon="🕑"
+                :title="$availServiceId !== '' ? ($this->availService()?->name.' — schedule') : 'Site schedule'"
+                :subtitle="$availServiceId !== '' ? 'Overrides for this service only' : 'Open days, hours and bookable slots for the whole site'"
+                wire:key="panel-schedule">
+        <p class="bkf-label">Scope</p>
             <div class="flex flex-wrap items-center gap-1.5 mb-4">
                 <button type="button" wire:click="pickAvailService('')"
                         class="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors
@@ -691,8 +858,7 @@
                     </button>
                 @endforeach
             </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div class="space-y-4">
                 @if($availServiceId !== '')
                 {{-- Per-service schedule + confirmation mode --}}
                 <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-5">
@@ -797,12 +963,30 @@
                     </p>
                 </div>
                 @endif
+        </div>
+    </x-lightbox>
+    @endif
 
-                {{-- Day & slot exceptions --}}
-                <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-5">
-                    <h2 class="text-sm font-bold mb-1">Day &amp; slot exceptions
-                        @if($availServiceId !== '')<span class="text-[10px] font-semibold text-indigo-500 ml-1">{{ $this->availService()?->name }} only</span>@endif
-                    </h2>
+    @if($panel === 'exceptions')
+    <x-lightbox close="closePanel" :drawer="true" max-width="max-w-2xl" icon="📅"
+                title="Day & slot exceptions"
+                :subtitle="$availServiceId !== '' ? ($this->availService()?->name.' only — site-wide blocks still apply') : 'Close whole days or single slots on specific dates'"
+                wire:key="panel-exceptions">
+        <p class="bkf-label">Scope</p>
+            <div class="flex flex-wrap items-center gap-1.5 mb-4">
+                <button type="button" wire:click="pickAvailService('')"
+                        class="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors
+                            {{ $availServiceId === '' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-white/[0.03] text-gray-500 border border-gray-100 dark:border-white/[0.06]' }}">
+                    🌐 Whole site
+                </button>
+                @foreach($this->services->where('is_active', true)->where('kind', 'slot') as $asvc)
+                    <button type="button" wire:click="pickAvailService('{{ $asvc->id }}')"
+                            class="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors
+                                {{ $availServiceId === (string) $asvc->id ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-white/[0.03] text-gray-500 border border-gray-100 dark:border-white/[0.06]' }}">
+                        {{ $asvc->typeIcon() }} {{ $asvc->name }}
+                    </button>
+                @endforeach
+            </div>
                     <p class="text-[11px] text-gray-400 mb-4">
                         Overrides for specific dates — close a whole day (holiday) or switch single
                         slots off (lunch, personal appointment). Click a slot to toggle it.
@@ -934,104 +1118,8 @@
                             </div>
                         </div>
                     @endif
-                </div>
-            </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- ══════════ RIGHT RAIL: calendar + selected day's bookings below ══════════ --}}
-        <div class="space-y-4">
-            {{-- Calendar — colored from the SITE THEME accent so it matches the
-                 owner's brand and contrasts the white workspace tiles. --}}
-            @php
-                $accent = $site->theme['accent'] ?? '#4f46e5';
-                // HSL shade helpers: deep (darker, punchy) and vivid (max
-                // saturation, brighter) versions of the theme accent.
-                $shade = function (string $hex, float $dSat, float $dLig): string {
-                    [$r, $g, $b] = array_map(fn ($i) => hexdec(substr($hex, $i, 2)) / 255, [1, 3, 5]);
-                    $max = max($r, $g, $b); $min = min($r, $g, $b); $l = ($max + $min) / 2; $d = $max - $min;
-                    $s = $d == 0 ? 0 : $d / (1 - abs(2 * $l - 1));
-                    $h = $d == 0 ? 0 : ($max === $r ? fmod(($g - $b) / $d, 6) : ($max === $g ? ($b - $r) / $d + 2 : ($r - $g) / $d + 4)) * 60;
-                    if ($h < 0) $h += 360;
-                    $s = max(0, min(1, $s + $dSat)); $l = max(0, min(1, $l + $dLig));
-                    $c = (1 - abs(2 * $l - 1)) * $s; $x = $c * (1 - abs(fmod($h / 60, 2) - 1)); $m = $l - $c / 2;
-                    [$r, $g, $b] = match (true) {
-                        $h < 60 => [$c, $x, 0], $h < 120 => [$x, $c, 0], $h < 180 => [0, $c, $x],
-                        $h < 240 => [0, $x, $c], $h < 300 => [$x, 0, $c], default => [$c, 0, $x],
-                    };
-                    return sprintf('#%02x%02x%02x', (int) round(($r + $m) * 255), (int) round(($g + $m) * 255), (int) round(($b + $m) * 255));
-                };
-                $ok = strlen($accent) === 7;
-                $deep  = $ok ? $shade($accent, +0.10, -0.10) : $accent; // dark, saturated
-                $vivid = $ok ? $shade($accent, +0.18, +0.03) : $accent; // bright, punchy
-            @endphp
-            <style>
-                #bk-cal { --bk-cal-bg:{{ $deep }}; --bk-cal-bg2:{{ $vivid }}; --bk-cal-day:{{ $accent }};
-                          background:linear-gradient(135deg, var(--bk-cal-bg) 0%, var(--bk-cal-bg) 45%, var(--bk-cal-bg2) 100%);
-                          color:#fff; box-shadow:0 10px 25px -5px {{ $deep }}66; }
-                #bk-cal .bkcal-booked { background:var(--bk-cal-day); }
-                #bk-cal .bkcal-sel    { color:var(--bk-cal-bg); }
-                #bk-cal .bkcal-badge  { color:var(--bk-cal-bg); }
-            </style>
-            <div id="bk-cal" class="rounded-2xl p-4 text-white shadow-lg">
-                <div class="flex items-center justify-between mb-3">
-                    <button wire:click="calShift(-1)" class="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm transition-colors" aria-label="Previous month">‹</button>
-                    <h2 class="text-sm font-bold">{{ \Carbon\Carbon::parse($calMonth.'-01')->format('F Y') }}</h2>
-                    <button wire:click="calShift(1)" class="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm transition-colors" aria-label="Next month">›</button>
-                </div>
-                <div class="grid grid-cols-7 gap-1 mb-1">
-                    @foreach(['Su','Mo','Tu','We','Th','Fr','Sa'] as $dow)
-                        <span class="text-center text-[10px] font-bold text-white/50">{{ $dow }}</span>
-                    @endforeach
-                </div>
-                <div class="grid grid-cols-7 gap-1">
-                    @foreach($this->calendarDays as $cell)
-                        <button wire:click="pickDate('{{ $cell['date'] }}')"
-                                class="relative aspect-square rounded-lg text-xs transition-colors
-                                    {{ ! $cell['inMonth'] ? 'opacity-40' : '' }}
-                                    {{ $calDate === $cell['date'] ? 'bg-white bkcal-sel font-bold shadow-md' : ($cell['count'] > 0 ? 'bkcal-booked text-white font-bold ring-1 ring-white/60 shadow-md' : ($cell['isToday'] ? 'ring-1 ring-white/70 text-white font-bold hover:bg-white/15' : 'text-white/85 hover:bg-white/15')) }}">
-                                {{ $cell['day'] }}
-                                @if($cell['count'] > 0)
-                                    <span class="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-bold leading-[15px] bg-white shadow bkcal-badge">{{ $cell['count'] }}</span>
-                                @endif
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-
-            {{-- Selected date's bookings — below the calendar --}}
-            <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-100 dark:border-white/[0.06] flex items-baseline justify-between">
-                    <h2 class="text-sm font-bold">{{ \Carbon\Carbon::parse($calDate)->isToday() ? 'Today' : \Carbon\Carbon::parse($calDate)->format('D, M j') }}</h2>
-                    <span class="text-[11px] text-gray-400">{{ $this->dayBookings->count() }} booking(s)</span>
-                </div>
-                <div class="max-h-[360px] overflow-y-auto">
-                    @forelse($this->dayBookings as $b)
-                        @php $p = (array) ($b->params ?? []); $bkind = $b->service?->kind ?? 'slot';
-                             $hue = ['#6366f1','#0ea5e9','#f59e0b','#10b981','#ec4899'][abs(crc32($b->customer_name)) % 5]; @endphp
-                        <div class="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0 cursor-pointer hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors" wire:click="viewBooking('{{ $b->id }}')" title="View details">
-                            <span class="shrink-0 w-8 h-8 rounded-full grid place-items-center text-white text-[10px] font-bold" style="background:{{ $hue }}">
-                                {{ strtoupper(\Illuminate\Support\Str::of($b->customer_name)->substr(0, 2)) }}</span>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-xs font-bold truncate">{{ $b->customer_name }}
-                                    @if($b->status === 'pending')<span class="text-amber-500 font-semibold">· pending</span>@endif</p>
-                                <p class="text-[10px] text-gray-400 truncate">
-                                    {{ $b->service?->name }}{{ ($p['resource'] ?? false) ? ' · '.$p['resource'] : '' }}
-                                    @if($bkind === 'stay') · {{ $p['nights'] ?? '?' }} night(s)
-                                    @elseif($bkind === 'trip') · {{ $p['origin'] ?? '' }} → {{ $p['destination'] ?? '' }} @endif
-                                </p>
-                            </div>
-                            <span class="shrink-0 text-[11px] font-bold tabular-nums text-gray-600 dark:text-gray-300">
-                                {{ $bkind === 'stay' ? 'stay' : $b->starts_at?->format('g:i A') }}</span>
-                        </div>
-                    @empty
-                        <p class="px-4 py-10 text-center text-xs text-gray-400">Nothing booked on this day.</p>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-    </div>
+    </x-lightbox>
+    @endif
 
     {{-- ══════════ BOOKING DETAIL — dashboard-card lightbox ══════════ --}}
     @if($this->viewedBooking)

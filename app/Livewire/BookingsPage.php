@@ -33,6 +33,9 @@ class BookingsPage extends Component
     /** bookings | services | availability (calendar is a permanent right rail) */
     public string $tab = 'bookings';
 
+    /** Right-side panel currently open: service | resource | schedule | exceptions (null = none). */
+    public ?string $panel = null;
+
     // Calendar state
     public string $calMonth = ''; // Y-m
 
@@ -277,6 +280,54 @@ class BookingsPage extends Component
     public function closeWizard(): void
     {
         $this->wizOpen = false;
+    }
+
+    // ── Right-side panels ─────────────────────────────────────────────────
+    // Every editor on this page (service, shared resource, schedule, day &
+    // slot exceptions) opens in a drawer on the right over a grey overlay.
+
+    public function openPanel(string $panel): void
+    {
+        if (! in_array($panel, ['service', 'resource', 'schedule', 'exceptions'], true)) {
+            return;
+        }
+        $this->resetValidation();
+        $this->panel = $panel;
+    }
+
+    public function closePanel(): void
+    {
+        if ($this->panel === 'service') {
+            $this->resetForm();
+        }
+        if ($this->panel === 'resource') {
+            $this->reset(['srEditingId', 'srName', 'srCapacity', 'srPrice']);
+            $this->srCapacity = 1;
+        }
+        $this->resetValidation();
+        $this->panel = null;
+    }
+
+    /** “＋ Add service” → blank service form in the panel. */
+    public function newService(): void
+    {
+        $this->resetForm();
+        $this->openPanel('service');
+    }
+
+    /** “＋ Add resource” → blank shared-resource form in the panel. */
+    public function newSiteResource(): void
+    {
+        $this->reset(['srEditingId', 'srName', 'srCapacity', 'srPrice']);
+        $this->srCapacity = 1;
+        $this->openPanel('resource');
+    }
+
+    /** An upcoming-exception chip → exceptions panel focused on that date. */
+    public function openException(string $date): void
+    {
+        $this->blockDate = $date;
+        $this->openPanel('exceptions');
     }
 
     #[Computed]
@@ -716,6 +767,7 @@ class BookingsPage extends Component
         ]));
         $this->site->refresh();
         unset($this->planMonths);
+        $this->panel = null;
 
         $this->dispatch('toast', level: 'success', title: 'Availability saved', message: 'New slots apply to all future bookings.');
     }
@@ -774,6 +826,7 @@ class BookingsPage extends Component
         ]);
         $svc->update(['config' => array_filter($config, fn ($v) => $v !== null)]);
         unset($this->planMonths, $this->blockDaySlots, $this->services);
+        $this->panel = null;
         $this->dispatch('toast', level: 'success', title: 'Saved', message: "“{$svc->name}” availability updated.");
     }
 
@@ -1105,6 +1158,7 @@ class BookingsPage extends Component
         if (! $this->editingId) {
             $this->resetForm();
         }
+        $this->panel = null;
         unset($this->services);
         $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Service saved.');
     }
@@ -1138,6 +1192,7 @@ class BookingsPage extends Component
             default => ['none', ''],
         };
         unset($this->departures);
+        $this->openPanel('service');
     }
 
     public function deleteService(string $id): void
@@ -1292,6 +1347,7 @@ class BookingsPage extends Component
 
         $this->reset(['srEditingId', 'srName', 'srCapacity', 'srPrice']);
         $this->srCapacity = 1;
+        $this->panel = null;
         unset($this->siteResources, $this->serviceResources);
         $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Resource saved.');
     }
@@ -1303,6 +1359,7 @@ class BookingsPage extends Component
         $this->srName = $r->name;
         $this->srCapacity = max(1, (int) $r->capacity);
         $this->srPrice = $r->price_cents === null ? '' : number_format($r->price_cents / 100, 2, '.', '');
+        $this->openPanel('resource');
     }
 
     public function toggleSiteResource(string $id): void
