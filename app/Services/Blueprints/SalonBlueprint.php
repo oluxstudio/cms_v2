@@ -31,7 +31,8 @@ class SalonBlueprint
             $site->update(['template' => $config['template']]);
         }
 
-        // 2. Bookings feature with salon defaults.
+        // 2. Full commerce suite, with bookings configured for salon hours.
+        $site->enableCommerceSuite();
         $site->enableFeature('bookings', $config['booking_settings']);
 
         // 3. Service menu + staff (skip when the site already has services).

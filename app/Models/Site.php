@@ -23,6 +23,9 @@ class Site extends Model
     /** Roles a member can hold within a site, ordered by privilege. */
     public const ROLES = ['owner', 'admin', 'editor', 'viewer'];
 
+    /** The commerce suite every site starts with (nav items show when enabled). */
+    public const COMMERCE_FEATURES = ['store', 'invoices', 'donations', 'bookings', 'estimator'];
+
     protected $fillable = ['user_id', 'name', 'domain', 'owner', 'description', 'template', 'theme', 'live', 'domain_verified_at'];
 
     protected $casts = ['theme' => 'array', 'live' => 'boolean', 'domain_verified_at' => 'datetime'];
@@ -434,6 +437,21 @@ class Site extends Model
         $this->flushFeatureCache();
 
         return $feature;
+    }
+
+    /**
+     * Switch on the full commerce suite (store, invoices, donations, bookings,
+     * estimator) — used at site creation so the Commerce nav is populated from
+     * day one. Never re-enables a feature the site has explicitly disabled.
+     */
+    public function enableCommerceSuite(): void
+    {
+        $existing = $this->siteFeatures()->pluck('key')->all();
+        foreach (self::COMMERCE_FEATURES as $key) {
+            if (! in_array($key, $existing, true)) {
+                $this->enableFeature($key);
+            }
+        }
     }
 
     public function disableFeature(string $key): void

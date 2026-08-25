@@ -53,7 +53,6 @@ return [
     ],
 
     'donations' => [
-        'hidden' => true, // delisted — neither CMS nor CRM core; existing sites keep it
         'key' => 'donations',
         'tier' => 'basic',
         'intents' => ['donate', 'donation', 'donations', 'give', 'giving', 'fundraise', 'fundraising', 'support', 'contribution', 'tip'],

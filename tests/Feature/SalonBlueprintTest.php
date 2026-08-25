@@ -19,7 +19,10 @@ it('provisions a full salon site from the blueprint', function () {
         ->and($site->pages()->where('url', '/appointment')->exists())->toBeTrue()
         ->and($site->pages()->where('url', '/')->first()->components()->count())->toBeGreaterThan(0);
 
-    // Bookings feature enabled with salon hours.
+    // Full commerce suite on, bookings configured with salon hours.
+    foreach (Site::COMMERCE_FEATURES as $key) {
+        expect($site->hasFeature($key))->toBeTrue();
+    }
     expect($site->hasFeature('bookings'))->toBeTrue()
         ->and($site->feature('bookings')['days'])->toBe('mon,tue,wed,thu,fri,sat')
         ->and($site->feature('bookings')['slot_minutes'])->toBe(30);

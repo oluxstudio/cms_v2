@@ -128,6 +128,10 @@ class SiteComponent extends Component
         $site->update(['template' => 'blank']);
         $site->pages()->firstOrCreate(['url' => '/'], ['name' => 'Home', 'keywords' => '', 'is_published' => true]);
 
+        // Every site starts with the full commerce suite enabled (all basic
+        // tier) — so the Commerce nav is populated from day one.
+        $site->enableCommerceSuite();
+
         // Optional starter content so the site isn't a blank canvas (onboarding).
         match ($this->starter) {
             'salon' => app(SalonBlueprint::class)->apply($site),
