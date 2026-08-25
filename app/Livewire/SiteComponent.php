@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Livewire\Forms\SiteForm;
 use App\Models\Site;
 use App\Services\AccountActivity;
+use App\Services\Blueprints\SalonBlueprint;
 use App\Services\SampleSiteSeeder;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
@@ -24,6 +25,9 @@ class SiteComponent extends Component
 
     /** Scaffold a populated starter (pages, components, testimonials, contact form). */
     public bool $addSample = true;
+
+    /** Starter content: 'sample' (generic), 'salon' (Salon & Barber blueprint) or 'blank'. */
+    public string $starter = 'sample';
 
     /** Opened from the onboarding checklist's "Create site" step. */
     #[On('open-create-site')]
@@ -125,9 +129,11 @@ class SiteComponent extends Component
         $site->pages()->firstOrCreate(['url' => '/'], ['name' => 'Home', 'keywords' => '', 'is_published' => true]);
 
         // Optional starter content so the site isn't a blank canvas (onboarding).
-        if ($this->addSample) {
-            app(SampleSiteSeeder::class)->seed($site);
-        }
+        match ($this->starter) {
+            'salon' => app(SalonBlueprint::class)->apply($site),
+            'sample' => app(SampleSiteSeeder::class)->seed($site),
+            default => null,
+        };
 
         AccountActivity::siteCreated($site);
 

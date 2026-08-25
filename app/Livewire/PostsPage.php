@@ -35,6 +35,11 @@ class PostsPage extends Component
 
     public string $coverImage = '';
 
+    public string $category = '';
+
+    /** Comma-separated in the form; stored as a json array. */
+    public string $tags = '';
+
     public string $status = 'draft';
 
     public function mount(Site $site): void
@@ -52,7 +57,7 @@ class PostsPage extends Component
     public function createPost(): void
     {
         abort_unless($this->canManage(), 403);
-        $this->reset(['editingId', 'title', 'excerpt', 'body', 'coverImage']);
+        $this->reset(['editingId', 'title', 'excerpt', 'body', 'coverImage', 'category', 'tags']);
         $this->status = 'draft';
         $this->showForm = true;
     }
@@ -66,6 +71,8 @@ class PostsPage extends Component
         $this->excerpt = (string) $post->excerpt;
         $this->body = (string) $post->body;
         $this->coverImage = (string) $post->cover_image;
+        $this->category = (string) $post->category;
+        $this->tags = implode(', ', $post->tags ?? []);
         $this->status = $post->status;
         $this->showForm = true;
     }
@@ -78,8 +85,11 @@ class PostsPage extends Component
             'excerpt' => ['nullable', 'string', 'max:500'],
             'body' => ['nullable', 'string', 'max:65000'],
             'coverImage' => ['nullable', 'string', 'max:500'],
+            'category' => ['nullable', 'string', 'max:120'],
+            'tags' => ['nullable', 'string', 'max:600'],
             'status' => ['required', 'in:draft,published'],
         ]);
+        $tags = array_values(array_filter(array_map('trim', explode(',', $this->tags))));
 
         if ($this->editingId) {
             $post = Post::where('site_id', $this->site->id)->findOrFail($this->editingId);
@@ -88,6 +98,8 @@ class PostsPage extends Component
                 'excerpt' => $this->excerpt ?: null,
                 'body' => $this->body ?: null,
                 'cover_image' => $this->coverImage ?: null,
+                'category' => $this->category ?: null,
+                'tags' => $tags ?: null,
                 'status' => $this->status,
                 'published_at' => $this->status === 'published' ? ($post->published_at ?? now()) : null,
             ]);
@@ -100,6 +112,8 @@ class PostsPage extends Component
                 'excerpt' => $this->excerpt ?: null,
                 'body' => $this->body ?: null,
                 'cover_image' => $this->coverImage ?: null,
+                'category' => $this->category ?: null,
+                'tags' => $tags ?: null,
                 'status' => $this->status,
                 'published_at' => $this->status === 'published' ? now() : null,
             ]);
@@ -128,6 +142,14 @@ class PostsPage extends Component
     // ── Data ─────────────────────────────────────────────────────
 
     /** Tiles: totals for the header cards. */
+    /** Distinct categories already used on this site — feeds the datalist. */
+    public function getCategoriesProperty(): array
+    {
+        return Post::where('site_id', $this->site->id)
+            ->whereNotNull('category')->distinct()->orderBy('category')
+            ->pluck('category')->all();
+    }
+
     public function getStatsProperty(): array
     {
         $q = Post::where('site_id', $this->site->id);

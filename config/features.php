@@ -110,6 +110,9 @@ return [
             'slot_minutes' => ['type' => 'number', 'label' => 'Slot length (minutes)',                 'default' => 30],
             'lead_hours' => ['type' => 'number', 'label' => 'Minimum notice before a booking (hours)', 'default' => 12],
             'horizon_days' => ['type' => 'number', 'label' => 'How many days ahead can be booked',     'default' => 30],
+            'remind_visitor' => ['type' => 'toggle', 'label' => 'Email customers a reminder ~24h before their booking', 'default' => true],
+            'review_requests' => ['type' => 'toggle', 'label' => 'Email a review request after the appointment (needs a review link in Site settings)', 'default' => true],
+            'rebook_weeks' => ['type' => 'number', 'label' => 'Rebooking prompt: email customers N weeks after their last visit (0 = off)', 'default' => 5],
         ],
     ],
 

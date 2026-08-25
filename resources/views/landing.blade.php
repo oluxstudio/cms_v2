@@ -614,6 +614,7 @@
                     <a href="#specialties">Features</a>
                     <a href="#pricing">Pricing</a>
                     <a href="#faq">FAQ</a>
+                    <a href="{{ route('landing.salons') }}">For salons &amp; barbers</a>
                 </div>
                 <div>
                     <h4>Account</h4>

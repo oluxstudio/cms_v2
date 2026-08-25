@@ -15,10 +15,10 @@ class Post extends Model
 
     protected $fillable = [
         'site_id', 'user_id', 'title', 'slug', 'excerpt', 'body', 'cover_image',
-        'status', 'published_at', 'views', 'likes', 'comments',
+        'category', 'tags', 'status', 'published_at', 'views', 'likes', 'comments',
     ];
 
-    protected $casts = ['published_at' => 'datetime'];
+    protected $casts = ['published_at' => 'datetime', 'tags' => 'array'];
 
     public function site(): BelongsTo
     {
@@ -53,6 +53,8 @@ class Post extends Model
             'slug' => $this->slug,
             'excerpt' => $this->excerpt,
             'cover_image' => $this->cover_image,
+            'category' => $this->category,
+            'tags' => $this->tags ?? [],
             'author' => $this->author?->name,
             'published_at' => $this->published_at?->toIso8601String(),
             'views' => (int) $this->views,

@@ -40,6 +40,9 @@ class PostApiController extends Controller
         $site = $this->site($siteName);
         $posts = Post::where('site_id', $site->id)
             ->where('status', 'published')
+            // Optional taxonomy filters: ?category=news / ?tag=hair-care
+            ->when($request->query('category'), fn ($q, $c) => $q->whereRaw('LOWER(category) = ?', [strtolower($c)]))
+            ->when($request->query('tag'), fn ($q, $t) => $q->whereJsonContains('tags', $t))
             ->with('author:id,name')
             ->orderByDesc('published_at')
             ->paginate(min(50, max(1, (int) $request->query('per_page', 10))));
@@ -98,11 +101,19 @@ class PostApiController extends Controller
 
     private function validated(Request $request, bool $creating): array
     {
+        // Tags arrive as an array OR a comma-separated string — normalize first.
+        if (is_string($request->input('tags'))) {
+            $request->merge(['tags' => array_values(array_filter(array_map('trim', explode(',', $request->input('tags')))))]);
+        }
+
         return $request->validate([
             'title' => [$creating ? 'required' : 'sometimes', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string', 'max:1000'],
             'body' => ['nullable', 'string'],
             'cover_image' => ['nullable', 'string', 'max:2048'],
+            'category' => ['nullable', 'string', 'max:120'],
+            'tags' => ['nullable', 'array', 'max:20'],
+            'tags.*' => ['string', 'max:60'],
             'status' => ['sometimes', 'in:draft,published'],
             'published_at' => ['nullable', 'date'],
         ]);
@@ -122,6 +133,8 @@ class PostApiController extends Controller
             'excerpt' => $data['excerpt'] ?? null,
             'body' => $data['body'] ?? '',
             'cover_image' => $data['cover_image'] ?? null,
+            'category' => $data['category'] ?? null,
+            'tags' => $data['tags'] ?? null,
             'status' => $status,
             'published_at' => $data['published_at'] ?? ($status === 'published' ? now() : null),
         ]);

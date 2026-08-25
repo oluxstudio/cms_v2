@@ -49,7 +49,10 @@ const { collection } = await cms.collections.create({ name: 'Team', slug: 'team'
 await cms.items(collection.id).add({ name: 'Ada', role: 'Stylist' })
 
 // Posts / Forms / Pages / Booking
-await cms.posts.create({ title: 'Hello', body: '<p>…</p>' })
+await cms.posts.create({ title: 'Hello', body: '<p>…</p>',
+  category: 'News', tags: ['styling', 'tips'], status: 'published' }) // tags: array or 'a, b' string
+await cms.posts.list()                    // → each post carries category + tags
+// filter reads: /api/sites/{s}/posts?category=news or ?tag=styling
 await cms.forms.create({ name: 'quote', title: 'Get a quote',
   fields: [{ key: 'email', label: 'Email', type: 'email', required: true }] })
 await cms.booking.services.create({ name: 'Haircut', duration_min: 45, price_cents: 3800 })

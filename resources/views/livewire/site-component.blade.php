@@ -69,13 +69,32 @@
                     <textarea wire:model="form.description" rows="3" placeholder="Optional…"
                               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none resize-none"></textarea>
                 </div>
-                <label class="flex items-start gap-2.5 rounded-lg border border-gray-200 px-3 py-2.5 cursor-pointer select-none">
-                    <input type="checkbox" wire:model="addSample" class="mt-0.5">
-                    <span>
-                        <span class="block text-sm font-semibold text-gray-800">Add sample content</span>
-                        <span class="block text-xs text-gray-400">Starter pages, a hero, testimonials and a contact form — so it's not a blank canvas. Edit or delete anytime.</span>
-                    </span>
-                </label>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Start with</label>
+                    <div class="space-y-1.5">
+                        <label class="flex items-start gap-2.5 rounded-lg border border-gray-200 px-3 py-2.5 cursor-pointer select-none">
+                            <input type="radio" wire:model="starter" value="sample" class="mt-0.5">
+                            <span>
+                                <span class="block text-sm font-semibold text-gray-800">Sample content</span>
+                                <span class="block text-xs text-gray-400">Starter pages, a hero, testimonials and a contact form. Edit or delete anytime.</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-2.5 rounded-lg border border-gray-200 px-3 py-2.5 cursor-pointer select-none">
+                            <input type="radio" wire:model="starter" value="salon" class="mt-0.5">
+                            <span>
+                                <span class="block text-sm font-semibold text-gray-800">Salon &amp; Barber</span>
+                                <span class="block text-xs text-gray-400">Full salon site: 5 pages, online booking with deposits, a service menu, staff chairs and an appointment form — ready to customise.</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-2.5 rounded-lg border border-gray-200 px-3 py-2.5 cursor-pointer select-none">
+                            <input type="radio" wire:model="starter" value="blank" class="mt-0.5">
+                            <span>
+                                <span class="block text-sm font-semibold text-gray-800">Blank</span>
+                                <span class="block text-xs text-gray-400">Just a Home page — build everything yourself.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" wire:click="$set('showCreate', false)"
                             class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg cursor-pointer">

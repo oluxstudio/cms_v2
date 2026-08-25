@@ -14,3 +14,9 @@ Schedule::command('db:backup')->everySixHours()->withoutOverlapping();
 
 // Invoice automation: overdue refresh, recurring generation, payment reminders.
 Schedule::command('invoices:sweep')->hourly()->withoutOverlapping();
+
+// Booking automations: ~24h reminders + next-day review requests hourly,
+// "time for your next visit" prompts once a day (send-once stamps on bookings).
+Schedule::command('bookings:automate reminders')->hourly()->withoutOverlapping();
+Schedule::command('bookings:automate reviews')->hourly()->withoutOverlapping();
+Schedule::command('bookings:automate rebook')->dailyAt('10:00')->withoutOverlapping();

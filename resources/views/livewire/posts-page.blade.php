@@ -139,6 +139,25 @@
                     </label>
                     @include('partials.post-body-editor', ['mediaAssets' => $this->mediaAssets])
                 </div>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Category</label>
+                        <input wire:model="category" type="text" placeholder="e.g. Hair care" list="post-categories"
+                               class="w-full text-sm rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] px-3.5 py-2.5 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                        <datalist id="post-categories">
+                            @foreach ($this->categories as $cat)
+                                <option value="{{ $cat }}"></option>
+                            @endforeach
+                        </datalist>
+                        @error('category') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Tags <span class="font-normal text-gray-400">(comma-separated)</span></label>
+                        <input wire:model="tags" type="text" placeholder="styling, summer, tips"
+                               class="w-full text-sm rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] px-3.5 py-2.5 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                        @error('tags') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    </div>
+                </div>
                 <div class="grid sm:grid-cols-[1fr_auto] gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Cover image URL <a href="{{ url($site->name.'/media') }}" class="font-normal text-indigo-500 hover:underline">(Media)</a></label>

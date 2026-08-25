@@ -148,6 +148,8 @@ Route::get('/preview/{siteName}/{pageUrl}', [PublicPageController::class, 'show'
 
 // ── Root: the public landing page for EVERYONE (signed in or not) ────────────
 Route::view('/', 'landing')->name('landing');
+// Vertical landing: salons & barbershops (£79 pitch, demo link, register CTA).
+Route::view('/salons', 'salon-landing')->name('landing.salons');
 Route::redirect('/welcome', '/');
 
 // Public "getting started" tutorial — linked from the post-payment email.

@@ -15,6 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Live demo linked from the /salons vertical landing page (hairco demo).
+    'salon_demo_url' => env('SALON_DEMO_URL'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
