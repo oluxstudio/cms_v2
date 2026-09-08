@@ -74,8 +74,7 @@
         $railUser = auth()->user();
         $railCounts = [
             'alerts' => \App\Models\Alert::visibleTo($currentSite, $railUser)->whereNull('read_at')->count(),
-            'messages' => \App\Models\Message::visibleTo($currentSite, $railUser)->whereNull('read_at')
-                ->where('sender_id', '!=', $railUser->id)->count(),
+            'messages' => \App\Models\Message::unreadCountFor($currentSite, $railUser),
             'todos' => \App\Models\Todo::visibleTo($currentSite, $railUser)->where('status', 'open')->count(),
         ];
     }
@@ -233,7 +232,7 @@
                         $railTabs = [
                             'alerts'   => ['Alerts', '#ef4444', 'M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'],
                             'messages' => ['Messages', '#6366f1', 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.4-4 8-9 8a9.9 9.9 0 01-4-.8L3 20l1.3-3.9A7.4 7.4 0 013 12c0-4.4 4-8 9-8s9 3.6 9 8z'],
-                            'todos'    => ['Todos', '#10b981', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                            'todos'    => ['Tasks', '#10b981', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
                         ];
                     @endphp
 
@@ -281,6 +280,16 @@
                 {{-- Normal slot / rail detail. h-full so height propagates to
                      full-height pages; #MainBody's overflow-y-auto scrolls taller ones. --}}
                 <div class="h-full">
+                    @if (auth()->check() && auth()->user()->password !== null && auth()->user()->password_changed_at === null && ! session('pw-banner-dismissed'))
+                        {{-- Invited members arrive on an emailed temporary password — nudge, don't force. --}}
+                        <div class="flex items-center justify-between gap-3 mx-4 mt-3 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200/70 dark:border-amber-500/20 text-sm text-amber-800 dark:text-amber-300">
+                            <span>You're using a temporary password — set your own from <a href="{{ url('/settings') }}" class="font-bold underline">Settings</a>.</span>
+                            <form method="POST" action="{{ url()->current() }}" onsubmit="return false">
+                                <button type="button" onclick="fetch('{{ route('pw-banner.dismiss') }}', {method:'POST', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}}).then(() => this.closest('div').remove())"
+                                        class="text-amber-500 hover:text-amber-700 font-bold" aria-label="Dismiss">✕</button>
+                            </form>
+                        </div>
+                    @endif
                     <div x-show="!detail" class="h-full">{{ $slot }}</div>
 
                     @auth

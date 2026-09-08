@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Jobs\InstallTemplateJob;
 use App\Models\Collection;
 use App\Models\CollectionItem;
 use App\Models\Component;
@@ -30,6 +31,9 @@ use Livewire\Component as LivewireComponent;
 class ConnectReviewPage extends LivewireComponent
 {
     public Site $site;
+
+    /** Embedded inside another page (e.g. the page-detail Content tab): hides page-level chrome like the client-URL bar. */
+    public bool $embedded = false;
 
     /** The client site URL to embed (stored as the `client_url` site attribute). */
     public string $clientUrl = '';
@@ -71,11 +75,60 @@ class ConnectReviewPage extends LivewireComponent
         $this->flash = $url ? 'Preview URL saved.' : 'Preview URL cleared.';
     }
 
-    /** The iframe src: the selected page of the client site, in edit mode. */
+    /**
+     * Background template-install state: '' | installing | done | failed.
+     * Set by TemplateInstaller::bind() and finished by InstallTemplateJob;
+     * the blade polls while it's 'installing'.
+     */
+    public function getInstallStatusProperty(): string
+    {
+        return (string) $this->site->getAttr('template_install', '');
+    }
+
+    /** Re-run the background install for the currently applied design. */
+    public function retryInstall(): void
+    {
+        abort_unless($this->site->allows(Auth::user(), 'builder.manage'), 403);
+        $row = $this->site->installedTemplates()->whereNotNull('applied_at')->first();
+        if (! $row) {
+            return;
+        }
+        $this->site->setAttr('template_install', 'installing');
+        InstallTemplateJob::dispatch($this->site->id, $row->id);
+    }
+
+    /**
+     * Live preview: the clean visitor-facing view of the current page —
+     * the applied template rendering this site's content, NO edit chrome.
+     */
+    public function getLivePreviewUrlProperty(): ?string
+    {
+        if ($this->clientUrl !== '') {
+            return rtrim($this->clientUrl, '/').'/'.ltrim($this->previewPath, '/');
+        }
+
+        return $this->site->templatePreviewUrl(ltrim($this->previewPath, '/') ?: null);
+    }
+
+    /** Renderer mode: no external client URL — embed the site's own template renderer. */
+    public function getRendererModeProperty(): bool
+    {
+        return $this->clientUrl === '';
+    }
+
+    /**
+     * The iframe src: the external client site (edit mode) when connected,
+     * otherwise the site's OWN template renderer showing live CMS content.
+     */
     public function getEmbedUrlProperty(): ?string
     {
         if ($this->clientUrl === '') {
-            return null;
+            $page = ltrim($this->previewPath, '/') ?: null;
+
+            $url = $this->site->templatePreviewUrl($page);
+
+            // Edit mode for the shell's olux-edit plugin (click-to-edit).
+            return $url ? $url.(str_contains($url, '?') ? '&' : '?').'olx-edit=1' : null;
         }
         $base = rtrim($this->clientUrl, '/').'/'.ltrim($this->previewPath, '/');
         $sep = str_contains($base, '?') ? '&' : '?';
@@ -112,13 +165,77 @@ class ConnectReviewPage extends LivewireComponent
         $lkey = strtolower($key);
 
         return match ($kind) {
-            'collection' => Collection::where('site_id', $this->site->id)->whereRaw('LOWER(slug) = ?', [$lkey])->first(),
+            // Markers may carry the slug ("about-points") OR its camel form
+            // ("heroTags") — accept both by kebab-ing the key too.
+            'collection' => Collection::where('site_id', $this->site->id)
+                ->whereRaw('LOWER(slug) IN (?, ?)', [$lkey, strtolower(Str::kebab((string) $key))])->first(),
             'form' => Form::where('site_id', $this->site->id)->whereRaw('LOWER(name) = ?', [$lkey])->first(),
             'post' => Post::where('site_id', $this->site->id)->whereRaw('LOWER(slug) = ?', [$lkey])->first(),
             // Component key = camelCase(name); match case-insensitively so
-            // "Book CTA" (→bookCTA) resolves a data-olx-key="bookCta".
-            default => $this->site->contentComponents()->get()->first(fn (Component $c) => strtolower(Str::camel($c->name)) === $lkey),
+            // "Book CTA" (→bookCTA) resolves a data-olx-key="bookCta". Renderer
+            // shells send the slug form instead ("Why Us" → why-us) — accept
+            // both, PREFERRING components attached to the page being previewed
+            // (legacy sites can carry same-named components on several pages).
+            default => $this->componentByKey($lkey),
         };
+    }
+
+    /**
+     * "＋ Add item" under a repeatable list in the preview: rows live as
+     * component nodes labelled "{Prefix} {n} {Field}" — clone the first
+     * row's field set as row n+1 (values copied so the layout stays whole),
+     * then open the component so the owner can edit the new row.
+     */
+    public function inlineNodeItemAdd(?string $key, string $prefix): void
+    {
+        $this->guard();
+        $component = $this->componentByKey(strtolower((string) $key));
+        if (! $component || $prefix === '') {
+            return;
+        }
+        $component->load('nodes');
+
+        $rows = [];
+        foreach ($component->nodes as $n) {
+            if (preg_match('/^'.preg_quote($prefix, '/').' (\d+) (.+)$/', (string) $n->label, $m)) {
+                $rows[(int) $m[1]][$m[2]] ??= $n;
+            }
+        }
+        if ($rows === []) {
+            return;
+        }
+        ksort($rows);
+        $next = max(array_keys($rows)) + 1;
+        $template = $rows[array_key_first($rows)];
+
+        app(ContentVersioner::class)->capture($component, Auth::user()?->name);
+        $order = (int) $component->nodes->max('order') + 1;
+        foreach ($template as $field => $node) {
+            $component->nodes()->create([
+                'label' => "{$prefix} {$next} {$field}",
+                'type' => $node->type,
+                'value' => (string) $node->value,
+                'parent' => '0',
+                'order' => $order++,
+            ]);
+        }
+
+        $this->select('component', $component->id);
+        $this->dispatch('olx-editor-focus', target: 'fields');
+        $this->refreshPreview('Item added');
+    }
+
+    /** Slug/camel component lookup, current-preview-page first. */
+    private function componentByKey(string $lkey): ?Component
+    {
+        $match = fn (Component $c) => strtolower(Str::camel($c->name)) === $lkey || Str::slug($c->name) === $lkey;
+
+        $page = $this->site->livePages()->where('url', '/'.ltrim($this->previewPath, '/'))->first();
+        if ($page && ($hit = $page->components()->with('nodes')->get()->first($match))) {
+            return $hit;
+        }
+
+        return $this->site->contentComponents()->get()->first($match);
     }
 
     /** Media picker selection → fill the image node being edited (@media ref). */
@@ -302,7 +419,29 @@ class ConnectReviewPage extends LivewireComponent
             $component = $id
                 ? Component::with('nodes')->where('site_id', $this->site->id)->find($id)
                 : $this->resolveByKey('component', (string) $key)?->load('nodes');
-            $node = $component ? $this->nodeByFieldKey($component, $field) : null;
+            if (! $component) {
+                return;
+            }
+            $node = $this->nodeByFieldKey($component, $field);
+            // Marker exists in the template but the component lacks the node
+            // (dynamic field() bindings aren't extracted) — create it so the
+            // edit persists and the field appears in the sidebar from now on.
+            if (! $node && $field !== '' && ! str_contains($field, '.')) {
+                app(ContentVersioner::class)->capture($component, Auth::user()?->name);
+                $node = $component->nodes()->create([
+                    'label' => Str::headline($field),
+                    'type' => 'text',
+                    'value' => $value,
+                    'parent' => '0',
+                    'order' => (int) $component->nodes->max('order') + 1,
+                ]);
+                if ($this->selectedId) {
+                    $this->loadEdit();
+                }
+                $this->refreshPreview('Saved', reloadFrame: false);
+
+                return;
+            }
             if (! $node) {
                 return;
             }
@@ -315,7 +454,7 @@ class ConnectReviewPage extends LivewireComponent
         if ($this->selectedId) {
             $this->loadEdit();
         }
-        $this->refreshPreview('Saved');
+        $this->refreshPreview('Saved', reloadFrame: false);
     }
 
     /** ✕ on a collection item inside the preview (standalone or embedded in a component). */
@@ -377,6 +516,137 @@ class ConnectReviewPage extends LivewireComponent
         // Jump the editor to the freshly added item so it's ready to fill in.
         $this->dispatch('olx-editor-focus', target: 'last-item');
         $this->refreshPreview('Item added');
+    }
+
+    /**
+     * Inline edit of a collection row's field in a RENDERER preview — rows
+     * carry no item ids there, so the shell addresses the row by position
+     * among published items.
+     */
+    /**
+     * Link/button editor from the preview: saves the label AND the href in one
+     * go. The href lands in the sibling field whose name looks like a link
+     * (href/url/link) — created on the component when it doesn't exist yet.
+     */
+    public function inlineLinkEdit(?string $key, string $kind, string $labelField, string $label, string $href, ?int $index = null, string $oldLabel = '', string $oldHref = ''): void
+    {
+        $this->guard();
+
+        if ($index !== null && $kind === 'collection') {
+            $col = $this->resolveCollection(null, $key);
+            $item = $col?->items()->where('status', 'published')->orderBy('position')->orderBy('id')
+                ->get()->values()->get($index);
+            if (! $item) {
+                return;
+            }
+            app(ContentVersioner::class)->capture($col, Auth::user()?->name);
+            $data = $item->data ?? [];
+            if ($label !== '') {
+                $data[$labelField] = $label;
+            }
+            // Find the row's link-ish field; default to "href".
+            $hrefField = collect(array_keys($data))
+                ->merge(collect($col->fields ?? [])->pluck('key'))
+                ->first(fn ($k) => preg_match('/href|url|link/i', (string) $k)) ?: 'href';
+            if ($href !== '') {
+                $data[$hrefField] = $href;
+            }
+            $item->update(['data' => $data]);
+            $this->refreshPreview('Saved', reloadFrame: false);
+
+            return;
+        }
+
+        $component = $this->resolveByKey('component', (string) $key)?->load('nodes');
+        if (! $component) {
+            return;
+        }
+        app(ContentVersioner::class)->capture($component, Auth::user()?->name);
+
+        // 1. Marked label → node by field key. 2. UNMARKED links (nav menus:
+        //    "Left Nav 2 Label"/"… Href" node rows) → match nodes by their
+        //    CURRENT values, pairing label+href via the shared "{prefix} {n}" stem.
+        $labelNode = $labelField !== '' ? $this->nodeByFieldKey($component, $labelField) : null;
+        if (! $labelNode && $oldLabel !== '') {
+            $labelNode = $component->nodes->first(fn ($n) => trim((string) $n->value) === $oldLabel
+                && ! preg_match('/href|url|link/i', (string) $n->label));
+        }
+        if ($label !== '' && $labelNode) {
+            $labelNode->update(['value' => $label]);
+        }
+
+        if ($href !== '') {
+            $hrefNode = null;
+            if ($labelNode && preg_match('/^(.*?)\s*(label|title|text|name)$/i', (string) $labelNode->label, $m)) {
+                $stem = trim($m[1]); // e.g. "Right Nav 2"
+                if ($stem !== '') {
+                    $hrefNode = $component->nodes->first(fn ($n) => preg_match('/href|url|link/i', (string) $n->label)
+                        && str_starts_with((string) $n->label, $stem));
+                }
+            }
+            $hrefNode ??= $oldHref !== ''
+                ? $component->nodes->first(fn ($n) => trim((string) $n->value) === $oldHref
+                    && preg_match('/href|url|link/i', (string) $n->label))
+                : null;
+            $hrefNode ??= $component->nodes->first(fn ($n) => preg_match('/^(link|href|url)$/i', (string) $n->label));
+
+            if ($hrefNode) {
+                $hrefNode->update(['value' => $href]);
+            } elseif ($labelNode) {
+                $component->nodes()->create([
+                    'label' => 'Link', 'type' => 'text', 'value' => $href,
+                    'parent' => '0', 'order' => (int) $component->nodes->max('order') + 1,
+                ]);
+            }
+        }
+        if ($this->selectedId === $component->id) {
+            $this->loadEdit();
+        }
+        $this->refreshPreview('Saved', reloadFrame: false);
+    }
+
+    public function inlineFieldEditByIndex(?string $key, string $field, string $value, int $index): void
+    {
+        $this->guard();
+        $col = $this->resolveCollection(null, $key);
+        if (! $col || $field === '') {
+            return;
+        }
+        $item = $col->items()->where('status', 'published')->orderBy('position')->orderBy('id')
+            ->get()->values()->get($index);
+        if (! $item) {
+            return;
+        }
+        app(ContentVersioner::class)->capture($col, Auth::user()?->name);
+        $data = $item->data ?? [];
+        $data[$field] = $value;
+        $item->update(['data' => $data]);
+        if ($this->selectedId === $col->id) {
+            $this->loadEdit();
+        }
+        $this->refreshPreview('Saved', reloadFrame: false);
+    }
+
+    /**
+     * ✕ on a collection row in a RENDERER preview: rows there carry no item
+     * ids, so the shell sends the row's position among published items.
+     */
+    public function inlineItemRemoveByIndex(?string $key, int $index): void
+    {
+        $this->guard();
+        $col = $this->resolveCollection(null, $key);
+        if (! $col) {
+            return;
+        }
+        $item = $col->items()->where('status', 'published')->orderBy('position')->orderBy('id')
+            ->get()->values()->get($index);
+        if (! $item) {
+            return;
+        }
+        app(ContentVersioner::class)->capture($col, Auth::user()?->name);
+        $item->delete();
+        $this->select('collection', $col->id);
+        $this->refreshPreview('Item removed');
     }
 
     /**
@@ -503,8 +773,10 @@ class ConnectReviewPage extends LivewireComponent
                         'value' => '', 'parent' => '0', 'order' => (int) $component->nodes()->max('order') + 1]);
                 $parent = $parentNode->id;
             }
-            $type = in_array($spec['type'] ?? 'text', ['text', 'url', 'image', 'number', 'boolean', 'color'], true)
-                ? $spec['type'] : 'text';
+            $type = (string) ($spec['type'] ?? 'text');
+            if (! in_array($type, ['text', 'url', 'image', 'number', 'boolean', 'color'], true)) {
+                $type = 'text';
+            }
             $component->nodes()->create(['label' => Str::headline(end($segments)), 'type' => $type,
                 'value' => Str::limit((string) ($spec['value'] ?? ''), 5000, ''),
                 'parent' => $parent, 'order' => (int) $component->nodes()->max('order') + 1]);
@@ -802,8 +1074,27 @@ class ConnectReviewPage extends LivewireComponent
      * the rest republish after the response so the editor stays snappy.
      * No iframe reload needed: connect.js re-applies content in place.
      */
-    private function refreshPreview(string $what = 'Saved'): void
+    private function refreshPreview(string $what = 'Saved', bool $reloadFrame = true): void
     {
+        // Renderer mode: the shell reads /api/sites/{name}/content once at
+        // boot — reload the iframe so the fresh edit shows. Live-app-derived
+        // templates ALSO read page.json for their own field() bindings, so
+        // republish the current page too (cheap, synchronous).
+        // Inline in-page edits skip the reload: the typed text is already
+        // on screen, and yanking the frame away mid-editing is jarring.
+        if ($this->rendererMode) {
+            $current = $this->site->livePages()->get()->first(fn ($p) => $p->url === $this->previewPath);
+            if ($current) {
+                app(PageJsonPublisher::class)->publish($current);
+            }
+            // In-place: the shell re-fetches content and Vue re-renders —
+            // no iframe reload, the preview never flashes.
+            $this->dispatch('olx-refresh-frame');
+            $this->dispatch('toast', level: 'success', title: $what, message: 'Saved — the preview updates in place.');
+
+            return;
+        }
+
         $pages = $this->site->livePages()->get();
         $current = $pages->first(fn ($p) => $p->url === $this->previewPath) ?? $pages->first();
         if ($current) {
@@ -840,7 +1131,13 @@ class ConnectReviewPage extends LivewireComponent
     /** Origin of the embedded client site — the ONLY origin the message bridge trusts. */
     public function getClientOriginProperty(): string
     {
-        $parts = parse_url($this->clientUrl);
+        // Renderer mode embeds the CMS's own nuxt-preview shell (same origin),
+        // so its olux-edit plugin messages are trusted from our own origin.
+        if ($this->clientUrl === '') {
+            $parts = parse_url(url('/'));
+        } else {
+            $parts = parse_url($this->clientUrl);
+        }
         if (! $parts || empty($parts['scheme']) || empty($parts['host'])) {
             return '';
         }
@@ -871,6 +1168,7 @@ class ConnectReviewPage extends LivewireComponent
 
         return view('livewire.connect-review-page', [
             'embedUrl' => $this->embedUrl,
+            'livePreviewUrl' => $this->livePreviewUrl,
             'clientOrigin' => $this->clientOrigin,
             'pages' => $this->site->livePages()->orderBy('name')->get(['name', 'url']),
             'versions' => $versions,

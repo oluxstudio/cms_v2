@@ -57,6 +57,13 @@ class CreatorTemplatesPage extends Component
         return app(StripeConnect::class)->canSell(Auth::user());
     }
 
+    /** Business-plan gate (moderators always may — first-party templates). */
+    public function getCanPublishProperty(): bool
+    {
+        return $this->isModerator
+            || Auth::user()->currentSubscription()->allowsMarketplacePublishing();
+    }
+
     public function getMyTemplatesProperty()
     {
         return Template::where('user_id', Auth::id())->latest('id')->get();
@@ -96,6 +103,11 @@ class CreatorTemplatesPage extends Component
             return;
         }
 
+        if (! $this->canPublish) {
+            $this->err = 'Publishing to the template marketplace needs the Business plan.';
+
+            return;
+        }
         $priceCents = (int) round(((float) $this->tPrice) * 100);
         if ($priceCents > 0 && ! $this->canSell) {
             $this->err = 'Connect payouts before publishing a paid template (or set the price to 0).';

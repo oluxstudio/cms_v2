@@ -3,13 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Site;
-use App\Services\Stripe\StripeGateway;
+use App\Payments\CheckoutLine;
+use App\Payments\CheckoutRequest;
+use App\Payments\PaymentManager;
+use App\Payments\WebhookEventKind;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class DonateController extends Controller
 {
-    public function __construct(private StripeGateway $stripe) {}
+    public function __construct(private PaymentManager $payments) {}
 
     private function site(string $siteName): Site
     {
@@ -48,7 +51,8 @@ class DonateController extends Controller
             'message' => ['nullable', 'string', 'max:500'],
         ]);
 
-        if (! $site->stripeReady()) {
+        $gateway = $this->payments->for($site);
+        if (! $gateway->available($site)) {
             return back()->with('donate_error', 'Donations are not available right now.');
         }
 
@@ -64,21 +68,13 @@ class DonateController extends Controller
         ]);
 
         try {
-            $session = $this->stripe->createCheckoutSession(
-                site: $site,
-                lineItems: [[
-                    'price_data' => [
-                        'currency' => $currency,
-                        'product_data' => ['name' => 'Donation to '.ucwords(str_replace('-', ' ', $site->name))],
-                        'unit_amount' => $cents,
-                    ],
-                    'quantity' => 1,
-                ]],
+            $session = $gateway->createCheckout($site, new CheckoutRequest(
+                lines: [new CheckoutLine('Donation to '.ucwords(str_replace('-', ' ', $site->name)), $cents, $currency)],
                 successUrl: url($site->name.'/donate/success').'?session_id={CHECKOUT_SESSION_ID}',
                 cancelUrl: url($site->name.'/donate'),
                 metadata: ['donation_id' => $donation->id, 'site_id' => $site->id],
                 customerEmail: $data['email'] ?? null,
-            );
+            ));
         } catch (\Throwable $e) {
             Log::error('Stripe donation failed', ['site' => $site->id, 'msg' => $e->getMessage()]);
             $donation->delete();
@@ -103,24 +99,25 @@ class DonateController extends Controller
     {
         $site = $this->site($siteName);
 
+        $gateway = $this->payments->for($site);
+
         try {
-            $event = $this->stripe->verifyWebhook($site, $request->getContent(), $request->header('Stripe-Signature', ''));
+            $event = $gateway->verifyWebhook($site, $request->getContent(), $request->header($gateway->signatureHeaderName()));
         } catch (\Throwable $e) {
             return response('Invalid signature', 400);
         }
 
-        if ($event->type === 'checkout.session.completed') {
-            $session = $event->data->object;
-            $id = $session->metadata->donation_id ?? null;
+        if ($event->kind === WebhookEventKind::Completed) {
+            $id = $event->metadata['donation_id'] ?? null;
 
             $donation = $id
                 ? $site->donations()->find($id)
-                : $site->donations()->where('stripe_session_id', $session->id)->first();
+                : $site->donations()->where('stripe_session_id', $event->sessionId)->first();
 
             if ($donation) {
                 $donation->update([
-                    'donor_email' => $donation->donor_email ?: ($session->customer_details->email ?? null),
-                    'donor_name' => $donation->donor_name ?: ($session->customer_details->name ?? null),
+                    'donor_email' => $donation->donor_email ?: $event->payerEmail,
+                    'donor_name' => $donation->donor_name ?: $event->payerName,
                 ]);
                 $donation->markPaid();
             }

@@ -83,6 +83,47 @@
         </div>
     @endif
 
+    {{-- ── Per-site usage ── --}}
+    @if ($sites->isNotEmpty())
+    <h2 class="mt-6 mb-2 text-sm font-bold text-gray-900 dark:text-white">Usage by site</h2>
+    <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left" style="min-width:760px">
+                <thead>
+                    <tr class="border-b border-gray-100 dark:border-white/[0.05]">
+                        @foreach (['Site', 'Storage', 'Pages', 'Products', 'Bookings', 'Orders', 'Revenue', 'Contacts', 'Messages', 'Visits 30d'] as $th)
+                            <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ $th }}</th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($sites as $s)
+                    <tr class="border-b border-gray-50 dark:border-white/[0.04] last:border-0">
+                        <td class="px-4 py-2.5 text-xs font-bold text-gray-900 dark:text-white whitespace-nowrap">{{ $s->name }}
+                            @if($s->live)<span class="ml-1 text-[9px] font-bold text-emerald-500 uppercase">live</span>@endif
+                        </td>
+                        <td class="px-4 py-2.5 text-xs tabular-nums text-gray-600 dark:text-gray-300">{{ $fmtBytes((int) ($usage['media_bytes'][$s->id] ?? 0)) }}</td>
+                        <td class="px-4 py-2.5 text-xs tabular-nums text-gray-600 dark:text-gray-300">{{ $s->pages_count }}</td>
+                        <td class="px-4 py-2.5 text-xs tabular-nums text-gray-600 dark:text-gray-300">{{ (int) ($usage['products'][$s->id] ?? 0) }}</td>
+                        <td class="px-4 py-2.5 text-xs tabular-nums text-gray-600 dark:text-gray-300">{{ (int) ($usage['bookings'][$s->id] ?? 0) }}</td>
+                        <td class="px-4 py-2.5 text-xs tabular-nums text-gray-600 dark:text-gray-300">{{ (int) ($usage['orders'][$s->id] ?? 0) }}</td>
+                        <td class="px-4 py-2.5 text-xs font-bold tabular-nums text-gray-900 dark:text-white">{{ \App\Support\Money::format((int) ($usage['revenue_cents'][$s->id] ?? 0), 'gbp') }}</td>
+                        <td class="px-4 py-2.5 text-xs tabular-nums text-gray-600 dark:text-gray-300">{{ (int) ($usage['contacts'][$s->id] ?? 0) }}</td>
+                        <td class="px-4 py-2.5 text-xs tabular-nums text-gray-600 dark:text-gray-300">{{ (int) ($usage['messages'][$s->id] ?? 0) }}</td>
+                        <td class="px-4 py-2.5 text-xs font-bold tabular-nums text-gray-900 dark:text-white">{{ number_format((int) ($usage['visits_30d'][$s->id] ?? 0)) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-4 bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-1">Traffic — all sites, 30 days</h2>
+        <div id="pa-visits-chart" wire:ignore></div>
+    </div>
+    @endif
+
     {{-- ── Diary / timeline ── --}}
     <div class="mt-7 flex flex-wrap items-center gap-2">
         <h2 class="text-sm font-bold text-gray-900 dark:text-white mr-2">Activity diary</h2>
@@ -156,3 +197,27 @@
         @endif
     </div>
 </div>
+
+@script
+<script>
+(function () {
+    const el = document.querySelector('#pa-visits-chart');
+    if (!el || typeof ApexCharts === 'undefined') return;
+    const isDark = document.documentElement.classList.contains('dark');
+    const sub = isDark ? '#9ca3af' : '#6b7280';
+    const c = @js($charts);
+    new ApexCharts(el, {
+        chart: { type: 'area', height: 170, background: 'transparent', toolbar: { show: false } },
+        series: [{ name: 'Visits', data: c.visits }],
+        xaxis: { categories: c.labels, tickAmount: 6, labels: { style: { colors: sub, fontSize: '10px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+        yaxis: { labels: { style: { colors: sub, fontSize: '10px' } } },
+        stroke: { curve: 'smooth', width: 2 }, colors: ['#6366f1'],
+        fill: { type: 'gradient', gradient: { opacityFrom: 0.3, opacityTo: 0.03 } },
+        dataLabels: { enabled: false },
+        grid: { borderColor: isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)' },
+        tooltip: { theme: isDark ? 'dark' : 'light' },
+        noData: { text: 'No traffic yet', style: { color: sub } },
+    }).render();
+})();
+</script>
+@endscript

@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Livewire\AdminVerifyPage;
 use App\Livewire\PlatformAccountPage;
+use App\Livewire\PlatformAccountsPage;
 use App\Livewire\PlatformDashboard;
 use App\Models\AccountActivityLog;
 use App\Models\Site;
@@ -126,4 +127,68 @@ it('forbids the account detail page for non-supers', function () {
     $target = User::factory()->create();
 
     $this->actingAs($user)->get('/admin/accounts/'.$target->id)->assertForbidden();
+});
+
+it('shows money, storage and trial analytics on the dashboard', function () {
+    $admin = superAdmin();
+
+    // The dashboard aggregates GLOBALLY and the suite shares one database, so
+    // assert on the DELTA this test's data adds rather than absolute totals.
+    $before = Livewire::actingAs($admin)->test(PlatformDashboard::class)->viewData('money');
+
+    // A paying business account with a price override, media and a paid order.
+    $client = User::factory()->create(['name' => 'Big Client']);
+    $client->currentSubscription()->update(['plan' => 'business', 'status' => 'active', 'price_overrides' => ['business' => 5000]]);
+    $site = Site::create(['user_id' => $client->id, 'name' => 'big-'.uniqid(), 'domain' => 'big-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
+    $site->media()->create(['name' => 'a.jpg', 'file_type' => 'image', 'url' => '/x.jpg', 'size' => '2 MB', 'bytes' => 2097152]);
+    $site->orders()->create(['status' => 'paid', 'total_cents' => 12300, 'currency' => 'gbp', 'paid_at' => now()->subDay()]);
+
+    // A trial ending in 3 days.
+    $trialist = User::factory()->create(['name' => 'Trial Tina']);
+    $trialist->currentSubscription()->update(['plan' => 'trial', 'status' => 'trialing', 'trial_ends_at' => now()->addDays(3)]);
+
+    $component = Livewire::actingAs($admin)->test(PlatformDashboard::class);
+    $money = $component->viewData('money');
+    expect($money['mrr_cents'] - $before['mrr_cents'])->toBe(5000) // override wins over the £79 list price
+        ->and($money['gmv_30d_cents'] - $before['gmv_30d_cents'])->toBe(12300);
+
+    $component->assertSee('Estimated MRR')->assertSee('Trial Tina')->assertSee('Big Client');
+});
+
+it('sorts and filters accounts by usage and plan', function () {
+    $admin = superAdmin();
+    $heavy = User::factory()->create(['name' => 'Heavy Storage']);
+    $heavy->currentSubscription()->update(['plan' => 'pro', 'status' => 'active']);
+    $site = Site::create(['user_id' => $heavy->id, 'name' => 'heavy-'.uniqid(), 'domain' => 'heavy-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
+    $site->media()->create(['name' => 'b.jpg', 'file_type' => 'image', 'url' => '/y.jpg', 'size' => '5 MB', 'bytes' => 5242880]);
+    User::factory()->create(['name' => 'Light User']);
+
+    $rows = Livewire::actingAs($admin)->test(PlatformAccountsPage::class)
+        ->call('setSort', 'storage')
+        ->viewData('accounts');
+    expect($rows->first()->name)->toBe('Heavy Storage')
+        ->and((int) $rows->first()->storage_bytes)->toBe(5242880);
+
+    // Plan filter narrows to pro accounts only.
+    $filtered = Livewire::actingAs($admin)->test(PlatformAccountsPage::class)
+        ->call('filterPlan', 'pro')
+        ->viewData('accounts');
+    expect($filtered->pluck('name'))->toContain('Heavy Storage')->not->toContain('Light User');
+});
+
+it('aggregates per-site usage on the account detail page', function () {
+    $admin = superAdmin();
+    $client = User::factory()->create();
+    $s1 = Site::create(['user_id' => $client->id, 'name' => 'u1-'.uniqid(), 'domain' => 'u1-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
+    $s2 = Site::create(['user_id' => $client->id, 'name' => 'u2-'.uniqid(), 'domain' => 'u2-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
+    $s1->orders()->create(['status' => 'paid', 'total_cents' => 900, 'currency' => 'gbp', 'paid_at' => now()]);
+    $s1->orders()->create(['status' => 'pending', 'total_cents' => 500, 'currency' => 'gbp']);
+    $s2->contacts()->create(['name' => 'C', 'email' => 'c@example.com', 'status' => 'new']);
+
+    $usage = Livewire::actingAs($admin)->test(PlatformAccountPage::class, ['userId' => $client->id])
+        ->viewData('usage');
+    expect((int) ($usage['orders'][$s1->id] ?? 0))->toBe(2)
+        ->and((int) ($usage['revenue_cents'][$s1->id] ?? 0))->toBe(900)
+        ->and((int) ($usage['contacts'][$s2->id] ?? 0))->toBe(1)
+        ->and($usage['orders'][$s2->id] ?? null)->toBeNull();
 });

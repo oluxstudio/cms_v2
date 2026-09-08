@@ -96,7 +96,10 @@ class Collection extends Model
             $items = $everything ? $this->items : $this->items->where('status', 'published')->values();
             $out['items'] = $items->map(fn (CollectionItem $i) => [
                 'id' => $i->id,
-                'data' => $i->data ?? [],
+                // @media/… refs in item fields resolve to served URLs.
+                'data' => collect($i->data ?? [])->map(fn ($v) => is_string($v) && str_starts_with($v, '@media/')
+                    ? Media::resolveRef($this->site_id, $v)
+                    : $v)->all(),
                 'status' => $i->status,
                 'created_at' => $i->created_at?->toIso8601String(),
             ])->values()->all();

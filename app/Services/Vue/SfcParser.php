@@ -286,7 +286,7 @@ class SfcParser
             $selfClose = ($t[4][0] ?? '') === '/';
 
             if (! $closing && $tag === 'img') {
-                if ($vforDepth === 0 && preg_match('/\ssrc="(\/assets\/[^"]+)"/', $attrs, $m)) {
+                if ($vforDepth === 0 && ! str_contains($attrs, 'data-olx-skip') && preg_match('/\ssrc="(\/assets\/[^"]+)"/', $attrs, $m)) {
                     $fixed[] = ['tag' => 'img', 'kind' => 'image', 'value' => $m[1], 'start' => $pos, 'end' => $pos + strlen($full)];
                 }
 
@@ -330,6 +330,11 @@ class SfcParser
     private static function collect(array $el, string $tag, string $inner, int $endPos, int $vforDepth, array &$fixed, array &$ranges): void
     {
         if ($vforDepth > 0 || ! in_array($tag, self::TEXT_TAGS, true)) {
+            return;
+        }
+        // Author opt-out: UI chrome (filter chips, cart copy, wizard buttons)
+        // must never become CMS fields — labels would drift across versions.
+        if (str_contains($el['attrs'], 'data-olx-skip')) {
             return;
         }
         $trimmed = trim($inner);

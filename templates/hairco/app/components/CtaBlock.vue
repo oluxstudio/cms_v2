@@ -1,18 +1,18 @@
 <script setup lang="ts">
-
-const olux = useOluxContent('cta')
-const oluxFb: Record<string, string> = {"Headline":"Ready for a fresh look?","Text":"Chairs fill fast on weekends \u2014 reserve yours in under a minute.","CTA Label":"Book an appointment","CTA Link":"/appointment"}
+const oluxCms = useOluxContent('cta')
+const oluxFb: Record<string, string> = {"CTA Label":"Book an appointment","CTA Link":"/appointment"}
+const { field } = useCms()
 </script>
 
 <template>
-  <section class="cta" v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">
+  <section class="cta" data-olx-key="cta" data-olx-kind="component" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="cta-band">
         <div>
-          <h2>{{ olux.t('Headline', oluxFb['Headline']) }}</h2>
-          <p>{{ olux.t('Text', oluxFb['Text']) }}</p>
+          <h2 data-olx-field="heading">{{ field('cta', 'heading', 'Ready for a fresh look?') }}</h2>
+          <p data-olx-field="body">{{ field('cta', 'body', 'Chairs fill fast on weekends — reserve yours in under a minute.') }}</p>
         </div>
-        <a class="btn" :href="olux.t('CTA Link', oluxFb['CTA Link'])">{{ olux.t('CTA Label', oluxFb['CTA Label']) }}</a>
+        <a data-olx-field="ctaLabel" class="btn" :href="oluxCms.t('CTA Link', oluxFb['CTA Link'])">{{ oluxCms.t('CTA Label', oluxFb['CTA Label']) }}</a>
       </div>
     </div>
   </section>

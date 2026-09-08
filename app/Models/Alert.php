@@ -11,7 +11,7 @@ class Alert extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['site_id', 'user_id', 'level', 'type', 'audience', 'title', 'body', 'link', 'meta', 'read_at'];
+    protected $fillable = ['site_id', 'user_id', 'level', 'type', 'dedupe_key', 'audience', 'title', 'body', 'link', 'meta', 'read_at'];
 
     protected $casts = ['meta' => 'array', 'read_at' => 'datetime'];
 

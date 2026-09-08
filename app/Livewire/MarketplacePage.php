@@ -5,12 +5,11 @@ namespace App\Livewire;
 use App\Features\FeatureRegistry;
 use App\Livewire\Concerns\InteractsWithCuratedTemplates;
 use App\Models\Site;
-use App\Models\SitePaymentSettings;
 use App\Models\Template;
 use App\Models\TemplateRating;
-use App\Services\StripeConnect;
+use App\Services\ActivityLogger;
 use App\Services\TemplateCatalog;
-use App\Services\TemplateCommerce;
+use App\Services\TemplateInstaller;
 use App\Services\TemplatePackageImporter;
 use App\Services\TemplateRatings;
 use Illuminate\Support\Facades\Auth;
@@ -39,16 +38,6 @@ class MarketplacePage extends Component
     public array $form = [];
 
     /** Stripe payments panel. */
-    public bool $showPayments = false;
-
-    public string $pubKey = '';
-
-    public string $secretKey = '';
-
-    public string $webhookSecret = '';
-
-    public bool $hasSecret = false;
-
     public string $successMessage = '';
 
     public string $errorMessage = '';
@@ -97,7 +86,8 @@ class MarketplacePage extends Component
 
         if ($this->site->hasFeature($key)) {
             $this->site->disableFeature($key);
-            $this->successMessage = $feature['name'].' disabled.';
+            session()->flash('mp-message', $feature['name'].' disabled — its pages were removed from your menu.');
+            $this->redirect(url($this->site->name.'/marketplace'));
 
             return;
         }
@@ -112,7 +102,8 @@ class MarketplacePage extends Component
         }
 
         $this->site->enableFeature($key);
-        $this->successMessage = $feature['name'].' enabled.';
+        session()->flash('mp-message', $feature['name'].' enabled — its pages were added to your menu.');
+        $this->redirect(url($this->site->name.'/marketplace'));
     }
 
     public function openSettings(string $key): void
@@ -151,53 +142,8 @@ class MarketplacePage extends Component
         $this->closeSettings();
     }
 
-    public string $siteCurrency = 'gbp';
-
-    public function openPayments(): void
-    {
-        $ps = $this->site->paymentSettings;
-        $this->siteCurrency = $this->site->currency ?? 'gbp';
-        $this->pubKey = $ps->stripe_publishable ?? '';
-        $this->hasSecret = (bool) ($ps && filled($ps->stripe_secret));
-        $this->secretKey = '';
-        $this->webhookSecret = '';
-        $this->showPayments = true;
-    }
-
-    public function savePayments(): void
-    {
-        if (! $this->guard()) {
-            return;
-        }
-
-        $this->validate([
-            'pubKey' => ['nullable', 'string', 'max:255'],
-            'secretKey' => ['nullable', 'string', 'max:255'],
-            'webhookSecret' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $ps = $this->site->paymentSettings ?: new SitePaymentSettings(['site_id' => $this->site->id]);
-        $ps->site_id = $this->site->id;
-        $ps->stripe_publishable = $this->pubKey ?: null;
-
-        // Only overwrite secrets when a new value is entered (blank = keep existing).
-        if (filled($this->secretKey)) {
-            $ps->stripe_secret = $this->secretKey;
-        }
-        if (filled($this->webhookSecret)) {
-            $ps->stripe_webhook_secret = $this->webhookSecret;
-        }
-        $ps->livemode = str_starts_with($this->pubKey, 'pk_live_');
-        $ps->save();
-
-        // Site currency (default POUND) — drives every money string + checkout.
-        if (array_key_exists(strtolower($this->siteCurrency), config('currencies'))) {
-            $this->site->update(['currency' => strtolower($this->siteCurrency)]);
-        }
-
-        $this->showPayments = false;
-        $this->successMessage = 'Stripe payment settings saved.';
-    }
+    // Payment settings moved to their own page: /{site}/payments
+    // (App\Livewire\SitePaymentsPage).
 
     // ───────────────────────────────────────────── Templates marketplace (DB catalog)
 
@@ -300,52 +246,26 @@ class MarketplacePage extends Component
             return;
         }
 
-        $user = Auth::user();
-        $commerce = app(TemplateCommerce::class);
+        try {
+            $result = app(TemplateInstaller::class)->saveCatalogToSite(Auth::user(), $this->site, $tpl);
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
 
-        // Paid + not entitled → send the buyer to Stripe Checkout.
-        if (! $commerce->entitled($user, $tpl)) {
-            $connect = app(StripeConnect::class);
-            if (! $connect->configured()) {
-                $this->errorMessage = 'Paid templates require marketplace payments, which aren\'t set up yet.';
-
-                return;
-            }
-            try {
-                $url = $connect->checkout(
-                    $user, $tpl,
-                    route('templates.checkout.success').'?site='.urlencode($this->site->name),
-                    route('templates.checkout.cancel').'?site='.urlencode($this->site->name),
-                );
-            } catch (\Throwable $e) {
-                $this->errorMessage = $e->getMessage();
-
-                return;
-            }
-
-            return $this->redirect($url); // off to Stripe
+            return;
         }
-
-        // Entitled (free or already purchased) → record the free grant + install.
-        $commerce->grantFree($user, $tpl);
-
-        $this->site->installedTemplates()->create([
-            'template_id' => $tpl->id,
-            'template_version_id' => $tpl->latest_version_id,
-            'source' => 'catalog',
-            'builtin_key' => $tpl->builtin_key,
-            'name' => $tpl->name,
-            'description' => $tpl->description,
-            'category' => $tpl->category,
-            'accent_color' => $tpl->accent_color,
-            'gradient_class' => $tpl->gradient_class,
-        ]);
-        $tpl->increment('installs_count');
+        if (is_string($result)) {
+            return $this->redirect($result); // off to Stripe
+        }
 
         $this->successMessage = $tpl->name.' installed to this site.';
     }
 
-    /** Uninstall a template from this site (un-applying it first if it's in use). */
+    /**
+     * Uninstall a template from this site. A template that has been APPLIED
+     * has scaffolded real pages/components — deleting the install row would
+     * strand them looking like an uninstall, so applied templates are kept
+     * until the site stops using them.
+     */
     public function uninstallTemplate(string $id): void
     {
         if (! $this->guard()) {
@@ -353,6 +273,11 @@ class MarketplacePage extends Component
         }
         $st = $this->site->installedTemplates()->whereKey($id)->first();
         if (! $st) {
+            return;
+        }
+        if ($st->isApplied()) {
+            $this->templateError = '“'.$st->name.'” is applied to this site — its pages are in use. Switch the site to another template first.';
+
             return;
         }
         $st->delete();
@@ -384,6 +309,17 @@ class MarketplacePage extends Component
             $this->templateError = $e->getMessage();
 
             return;
+        }
+
+        try {
+            ActivityLogger::log($this->site->id, 'template', 'uploaded',
+                'Template “'.$tpl->name.'” uploaded from a .zip', [
+                    'entity_id' => $tpl->id,
+                    'description' => 'Direct upload by '.auth()->user()?->name.' — sanitised, not marketplace-reviewed.',
+                    'url' => '/marketplace',
+                ]);
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         $this->reset('templateZip');

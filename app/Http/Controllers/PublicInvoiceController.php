@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\Site;
-use App\Services\Stripe\StripeGateway;
+use App\Payments\CheckoutLine;
+use App\Payments\CheckoutRequest;
+use App\Payments\PaymentManager;
+use App\Payments\WebhookEventKind;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
@@ -14,7 +17,7 @@ use Illuminate\Http\Request;
  */
 class PublicInvoiceController extends Controller
 {
-    public function __construct(private StripeGateway $stripe) {}
+    public function __construct(private PaymentManager $payments) {}
 
     private function invoice(string $siteName, string $token): array
     {
@@ -81,30 +84,34 @@ class PublicInvoiceController extends Controller
         if ($invoice->status === 'paid') {
             return redirect()->route('public.invoice', [$siteName, $token]);
         }
-        abort_unless($invoice->isPayable() && $site->stripeReady(), 404);
+        // Friendly (not a 404): the invoice exists, the site just isn't taking
+        // card payments right now.
+        $gateway = $this->payments->for($site);
+        if (! $invoice->isPayable() || ! $gateway->available($site)) {
+            return redirect()->route('public.invoice', [$siteName, $token])
+                ->with('invoice_error', 'Online payment isn\'t available for this invoice right now — contact us to pay another way.');
+        }
 
-        $session = $this->stripe->createCheckoutSession(
-            $site,
-            collect($invoice->items)->map(fn ($i) => [
-                'price_data' => [
-                    'currency' => $invoice->currency,
-                    'product_data' => ['name' => $i['description'] ?: 'Item'],
-                    'unit_amount' => max(1, (int) $i['unit_cents']),
-                ],
-                'quantity' => max(1, (int) ($i['qty'] ?? 1)),
-            ])->when($invoice->tax_cents > 0, fn ($items) => $items->push([
-                'price_data' => [
-                    'currency' => $invoice->currency,
-                    'product_data' => ['name' => 'Tax'],
-                    'unit_amount' => $invoice->tax_cents,
-                ],
-                'quantity' => 1,
-            ]))->values()->all(),
-            route('public.invoice.success', [$siteName, $token]),
-            route('public.invoice', [$siteName, $token]),
-            ['invoice_id' => $invoice->id, 'site_id' => $site->id],
-            $invoice->customer_email,
-        );
+        $lines = collect($invoice->items)->map(fn ($i) => new CheckoutLine(
+            $i['description'] ?: 'Item', max(1, (int) $i['unit_cents']), $invoice->currency, max(1, (int) ($i['qty'] ?? 1)),
+        ))->when($invoice->tax_cents > 0, fn ($items) => $items->push(
+            new CheckoutLine('Tax', $invoice->tax_cents, $invoice->currency),
+        ))->values()->all();
+
+        try {
+            $session = $gateway->createCheckout($site, new CheckoutRequest(
+                lines: $lines,
+                successUrl: route('public.invoice.success', [$siteName, $token]),
+                cancelUrl: route('public.invoice', [$siteName, $token]),
+                metadata: ['invoice_id' => $invoice->id, 'site_id' => $site->id],
+                customerEmail: $invoice->customer_email,
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->route('public.invoice', [$siteName, $token])
+                ->with('invoice_error', 'Payment could not be started. Please try again shortly.');
+        }
 
         $invoice->update(['stripe_session_id' => $session->id]);
 
@@ -123,17 +130,18 @@ class PublicInvoiceController extends Controller
     {
         $site = Site::where('name', $siteName)->firstOrFail();
 
+        $gateway = $this->payments->for($site);
+
         try {
-            $event = $this->stripe->verifyWebhook($site, $request->getContent(), (string) $request->header('Stripe-Signature'));
+            $event = $gateway->verifyWebhook($site, $request->getContent(), $request->header($gateway->signatureHeaderName()));
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Invalid signature.'], 400);
         }
 
-        if ($event->type === 'checkout.session.completed') {
-            $session = $event->data->object;
-            $invoice = isset($session->metadata->invoice_id)
-                ? Invoice::where('site_id', $site->id)->find($session->metadata->invoice_id)
-                : Invoice::where('site_id', $site->id)->where('stripe_session_id', $session->id)->first();
+        if ($event->kind === WebhookEventKind::Completed) {
+            $invoice = isset($event->metadata['invoice_id'])
+                ? Invoice::where('site_id', $site->id)->find($event->metadata['invoice_id'])
+                : Invoice::where('site_id', $site->id)->where('stripe_session_id', $event->sessionId)->first();
 
             if ($invoice && $invoice->status !== 'paid') {
                 $invoice->markPaid();

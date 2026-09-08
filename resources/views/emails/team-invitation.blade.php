@@ -1,19 +1,30 @@
 <x-mail::message>
-# You've been invited 🎉
+# You're on the team 🎉
 
 @if ($inviterName)
-**{{ $inviterName }}** has invited you to join **{{ $accountName }}**'s team on {{ config('app.name') }} as **{{ $roleName }}**.
+**{{ $inviterName }}** has added you to **{{ $siteName }}** on {{ config('app.name') }} as **{{ $roleName }}**.
 @else
-You've been invited to join **{{ $accountName }}**'s team on {{ config('app.name') }} as **{{ $roleName }}**.
+You've been added to **{{ $siteName }}** on {{ config('app.name') }} as **{{ $roleName }}**.
 @endif
 
-Click the button below to verify your email and set up your access. What you can see and do is defined by the **{{ $roleName }}** role.
+@if ($tempPassword)
+An account is ready for you — just log in:
 
-<x-mail::button :url="$acceptUrl">
-Accept invitation
+<x-mail::panel>
+**Email:** {{ $email }}<br>
+**Temporary password:** {{ $tempPassword }}
+</x-mail::panel>
+
+For your security, change this password from **Settings** after your first login.
+@else
+Log in with your existing {{ config('app.name') }} account ({{ $email }}) — {{ $siteName }} will be waiting on your dashboard.
+@endif
+
+<x-mail::button :url="$loginUrl">
+Log in
 </x-mail::button>
 
-This invitation expires {{ $expiresAt->diffForHumans() }}. If you weren't expecting it, you can safely ignore this email — no account will be created.
+What you can see and do on {{ $siteName }} is defined by the **{{ $roleName }}** role. If you weren't expecting this, contact the person who added you.
 
 Thanks,<br>
 {{ config('app.name') }}

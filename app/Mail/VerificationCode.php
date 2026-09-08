@@ -3,13 +3,14 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /** The 6-digit code that verifies a new signup's email before the account is created. */
-class VerificationCode extends Mailable
+class VerificationCode extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Invoice;
 use App\Models\Site;
+use App\Services\OpsAlerts;
 use Illuminate\Console\Command;
 
 /**
@@ -21,11 +22,13 @@ class InvoiceSweep extends Command
     {
         $swept = 0;
         foreach (Site::all() as $site) {
-            if (! $site->hasFeature('invoices')) {
-                continue;
+            if ($site->hasFeature('invoices')) {
+                Invoice::sweep($site);
+                $swept++;
             }
-            Invoice::sweep($site);
-            $swept++;
+            // Generated action items (overdue invoices, stale quotes, pending
+            // bookings) — feature-gated internally, cheap for quiet sites.
+            OpsAlerts::sweep($site);
         }
         $this->info("Swept invoices for {$swept} site(s).");
 

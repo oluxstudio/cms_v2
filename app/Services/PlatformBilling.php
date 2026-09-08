@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\TutorialWelcome;
 use App\Models\AccountSubscription;
 use App\Models\User;
+use App\Services\Domains\DomainPurchase;
 use Illuminate\Support\Facades\Mail;
 use Stripe\Checkout\Session;
 use Stripe\StripeClient;
@@ -89,6 +90,11 @@ class PlatformBilling
 
         if ($event->type === 'checkout.session.completed') {
             $session = $event->data->object;
+            if (($session->metadata->kind ?? '') === 'domain') {
+                app(DomainPurchase::class)->fulfilFromWebhookSession($session);
+
+                return;
+            }
             $user = User::find((int) ($session->metadata->user_id ?? 0));
             $plan = (string) ($session->metadata->plan ?? '');
             if ($user && $plan !== '') {

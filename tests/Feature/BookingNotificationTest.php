@@ -41,8 +41,8 @@ test('a booking is recorded as a form response and emails customer + owner by de
         ->and($response->fields['service'])->toBe('Haircut')
         ->and($response->fields['reference'])->toBe($booking->reference);
 
-    Mail::assertSent(SubmissionReceipt::class, fn ($m) => $m->hasTo('ada@example.test'));
-    Mail::assertSent(NewBookingNotification::class, fn ($m) => $m->hasTo($owner->email));
+    Mail::assertQueued(SubmissionReceipt::class, fn ($m) => $m->hasTo('ada@example.test'));
+    Mail::assertQueued(NewBookingNotification::class, fn ($m) => $m->hasTo($owner->email));
 });
 
 test('the admin recipient is configurable on the booking form settings', function () {
@@ -53,7 +53,7 @@ test('the admin recipient is configurable on the booking form settings', functio
 
     app(BookingNotifications::class)->send($booking, $site);
 
-    Mail::assertSent(NewBookingNotification::class, fn ($m) => $m->hasTo('desk@salon.test'));
+    Mail::assertQueued(NewBookingNotification::class, fn ($m) => $m->hasTo('desk@salon.test'));
 });
 
 test('notify toggles are honoured and confirmed bookings send the confirmation mailable', function () {
@@ -64,8 +64,8 @@ test('notify toggles are honoured and confirmed bookings send the confirmation m
 
     app(BookingNotifications::class)->send($booking, $site, confirmed: true);
 
-    Mail::assertSent(BookingConfirmed::class, fn ($m) => $m->hasTo('ada@example.test'));
-    Mail::assertNotSent(NewBookingNotification::class);
+    Mail::assertQueued(BookingConfirmed::class, fn ($m) => $m->hasTo('ada@example.test'));
+    Mail::assertNotQueued(NewBookingNotification::class);
     // The CRM record is written regardless of email toggles.
     expect(FormResponse::whereHas('form', fn ($q) => $q->where('site_id', $site->id))->count())->toBe(1);
 });
@@ -86,7 +86,7 @@ test('the response lands on the form the client booking UI came from', function 
         ->and($response->fields['inspiration'])->toBe('Layered bob') // custom field included
         ->and(Form::where('site_id', $site->id)->where('name', 'booking')->exists())->toBeFalse();
     // …and the admin email uses THAT form's configured address.
-    Mail::assertSent(NewBookingNotification::class, fn ($m) => $m->hasTo('front-desk@salon.test'));
+    Mail::assertQueued(NewBookingNotification::class, fn ($m) => $m->hasTo('front-desk@salon.test'));
 });
 
 test('an unknown or inactive requested form falls back to the booking form', function () {

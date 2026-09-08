@@ -8,8 +8,10 @@ use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Site;
 use App\Services\FormDelivery;
+use App\Services\TaskLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 /**
  * POST /api/sites/{siteName}/block-form/{blockId}
@@ -77,6 +79,15 @@ class BlockFormController extends Controller
 
         // BlockKit forms now notify too, through the same delivery channels.
         app(FormDelivery::class)->deliver($inbox, $response, $submitted);
+
+        try {
+            app(TaskLogger::class)->alert($site,
+                'New “'.($inbox->title ?: 'form').'” submission', 'form', 'info',
+                Str::limit(implode(' · ', array_map('strval', array_slice(array_values($submitted), 0, 3))), 140),
+                null, 'all', url($site->name.'/submissions'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'message' => (string) data_get($form->props, 'success_message', 'Thanks — we got your message.'),

@@ -30,6 +30,7 @@ return [
         'settings' => [
             'currency' => ['type' => 'select', 'label' => 'Currency', 'options' => ['usd', 'eur', 'gbp', 'cad', 'aud'], 'default' => 'usd'],
             'product_limit' => ['type' => 'number', 'label' => 'Max products', 'default' => 50],
+            'vat_percent' => ['type' => 'number', 'label' => 'VAT % (prices are VAT-inclusive; 0 = not shown)', 'default' => 0],
         ],
     ],
 

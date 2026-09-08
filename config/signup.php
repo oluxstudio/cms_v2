@@ -15,4 +15,14 @@ return [
 
     // Hard cap on codes issued per email address per hour (abuse guard).
     'max_codes_per_hour' => 5,
+
+    // Refuse sign-ups from throwaway mailboxes (domain match, subdomains included).
+    'blocked_domains' => [
+        'mailinator.com', 'guerrillamail.com', 'guerrillamail.net', 'sharklasers.com', '10minutemail.com',
+        '10minutemail.net', 'tempmail.com', 'temp-mail.org', 'yopmail.com', 'trashmail.com', 'getnada.com',
+        'dispostable.com', 'maildrop.cc', 'throwawaymail.com', 'fakeinbox.com', 'mohmal.com', 'emailondeck.com',
+    ],
+
+    // Check the email domain can actually receive mail (MX or A record) before sending a code.
+    'check_mx' => (bool) env('SIGNUP_CHECK_MX', true),
 ];

@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Livewire\Concerns\InteractsWithCuratedTemplates;
 use App\Models\Site;
 use App\Models\SiteTemplate;
+use App\Services\TemplateInstaller;
 use App\Templates\TemplateAppRegistry;
 use App\Templates\TemplateContract;
 use Illuminate\Support\Str;
@@ -54,7 +55,7 @@ class SiteTemplatesPage extends Component
     /** The installed SiteTemplate whose id matches the gallery card key, or null. */
     private function installedFor(string $key): ?SiteTemplate
     {
-        return $this->site->installedTemplates()->whereKey((int) $key)->first();
+        return $this->site->installedTemplates()->whereKey($key)->first();
     }
 
     /** Card/detail array for an installed template (keyed by its SiteTemplate id). */
@@ -178,15 +179,68 @@ class SiteTemplatesPage extends Component
     /** Use (apply) the template — APPENDS its pages, theme, font & assets to the site. */
     public function applyTemplate()
     {
-        $this->dispatch('toast', level: 'error', title: 'Unavailable', message: 'Legacy template installing was removed — build with blocks and save your own templates in the builder.');
+        $it = $this->installedFor($this->selectedKey);
+        if (! $it || ! $this->site->canManageTeam(auth()->user())) {
+            return null;
+        }
+        app(TemplateInstaller::class)->applyAsync($this->site, $it);
+        $this->site->refresh();
+        $this->loadInstalled();
+        $this->selectedTemplate = $this->installedToArray($it->fresh());
 
-        return null;
+        return $this->redirect(url($this->site->name.'/connect'), navigate: true);
     }
 
-    /** Stop using the template — removes exactly what it added; defaults remain. */
+    /** Save a curated app to this site AND make it the active design. */
+    public function useDesign(string $key): void
+    {
+        if (! $this->site->canManageTeam(auth()->user())) {
+            return;
+        }
+        $installer = app(TemplateInstaller::class);
+        $row = $this->site->installedTemplates()->whereKey($key)->first()
+            ?? $installer->saveCuratedToSite($this->site, $key);
+        $installer->applyAsync($this->site, $row);
+        $this->site->refresh();
+        $this->loadInstalled();
+        $this->redirect(url($this->site->name.'/connect'), navigate: true);
+    }
+
+    /** Back to the generic block renderer; no pages are removed. */
     public function stopUsing(): void
     {
-        $this->dispatch('toast', level: 'error', title: 'Unavailable', message: 'Legacy template installing was removed — build with blocks and save your own templates in the builder.');
+        if (! $this->site->canManageTeam(auth()->user())) {
+            return;
+        }
+        // Give back the theme this design replaced, if we stashed one.
+        $applied = $this->site->installedTemplates()->whereNotNull('applied_at')->first();
+        if ($applied && $applied->previous_theme !== null) {
+            $this->site->update(['theme' => $applied->previous_theme]);
+            $applied->update(['previous_theme' => null]);
+        }
+        $this->site->update(['template' => TemplateAppRegistry::BLANK]);
+        $this->site->installedTemplates()->update(['applied_at' => null]);
+        $this->site->refresh();
+        $this->loadInstalled();
+        $this->dispatch('toast', level: 'success', title: 'Design cleared', message: 'The site is back on the generic renderer.');
+    }
+
+    /** Remove a saved design (the active one must be switched away first). */
+    public function removeTemplate(string $key): void
+    {
+        $it = $this->installedFor($key);
+        if (! $it || ! $this->site->canManageTeam(auth()->user())) {
+            return;
+        }
+        if ($it->isApplied()) {
+            $this->dispatch('toast', level: 'error', title: 'In use', message: 'This is the active design — switch to another before removing it.');
+
+            return;
+        }
+        $it->delete();
+        $this->backToGallery();
+        $this->loadInstalled();
+        $this->dispatch('toast', level: 'success', title: 'Removed', message: 'Design removed from this site.');
     }
 
     // ─────────────────────────────────────────────────────────────

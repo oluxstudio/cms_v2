@@ -14,8 +14,27 @@
                 if (d.type === 'olx-field-edit') this.$wire.inlineFieldEdit(d.id, d.key, d.kind, d.field, d.value, d.itemId);
                 if (d.type === 'olx-item-remove') this.$wire.inlineItemRemove(d.id, d.key, d.itemId);
                 if (d.type === 'olx-item-add') this.$wire.inlineItemAdd(d.id, d.key, d.componentKey, d.field);
+                if (d.type === 'olx-node-item-add') this.$wire.inlineNodeItemAdd(d.key, d.prefix);
+                if (d.type === 'olx-navigate') this.$wire.set('previewPath', d.path || '/');
+                if (d.type === 'olx-item-remove-idx') this.$wire.inlineItemRemoveByIndex(d.key, d.index);
+                if (d.type === 'olx-field-edit-idx') this.$wire.inlineFieldEditByIndex(d.key, d.field, d.value, d.index);
+                if (d.type === 'olx-link-edit') this.$wire.inlineLinkEdit(d.key, d.kind, d.labelField ?? '', d.label, d.href, d.index ?? null, d.oldLabel ?? '', d.oldHref ?? '');
                 if (d.type === 'olx-register') this.$wire.registerMarkers(d.markers);
                 if (d.type === 'olx-hover-field') this.hotNode(d.field);
+            });
+            // Renderer mode: after a save, tell the shell to re-fetch content
+            // and re-render IN PLACE — no iframe reload, no flash.
+            Livewire.on('olx-refresh-frame', () => {
+                const f = document.getElementById('olx-frame');
+                if (f && f.contentWindow) f.contentWindow.postMessage({ source: 'olx-cms', type: 'olx-refresh-content' }, '*');
+            });
+            // Hard reload fallback (kept for callers that still dispatch it).
+            Livewire.on('olx-reload-frame', () => {
+                const f = document.getElementById('olx-frame');
+                if (!f) return;
+                const u = new URL(f.src, window.location.origin);
+                u.searchParams.set('t', Date.now().toString());
+                f.src = u.toString();
             });
         },
         // Preview field hover → highlight the matching node input on the right.
@@ -69,16 +88,24 @@
 
     {{-- Toolbar --}}
     <div class="flex items-center gap-3 mb-3 flex-wrap">
-        <h1 class="text-lg font-extrabold text-gray-900 dark:text-white">Preview</h1>
+        <h1 class="text-lg font-extrabold text-gray-900 dark:text-white">Edit mode</h1>
+        @if ($livePreviewUrl)
+            <a href="{{ $livePreviewUrl }}" target="_blank" rel="noopener"
+               class="text-xs font-semibold text-indigo-500 hover:text-indigo-600 whitespace-nowrap"
+               title="Open this page exactly as visitors see it — no edit chrome">Live preview ↗</a>
+        @endif
 
         {{-- Page selector: navigates the preview iframe to that page --}}
         @if ($pages->isNotEmpty())
+            {{-- Page selector — hidden when embedded in a single page's Content tab --}}
+            @unless($embedded)
             <select wire:model.live="previewPath"
                     class="text-xs font-semibold rounded-lg bg-white dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.1] px-2.5 py-1.5">
                 @foreach ($pages as $page)
                     <option value="{{ $page->url }}">{{ $page->name }} ({{ $page->url }})</option>
                 @endforeach
             </select>
+            @endunless
         @endif
 
         <span class="text-xs text-gray-400">Click a component in the live preview to edit it.</span>
@@ -110,19 +137,41 @@
         @endif
     </div>
 
-    {{-- Client URL bar --}}
-    <div class="flex items-center gap-2 mb-3">
+    {{-- Client URL bar (hidden when embedded in the page-detail Content tab) --}}
+    @unless($embedded)
+        <div class="flex items-center gap-2 mb-3">
         <span class="text-xs font-semibold text-gray-500 shrink-0">Client site URL</span>
         <input wire:model="urlInput" type="url" placeholder="https://your-client-site.com (or http://localhost:3000)"
                class="flex-1 text-sm rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] px-3 py-1.5">
         <button wire:click="saveClientUrl" class="text-xs font-semibold text-white px-3 py-1.5 rounded-lg" style="background:var(--primary)">Set</button>
     </div>
+    @endunless
 
-    @if (! $embedUrl)
+    @if ($this->installStatus === 'installing')
+        {{-- The design was just applied; pages, forms and modules are being
+             created by a background job. Poll until it flips to done/failed —
+             the poll lives only in this branch, so it stops automatically. --}}
+        <div wire:poll.3s class="flex-1 grid place-items-center border border-dashed rounded-2xl px-6 text-center">
+            <div class="space-y-3">
+                <svg class="animate-spin h-8 w-8 mx-auto text-indigo-500" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Setting up your site…</p>
+                <p class="text-xs text-gray-400 max-w-sm mx-auto">Creating the template's pages and components, wiring up forms, bookings, shop &amp; orders, and applying the theme. This usually takes a few seconds — the preview appears here automatically.</p>
+            </div>
+        </div>
+    @elseif ($this->installStatus === 'failed')
+        <div class="flex-1 grid place-items-center border border-dashed border-rose-300 dark:border-rose-500/40 rounded-2xl px-6 text-center">
+            <div class="space-y-3">
+                <p class="text-sm font-semibold text-rose-600">Something went wrong while setting up this design.</p>
+                <p class="text-xs text-gray-400 max-w-sm mx-auto">Nothing already on your site was touched. You can safely try again.</p>
+                <button wire:click="retryInstall" class="text-xs font-semibold text-white px-4 py-2 rounded-lg" style="background:var(--primary)">Try again</button>
+            </div>
+        </div>
+    @elseif (! $embedUrl)
         <div class="flex-1 grid place-items-center text-sm text-gray-400 border border-dashed rounded-2xl px-6 text-center">
-            Enter your client site’s URL above and press <strong>Set</strong>. The site must embed
-            <code>connect.js</code> — then it renders here exactly as your visitors see it, and clicking a
-            component opens it for editing.
+            No preview available yet. Apply a design from <a href="{{ url($site->name.'/designs') }}" class="font-semibold text-indigo-500 hover:underline">My Designs</a> and your site shows here with live content — or, for an externally hosted client site, enter its URL above (it must embed <code>connect.js</code>) to preview and click-to-edit it.
         </div>
     @else
         {{-- Inspector only opens once a component is selected; otherwise the

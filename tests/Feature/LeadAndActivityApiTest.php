@@ -51,7 +51,7 @@ test('the interest API captures the contact, notifies the dashboard and emails t
         ->and(Alert::where('site_id', $site->id)->where('type', 'interest')->exists())->toBeTrue()
         ->and(SiteActivityLog::where('site_id', $site->id)->where('entity_type', 'interest')->value('title'))
         ->toContain('Kitchen refit');
-    Mail::assertSent(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email));
+    Mail::assertQueued(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email));
 });
 
 test('booking confirm and cancel land in recent activity', function () {

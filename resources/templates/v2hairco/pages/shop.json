@@ -1,0 +1,45 @@
+{
+    "name": "Shop",
+    "url": "/shop",
+    "layout": "default",
+    "keywords": "shop",
+    "attributes": {
+        "title": "Shop"
+    },
+    "blocks": [
+        {
+            "type": "app:v2hairco:shop",
+            "name": "Shop",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Loading products\u2026",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "The shop is being stocked \u2014 check back soon.",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text C",
+                    "type": "text",
+                    "value": "\u2190 Prev",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Text D",
+                    "type": "text",
+                    "value": "Next \u2192",
+                    "order": 3,
+                    "description": "text"
+                }
+            ]
+        }
+    ]
+}

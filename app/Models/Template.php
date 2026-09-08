@@ -67,12 +67,11 @@ class Template extends Model
     public function previewUrl(?string $siteName = null): ?string
     {
         $key = $this->builtin_key ?: $this->slug;
-        if (! is_file(public_path("vue-templates/{$key}/index.html"))) {
+        if (! $key || ! is_file(public_path("nuxt-preview/{$key}/index.html"))) {
             return null;
         }
-        $url = url("vue-templates/{$key}/index.html");
 
-        return $siteName ? $url.'?site='.urlencode($siteName) : $url;
+        return url("nuxt-preview/{$key}/").'?'.http_build_query(array_filter(['site' => $siteName, 'template' => $key]));
     }
 
     /** Resolve the latest published version to a TemplateContract for applying. */

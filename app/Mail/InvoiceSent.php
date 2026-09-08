@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\Site;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
@@ -13,7 +14,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /** The invoice email — summary + hosted pay link. */
-class InvoiceSent extends Mailable
+class InvoiceSent extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

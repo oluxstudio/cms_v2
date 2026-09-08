@@ -14,6 +14,22 @@
         </div>
     </div>
 
+    {{-- Sort + plan filter --}}
+    <div class="flex flex-wrap items-center gap-1.5 mb-4 -mt-2">
+        <select wire:change="setSort($event.target.value)"
+                class="text-xs font-semibold pr-7 pl-3 py-1.5 rounded-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.05] text-gray-600 dark:text-gray-300 cursor-pointer focus:outline-none">
+            @foreach(['name' => 'Sort: name', 'newest' => 'Sort: newest', 'storage' => 'Sort: storage', 'visits' => 'Sort: visits 30d'] as $key => $label)
+                <option value="{{ $key }}" @selected($sort === $key)>{{ $label }}</option>
+            @endforeach
+        </select>
+        @foreach(config('plans.tiers') as $key => $t)
+            <button wire:click="filterPlan('{{ $key }}')"
+                    class="px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors
+                           {{ $planFilter === $key ? 'text-white border-transparent' : 'text-gray-500 border-gray-200 dark:border-white/[0.08]' }}"
+                    @if($planFilter === $key) style="background: {{ $t['color'] }}" @endif>{{ $t['name'] }}</button>
+        @endforeach
+    </div>
+
     <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden">
         @forelse($accounts as $account)
         @php $sub = $account->currentSubscription(); $tier = $sub->tier(); @endphp
@@ -24,6 +40,24 @@
                     @if($account->isSuper())<span class="ml-1 text-[9px] font-bold uppercase text-indigo-400">admin</span>@endif
                 </a>
                 <p class="text-xs text-gray-400 truncate">{{ $account->email }} · {{ $account->sites_count }} {{ Str::plural('site', $account->sites_count) }}</p>
+            </div>
+
+            {{-- Usage: storage vs plan limit + 30d traffic --}}
+            @php
+                $bytes = (int) ($account->storage_bytes ?? 0);
+                $limitBytes = $sub->storageLimitBytes();
+                $pct = $limitBytes ? min(100, (int) round($bytes / $limitBytes * 100)) : null;
+                $fmt = $bytes >= 1048576 ? number_format($bytes / 1048576, 1).' MB' : number_format($bytes / 1024, 1).' KB';
+            @endphp
+            <div class="w-36 shrink-0 hidden sm:block">
+                <p class="text-[10px] text-gray-400 tabular-nums flex justify-between">
+                    <span>{{ $fmt }}</span>
+                    <span class="{{ ($pct ?? 0) > 85 ? 'text-rose-500 font-bold' : '' }}">{{ $pct !== null ? $pct.'%' : '∞' }}</span>
+                </p>
+                <span class="block mt-0.5 h-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.07] overflow-hidden">
+                    <span class="block h-full rounded-full {{ ($pct ?? 0) > 85 ? 'bg-rose-500' : 'bg-indigo-500' }}" style="width: {{ $pct ?? 4 }}%"></span>
+                </span>
+                <p class="text-[10px] text-gray-400 mt-0.5">{{ number_format((int) ($account->visits_30d ?? 0)) }} visits · 30d</p>
             </div>
 
             <span class="px-2.5 py-1 rounded-full text-[11px] font-bold text-white" style="background: {{ $tier['color'] }}">

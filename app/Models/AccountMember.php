@@ -14,7 +14,7 @@ class AccountMember extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['account_id', 'user_id', 'role_id'];
+    protected $fillable = ['account_id', 'user_id', 'role_id', 'site_id'];
 
     public function account(): BelongsTo
     {

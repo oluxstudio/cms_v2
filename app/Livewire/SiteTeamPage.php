@@ -5,13 +5,16 @@ namespace App\Livewire;
 use App\Access\Permissions;
 use App\Mail\TeamInvitationMail;
 use App\Models\AccountMember;
+use App\Models\Message;
 use App\Models\Role;
 use App\Models\Site;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Services\AccountActivity;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 /**
@@ -131,35 +134,96 @@ class SiteTeamPage extends Component
         }
 
         $existing = User::whereRaw('LOWER(email) = ?', [$email])->first();
-        if ($existing && AccountMember::where('account_id', $this->accountId)->where('user_id', $existing->id)->exists()) {
-            $this->errorMessage = $existing->name.' is already a member of this account.';
+        if ($existing && AccountMember::where('account_id', $this->accountId)->where('user_id', $existing->id)
+            ->where(fn ($q) => $q->whereNull('site_id')->orWhere('site_id', $this->site->id))->exists()) {
+            $this->errorMessage = $existing->name.' already has access to this site.';
 
             return;
         }
 
-        [$invitation, $plain] = TeamInvitation::issue($this->account, Auth::user(), $email, $role);
-        Mail::to($email)->send(new TeamInvitationMail($invitation, $plain));
+        // The invite CREATES the account: a brand-new address gets a user with
+        // a temporary password (emailed); an existing user just gains access —
+        // their password is never touched. Either way, all they do is log in.
+        $temp = null;
+        $user = $existing;
+        if (! $user) {
+            $temp = Str::password(12, symbols: false);
+            $user = User::create([
+                'name' => Str::of(Str::before($email, '@'))->replace(['.', '_', '-'], ' ')->title()->toString(),
+                'email' => $email,
+                'password' => Hash::make($temp),
+                'email_verified_at' => now(),   // the owner vouches for the address
+                'password_changed_at' => null,  // still on the temporary password
+            ]);
+        }
+
+        // Access is scoped to THIS site only.
+        AccountMember::create([
+            'account_id' => $this->accountId, 'user_id' => $user->id,
+            'role_id' => $role->id, 'site_id' => $this->site->id,
+        ]);
+
+        [$invitation] = TeamInvitation::issue($this->account, Auth::user(), $email, $role, $this->site->id);
+        $invitation->update(['accepted_at' => now()]); // audit row — access already exists
+        Mail::to($email)->send(new TeamInvitationMail($invitation, $this->site, $temp));
         AccountActivity::memberInvited($this->accountId, $email, $role->name);
 
+        // Every new member starts with an onboarding task on the site's task
+        // board, assigned to them and owned by the inviter — so the inviter
+        // can monitor it like any other task, and the invitee lands with a
+        // clear first step instead of an empty screen.
+        $task = $this->site->todos()->create([
+            'user_id' => Auth::id(),
+            'assigned_user_id' => $user->id,
+            'title' => 'Get set up on '.$this->site->name,
+            'description' => 'Welcome aboard! Work through the checklist below, then mark this task done.',
+            'priority' => 'normal',
+            'status' => 'open',
+            'due_at' => now()->addWeek()->endOfDay(),
+        ]);
+        foreach (['Log in and update your password', 'Fill in your profile', 'Look around the '.$this->site->name.' dashboard'] as $i => $label) {
+            $task->items()->create(['label' => $label, 'sort' => $i + 1]);
+        }
+        Message::create([
+            'site_id' => $this->site->id,
+            'sender_id' => Auth::id(),
+            'recipient_id' => $user->id,
+            'body' => "You've been assigned a task: {$task->title}",
+        ]);
+
         $this->reset('inviteEmail');
-        $this->dispatch('toast', level: 'success', title: 'Invitation sent', message: 'An email with a verification link is on its way to '.$email.'.');
+        $this->dispatch('toast', level: 'success', title: 'Member added', message: $user->name.' can now log in — their access details are on the way to '.$email.'.');
     }
 
     public function resendInvite(string $invitationId): void
     {
         $this->guard();
         $invitation = TeamInvitation::where('account_id', $this->accountId)->findOrFail($invitationId);
-        // Re-issue: fresh token + fresh expiry.
-        [$invitation, $plain] = TeamInvitation::issue($this->account, Auth::user(), $invitation->email, $invitation->role);
-        Mail::to($invitation->email)->send(new TeamInvitationMail($invitation, $plain));
-        $this->dispatch('toast', level: 'success', title: 'Invitation re-sent', message: 'A fresh link went to '.$invitation->email.'.');
+        $user = User::whereRaw('LOWER(email) = ?', [$invitation->email])->first();
+        $site = $invitation->site_id ? Site::find($invitation->site_id) : $this->site;
+
+        // Only a member still on their emailed temporary password gets a new
+        // one — never reset a password someone actually chose.
+        $temp = null;
+        if ($user && $user->password_changed_at === null && $user->sites()->doesntExist()) {
+            $temp = Str::password(12, symbols: false);
+            $user->update(['password' => Hash::make($temp)]);
+        }
+        Mail::to($invitation->email)->send(new TeamInvitationMail($invitation, $site ?? $this->site, $temp));
+        $this->dispatch('toast', level: 'success', title: 'Details re-sent', message: 'A fresh email went to '.$invitation->email.'.');
     }
 
     public function revokeInvite(string $invitationId): void
     {
         $this->guard();
-        TeamInvitation::where('account_id', $this->accountId)->findOrFail($invitationId)->delete();
-        $this->dispatch('toast', level: 'success', title: 'Invitation revoked', message: 'The link no longer works.');
+        $invitation = TeamInvitation::where('account_id', $this->accountId)->findOrFail($invitationId);
+        $user = User::whereRaw('LOWER(email) = ?', [$invitation->email])->first();
+        if ($user && $invitation->site_id) {
+            AccountMember::where('account_id', $this->accountId)->where('user_id', $user->id)
+                ->where('site_id', $invitation->site_id)->delete();
+        }
+        $invitation->delete();
+        $this->dispatch('toast', level: 'success', title: 'Access revoked', message: $invitation->email.' can no longer open this site.');
     }
 
     // ── Roles & permissions ──────────────────────────────────────

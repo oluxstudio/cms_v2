@@ -35,7 +35,7 @@ class LlmServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(LlmDriverInterface::class, function () {
+        $this->app->bind(LlmDriverInterface::class, function () {
             $driver = config('services.llm.driver', 'anthropic');
 
             return match ($driver) {

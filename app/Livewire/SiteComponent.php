@@ -61,9 +61,11 @@ class SiteComponent extends Component
             ->unless(Auth::user()?->isSuper(), fn ($q) => $q->where(function ($w) {
                 $w->where('user_id', Auth::id())
                     ->orWhereHas('members', fn ($m) => $m->where('users.id', Auth::id()))
-                    // Account-team membership: members see every site of the
-                    // client accounts they belong to.
-                    ->orWhereIn('user_id', Auth::user()->memberships()->pluck('account_id'));
+                    // Team membership: a site-scoped row opens exactly that
+                    // site; an account-wide row (site_id null) opens every
+                    // site the account owns.
+                    ->orWhereIn('id', Auth::user()->memberships()->whereNotNull('site_id')->pluck('site_id'))
+                    ->orWhereIn('user_id', Auth::user()->memberships()->whereNull('site_id')->pluck('account_id'));
             }))
             ->withCount(['pages', 'components'])->with('user:id,name');
 

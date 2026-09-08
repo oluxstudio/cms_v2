@@ -602,35 +602,12 @@
                                 @if($this->svcFieldOn('duration'))<x-field.text label="Duration (min)" model="duration" type="number" min="5" />@endif
                                 @if($this->svcFieldOn('price'))<x-field.text label="Price (0 = free)" model="price" type="number" step="0.01" min="0" :live="true" />@endif
                             </div>
-                            @if($this->svcFieldOn('capacity'))
-                            <x-field.text label="Parallel bookings" model="capacity" type="number" min="1" hint="How many customers can book the SAME time at once (e.g. 3 chairs = 3). Ignored when staff are named below." />
-                            @endif
-                            @if($this->svcFieldOn('schedule'))
-                            <x-field.days label="Days override" model="slotDays" hint="None selected = site availability." />
-                            <div class="grid grid-cols-2 gap-3">
-                                <x-field.text label="Opens (override)" model="slotOpen" type="time" hint="Blank = site opening time." />
-                                <x-field.text label="Closes (override)" model="slotClose" type="time" hint="Blank = site closing time." />
-                            </div>
-                            @endif
-                            @if($this->svcFieldOn('buffers'))
-                            <div class="grid grid-cols-2 gap-3">
-                                <x-field.text label="Buffer before (min)" model="bufferBefore" type="number" min="0" hint="Gap kept free BEFORE each booking (setup/travel time)." />
-                                <x-field.text label="Buffer after (min)" model="bufferAfter" type="number" min="0" hint="Gap kept free AFTER each booking (cleanup) before the next can start." />
-                            </div>
-                            @endif
                         @endif
 
                         @if($kind === 'stay')
                             <div class="grid grid-cols-2 gap-3">
                                 @if($this->svcFieldOn('price'))<x-field.text label="Price per night" model="price" type="number" step="0.01" min="0" :live="true" />@endif
                                 <x-field.text label="Units available" model="capacity" type="number" min="1" hint="Identical rooms/houses of this type." />
-                            </div>
-                            <div class="grid grid-cols-3 gap-3">
-                                @if($this->svcFieldOn('nights'))
-                                <x-field.text label="Min nights" model="minNights" type="number" min="1" />
-                                <x-field.text label="Max nights" model="maxNights" type="number" min="1" />
-                                @endif
-                                @if($this->svcFieldOn('guests'))<x-field.text label="Max guests" model="maxGuests" type="number" min="1" />@endif
                             </div>
                         @endif
 
@@ -641,9 +618,21 @@
                             @endif
                         @endif
 
-                        <x-field.textarea model="description" rows="2" placeholder="Short description (optional)" />
+                        {{-- Essentials end here — save is one click away. --}}
+                        <div class="flex gap-2 pt-1">
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">{{ $editingId ? 'Update' : 'Add service' }}</button>
+                            @if($editingId)
+                            <button type="button" wire:click="closePanel" class="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">Cancel</button>
+                            @endif
+                        </div>
 
-                        {{-- Booking form: basic 4 + owner-defined custom fields --}}
+                        <div class="olx-adv-lead">More options</div>
+
+                        <x-panel-group label="Description" hint="shown to customers">
+                            <x-field.textarea model="description" rows="2" placeholder="Short description (optional)" />
+                        </x-panel-group>
+
+                        <x-panel-group label="Booking form" hint="what customers fill in">
                         <div class="pt-1">
                             <label class="bkf-label">Booking form</label>
                             <div class="flex flex-wrap gap-1.5 mb-1.5">
@@ -669,7 +658,9 @@
                             @endif
                             <p class="bkf-hint">Basic fields are always shown; custom fields are added to the customer booking form.</p>
                         </div>
+                        </x-panel-group>
 
+                        <x-panel-group label="Payments & deposits" hint="deposits, upfront payment, auto-confirm">
                         @if($this->svcFieldOn('deposit'))
                         <div class="grid grid-cols-2 gap-3 items-end">
                             <div><x-field.radio label="Deposit (optional)" model="depositMode" :live="true" name="svc-dep"
@@ -686,22 +677,47 @@
                         <x-field.check model="requiresPayment" text="Require payment (Stripe) to confirm" />
                         <x-field.check model="autoConfirm" text="Auto-confirm bookings"
                                        hint="Successful bookings are confirmed instantly (no manual approval). Paid bookings always confirm once payment completes." />
+                        </x-panel-group>
 
-                        <div class="flex gap-2">
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">{{ $editingId ? 'Update' : 'Add service' }}</button>
-                            @if($editingId)
-                            <button type="button" wire:click="closePanel" class="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5">Cancel</button>
+                        <x-panel-group label="Capacity, buffers & custom hours" hint="parallel bookings, gaps, per-service schedule">
+                            @if($kind === 'slot')
+                                @if($this->svcFieldOn('capacity'))
+                                <x-field.text label="Parallel bookings" model="capacity" type="number" min="1" hint="How many customers can book the SAME time at once (e.g. 3 chairs = 3). Ignored when staff are named below." />
+                                @endif
+                                @if($this->svcFieldOn('schedule'))
+                                <x-field.days label="Days override" model="slotDays" hint="None selected = site availability." />
+                                <div class="grid grid-cols-2 gap-3">
+                                    <x-field.text label="Opens (override)" model="slotOpen" type="time" hint="Blank = site opening time." />
+                                    <x-field.text label="Closes (override)" model="slotClose" type="time" hint="Blank = site closing time." />
+                                </div>
+                                @endif
+                                @if($this->svcFieldOn('buffers'))
+                                <div class="grid grid-cols-2 gap-3">
+                                    <x-field.text label="Buffer before (min)" model="bufferBefore" type="number" min="0" hint="Gap kept free BEFORE each booking (setup/travel time)." />
+                                    <x-field.text label="Buffer after (min)" model="bufferAfter" type="number" min="0" hint="Gap kept free AFTER each booking (cleanup) before the next can start." />
+                                </div>
+                                @endif
                             @endif
-                        </div>
+                            @if($kind === 'stay')
+                                <div class="grid grid-cols-3 gap-3">
+                                    @if($this->svcFieldOn('nights'))
+                                    <x-field.text label="Min nights" model="minNights" type="number" min="1" />
+                                    <x-field.text label="Max nights" model="maxNights" type="number" min="1" />
+                                    @endif
+                                    @if($this->svcFieldOn('guests'))<x-field.text label="Max guests" model="maxGuests" type="number" min="1" />@endif
+                                </div>
+                            @endif
+                            @if($kind === 'trip')
+                                <p class="text-xs text-gray-400">Seats and per-departure limits are set on each departure below.</p>
+                            @endif
+                        </x-panel-group>
                     </form>
 
                     {{-- Resources: staff (slot) / rooms (stay) / vehicles (trip),
                          each with its OWN availability. --}}
                     @if($editingId)
-                        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/[0.06]">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">
-                                {{ ['slot' => 'Staff', 'stay' => 'Rooms / houses', 'trip' => 'Vehicles'][$kind] }}
-                            </h3>
+                        <x-panel-group :label="['slot' => 'Staff', 'stay' => 'Rooms / houses', 'trip' => 'Vehicles'][$kind]" hint="named people/units with their own schedules">
+                        <div class="mt-1">
                             <p class="text-[10px] text-gray-400 mb-2">
                                 @if($kind === 'slot') Each staff member has their own schedule — customers pick one or “Any”. With staff listed, capacity comes from the roster.
                                 @elseif($kind === 'stay') Name each unit — customers pick a specific one or “Any”. With rooms listed, they replace the unit count.
@@ -741,11 +757,12 @@
                                     class="mt-2 px-3 py-1.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold">＋ Add</button>
                             @error('resName')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                         </div>
+                        </x-panel-group>
                     @endif
 
                     @if($editingId && $kind === 'trip')
-                        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/[0.06]">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Departures</h3>
+                        <x-panel-group label="Departures" hint="routes, dates, seats" :open="true">
+                        <div class="mt-1">
                             <div class="space-y-1.5 mb-3">
                                 @forelse($this->departures as $dep)
                                     <div class="flex items-center gap-2 text-xs bg-gray-50 dark:bg-white/[0.04] rounded-lg px-2.5 py-2">
@@ -773,12 +790,13 @@
                             @error('depOrigin')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                             @error('depDate')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                         </div>
+                        </x-panel-group>
                     @endif
 
                     {{-- Seasonal / date-range pricing rules --}}
                     @if($editingId)
-                        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/[0.06]">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Seasonal pricing</h3>
+                        <x-panel-group label="Seasonal pricing" hint="date-range price overrides">
+                        <div class="mt-1">
                             <p class="text-[10px] text-gray-400 mb-2">Date-range price overrides — a rule on a specific {{ strtolower($this->serviceResources->isNotEmpty() ? 'resource' : 'resource') }} beats a service-wide rule; stays price each night by its own rule.</p>
                             <div class="space-y-1.5 mb-3">
                                 @forelse($this->priceRules as $rule)
@@ -812,6 +830,7 @@
                             @error('prEnd')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                             @error('prPrice')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                         </div>
+                        </x-panel-group>
                     @endif
     </x-lightbox>
     @endif
@@ -869,9 +888,16 @@
                         <x-field.text label="Opens (override)" model="asOpen" type="time" hint="Blank = site opening." />
                         <x-field.text label="Closes (override)" model="asClose" type="time" hint="Blank = site closing." />
                     </div>
+                    <div class="mb-4"><x-field.check model="asAutoConfirm" text="Auto-confirm bookings"
+                                   hint="On: successful bookings confirm instantly. Off: you confirm each one manually." /></div>
+                    <button wire:click="saveServiceAvailability" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">Save service availability</button>
+
+                    <div class="olx-adv-lead">More options</div>
+
+                    <x-panel-group label="Weekday hours" hint="different hours on certain days">
                     {{-- Per-weekday hour overrides (scope-aware) --}}
-                    <div class="mb-4">
-                        <label class="bkf-label">Weekday hours</label>
+                    <div class="mb-1">
+                        <label class="bkf-label sr-only">Weekday hours</label>
                         <p class="text-[10px] text-gray-400 mb-1.5">Different hours on certain weekdays — e.g. short Fridays. Days without an entry use the Opens/Closes above.</p>
                         <div class="flex flex-wrap gap-1.5 mb-2">
                             @forelse($dayHours as $dhd => $dh)
@@ -892,10 +918,7 @@
                         </div>
                         @error('dhOpen')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                     </div>
-
-                    <div class="mb-4"><x-field.check model="asAutoConfirm" text="Auto-confirm bookings"
-                                   hint="On: successful bookings confirm instantly. Off: you confirm each one manually." /></div>
-                    <button wire:click="saveServiceAvailability" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">Save service availability</button>
+                    </x-panel-group>
                 </div>
                 @else
                 <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-5">
@@ -922,9 +945,20 @@
                         <x-field.text label="Opens" model="availOpen" type="time" />
                         <x-field.text label="Closes" model="availClose" type="time" />
                     </div>
-                    {{-- Per-weekday hour overrides (scope-aware) --}}
-                    <div class="mb-4">
-                        <label class="bkf-label">Weekday hours</label>
+                    @error('availOpen')<p class="text-xs text-rose-500 mb-2">{{ $message }}</p>@enderror
+                    @error('availSlot')<p class="text-xs text-rose-500 mb-2">{{ $message }}</p>@enderror
+
+                    <button wire:click="saveAvailability" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">Save availability</button>
+
+                    @php $preview = app(\App\Services\BookingService::class)->settings($site); @endphp
+                    <p class="text-[11px] text-gray-400 mt-4">
+                        Currently live: {{ strtoupper(implode(' · ', $preview['days'])) }} — {{ $preview['open'] }}–{{ $preview['close'] }},
+                        every {{ $preview['slot'] }} min, {{ $preview['lead'] }}h lead, {{ $preview['horizon'] }} days ahead.
+                    </p>
+
+                    <div class="olx-adv-lead">More options</div>
+
+                    <x-panel-group label="Weekday hours" hint="different hours on certain days">
                         <p class="text-[10px] text-gray-400 mb-1.5">Different hours on certain weekdays — e.g. short Fridays. Days without an entry use the Opens/Closes above.</p>
                         <div class="flex flex-wrap gap-1.5 mb-2">
                             @forelse($dayHours as $dhd => $dh)
@@ -944,23 +978,16 @@
                             <button type="button" wire:click="addDayHour" class="px-3 py-2 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">＋ Add</button>
                         </div>
                         @error('dhOpen')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
-                    </div>
+                    </x-panel-group>
 
-                    <div class="grid grid-cols-3 gap-3 mb-4">
-                        <x-field.text label="Slot length (min)" model="availSlot" type="number" min="5" step="5" hint="Times offered every N minutes." />
-                        <x-field.text label="Lead time (hours)" model="availLead" type="number" min="0" hint="Earliest a customer can book." />
-                        <x-field.text label="Horizon (days)" model="availHorizon" type="number" min="1" hint="How far ahead bookings open." />
-                    </div>
-                    @error('availOpen')<p class="text-xs text-rose-500 mb-2">{{ $message }}</p>@enderror
-                    @error('availSlot')<p class="text-xs text-rose-500 mb-2">{{ $message }}</p>@enderror
-
-                    <button wire:click="saveAvailability" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">Save availability</button>
-
-                    @php $preview = app(\App\Services\BookingService::class)->settings($site); @endphp
-                    <p class="text-[11px] text-gray-400 mt-4">
-                        Currently live: {{ strtoupper(implode(' · ', $preview['days'])) }} — {{ $preview['open'] }}–{{ $preview['close'] }},
-                        every {{ $preview['slot'] }} min, {{ $preview['lead'] }}h lead, {{ $preview['horizon'] }} days ahead.
-                    </p>
+                    <x-panel-group label="Slots & booking window" hint="slot length, lead time, horizon">
+                        <div class="grid grid-cols-3 gap-3">
+                            <x-field.text label="Slot length (min)" model="availSlot" type="number" min="5" step="5" hint="Times offered every N minutes." />
+                            <x-field.text label="Lead time (hours)" model="availLead" type="number" min="0" hint="Earliest a customer can book." />
+                            <x-field.text label="Horizon (days)" model="availHorizon" type="number" min="1" hint="How far ahead bookings open." />
+                        </div>
+                        <p class="text-[10px] text-gray-400">Remember to press “Save availability” above after changing these.</p>
+                    </x-panel-group>
                 </div>
                 @endif
         </div>
@@ -1156,6 +1183,11 @@
                         <button type="button" wire:click="setStatus('{{ $vb->id }}', 'cancelled')" data-confirm="Cancel this booking? The customer is emailed about the cancellation."
                                 class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-rose-600 border shadow-sm hover:bg-rose-50"
                                 style="border-color:rgba(51,44,31,.14)">Cancel</button>
+                    @endif
+                    @if($vb->starts_at?->isPast() && in_array($vb->status, ["confirmed", "pending"], true))
+                        <button type="button" wire:click="setStatus('{{ $vb->id }}', 'no_show')" data-confirm="Mark this booking as a no-show? The customer is NOT emailed."
+                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-amber-600 border shadow-sm hover:bg-amber-50"
+                                style="border-color:rgba(51,44,31,.14)">Mark no-show</button>
                     @endif
                     <a href="mailto:{{ $vb->customer_email }}"
                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-[#211d15] border shadow-sm hover:bg-gray-50"

@@ -174,6 +174,8 @@
                                     :options="['list' => 'List', 'grid' => 'Grid', 'table' => 'Table']" />
                     @error('type') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
+                <div class="olx-adv-lead">More options</div>
+                <x-panel-group label="Description & visitor submissions" hint="what it's for, public submissions">
                 <div>
                     <x-field.textarea label="Description (optional)" model="description" rows="3"
                                       placeholder="What is this collection for?" class="resize-none" />
@@ -205,6 +207,7 @@
                         </div>
                     @endif
                 </div>
+                </x-panel-group>
             </div>
             <div class="flex gap-3 pt-1">
                 <button wire:click="$set('showModal', false)"

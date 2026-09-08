@@ -117,4 +117,53 @@ class AssetImporter
 
         return $media->ref();
     }
+
+    /**
+     * Import a LOCAL image file (e.g. a template's shipped asset) into the
+     * site's media library. Same storage layout + dedupe as importRef().
+     * Returns the @media ref, or null when the file can't be imported.
+     */
+    public function importLocal(Site $site, string $absolutePath, ?string $name = null): ?string
+    {
+        if (! is_file($absolutePath) || filesize($absolutePath) > self::MAX_BYTES) {
+            return null;
+        }
+        $name ??= basename($absolutePath);
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (! in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif', 'ico'], true)) {
+            return null;
+        }
+
+        // Already imported (same matching as resolveRef) and stored here → reuse.
+        $existing = Media::where('site_id', $site->id)->get()
+            ->first(fn (Media $m) => mb_strtolower($m->name) === mb_strtolower($name)
+                || mb_strtolower(basename($m->url)) === mb_strtolower($name));
+        if ($existing && ! Str::startsWith($existing->url, ['http://', 'https://'])) {
+            return $existing->ref();
+        }
+
+        $body = (string) file_get_contents($absolutePath);
+        $disk = Storage::disk('public');
+        $path = 'media/'.$site->name.'/'.$name;
+        if ($disk->exists($path)) {
+            $info = pathinfo($name);
+            $name = $info['filename'].'-'.Str::lower(Str::random(4)).(isset($info['extension']) ? '.'.$info['extension'] : '');
+            $path = 'media/'.$site->name.'/'.$name;
+        }
+        $disk->put($path, $body);
+
+        $attrs = [
+            'file_type' => Media::guessType(mime_content_type($absolutePath) ?: null, $name),
+            'url' => Storage::url($path),
+            'size' => Media::humanSize(strlen($body)),
+            'bytes' => strlen($body),
+        ];
+        if ($existing) {
+            $existing->update($attrs);
+
+            return $existing->ref();
+        }
+
+        return Media::create($attrs + ['site_id' => $site->id, 'name' => $name, 'alt_text' => null])->ref();
+    }
 }

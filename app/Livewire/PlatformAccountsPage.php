@@ -2,7 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Models\Media;
+use App\Models\Site;
 use App\Models\User;
+use App\Models\Visit;
 use App\Services\PlatformBilling;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
@@ -20,6 +23,26 @@ class PlatformAccountsPage extends Component
 
     #[Url(as: 'q')]
     public string $search = '';
+
+    /** newest | storage | visits | name */
+    #[Url(as: 'sort')]
+    public string $sort = 'name';
+
+    /** '' = all, else a plan tier key. */
+    #[Url(as: 'plan')]
+    public string $planFilter = '';
+
+    public function setSort(string $sort): void
+    {
+        $this->sort = in_array($sort, ['name', 'newest', 'storage', 'visits'], true) ? $sort : 'name';
+        $this->resetPage();
+    }
+
+    public function filterPlan(string $plan): void
+    {
+        $this->planFilter = $this->planFilter === $plan ? '' : $plan;
+        $this->resetPage();
+    }
 
     /** account being edited in the drawer */
     public ?string $editingId = null;
@@ -94,11 +117,33 @@ class PlatformAccountsPage extends Component
         $accounts = User::query()
             ->with('subscription')
             ->withCount('sites')
+            // Usage columns for the table + sorting: storage + 30-day traffic.
+            ->addSelect([
+                'storage_bytes' => Media::selectRaw('coalesce(sum(bytes), 0)')
+                    ->whereIn('site_id', Site::select('id')->whereColumn('sites.user_id', 'users.id')),
+                'visits_30d' => Visit::selectRaw('count(*)')
+                    ->where('is_bot', false)
+                    ->where('created_at', '>=', now()->subDays(30))
+                    ->whereIn('site_id', Site::select('id')->whereColumn('sites.user_id', 'users.id')),
+            ])
             ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';
                 $q->where(fn ($w) => $w->where('name', 'like', $term)->orWhere('email', 'like', $term));
             })
-            ->orderBy('name')
+            ->when($this->planFilter !== '', function ($q) {
+                if ($this->planFilter === 'trial') {
+                    // Accounts without a subscription row are implicitly on trial.
+                    $q->where(fn ($w) => $w
+                        ->whereHas('subscription', fn ($s) => $s->where('plan', 'trial'))
+                        ->orWhereDoesntHave('subscription'));
+                } else {
+                    $q->whereHas('subscription', fn ($s) => $s->where('plan', $this->planFilter));
+                }
+            })
+            ->when($this->sort === 'name', fn ($q) => $q->orderBy('name'))
+            ->when($this->sort === 'newest', fn ($q) => $q->latest())
+            ->when($this->sort === 'storage', fn ($q) => $q->orderByDesc('storage_bytes'))
+            ->when($this->sort === 'visits', fn ($q) => $q->orderByDesc('visits_30d'))
             ->paginate(15);
 
         return view('livewire.platform-accounts-page', ['accounts' => $accounts]);

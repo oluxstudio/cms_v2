@@ -5,10 +5,13 @@ namespace App\Livewire;
 use App\Models\TemplateSubmission;
 use App\Services\SubmissionPublisher;
 use App\Services\TemplateExtractor;
+use App\Services\TemplateRepoIngest;
+use App\Services\TemplateStager;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 /**
  * Moderator review of template-app submissions from the staging folder
@@ -17,6 +20,21 @@ use Livewire\Component;
  */
 class TemplateSubmissions extends Component
 {
+    use WithFileUploads;
+
+    /** Intake card state: zip upload + import-from-repo. */
+    public $appZip = null;
+
+    public bool $confirmReplace = false;
+
+    public string $repoUrl = '';
+
+    public string $repoBranch = '';
+
+    public string $repoKey = '';
+
+    public string $intakeError = '';
+
     public string $rejectNote = '';
 
     public ?string $rejectingId = null;
@@ -25,6 +43,71 @@ class TemplateSubmissions extends Component
     {
         return auth()->user()
             && in_array(auth()->user()->email, (array) config('templates.moderators'), true);
+    }
+
+    /** Upload a zipped Nuxt app straight into staging, then scan it. */
+    public function uploadApp(): void
+    {
+        if (! $this->isModerator()) {
+            return;
+        }
+        $this->intakeError = '';
+        $this->validate(['appZip' => ['required', 'file', 'max:61440']]); // 60 MB
+
+        try {
+            $key = TemplateStager::sanitizeKey(
+                pathinfo($this->appZip->getClientOriginalName(), PATHINFO_FILENAME));
+            app(TemplateStager::class)->stageZip($this->appZip->getRealPath(), $key, $this->confirmReplace);
+        } catch (\Throwable $e) {
+            $this->intakeError = $e->getMessage();
+
+            return;
+        }
+        $this->reset('appZip', 'confirmReplace');
+        $this->scan();
+    }
+
+    /** Clone a (private) repo into staging and scan it — the repo-first intake. */
+    public function importRepo(): void
+    {
+        if (! $this->isModerator()) {
+            return;
+        }
+        $this->intakeError = '';
+        $this->validate(['repoUrl' => ['required', 'string', 'max:500']]);
+        if (! preg_match('#^(https?://|git@)#', $this->repoUrl)) {
+            $this->intakeError = 'Enter a git URL (https://… or git@…).';
+
+            return;
+        }
+
+        try {
+            $key = TemplateStager::sanitizeKey(
+                $this->repoKey ?: Str::before(basename($this->repoUrl), '.git'));
+            app(TemplateRepoIngest::class)
+                ->fromRepo(trim($this->repoUrl), $key, trim($this->repoBranch) ?: null);
+        } catch (\Throwable $e) {
+            $this->intakeError = $e->getMessage();
+
+            return;
+        }
+        $this->reset('repoUrl', 'repoBranch', 'repoKey');
+        $this->dispatch('toast', level: 'success', title: 'Imported', message: "“{$key}” staged from its repository — review it below.");
+    }
+
+    /** Re-pull a submission from its source repo (republishes if already accepted). */
+    public function pullLatest(string $id): void
+    {
+        if (! $this->isModerator()) {
+            return;
+        }
+        $sub = TemplateSubmission::findOrFail($id);
+        try {
+            app(TemplateRepoIngest::class)->pull($sub);
+            $this->dispatch('toast', level: 'success', title: 'Updated', message: "“{$sub->key}” re-imported from {$sub->repo_url}.");
+        } catch (\Throwable $e) {
+            $this->dispatch('toast', level: 'error', title: 'Pull failed', message: $e->getMessage());
+        }
     }
 
     /** Scan the staging folder: upsert a pending submission per Nuxt app found. */
@@ -108,11 +191,13 @@ class TemplateSubmissions extends Component
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
         ]);
-        // Build the published renderer app in the background so site previews work.
+        // Background: build the renderer app for previews, then sync the
+        // catalog so the accepted template is browsable without a manual step.
         dispatch(function () use ($sub) {
             Artisan::call('nuxt:preview-build', ['--template' => $sub->key]);
+            Artisan::call('templates:sync');
         });
-        $this->dispatch('toast', level: 'success', title: 'Accepted', message: "“{$sub->name}” published to the marketplace. Renderer build queued.");
+        $this->dispatch('toast', level: 'success', title: 'Accepted', message: "“{$sub->name}” published — renderer build and catalog sync queued.");
     }
 
     public function startReject(string $id): void

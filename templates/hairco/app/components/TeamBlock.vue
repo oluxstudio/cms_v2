@@ -1,27 +1,33 @@
 <script setup lang="ts">
-const olux = useOluxContent('team')
-const oluxFb: Record<string, string> = {"Text":"Meet the stylists","Headline":"Our Collective","Text B":"Four specialists, one standard \u2014 hair that leaves the chair healthier than it arrived."}
-const members = olux.items('Member', {"Image":"img","Name":"name","Role":"role"}, [
+const oluxCms = useOluxContent('team')
+const oluxFb: Record<string, string> = {}
+import { computed } from 'vue'
+
+const { field, items } = useCms()
+
+// Handcoded fallback — the CMS "team" collection overrides these rows.
+const fallbackMembers = oluxCms.items('Fallback Member', {"Image":"img","Name":"name","Role":"role"}, [
   { img: '/assets/images/team-1.svg', name: 'Amara Ellis', role: 'Creative Director' },
   { img: '/assets/images/team-2.svg', name: 'Rosa Delgado', role: 'Color Specialist' },
   { img: '/assets/images/team-3.svg', name: 'Maya Chen', role: 'Curl Expert' },
   { img: '/assets/images/team-4.svg', name: 'Jules Baptiste', role: 'Senior Stylist' },
 ], {})
+const members = computed(() => items('team', fallbackMembers))
 </script>
 
 <template>
-  <section class="team" v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">
+  <section class="team" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
-      <div class="section-head centered">
-        <p class="eyebrow">{{ olux.t('Text', oluxFb['Text']) }}</p>
-        <h2>{{ olux.t('Headline', oluxFb['Headline']) }}</h2>
-        <p>{{ olux.t('Text B', oluxFb['Text B']) }}</p>
+      <div class="section-head centered" data-olx-key="teamIntro" data-olx-kind="component">
+        <p class="eyebrow" data-olx-field="caption">{{ field('teamIntro', 'caption', 'Meet the stylists') }}</p>
+        <h2 data-olx-field="heading">{{ field('teamIntro', 'heading', 'Our Collective') }}</h2>
+        <p data-olx-field="body">{{ field('teamIntro', 'body', 'Four specialists, one standard — hair that leaves the chair healthier than it arrived.') }}</p>
       </div>
-      <div class="team-grid">
-        <div v-for="m in members" :key="m.name" class="member">
-          <div class="photo"><img :src="m.img" :alt="m.name"></div>
-          <h3>{{ m.name }}</h3>
-          <p>{{ m.role }}</p>
+      <div class="team-grid" data-olx-key="team" data-olx-kind="collection">
+        <div v-for="m in members" :key="m.name" class="member" data-olx-item>
+          <div class="photo"><img :src="m.img || m.image || '/assets/images/team-1.svg'" :alt="m.name" data-olx-field="image"></div>
+          <h3 data-olx-field="name">{{ m.name }}</h3>
+          <p data-olx-field="role">{{ m.role }}</p>
         </div>
       </div>
     </div>

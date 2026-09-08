@@ -101,7 +101,7 @@ class StripeConnect
             'template_version_id' => $template->latest_version_id,
             'user_id' => $buyer->id,
             'price_cents' => $price,
-            'currency' => $template->currency ?: 'usd',
+            'currency' => $template->currency ?: config('templates.currency', 'gbp'),
             'platform_fee_cents' => $fee,
             'creator_amount_cents' => $price - $fee,
             'status' => 'pending',

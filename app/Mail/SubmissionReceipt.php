@@ -6,6 +6,7 @@ use App\Models\Form;
 use App\Models\Site;
 use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -19,7 +20,7 @@ use Illuminate\Queue\SerializesModels;
  * page (site attributes email.receipt_subject / email.receipt_sections) with
  * {placeholders}. The admin's logo brands it, falling back to the app logo.
  */
-class SubmissionReceipt extends Mailable
+class SubmissionReceipt extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

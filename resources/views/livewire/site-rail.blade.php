@@ -7,7 +7,7 @@
          (pills ≥4xl, badge icons below) and drives `tab` via the rail-tab event. --}}
     <div class="hidden shrink-0 p-3">
         <div class="flex gap-1 bg-white/70 dark:bg-white/[0.05] rounded-2xl p-1">
-            @foreach (['alerts'=>['Alerts','#ef4444'], 'messages'=>['Messages','#6366f1'], 'todos'=>['Todos','#10b981']] as $key => [$label,$badge])
+            @foreach (['alerts'=>['Alerts','#ef4444'], 'messages'=>['Messages','#6366f1'], 'todos'=>['Tasks','#10b981']] as $key => [$label,$badge])
                 <button type="button" wire:click="$set('tab','{{ $key }}')"
                         class="fx flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-semibold transition-colors
                                {{ $tab === $key
@@ -120,10 +120,10 @@
                 @endforelse
             </div>
 
-            {{-- bottom link → Todos page --}}
-            <a href="{{ url($this->site->name.'/todos') }}" wire:navigate
+            {{-- bottom link → Tasks page --}}
+            <a href="{{ url($this->site->name.'/tasks') }}" wire:navigate
                class="fx mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-white dark:hover:bg-white/[0.04]">
-                Open Todos
+                Open Tasks
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </a>
         @endif

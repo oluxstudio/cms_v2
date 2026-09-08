@@ -57,8 +57,10 @@ class TemplateExtractor
 
         [$manifest['fonts'], $manifest['behaviours']] = $this->headMeta($root);
 
-        foreach (File::files("$root/app/pages") as $pageFile) {
-            if ($pageFile->getExtension() !== 'vue') {
+        // Recurse so nested pages (app/pages/shop/index.vue) are extracted too;
+        // dynamic pages ([slug].vue) render from the API, not CMS content.
+        foreach (File::allFiles("$root/app/pages") as $pageFile) {
+            if ($pageFile->getExtension() !== 'vue' || str_contains($pageFile->getFilename(), '[')) {
                 continue;
             }
             $manifest['pages'][] = $this->page($root, $pageFile->getPathname());
@@ -76,14 +78,22 @@ class TemplateExtractor
     {
         $src = File::get($file);
         $sections = SfcParser::sections($src);
-        $slug = basename($file, '.vue');
-        $url = $slug === 'index' ? '/' : '/'.Str::slug($slug);
+        // Nuxt file routing: path relative to app/pages, "index" segments drop.
+        $relative = ltrim(str_replace('\\', '/', Str::after($file, '/app/pages/')), '/');
+        $segments = array_map(fn ($seg) => Str::slug($seg), explode('/', substr($relative, 0, -4)));
+        if (end($segments) === 'index') {
+            array_pop($segments);
+        }
+        $url = '/'.implode('/', $segments);
+        $url = $url === '' ? '/' : rtrim($url, '/');
+        $url = $url === '' ? '/' : $url;
+        $slug = $segments === [] ? 'index' : end($segments);
 
         $page = [
-            'name' => $slug === 'index' ? 'Home' : Str::headline($slug),
+            'name' => $url === '/' ? 'Home' : Str::headline($slug),
             'title' => SfcParser::useHeadTitle($sections['script']),
             'url' => $url,
-            'file' => 'app/pages/'.basename($file),
+            'file' => 'app/pages/'.$relative,
             'layout' => ['header' => null, 'footer' => null],
             'blocks' => [],
         ];

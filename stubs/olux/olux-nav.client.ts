@@ -29,8 +29,13 @@ export default defineNuxtPlugin(() => {
       // mailto/tel and file-ish paths (contain a dot) stay native.
       if (!href.startsWith('/') || href.startsWith('//') || href.includes('.')) return
       e.preventDefault()
+      // NuxtLink hrefs are rendered WITH the app base (/nuxt-preview/{key});
+      // pushing them raw would prefix the base a second time — strip it.
+      const base = (useRuntimeConfig().app?.baseURL || '/').replace(/\/+$/, '')
+      let path = href
+      if (base && path.startsWith(base + '/')) path = path.slice(base.length)
       // Keep ?site=… so a manual reload on the new URL still finds the CMS.
-      router.push({ path: href, query: router.currentRoute.value.query })
+      router.push({ path, query: router.currentRoute.value.query })
     },
     { capture: true },
   )

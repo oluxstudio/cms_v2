@@ -15,6 +15,9 @@ class SocialAuthController extends Controller
     {
         $this->validateProvider($provider);
 
+        // ?intent=signup → after OAuth, continue the signup wizard instead of the home page.
+        session()->put('social.after', request()->query('intent') === 'signup' ? 'start' : null);
+
         return Socialite::driver($provider)->redirect();
     }
 
@@ -71,7 +74,11 @@ class SocialAuthController extends Controller
 
         Auth::login($user, remember: true);
 
-        return redirect()->intended(route('home'));
+        if (session()->pull('social.after') === 'start') {
+            return redirect()->route('start');
+        }
+
+        return redirect()->intended($user->landingUrl());
     }
 
     private function validateProvider(string $provider): void

@@ -13,6 +13,7 @@ use App\Services\Booking\TripAvailability;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * The booking engine facade — ONE entry point for all three archetypes
@@ -137,6 +138,12 @@ class BookingService
             }
         } else {
             if (! $this->slots->isBookable($site, $service, $start)) {
+                Log::info('booking rejected: not bookable', [
+                    'site' => $site->name, 'service' => $service->slug, 'start' => (string) $start,
+                    'now' => now()->toDateTimeString(),
+                    'config' => $site->feature('bookings'), 'service_config' => $service->config,
+                ]);
+
                 return 'That time is no longer available. Please pick another slot.';
             }
             Service::whereKey($service->id)->lockForUpdate()->first();
@@ -280,6 +287,15 @@ class BookingService
         // Dashboard recent-activity: every booking, whichever entry point made it.
         try {
             ActivityLogger::bookingEvent($booking->setRelation('service', $service), 'created');
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        try {
+            app(TaskLogger::class)->alert($site,
+                'New booking — '.$service->name, 'booking', 'success',
+                $input['name'].' · '.$booking->starts_at?->format('D j M, g:i A'),
+                null, 'all', url($site->name.'/bookings'));
         } catch (\Throwable $e) {
             report($e);
         }

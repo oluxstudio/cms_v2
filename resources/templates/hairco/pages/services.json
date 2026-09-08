@@ -12,108 +12,87 @@
             "name": "Services",
             "nodes": [
                 {
-                    "label": "Text",
-                    "type": "text",
-                    "value": "Our services",
-                    "order": 0,
-                    "description": "text"
-                },
-                {
-                    "label": "Headline",
-                    "type": "text",
-                    "value": "What we provide to our customers",
-                    "order": 1,
-                    "description": "text"
-                },
-                {
-                    "label": "Text B",
-                    "type": "text",
-                    "value": "Every treatment starts with a consultation \u2014 your hair, your goals, our craft.",
-                    "order": 2,
-                    "description": "text"
-                },
-                {
-                    "label": "Service 1 Icon",
+                    "label": "Fallback Service 1 Icon",
                     "type": "text",
                     "value": "\u2702",
+                    "order": 0,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Fallback Service 1 Title",
+                    "type": "text",
+                    "value": "Hairstyles",
+                    "order": 1,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Service 1 Text",
+                    "type": "text",
+                    "value": "Signature cuts and styling shaped to your face, texture and daily routine.",
+                    "order": 2,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Service 2 Icon",
+                    "type": "text",
+                    "value": "\ud83c\udfa8",
                     "order": 3,
                     "description": "item:icon"
                 },
                 {
-                    "label": "Service 1 Title",
+                    "label": "Fallback Service 2 Title",
                     "type": "text",
-                    "value": "Hairstyles",
+                    "value": "Coloring",
                     "order": 4,
                     "description": "item:title"
                 },
                 {
-                    "label": "Service 1 Text",
+                    "label": "Fallback Service 2 Text",
                     "type": "text",
-                    "value": "Signature cuts and styling shaped to your face, texture and daily routine.",
+                    "value": "Balayage, gloss and full color with gentle, salon-grade pigments.",
                     "order": 5,
                     "description": "item:text"
                 },
                 {
-                    "label": "Service 2 Icon",
+                    "label": "Fallback Service 3 Icon",
                     "type": "text",
-                    "value": "\ud83c\udfa8",
+                    "value": "\ud83c\udf00",
                     "order": 6,
                     "description": "item:icon"
                 },
                 {
-                    "label": "Service 2 Title",
+                    "label": "Fallback Service 3 Title",
                     "type": "text",
-                    "value": "Coloring",
+                    "value": "Hair Curly",
                     "order": 7,
                     "description": "item:title"
                 },
                 {
-                    "label": "Service 2 Text",
+                    "label": "Fallback Service 3 Text",
                     "type": "text",
-                    "value": "Balayage, gloss and full color with gentle, salon-grade pigments.",
+                    "value": "Curl definition, perms and care plans that keep every coil bouncy.",
                     "order": 8,
                     "description": "item:text"
                 },
                 {
-                    "label": "Service 3 Icon",
+                    "label": "Fallback Service 4 Icon",
                     "type": "text",
-                    "value": "\ud83c\udf00",
+                    "value": "\u2728",
                     "order": 9,
                     "description": "item:icon"
                 },
                 {
-                    "label": "Service 3 Title",
+                    "label": "Fallback Service 4 Title",
                     "type": "text",
-                    "value": "Hair Curly",
+                    "value": "Lamination",
                     "order": 10,
                     "description": "item:title"
                 },
                 {
-                    "label": "Service 3 Text",
-                    "type": "text",
-                    "value": "Curl definition, perms and care plans that keep every coil bouncy.",
-                    "order": 11,
-                    "description": "item:text"
-                },
-                {
-                    "label": "Service 4 Icon",
-                    "type": "text",
-                    "value": "\u2728",
-                    "order": 12,
-                    "description": "item:icon"
-                },
-                {
-                    "label": "Service 4 Title",
-                    "type": "text",
-                    "value": "Lamination",
-                    "order": 13,
-                    "description": "item:title"
-                },
-                {
-                    "label": "Service 4 Text",
+                    "label": "Fallback Service 4 Text",
                     "type": "text",
                     "value": "Glass-shine lamination that seals, smooths and protects for weeks.",
-                    "order": 14,
+                    "order": 11,
                     "description": "item:text"
                 }
             ]
@@ -125,72 +104,37 @@
                 {
                     "label": "Image",
                     "type": "image",
-                    "value": "/assets/images/about.svg",
+                    "value": "/assets/images/about.jpg",
                     "order": 0,
                     "description": "attr:src"
                 },
                 {
-                    "label": "Text",
-                    "type": "text",
-                    "value": "About Hair Co.",
-                    "order": 1,
-                    "description": "text"
-                },
-                {
-                    "label": "Headline",
-                    "type": "text",
-                    "value": "Healthy hair begins with a healthy routine",
-                    "order": 2,
-                    "description": "text"
-                },
-                {
-                    "label": "Text B",
-                    "type": "text",
-                    "value": "For over fifteen years our collective has cared for hair the slow way \u2014 honest consultations, gentle products and techniques that respect what grows naturally.",
-                    "order": 3,
-                    "description": "text"
-                },
-                {
-                    "label": "CTA Label",
-                    "type": "text",
-                    "value": "Read our story",
-                    "order": 4,
-                    "description": "text"
-                },
-                {
-                    "label": "CTA Link",
-                    "type": "url",
-                    "value": "/about",
-                    "order": 5,
-                    "description": "attr:href"
-                },
-                {
-                    "label": "Point 1",
+                    "label": "Fallback Point 1 Point",
                     "type": "text",
                     "value": "Long-Lasting Hold",
-                    "order": 6,
-                    "description": "item:_value"
+                    "order": 1,
+                    "description": "item:point"
                 },
                 {
-                    "label": "Point 2",
+                    "label": "Fallback Point 2 Point",
                     "type": "text",
                     "value": "Effective Ingredients",
-                    "order": 7,
-                    "description": "item:_value"
+                    "order": 2,
+                    "description": "item:point"
                 },
                 {
-                    "label": "Point 3",
+                    "label": "Fallback Point 3 Point",
                     "type": "text",
                     "value": "Gentle Formulas",
-                    "order": 8,
-                    "description": "item:_value"
+                    "order": 3,
+                    "description": "item:point"
                 },
                 {
-                    "label": "Point 4",
+                    "label": "Fallback Point 4 Point",
                     "type": "text",
                     "value": "Deep Hydration",
-                    "order": 9,
-                    "description": "item:_value"
+                    "order": 4,
+                    "description": "item:point"
                 }
             ]
         },
@@ -199,150 +143,129 @@
             "name": "Pricing",
             "nodes": [
                 {
-                    "label": "Text",
-                    "type": "text",
-                    "value": "The best pricing",
-                    "order": 0,
-                    "description": "text"
-                },
-                {
-                    "label": "Headline",
-                    "type": "text",
-                    "value": "A menu for every hair day",
-                    "order": 1,
-                    "description": "text"
-                },
-                {
-                    "label": "Text B",
-                    "type": "text",
-                    "value": "Transparent prices, no surprise add-ons \u2014 longer or thicker hair may add a little time, never stress.",
-                    "order": 2,
-                    "description": "text"
-                },
-                {
-                    "label": "Price 1 Title",
+                    "label": "Fallback Price 1 Title",
                     "type": "text",
                     "value": "Signature Cut & Style",
+                    "order": 0,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Price 1 Description",
+                    "type": "text",
+                    "value": "Consultation, wash, precision cut and finish.",
+                    "order": 1,
+                    "description": "item:desc"
+                },
+                {
+                    "label": "Fallback Price 1 Price",
+                    "type": "text",
+                    "value": "$45",
+                    "order": 2,
+                    "description": "item:price"
+                },
+                {
+                    "label": "Fallback Price 2 Title",
+                    "type": "text",
+                    "value": "Full Color",
                     "order": 3,
                     "description": "item:title"
                 },
                 {
-                    "label": "Price 1 Description",
+                    "label": "Fallback Price 2 Description",
                     "type": "text",
-                    "value": "Consultation, wash, precision cut and finish.",
+                    "value": "Single-process color with gloss and blowout.",
                     "order": 4,
                     "description": "item:desc"
                 },
                 {
-                    "label": "Price 1 Price",
+                    "label": "Fallback Price 2 Price",
                     "type": "text",
-                    "value": "$45",
+                    "value": "$66",
                     "order": 5,
                     "description": "item:price"
                 },
                 {
-                    "label": "Price 2 Title",
+                    "label": "Fallback Price 3 Title",
                     "type": "text",
-                    "value": "Full Color",
+                    "value": "Balayage / Highlights",
                     "order": 6,
                     "description": "item:title"
                 },
                 {
-                    "label": "Price 2 Description",
+                    "label": "Fallback Price 3 Description",
                     "type": "text",
-                    "value": "Single-process color with gloss and blowout.",
+                    "value": "Hand-painted dimension with toner.",
                     "order": 7,
                     "description": "item:desc"
                 },
                 {
-                    "label": "Price 2 Price",
+                    "label": "Fallback Price 3 Price",
                     "type": "text",
-                    "value": "$66",
+                    "value": "$58",
                     "order": 8,
                     "description": "item:price"
                 },
                 {
-                    "label": "Price 3 Title",
+                    "label": "Fallback Price 4 Title",
                     "type": "text",
-                    "value": "Balayage / Highlights",
+                    "value": "Curl Definition",
                     "order": 9,
                     "description": "item:title"
                 },
                 {
-                    "label": "Price 3 Description",
+                    "label": "Fallback Price 4 Description",
                     "type": "text",
-                    "value": "Hand-painted dimension with toner.",
+                    "value": "Hydration, shaping and diffuse styling for curls.",
                     "order": 10,
                     "description": "item:desc"
                 },
                 {
-                    "label": "Price 3 Price",
+                    "label": "Fallback Price 4 Price",
                     "type": "text",
-                    "value": "$58",
+                    "value": "$49",
                     "order": 11,
                     "description": "item:price"
                 },
                 {
-                    "label": "Price 4 Title",
+                    "label": "Fallback Price 5 Title",
                     "type": "text",
-                    "value": "Curl Definition",
+                    "value": "Lamination",
                     "order": 12,
                     "description": "item:title"
                 },
                 {
-                    "label": "Price 4 Description",
+                    "label": "Fallback Price 5 Description",
                     "type": "text",
-                    "value": "Hydration, shaping and diffuse styling for curls.",
+                    "value": "Glass-shine treatment that smooths for weeks.",
                     "order": 13,
                     "description": "item:desc"
                 },
                 {
-                    "label": "Price 4 Price",
+                    "label": "Fallback Price 5 Price",
                     "type": "text",
-                    "value": "$49",
+                    "value": "$52",
                     "order": 14,
                     "description": "item:price"
                 },
                 {
-                    "label": "Price 5 Title",
+                    "label": "Fallback Price 6 Title",
                     "type": "text",
-                    "value": "Lamination",
+                    "value": "Express Blowout",
                     "order": 15,
                     "description": "item:title"
                 },
                 {
-                    "label": "Price 5 Description",
+                    "label": "Fallback Price 6 Description",
                     "type": "text",
-                    "value": "Glass-shine treatment that smooths for weeks.",
+                    "value": "Wash, blow-dry and quick finish.",
                     "order": 16,
                     "description": "item:desc"
                 },
                 {
-                    "label": "Price 5 Price",
-                    "type": "text",
-                    "value": "$52",
-                    "order": 17,
-                    "description": "item:price"
-                },
-                {
-                    "label": "Price 6 Title",
-                    "type": "text",
-                    "value": "Express Blowout",
-                    "order": 18,
-                    "description": "item:title"
-                },
-                {
-                    "label": "Price 6 Description",
-                    "type": "text",
-                    "value": "Wash, blow-dry and quick finish.",
-                    "order": 19,
-                    "description": "item:desc"
-                },
-                {
-                    "label": "Price 6 Price",
+                    "label": "Fallback Price 6 Price",
                     "type": "text",
                     "value": "$35",
-                    "order": 20,
+                    "order": 17,
                     "description": "item:price"
                 }
             ]
@@ -352,31 +275,17 @@
             "name": "Cta",
             "nodes": [
                 {
-                    "label": "Headline",
-                    "type": "text",
-                    "value": "Ready for a fresh look?",
-                    "order": 0,
-                    "description": "text"
-                },
-                {
-                    "label": "Text",
-                    "type": "text",
-                    "value": "Chairs fill fast on weekends \u2014 reserve yours in under a minute.",
-                    "order": 1,
-                    "description": "text"
-                },
-                {
                     "label": "CTA Label",
                     "type": "text",
                     "value": "Book an appointment",
-                    "order": 2,
+                    "order": 0,
                     "description": "text"
                 },
                 {
                     "label": "CTA Link",
                     "type": "url",
                     "value": "/appointment",
-                    "order": 3,
+                    "order": 1,
                     "description": "attr:href"
                 }
             ]

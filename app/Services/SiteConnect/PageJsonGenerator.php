@@ -299,7 +299,9 @@ class PageJsonGenerator
             // client renders it with a [data-olx-item] template inside the
             // field element, exactly like a standalone collection).
             'collection' => $this->linkedItems($site, (string) ($node['value'] ?? '')),
-            default => $node['value'] ?? '',
+            // Text/url nodes can hold a media path pasted from the picker —
+            // absolutise it like image nodes, or it 404s on client domains.
+            default => $this->absolutizeStorage($node['value'] ?? ''),
         };
     }
 
@@ -338,7 +340,13 @@ class PageJsonGenerator
             return $src !== '' && str_starts_with($src, '/') ? url($src) : $src;
         }
 
-        return $value;
+        return is_string($value) ? $this->absolutizeStorage($value) : $value;
+    }
+
+    /** A relative /storage/… path 404s when hydrated on a client domain. */
+    private function absolutizeStorage(mixed $value): mixed
+    {
+        return is_string($value) && str_starts_with($value, '/storage/') ? url($value) : $value;
     }
 
     private function formSuccessMessage(Form $f): string

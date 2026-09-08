@@ -7,9 +7,11 @@ use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Site;
 use App\Services\FormDelivery;
+use App\Services\TaskLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class FormSubmissionController extends Controller
 {
@@ -71,6 +73,15 @@ class FormSubmissionController extends Controller
         // ── 5. Dispatch to the form's enabled delivery channels (email now;
         // SMS/WhatsApp later). Best-effort — never blocks the submission.
         app(FormDelivery::class)->deliver($form, $response, $fields);
+
+        try {
+            app(TaskLogger::class)->alert($form->site,
+                'New “'.($form->title ?: $form->name).'” submission', 'form', 'info',
+                Str::limit(implode(' · ', array_map('strval', array_slice(array_values($fields), 0, 3))), 140),
+                null, 'all', url($form->site->name.'/submissions'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'message' => 'Form submitted successfully. Thank you!',

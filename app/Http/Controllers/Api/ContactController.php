@@ -9,6 +9,7 @@ use App\Models\Contact;
 use App\Models\ContactSubmission;
 use App\Models\Site;
 use App\Services\ActivityLogger;
+use App\Services\TaskLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -49,6 +50,15 @@ class ContactController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
+        try {
+            app(TaskLogger::class)->alert($site,
+                'New contact message from '.$data['name'], 'lead', 'info',
+                ($data['subject'] ?? null) ?: Str::limit($data['message'], 120),
+                null, 'all', url($site->name.'/submissions'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         // CRM funnel: the sender becomes (or updates) a Contact.
         try {
             Contact::capture($site, $data['name'], $data['email'], null,
@@ -62,7 +72,7 @@ class ContactController extends Controller
         try {
             ActivityLogger::log($site->id, 'form_response', 'responded',
                 "New contact message from {$data['name']}", [
-                    'description' => $data['subject'] ?: Str::limit($data['message'], 120),
+                    'description' => ($data['subject'] ?? null) ?: Str::limit($data['message'], 120),
                     'url' => '/submissions',
                     'icon' => 'response',
                     'meta' => ['email' => $data['email'], 'form_name' => 'Contact'],

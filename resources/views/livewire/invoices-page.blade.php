@@ -362,28 +362,36 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <x-field.text label="Due date" model="dueDate" type="date" />
-                        <x-field.text label="Tax %" model="taxPercent" type="number" step="0.01" min="0" max="100" />
-                        <div>
-                            <label class="bkf-label">Repeat</label>
-                            <select wire:model="recurInterval" class="bkf-input">
-                                <option value="">One-off</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="quarterly">Quarterly</option>
-                                <option value="yearly">Yearly</option>
-                            </select>
-                            <p class="bkf-hint">Recurring invoices are generated and emailed automatically.</p>
-                        </div>
-                        <div>
-                            <label class="bkf-label">Currency</label>
-                            <select wire:model="invCurrency" class="bkf-input">
-                                @foreach(\App\Support\Money::options() as $code => $label)
-                                    <option value="{{ $code }}">{{ strtoupper($code) }} — {{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
                     </div>
-                    <x-field.textarea model="invNotes" rows="2" placeholder="Notes shown on the invoice (optional)" />
+
+                    <div class="olx-adv-lead">More options</div>
+                    <x-panel-group label="Tax, currency & repeat" hint="tax %, recurring, currency">
+                        <div class="grid grid-cols-2 gap-3">
+                            <x-field.text label="Tax %" model="taxPercent" type="number" step="0.01" min="0" max="100" />
+                            <div>
+                                <label class="bkf-label">Repeat</label>
+                                <select wire:model="recurInterval" class="bkf-input">
+                                    <option value="">One-off</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="quarterly">Quarterly</option>
+                                    <option value="yearly">Yearly</option>
+                                </select>
+                                <p class="bkf-hint">Recurring invoices are generated and emailed automatically.</p>
+                            </div>
+                            <div>
+                                <label class="bkf-label">Currency</label>
+                                <select wire:model="invCurrency" class="bkf-input">
+                                    @foreach(\App\Support\Money::options() as $code => $label)
+                                        <option value="{{ $code }}">{{ strtoupper($code) }} — {{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </x-panel-group>
+                    <x-panel-group label="Notes" hint="shown on the invoice">
+                        <x-field.textarea model="invNotes" rows="2" placeholder="Notes shown on the invoice (optional)" />
+                    </x-panel-group>
 
                     <div class="flex gap-2">
                         <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">{{ $editingId ? 'Update invoice' : 'Create draft' }}</button>

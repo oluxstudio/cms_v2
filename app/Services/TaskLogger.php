@@ -53,8 +53,9 @@ class TaskLogger
         string $audience = 'all',
         ?string $link = null,
         array $meta = [],
+        ?string $dedupeKey = null,
     ): Alert {
-        return $site->alerts()->create([
+        $values = [
             'user_id' => $user?->id,
             'level' => $level,
             'type' => $type,
@@ -63,7 +64,15 @@ class TaskLogger
             'body' => $body,
             'link' => $link,
             'meta' => $meta ?: null,
-        ]);
+        ];
+
+        // A deduped alert is raised at most once per key per site — recurring
+        // sweeps can call this freely without piling up duplicates.
+        if ($dedupeKey !== null) {
+            return $site->alerts()->firstOrCreate(['dedupe_key' => $dedupeKey], $values);
+        }
+
+        return $site->alerts()->create($values);
     }
 
     /**

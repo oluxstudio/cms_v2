@@ -72,11 +72,11 @@ class BookingAdminApiController extends Controller
         ]);
     }
 
-    /** Confirm or cancel a booking. */
+    /** Confirm, cancel or mark a booking as a no-show. */
     public function update(Request $request, string $siteName, string $id): JsonResponse
     {
         $site = $this->site($request, $siteName);
-        $data = $request->validate(['status' => ['required', 'in:confirmed,cancelled']]);
+        $data = $request->validate(['status' => ['required', 'in:confirmed,cancelled,no_show']]);
 
         $booking = $site->bookings()->with('service')->findOrFail($id);
         $was = $booking->status;

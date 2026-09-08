@@ -71,7 +71,16 @@ export const useOluxContent = (blockKey: string) => {
     // single-page fallback covers baked one-page exports served at any path.
     const page = pages.find((p: any) => ((p.url || '/').replace(/\/+$/, '') || '/') === path)
       ?? (pages.length === 1 ? pages[0] : null)
-    const wf: BlockT[] = page?.wireframe ?? []
+    if (!page) {
+      // Route the CMS doesn't know (e.g. dynamic /shop/{slug} pages): bind to
+      // the first page carrying this block so shared chrome keeps its content.
+      for (const p of pages) {
+        const hit = (p.wireframe ?? []).find((b: BlockT) => typeof b.type === 'string' && b.type.endsWith(`:${blockKey}`))
+        if (hit) return hit
+      }
+      return null
+    }
+    const wf: BlockT[] = page.wireframe ?? []
     return wf.find((b) => typeof b.type === 'string' && b.type.endsWith(`:${blockKey}`)) ?? null
   }
 
@@ -101,8 +110,24 @@ export const useOluxContent = (blockKey: string) => {
    * prefixes (e.g. image folders re-added by the template's own interpolation).
    * Returns a computed so v-for re-renders once content loads.
    */
+
+  /**
+   * Reactive ARRAY that tracks a computed list. Rewritten templates replace
+   * plain `const rows = […]` with these — returning a computed ref would
+   * silently break script usage like `rows.length` (NaN step bugs), so we
+   * keep real array semantics and sync contents reactively.
+   */
+  const trackedArray = <T>(compute: () => T[]): T[] => {
+    const arr = reactive([] as T[]) as T[]
+    watchEffect(() => {
+      const next = compute()
+      arr.splice(0, arr.length, ...next)
+    })
+    return arr
+  }
+
   const items = (prefix: string, fields: Record<string, string>, fallback: Row[], strip: Record<string, string> = {}) =>
-    computed<Row[]>(() => {
+    trackedArray<Row>(() => {
       const block = findBlock()
       if (!block?.nodes?.length) return fallback
       const rows: Row[] = []
@@ -140,7 +165,7 @@ export const useOluxContent = (blockKey: string) => {
    * data like FAQ questions). Returns a computed so v-for re-renders.
    */
   const list = (prefix: string, fallback: string[]) =>
-    computed<string[]>(() => {
+    trackedArray<string>(() => {
       const block = findBlock()
       if (!block?.nodes?.length) return fallback
       const out: string[] = []
@@ -158,7 +183,15 @@ export const useOluxContent = (blockKey: string) => {
    */
   const hidden = (): boolean => {
     if (!loaded.value || !data.value) return false
-    const block = findBlock()
+    const pages = data.value?.pages ?? (data.value?.page ? [data.value.page] : [])
+    if (!pages.length) return false
+    const path = route.path.replace(/\/+$/, '') || '/'
+    const page = pages.find((p: any) => ((p.url || '/').replace(/\/+$/, '') || '/') === path)
+      ?? (pages.length === 1 ? pages[0] : null)
+    // A route the CMS has no page for (dynamic pages like /shop/{slug})
+    // renders its shipped composition — never hide chrome there.
+    if (!page) return false
+    const block = (page.wireframe ?? []).find((b: BlockT) => typeof b.type === 'string' && b.type.endsWith(`:${blockKey}`))
     if (!block) return true
     return block.settings?.hidden === true
   }

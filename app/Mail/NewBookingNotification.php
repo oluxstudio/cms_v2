@@ -5,13 +5,14 @@ namespace App\Mail;
 use App\Models\Booking;
 use App\Models\Site;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /** Owner alert: a NEW booking just came in — review/confirm it. */
-class NewBookingNotification extends Mailable
+class NewBookingNotification extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

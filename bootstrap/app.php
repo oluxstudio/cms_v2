@@ -53,6 +53,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'preview/*/donate/webhook',
             'preview/*/booking/webhook',
             'preview/*/invoice/webhook',
+            'stripe/sites/webhook',
+            'hooks/template-repo',
             'stripe/templates/webhook',
             'stripe/subscription/webhook',
         ]);

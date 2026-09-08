@@ -41,9 +41,14 @@ class TemplateAppRegistry
                 if (! File::exists("{$dir}/package.json")) {
                     continue;
                 }
+                // Manifest lives beside the app when present, else in the
+                // split-file package under resources/templates/{key}.
                 $manifest = [];
-                if (File::exists("{$dir}/template.json")) {
-                    $manifest = json_decode(File::get("{$dir}/template.json"), true) ?: [];
+                foreach (["{$dir}/template.json", resource_path("templates/{$key}/template.json")] as $mf) {
+                    if (File::exists($mf)) {
+                        $manifest = json_decode(File::get($mf), true) ?: [];
+                        break;
+                    }
                 }
                 $out[$key] = [
                     'key' => $key,

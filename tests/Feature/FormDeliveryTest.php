@@ -41,8 +41,8 @@ test('a form submission delivers to both visitor and admin by default', function
 
     $this->postJson("/api/sites/{$site->name}/form/enquiry", ['name' => 'Sam', 'email' => 'sam@example.com'])->assertCreated();
 
-    Mail::assertSent(SubmissionReceipt::class, fn ($m) => $m->hasTo('sam@example.com'));
-    Mail::assertSent(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email));
+    Mail::assertQueued(SubmissionReceipt::class, fn ($m) => $m->hasTo('sam@example.com'));
+    Mail::assertQueued(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email));
 });
 
 test('disabling the admin notification stops the owner email', function () {
@@ -52,8 +52,8 @@ test('disabling the admin notification stops the owner email', function () {
 
     $this->postJson("/api/sites/{$site->name}/form/enquiry", ['name' => 'Sam', 'email' => 'sam@example.com'])->assertCreated();
 
-    Mail::assertSent(SubmissionReceipt::class);
-    Mail::assertNotSent(FormSubmissionNotification::class);
+    Mail::assertQueued(SubmissionReceipt::class);
+    Mail::assertNotQueued(FormSubmissionNotification::class);
 });
 
 test('an admin_address override receives the notification instead of the owner', function () {
@@ -63,7 +63,7 @@ test('an admin_address override receives the notification instead of the owner',
 
     $this->postJson("/api/sites/{$site->name}/form/enquiry", ['name' => 'Sam', 'email' => 'sam@example.com'])->assertCreated();
 
-    Mail::assertSent(FormSubmissionNotification::class, fn ($m) => $m->hasTo('ops@team.test') && ! $m->hasTo($owner->email));
+    Mail::assertQueued(FormSubmissionNotification::class, fn ($m) => $m->hasTo('ops@team.test') && ! $m->hasTo($owner->email));
 });
 
 test('disabling the whole email channel sends nothing', function () {
@@ -73,7 +73,7 @@ test('disabling the whole email channel sends nothing', function () {
 
     $this->postJson("/api/sites/{$site->name}/form/enquiry", ['name' => 'Sam', 'email' => 'sam@example.com'])->assertCreated();
 
-    Mail::assertNothingSent();
+    Mail::assertNothingQueued();
 });
 
 test('the admin notification links to the specific response deep link', function () {
@@ -84,7 +84,7 @@ test('the admin notification links to the specific response deep link', function
     $this->postJson("/api/sites/{$site->name}/form/enquiry", ['name' => 'Sam', 'email' => 'sam@example.com'])->assertCreated();
 
     $response = FormResponse::latest('id')->first();
-    Mail::assertSent(FormSubmissionNotification::class, fn ($m) => $m->adminUrl === route('site.forms.response', [$site->name, $response->id]));
+    Mail::assertQueued(FormSubmissionNotification::class, fn ($m) => $m->adminUrl === route('site.forms.response', [$site->name, $response->id]));
 });
 
 test('the response deep link opens that response in the forms page and marks it read', function () {
@@ -127,8 +127,8 @@ test('unimplemented channels are skipped, not errored', function () {
 
     $this->postJson("/api/sites/{$site->name}/form/enquiry", ['name' => 'Sam', 'email' => 'sam@example.com'])->assertCreated();
 
-    Mail::assertSent(SubmissionReceipt::class);
-    Mail::assertSent(FormSubmissionNotification::class);
+    Mail::assertQueued(SubmissionReceipt::class);
+    Mail::assertQueued(FormSubmissionNotification::class);
 });
 
 test('reordering/disabling sections changes the rendered receipt', function () {

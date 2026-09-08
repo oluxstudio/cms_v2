@@ -1,0 +1,314 @@
+{
+    "name": "About",
+    "url": "/about",
+    "layout": "default",
+    "keywords": "about",
+    "attributes": {
+        "title": "About Us \u2014 Hair Co."
+    },
+    "blocks": [
+        {
+            "type": "app:v2hairco:about",
+            "name": "About",
+            "nodes": [
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/about-1.jpg",
+                    "order": 0,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Image B",
+                    "type": "image",
+                    "value": "/assets/images/about-2.jpg",
+                    "order": 1,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Fallback Point 1 Point",
+                    "type": "text",
+                    "value": "Long-Lasting Hold",
+                    "order": 2,
+                    "description": "item:point"
+                },
+                {
+                    "label": "Fallback Point 2 Point",
+                    "type": "text",
+                    "value": "Effective Ingredients",
+                    "order": 3,
+                    "description": "item:point"
+                },
+                {
+                    "label": "Fallback Point 3 Point",
+                    "type": "text",
+                    "value": "Gentle Formulas",
+                    "order": 4,
+                    "description": "item:point"
+                },
+                {
+                    "label": "Fallback Point 4 Point",
+                    "type": "text",
+                    "value": "Deep Hydration",
+                    "order": 5,
+                    "description": "item:point"
+                }
+            ]
+        },
+        {
+            "type": "app:v2hairco:stats",
+            "name": "Stats",
+            "nodes": [
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/stats-1.jpg",
+                    "order": 0,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Image B",
+                    "type": "image",
+                    "value": "/assets/images/stats-2.jpg",
+                    "order": 1,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Fallback Stat 1 Title",
+                    "type": "text",
+                    "value": "30+",
+                    "order": 2,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Stat 1 Text",
+                    "type": "text",
+                    "value": "International Branches",
+                    "order": 3,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Stat 2 Title",
+                    "type": "text",
+                    "value": "12k",
+                    "order": 4,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Stat 2 Text",
+                    "type": "text",
+                    "value": "Happy Clients World Wide",
+                    "order": 5,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Stat 3 Title",
+                    "type": "text",
+                    "value": "15",
+                    "order": 6,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Stat 3 Text",
+                    "type": "text",
+                    "value": "Years of In-Field Experience",
+                    "order": 7,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Stat 4 Title",
+                    "type": "text",
+                    "value": "98%",
+                    "order": 8,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Stat 4 Text",
+                    "type": "text",
+                    "value": "Positive Client Reviews",
+                    "order": 9,
+                    "description": "item:text"
+                }
+            ]
+        },
+        {
+            "type": "app:v2hairco:team",
+            "name": "Team",
+            "nodes": [
+                {
+                    "label": "Fallback Member 1 Image",
+                    "type": "image",
+                    "value": "/assets/images/team-1.jpg",
+                    "order": 0,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Fallback Member 1 Name",
+                    "type": "text",
+                    "value": "Amara Ellis",
+                    "order": 1,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Fallback Member 1 Role",
+                    "type": "text",
+                    "value": "Creative Director",
+                    "order": 2,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Fallback Member 2 Image",
+                    "type": "image",
+                    "value": "/assets/images/team-2.jpg",
+                    "order": 3,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Fallback Member 2 Name",
+                    "type": "text",
+                    "value": "Rosa Delgado",
+                    "order": 4,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Fallback Member 2 Role",
+                    "type": "text",
+                    "value": "Color Specialist",
+                    "order": 5,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Fallback Member 3 Image",
+                    "type": "image",
+                    "value": "/assets/images/team-3.jpg",
+                    "order": 6,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Fallback Member 3 Name",
+                    "type": "text",
+                    "value": "Maya Chen",
+                    "order": 7,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Fallback Member 3 Role",
+                    "type": "text",
+                    "value": "Curl Expert",
+                    "order": 8,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Fallback Member 4 Image",
+                    "type": "image",
+                    "value": "/assets/images/team-4.jpg",
+                    "order": 9,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Fallback Member 4 Name",
+                    "type": "text",
+                    "value": "Jules Baptiste",
+                    "order": 10,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Fallback Member 4 Role",
+                    "type": "text",
+                    "value": "Senior Stylist",
+                    "order": 11,
+                    "description": "item:role"
+                }
+            ]
+        },
+        {
+            "type": "app:v2hairco:testimonials",
+            "name": "Testimonials",
+            "nodes": [
+                {
+                    "label": "Fallback Review 1 Quote",
+                    "type": "text",
+                    "value": "The consultation alone was worth the visit \u2014 my color has never looked this natural.",
+                    "order": 0,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Fallback Review 1 Name",
+                    "type": "text",
+                    "value": "Priya N.",
+                    "order": 1,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Fallback Review 1 Role",
+                    "type": "text",
+                    "value": "Coloring client",
+                    "order": 2,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Fallback Review 2 Quote",
+                    "type": "text",
+                    "value": "Three salons gave up on my curls. Hair Co. gave me a routine that actually works.",
+                    "order": 3,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Fallback Review 2 Name",
+                    "type": "text",
+                    "value": "Dana W.",
+                    "order": 4,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Fallback Review 2 Role",
+                    "type": "text",
+                    "value": "Curl care client",
+                    "order": 5,
+                    "description": "item:role"
+                },
+                {
+                    "label": "Fallback Review 3 Quote",
+                    "type": "text",
+                    "value": "Booked at noon, transformed by three. Effortless from start to finish.",
+                    "order": 6,
+                    "description": "item:quote"
+                },
+                {
+                    "label": "Fallback Review 3 Name",
+                    "type": "text",
+                    "value": "Elena M.",
+                    "order": 7,
+                    "description": "item:name"
+                },
+                {
+                    "label": "Fallback Review 3 Role",
+                    "type": "text",
+                    "value": "Styling client",
+                    "order": 8,
+                    "description": "item:role"
+                }
+            ]
+        },
+        {
+            "type": "app:v2hairco:cta",
+            "name": "Cta",
+            "nodes": [
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Book an appointment",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/appointment",
+                    "order": 1,
+                    "description": "attr:href"
+                }
+            ]
+        }
+    ]
+}

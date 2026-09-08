@@ -2,11 +2,16 @@
 
 namespace App\Livewire;
 
+use App\Mail\CourierInvite;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Site;
+use App\Payments\PaymentManager;
 use App\Support\Money;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -31,6 +36,8 @@ class OrdersPage extends Component
 
     public string $successMessage = '';
 
+    public string $errorMessage = '';
+
     public function mount(Site $site): void
     {
         $this->site = $site;
@@ -51,13 +58,93 @@ class OrdersPage extends Component
         $this->selectedId = null;
     }
 
-    public function markFulfilled(string $id): void
+    public function markShipped(string $id): void
     {
         $order = $this->site->orders()->find($id);
-        if ($order && $order->status === 'paid') {
-            $order->update(['status' => 'fulfilled']);
-            $this->successMessage = 'Order marked as fulfilled.';
+        if ($order && $order->isPaid()) {
+            $order->transitionTo('shipped', auth()->id());
+            $this->successMessage = 'Order marked as shipped.';
         }
+    }
+
+    public function markDelivered(string $id): void
+    {
+        $order = $this->site->orders()->find($id);
+        if ($order && $order->isPaid()) {
+            $order->transitionTo('delivered', auth()->id());
+            $this->successMessage = 'Order delivered — all done.';
+        }
+    }
+
+    /** Goods came back: restocks the items and stamps returned_at. */
+    public function markReturned(string $id): void
+    {
+        $order = $this->site->orders()->find($id);
+        if ($order && ($order->isPaid() || $order->status === 'return_requested')) {
+            $order->transitionTo('returned', auth()->id());
+            $this->successMessage = 'Order marked as returned — items are back in stock.';
+        }
+    }
+
+    /**
+     * Money back: refunds through the site's payment gateway when the order
+     * carries a payment reference, then marks the order refunded. On gateway
+     * failure nothing changes and the error is surfaced.
+     */
+    public function refundOrder(string $id): void
+    {
+        $order = $this->site->orders()->find($id);
+        if (! $order || in_array($order->status, ['pending', 'refunded', 'cancelled'], true)) {
+            return;
+        }
+
+        if ($order->stripe_payment_intent) {
+            try {
+                app(PaymentManager::class)->for($this->site)
+                    ->refund($this->site, $order->stripe_payment_intent);
+            } catch (\Throwable $e) {
+                Log::error('order refund failed', ['order' => $order->id, 'msg' => $e->getMessage()]);
+                $this->errorMessage = 'The refund could not be processed — nothing was changed. Please try again or refund from your Stripe dashboard.';
+
+                return;
+            }
+        }
+
+        $order->transitionTo('refunded', auth()->id());
+        $this->successMessage = $order->stripe_payment_intent
+            ? "Refund of {$order->formattedTotal()} sent — the money is on its way back."
+            : 'Order marked as refunded.';
+    }
+
+    // ── Courier invitation ────────────────────────────────────────────────
+    public string $courierEmail = '';
+
+    /** Email a courier a tokened link to the delivery page for this order. */
+    public function inviteCourier(string $id): void
+    {
+        $email = trim($this->courierEmail);
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->errorMessage = 'Enter a valid email address for the courier.';
+
+            return;
+        }
+        $order = $this->site->orders()->find($id);
+        if (! $order || ! in_array($order->status, ['paid', 'shipped'], true)) {
+            return;
+        }
+
+        $order->courier_token ??= Str::random(40);
+        $order->fill(['courier_email' => $email, 'courier_invited_at' => now()])->save();
+        $order->recordEvent('courier_invited', auth()->id(), $email);
+
+        try {
+            Mail::to($email)->send(new CourierInvite($order, $this->site));
+            $this->successMessage = "Delivery link sent to {$email}.";
+        } catch (\Throwable $e) {
+            report($e);
+            $this->errorMessage = 'Could not send the invitation email — please try again.';
+        }
+        $this->courierEmail = '';
     }
 
     /** Per-row status dropdown (image-style). Paid stamps paid_at once. */
@@ -70,12 +157,7 @@ class OrdersPage extends Component
         if (! $order || $order->status === $status) {
             return;
         }
-        $order->update([
-            'status' => $status,
-            'paid_at' => in_array($status, ['paid', 'fulfilled'], true)
-                ? ($order->paid_at ?? now())
-                : $order->paid_at,
-        ]);
+        $order->transitionTo($status, auth()->id()); // stamps timestamps, moves stock, records history
         $this->successMessage = "Order #{$order->id} → {$status}.";
     }
 
@@ -232,7 +314,7 @@ class OrdersPage extends Component
     public function getInsightsProperty(): array
     {
         $currency = $this->site->currency ?? 'gbp';
-        $paid = fn () => $this->site->orders()->whereIn('status', ['paid', 'fulfilled']);
+        $paid = fn () => $this->site->orders()->whereIn('status', ['paid', 'shipped', 'delivered', 'fulfilled']);
 
         $monthStart = now()->startOfMonth();
         $prevStart = now()->subMonthNoOverflow()->startOfMonth();
@@ -259,7 +341,7 @@ class OrdersPage extends Component
             return [
                 'label' => $date->format('j M'),
                 'cents' => (int) $this->site->orders()
-                    ->whereIn('status', ['paid', 'fulfilled'])
+                    ->whereIn('status', ['paid', 'shipped', 'delivered', 'fulfilled'])
                     ->whereDate('paid_at', $date->toDateString())
                     ->sum('total_cents'),
             ];

@@ -14,6 +14,7 @@ use App\Services\BlockTreeService;
 use App\Support\RichText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class SiteContentController extends Controller
 {
@@ -107,12 +108,59 @@ class SiteContentController extends Controller
             'components' => $components
                 ->map(fn ($c) => $c->payload() + ['order' => (int) $c->pivot->order])
                 ->values()->all(),
+            // Renderer wireframe: the app-template block list this page is made
+            // of, in order. Marketplace renderer apps (useOluxPageOrder /
+            // useOluxContent) read THIS to decide which blocks to draw and with
+            // what content — type "app:{templateKey}:{block}" mirrors the
+            // published pages/*.json the components were scaffolded from.
+            'wireframe' => $this->wireframePayload($page, $site, $components),
             // Collections on this page (attached + referenced), full with components.
             'collections' => $this->pageCollections($page, $components),
             // Forms this page uses (its BlockKit form blocks), full.
             'forms' => $this->pageForms($page, $site),
             'block_tree' => $this->blockTree($page, $site),
         ];
+    }
+
+    /**
+     * The page's blocks for app-template renderers: each ordered component
+     * becomes {type: "app:{key}:{slug(name)}", name, nodes[]}. The block key is
+     * the component name slugified — the same convention SubmissionPublisher
+     * uses when it turns an app's blocks into page defs, so scaffolded content
+     * round-trips back to the exact block that authored it. @media/ image refs
+     * resolve to served URLs (root-relative, like resolveTreeMedia).
+     */
+    private function wireframePayload(Page $page, Site $site, $components): array
+    {
+        $key = $site->renderTemplateKey();
+
+        // The template's chrome (header/nav + footer) wraps EVERY page —
+        // site-level components tagged by TemplateScaffolder::applyChrome().
+        static $chrome = [];
+        $chrome[$site->id] ??= $site->contentComponents()->whereNull('collection_id')->with('nodes')->get()
+            ->groupBy(fn ($c) => collect($c->tags ?? [])->first(fn ($t) => str_starts_with((string) $t, 'chrome:')) ?: '');
+        $header = $chrome[$site->id]->get('chrome:header', collect());
+        $footer = $chrome[$site->id]->get('chrome:footer', collect());
+
+        $entry = fn ($c) => [
+            'type' => "app:{$key}:".Str::slug($c->name),
+            'name' => $c->name,
+            'settings' => $c->pivot?->settings ? json_decode((string) $c->pivot->settings, true) : null,
+            'nodes' => $c->nodes->map(fn ($n) => [
+                'label' => $n->label,
+                'type' => $n->type,
+                'value' => str_starts_with((string) $n->value, '@media/')
+                    ? Media::resolveRef($site->id, (string) $n->value)
+                    : $n->value,
+                'order' => (int) $n->order,
+                'description' => $n->description,
+            ])->values()->all(),
+        ];
+
+        return $header->map($entry)
+            ->concat($components->map($entry))
+            ->concat($footer->map($entry))
+            ->values()->all();
     }
 
     /**

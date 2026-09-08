@@ -20,6 +20,6 @@ const oluxPage = useOluxPageOrder('/', oluxBlocks)
 <template>
   <div>
     <div id="preloader"></div>
-    <component :is="b.comp" v-for="(b, i) in oluxPage" :key="`${b.key}-${i}`" />
+    <component :is="b.comp" v-for="(b, i) in oluxPage" :key="`${b.key}-${i}`" :data-olx-key="b.key" data-olx-kind="component" />
   </div>
 </template>

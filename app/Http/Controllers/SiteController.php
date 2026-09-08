@@ -78,9 +78,9 @@ class SiteController extends Controller
         return view('messages', ['site' => $this->findSiteBySlug($siteID)]);
     }
 
-    public function todosPage($siteID)
+    public function tasksPage($siteID)
     {
-        return view('todos', ['site' => $this->findSiteBySlug($siteID)]);
+        return view('tasks', ['site' => $this->findSiteBySlug($siteID)]);
     }
 
     /**
@@ -90,12 +90,21 @@ class SiteController extends Controller
      */
     public function index()
     {
+        // Mid-wizard signups (e.g. back from Google sign-in) resume the wizard
+        // instead of landing on an empty site picker.
+        $wizard = (array) ((auth()->user()?->onboarding ?? [])['wizard'] ?? []);
+        if ($wizard && empty($wizard['done']) && ! auth()->user()->sites()->exists()) {
+            return redirect()->route('start');
+        }
+
         return view('site');
     }
 
-    public function templates()
+    public function designsPage($siteID)
     {
-        return view('templates');
+        $site = $this->findSiteBySlug($siteID);
+
+        return view('site-templates', compact('site'));
     }
 
     public function dashboard($siteID)
@@ -103,6 +112,14 @@ class SiteController extends Controller
         $site = $this->findSiteBySlug($siteID);
 
         return view('dashboard', ['site' => $site]);
+    }
+
+    public function pageDetail(string $siteID, string $page)
+    {
+        $site = $this->findSiteBySlug($siteID);
+        $pageModel = $site->pages()->findOrFail($page);
+
+        return view('page-detail', ['site' => $site, 'page' => $pageModel]);
     }
 
     public function pages($siteID)
@@ -138,6 +155,13 @@ class SiteController extends Controller
         $site = $this->findSiteBySlug($siteID);
 
         return view('site-templates', compact('site'));
+    }
+
+    public function paymentsPage($siteID)
+    {
+        $site = $this->findSiteBySlug($siteID);
+
+        return view('payments', compact('site'));
     }
 
     public function marketplace($siteID)
@@ -212,6 +236,14 @@ class SiteController extends Controller
     }
 
     /** Dedicated page for ONE invoice (booking-card design + PDF download). */
+    public function productShow(string $siteID, string $product)
+    {
+        $site = $this->findSiteBySlug($siteID);
+        $productModel = $site->products()->findOrFail($product);
+
+        return view('store-product', ['site' => $site, 'product' => $productModel]);
+    }
+
     public function invoiceShow($siteID, int $invoice)
     {
         $site = $this->findSiteBySlug($siteID);

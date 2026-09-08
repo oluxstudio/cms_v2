@@ -15,11 +15,13 @@ use Illuminate\Support\Str;
  * populated (stay: check-in/check-out midnights; trip: departure both ways)
  * so overlap queries and sorting stay uniform.
  *
- * status: pending | confirmed | cancelled | awaiting_payment
+ * status: pending | awaiting_payment | confirmed | cancelled | no_show
  */
 class Booking extends Model
 {
     use HasUlids;
+
+    public const STATUSES = ['pending', 'awaiting_payment', 'confirmed', 'cancelled', 'no_show'];
 
     protected $fillable = [
         'site_id', 'service_id', 'departure_id', 'resource_id', 'reference',
@@ -46,10 +48,22 @@ class Booking extends Model
         });
     }
 
-    /** Everything that occupies capacity — i.e. not cancelled. */
+    /** Everything that occupies capacity — i.e. not cancelled or a no-show. */
+    /** Bookings happening today (not cancelled). */
+    public function scopeToday(Builder $q): Builder
+    {
+        return $q->active()->whereDate('starts_at', today());
+    }
+
+    /** Future bookings (not cancelled), soonest first. */
+    public function scopeUpcoming(Builder $q): Builder
+    {
+        return $q->active()->where('starts_at', '>=', now())->orderBy('starts_at');
+    }
+
     public function scopeActive(Builder $q): Builder
     {
-        return $q->where('status', '!=', 'cancelled');
+        return $q->whereNotIn('status', ['cancelled', 'no_show']);
     }
 
     /** Ordered lifecycle events for the card's lifecycle box. */
@@ -74,6 +88,12 @@ class Booking extends Model
     public function markCancelled(): void
     {
         $this->update(['status' => 'cancelled']);
+    }
+
+    /** The customer didn't turn up — only meaningful for past bookings. */
+    public function markNoShow(): void
+    {
+        $this->update(['status' => 'no_show']);
     }
 
     public function formattedTotal(): string

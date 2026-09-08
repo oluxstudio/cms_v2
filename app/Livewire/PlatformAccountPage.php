@@ -3,8 +3,15 @@
 namespace App\Livewire;
 
 use App\Models\AccountActivityLog;
+use App\Models\Booking;
+use App\Models\Contact;
+use App\Models\Media;
+use App\Models\Message;
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\SiteActivityLog;
 use App\Models\User;
+use App\Models\Visit;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -70,7 +77,37 @@ class PlatformAccountPage extends Component
 
         $lastSeen = AccountActivityLog::where('account_id', $user->id)->latest()->value('created_at');
 
+        // ── Per-site usage: one grouped query per metric (never per-site loops).
+        $per = fn ($query, string $col = '*') => $siteIds->isEmpty() ? collect() : $query
+            ->whereIn('site_id', $siteIds)
+            ->selectRaw('site_id, '.($col === '*' ? 'count(*)' : $col).' as v')
+            ->groupBy('site_id')->pluck('v', 'site_id');
+
+        $since30 = now()->subDays(30);
+        $usage = [
+            'media_bytes' => $per(Media::query(), 'coalesce(sum(bytes),0)'),
+            'products' => $per(Product::query()),
+            'bookings' => $per(Booking::query()),
+            'orders' => $per(Order::query()),
+            'revenue_cents' => $per(Order::whereIn('status', ['paid', 'shipped', 'delivered', 'fulfilled']), 'coalesce(sum(total_cents),0)'),
+            'contacts' => $per(Contact::query()),
+            'messages' => $per(Message::query()),
+            'visits_30d' => $per(Visit::humans()->where('created_at', '>=', $since30)),
+        ];
+
+        // Account traffic sparkline (30 days) for the Apex chart.
+        $chartDays = collect(range(29, 0))->map(fn ($d) => now()->subDays($d)->toDateString());
+        $visitRows = $siteIds->isEmpty() ? collect() : Visit::humans()
+            ->whereIn('site_id', $siteIds)->where('created_at', '>=', $since30->copy()->startOfDay())
+            ->selectRaw('DATE(created_at) as d, count(*) as n')->groupBy('d')->pluck('n', 'd');
+        $charts = [
+            'labels' => $chartDays->map(fn ($d) => date('j M', strtotime($d)))->all(),
+            'visits' => $chartDays->map(fn ($d) => (int) ($visitRows[$d] ?? 0))->all(),
+        ];
+
         return view('livewire.platform-account-page', [
+            'usage' => $usage,
+            'charts' => $charts,
             'user' => $user,
             'sub' => $sub,
             'sites' => $user->sites()->withCount(['pages', 'media'])->get(),

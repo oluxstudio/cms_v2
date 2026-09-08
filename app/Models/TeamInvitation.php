@@ -15,7 +15,7 @@ class TeamInvitation extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['account_id', 'invited_by', 'role_id', 'email', 'token', 'expires_at', 'accepted_at'];
+    protected $fillable = ['account_id', 'invited_by', 'role_id', 'site_id', 'email', 'token', 'expires_at', 'accepted_at'];
 
     protected $casts = ['expires_at' => 'datetime', 'accepted_at' => 'datetime'];
 
@@ -44,12 +44,12 @@ class TeamInvitation extends Model
      * [$invitation, $plainToken]. The plain token goes into the email and
      * is never persisted.
      */
-    public static function issue(User $account, User $inviter, string $email, Role $role): array
+    public static function issue(User $account, User $inviter, string $email, Role $role, ?string $siteId = null): array
     {
         $plain = Str::random(48);
 
         $invitation = static::updateOrCreate(
-            ['account_id' => $account->id, 'email' => mb_strtolower(trim($email))],
+            ['account_id' => $account->id, 'email' => mb_strtolower(trim($email)), 'site_id' => $siteId],
             [
                 'invited_by' => $inviter->id,
                 'role_id' => $role->id,

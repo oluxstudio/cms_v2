@@ -1,0 +1,44 @@
+# /srv/edge/docker-compose.yml — THE single shared edge for the whole VPS.
+# Traefik owns 80/443, routes by each site container's labels, and issues
+# per-site TLS automatically. Never needs editing when sites come and go.
+#   docker network create edge   (once)
+#   docker compose up -d
+services:
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    # NOTE: Traefik's docker provider pins client API 1.24 by design. Docker
+    # daemons with a raised minimum reject it — fix on the DAEMON (once per VPS):
+    #   mkdir -p /etc/systemd/system/docker.service.d
+    #   printf '[Service]\nEnvironment=DOCKER_MIN_API_VERSION=1.24\n' \
+    #     > /etc/systemd/system/docker.service.d/api-version.conf
+    #   systemctl daemon-reload && systemctl restart docker
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=edge
+      # Non-container services (host processes like a pm2 app) get one file
+      # each in ./dynamic/ — see the repo's deploy/README for the pattern.
+      - --providers.file.directory=/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le.acme.email=admin@oluxstudio.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+      - ./dynamic:/dynamic:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks: [edge]
+
+networks:
+  edge:
+    external: true

@@ -9,5 +9,5 @@ it('renders the salon landing page for guests', function () {
         ->assertOk()
         ->assertSee('£79', false)
         ->assertSee('barbershops', false)
-        ->assertSee('/register', false);
+        ->assertSee('/start', false);
 });

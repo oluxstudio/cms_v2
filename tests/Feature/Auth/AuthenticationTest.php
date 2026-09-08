@@ -1,9 +1,10 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt as LivewireVolt;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('login screen can be rendered', function () {
     $this->get('/login')->assertStatus(200);
@@ -17,7 +18,10 @@ test('users can authenticate using the login screen', function () {
         ->set('loginPassword', 'password')
         ->call('login')
         ->assertHasNoErrors()
-        ->assertRedirect(route('home', absolute: false));
+        // A user with no sites or memberships resumes signup at /start;
+        // owners land on the picker and invited members on their dashboard
+        // (see User::landingUrl and TeamRbacTest).
+        ->assertRedirect(route('start'));
 
     $this->assertAuthenticated();
 });

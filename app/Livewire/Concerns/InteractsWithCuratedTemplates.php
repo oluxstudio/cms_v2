@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Concerns;
 
+use App\Support\CuratedTemplates;
 use App\Templates\TemplateAppRegistry;
 use Livewire\Attributes\Computed;
 
@@ -18,18 +19,8 @@ trait InteractsWithCuratedTemplates
     {
         $installedKeys = $this->site->installedTemplates()->pluck('builtin_key')->filter()->all();
 
-        return collect(TemplateAppRegistry::all())
-            ->reject(fn ($t) => $t['key'] === TemplateAppRegistry::BLANK)
-            ->map(fn ($t) => [
-                'key' => $t['key'],
-                'name' => $t['name'],
-                'description' => (string) ($t['manifest']['description'] ?? ''),
-                'category' => (string) ($t['manifest']['category'] ?? 'Template'),
-                'accent' => (string) ($t['manifest']['theme']['accent'] ?? $t['manifest']['accentColor'] ?? '#6366f1'),
-                'thumbnail' => $t['thumbnail'],
-                'installed' => in_array($t['key'], $installedKeys, true),
-                'previewUrl' => url("nuxt-preview/{$t['key']}/").'?template='.urlencode($t['key']),
-            ])
+        return collect(CuratedTemplates::all())
+            ->map(fn ($t) => $t + ['installed' => in_array($t['key'], $installedKeys, true)])
             ->values()
             ->all();
     }

@@ -79,8 +79,12 @@ services:
       - mysql_data:/var/lib/mysql
     healthcheck:
       test: ['CMD', 'mysqladmin', 'ping', '-p${DB_PASSWORD}']
-      interval: 5s
-      retries: 10
+      # Fast probes only while starting up; every probe is a container exec
+      # that costs dockerd CPU, which a 1-vCPU box cannot spare at steady state.
+      start_period: 60s
+      start_interval: 5s
+      interval: 60s
+      retries: 3
 
   redis:
     image: redis:alpine

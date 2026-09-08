@@ -47,7 +47,7 @@ class BlockAgent
             // The whole AI turn is ONE undo unit — Ctrl+Z reverts everything
             // Polux did in this exchange, however many tool calls it made.
             $text = $this->trees->withBatch($page, 'Polux: '.mb_substr($prompt, 0, 90), BlockTreeService::SOURCE_AI,
-                fn () => $this->driver->chat($this->systemPrompt($site, $user, $page, $selectedId), $messages, $this->toolDefinitions(), $execute),
+                fn () => $this->driver->chat($this->systemPrompt($site, $user, $page, $selectedId), $messages, $this->toolDefinitions(), $execute)->text,
             );
         } catch (\Throwable $e) {
             return ['ok' => false, 'text' => 'Polux could not reach the model — '.$e->getMessage(), 'mutated' => false, 'tools' => $executed];

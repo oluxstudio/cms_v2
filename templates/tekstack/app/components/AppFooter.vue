@@ -1,20 +1,20 @@
 <script setup lang="ts">
-const olux = useOluxContent('footer')
+const oluxCms = useOluxContent('footer')
 const oluxFb: Record<string, string> = {"Headline":"Tekstack<span>.</span>","Text":"Lorem ipsum dolor amet consectetur adi pisicing elit sed eiusm tempor incididunt ut labore dolore magna aliqua enim ad minim veniam quis.nostrud exercita.laboris nisi ut aliquip ea commodo conse quatuis aute irure.","CTA Label":"Tekstack","CTA Link":"#","CTA B Label":"Terms of Service","CTA B Link":"#","CTA C Label":"Privacy Policy","CTA C Link":"#"}
-const services = olux.list('Service', ['Web Design', 'App Developemnt', 'Cloud Services', 'Domain adn Hosting', 'Seo Optimization', 'Social Media'])
-const contacts = olux.list('Contact', ['101 West Town', 'PBo 12345, United States', '+1 1234 56 789', 'contact@example.com'])
+const services = oluxCms.list('Service', ['Web Design', 'App Developemnt', 'Cloud Services', 'Domain adn Hosting', 'Seo Optimization', 'Social Media'])
+const contacts = oluxCms.list('Contact', ['101 West Town', 'PBo 12345, United States', '+1 1234 56 789', 'contact@example.com'])
 </script>
 
 <template>
-  <footer id="footer" class="main-footer" v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">
+  <footer id="footer" class="main-footer" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="footer-content">
         <div class="row">
           <div class="col-lg-4 col-md-6 col-sm-12 footer-column">
             <div class="logo-widget footer-widget">
-              <a href="#hero" class="logo d-flex align-items-center"><h1 v-html="olux.t('Headline', oluxFb['Headline'])"></h1></a>
+              <a href="#hero" class="logo d-flex align-items-center"><h1 data-olx-field="headline" v-html="oluxCms.t('Headline', oluxFb['Headline'])"></h1></a>
               <div class="text">
-                <p>{{ olux.t('Text', oluxFb['Text']) }}</p>
+                <p data-olx-field="text">{{ oluxCms.t('Text', oluxFb['Text']) }}</p>
               </div>
               <ul class="footer-social">
                 <li><a href="#"><i class="fa fa-facebook"></i></a></li>
@@ -48,12 +48,12 @@ const contacts = olux.list('Contact', ['101 West Town', 'PBo 12345, United State
     <div class="container">
       <div class="row">
         <div class="col-lg-6 col-md-6 col-sm-12 column">
-          <div class="copyright"><a :href="olux.t('CTA Link', oluxFb['CTA Link'])">{{ olux.t('CTA Label', oluxFb['CTA Label']) }}</a> &copy; 2022 All Right Reserved</div>
+          <div class="copyright"><a data-olx-field="ctaLabel" :href="oluxCms.t('CTA Link', oluxFb['CTA Link'])">{{ oluxCms.t('CTA Label', oluxFb['CTA Label']) }}</a> &copy; 2022 All Right Reserved</div>
         </div>
         <div class="col-lg-6 col-md-6 col-sm-12 column">
           <ul class="footer-nav">
-            <li><a :href="olux.t('CTA B Link', oluxFb['CTA B Link'])">{{ olux.t('CTA B Label', oluxFb['CTA B Label']) }}</a></li>
-            <li><a :href="olux.t('CTA C Link', oluxFb['CTA C Link'])">{{ olux.t('CTA C Label', oluxFb['CTA C Label']) }}</a></li>
+            <li><a data-olx-field="ctaBLabel" :href="oluxCms.t('CTA B Link', oluxFb['CTA B Link'])">{{ oluxCms.t('CTA B Label', oluxFb['CTA B Label']) }}</a></li>
+            <li><a data-olx-field="ctaCLabel" :href="oluxCms.t('CTA C Link', oluxFb['CTA C Link'])">{{ oluxCms.t('CTA C Label', oluxFb['CTA C Label']) }}</a></li>
           </ul>
         </div>
       </div>

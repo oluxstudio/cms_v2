@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Site;
 use App\Models\Subscription;
+use App\Services\TaskLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -66,6 +67,14 @@ class SubscriptionController extends Controller
             'ip_address' => $request->ip(),
             'status' => 'active',
         ]);
+
+        try {
+            app(TaskLogger::class)->alert($site,
+                'New subscriber — '.$data['email'], 'subscriber', 'info',
+                $data['name'] ?? null, null, 'all', null);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'message' => 'Thank you for subscribing!',

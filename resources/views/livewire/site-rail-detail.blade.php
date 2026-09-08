@@ -47,7 +47,7 @@
                         </div>
                     @endforeach
                 </div>
-                <p class="text-[11px] text-gray-400 mt-3">Tick items off in the Todos panel on the right.</p>
+                <p class="text-[11px] text-gray-400 mt-3">Tick items off in the Tasks panel on the right.</p>
             </div>
         @endif
     @endif

@@ -60,6 +60,12 @@ class AccountSubscription extends Model
         return (bool) ($this->tier()['limits']['premium'] ?? false);
     }
 
+    /** May this account publish (and sell) templates on the marketplace? Business+. */
+    public function allowsMarketplacePublishing(): bool
+    {
+        return (bool) ($this->tier()['limits']['marketplace'] ?? false);
+    }
+
     /** May the owner create another site? (respects unlimited + expired trial) */
     public function canCreateSite(): bool
     {

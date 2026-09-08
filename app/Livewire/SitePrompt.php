@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Site;
 use App\Services\SiteAgent;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -35,6 +36,19 @@ class SitePrompt extends Component
         }
 
         $this->input = '';
+
+        // Per-site rate limit: the assistant is metered, not hammerable.
+        $limiterKey = 'ai:'.$this->siteId;
+        $perHour = (int) config('services.llm.per_hour', 30);
+        if (RateLimiter::tooManyAttempts($limiterKey, $perHour)) {
+            $this->messages[] = ['role' => 'user', 'text' => $text];
+            $this->messages[] = ['role' => 'assistant', 'ok' => false,
+                'text' => 'The assistant is cooling down — this site has used its '.$perHour.' AI requests for the hour. Try again shortly.'];
+            $this->dispatch('chat-updated');
+
+            return;
+        }
+        RateLimiter::hit($limiterKey, 3600);
 
         // Add user message
         $this->messages[] = ['role' => 'user', 'text' => $text];

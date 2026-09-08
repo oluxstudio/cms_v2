@@ -138,7 +138,7 @@ class ActivityLogger
             [
                 'entity_id' => $todo->id,
                 'description' => $todo->description,
-                'url' => '/todos',
+                'url' => '/tasks',
                 'meta' => ['priority' => $todo->priority, 'status' => $todo->status],
             ]
         );
@@ -154,7 +154,7 @@ class ActivityLogger
             [
                 'entity_id' => $todo->id,
                 'description' => null,
-                'url' => '/todos',
+                'url' => '/tasks',
                 'meta' => ['priority' => $todo->priority],
             ]
         );
@@ -176,10 +176,10 @@ class ActivityLogger
         );
     }
 
-    /** Booking lifecycle: created | confirmed | cancelled. */
+    /** Booking lifecycle: created | confirmed | cancelled | no_show. */
     public static function bookingEvent(Booking $booking, string $action): void
     {
-        $verb = ['created' => 'was made', 'confirmed' => 'was confirmed', 'cancelled' => 'was cancelled'][$action] ?? $action;
+        $verb = ['created' => 'was made', 'confirmed' => 'was confirmed', 'cancelled' => 'was cancelled', 'no_show' => 'was a no-show'][$action] ?? $action;
         static::log(
             $booking->site_id,
             'booking',

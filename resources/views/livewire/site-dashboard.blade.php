@@ -24,7 +24,12 @@
             </div>
         </div>
 
-        <p class="hidden md:block text-sm font-semibold text-gray-400">{{ $siteTitle }}</p>
+        <div class="hidden md:flex items-center gap-2">
+            <p class="text-sm font-semibold text-gray-400">{{ $siteTitle }}</p>
+            <a href="{{ $site->templatePreviewUrl() }}" target="_blank" rel="noopener"
+               title="Your site exactly as visitors see it"
+               class="text-xs font-semibold text-indigo-400 hover:text-indigo-500 whitespace-nowrap">Live preview ↗</a>
+        </div>
 
         <div class="flex items-center gap-2">
             <span class="text-xs font-medium text-gray-400 mr-1">Team</span>
@@ -65,36 +70,28 @@
                 <svg class="w-4 h-4 text-gray-300 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
             </a>
 
-            @php
-                $ringR = 34; $ringC = 2 * M_PI * $ringR; $ringDash = $ringC * min($productivity,100) / 100;
-                $chartMax = max(collect($chartData)->pluck('value')->max() ?? 0, 1);
-                $draftCount = max($pagesCount - $publishedCount, 0);
-                $pubPct = $pagesCount > 0 ? round($publishedCount / $pagesCount * 100) : 0;
-            @endphp
-
-            {{-- Productivity donut --}}
-            <div class="rounded-3xl p-5 shadow-sm text-white flex items-center gap-5"
+            {{-- This week — the numbers that matter for running the business --}}
+            <div class="rounded-3xl p-5 shadow-sm text-white"
                  style="background:linear-gradient(150deg,#1f2330,#11131c)">
-                <div class="relative w-[88px] h-[88px] shrink-0">
-                    <svg class="w-full h-full -rotate-90" viewBox="0 0 80 80">
-                        <circle cx="40" cy="40" r="{{ $ringR }}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="9"/>
-                        <circle cx="40" cy="40" r="{{ $ringR }}" fill="none" stroke="url(#ringg)" stroke-width="9" stroke-linecap="round"
-                                stroke-dasharray="{{ $ringDash }} {{ $ringC }}"/>
-                        <defs><linearGradient id="ringg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#818cf8"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs>
-                    </svg>
-                    <div class="absolute inset-0 flex flex-col items-center justify-center">
-                        <span class="text-xl font-extrabold leading-none">{{ $productivity }}%</span>
-                        <span class="text-[9px] text-white/50 mt-0.5">live</span>
-                    </div>
-                </div>
-                <div>
-                    <p class="text-sm font-bold">Today's Productivity</p>
-                    <p class="text-xs text-white/50 mt-0.5">{{ $publishedCount }} of {{ $pagesCount }} pages published</p>
-                    <a href="{{ url($site->name.'/analytics') }}" class="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-indigo-300 hover:text-indigo-200">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-sm font-bold">This week</p>
+                    <a href="{{ url($site->name.'/analytics') }}" class="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-300 hover:text-indigo-200">
                         Analytics <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                     </a>
                 </div>
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div><p class="text-2xl font-extrabold leading-none">{{ $weekStats['bookings'] }}</p><p class="text-[10px] text-white/50 mt-1">Bookings</p></div>
+                    <div><p class="text-2xl font-extrabold leading-none">£{{ number_format($weekStats['revenue_cents'] / 100, 0) }}</p><p class="text-[10px] text-white/50 mt-1">Collected</p></div>
+                    <div><p class="text-2xl font-extrabold leading-none">{{ $weekStats['leads'] }}</p><p class="text-[10px] text-white/50 mt-1">New leads</p></div>
+                </div>
             </div>
+
+            {{-- Ops cards: what needs doing, today's diary, money owed, setup --}}
+            @include('partials.dashboard-actions')
+            @include('partials.dashboard-checklist')
+            @include('partials.dashboard-agenda')
+            @include('partials.dashboard-vertical')
+            @include('partials.dashboard-money')
 
             {{-- Project Activity tile (amber, Lisso-style) --}}
             <div class="bg-amber-50 dark:bg-amber-500/10 rounded-3xl p-4 shadow-sm">
@@ -102,10 +99,11 @@
                     <span class="text-sm font-bold text-gray-900 dark:text-white">Project Activity</span>
                     <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-500/30 text-amber-800 dark:text-amber-300">Statistic</span>
                 </div>
-                <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="grid grid-cols-4 gap-2 text-center">
                     @foreach([
                         ['Pages',     $pagesCount,     'pages'],
                         ['Assets',    $mediaCount,     'media'],
+                        ['Forms',     $formsCount,     'forms'],
                         ['Responses', $responsesCount, 'forms'],
                     ] as [$lbl, $val, $seg])
                     <a href="{{ url($site->name.'/'.$seg) }}" class="flex flex-col items-center gap-0.5 hover:opacity-80 transition-opacity">
@@ -114,34 +112,25 @@
                     </a>
                     @endforeach
                 </div>
-                <div class="flex items-end justify-between gap-1 h-14 mt-4 pt-3 border-t border-amber-200/60 dark:border-amber-500/20">
-                    @foreach ($chartData as $bar)
-                        @php $pct = $chartMax > 0 ? max(8, round($bar['value'] / $chartMax * 100)) : 8; @endphp
-                        <div class="flex-1 flex flex-col items-center gap-1">
-                            <div class="w-full rounded-md" style="height:{{ $pct }}%;background:{{ $bar['value'] > 0 ? '#f59e0b' : '#fcd34d40' }}"></div>
-                            <span class="text-[8px] text-gray-400">{{ $bar['label'] }}</span>
-                        </div>
-                    @endforeach
-                </div>
             </div>
 
-            {{-- 2x2 stat grid — warm tile format --}}
+            {{-- Commerce tiles — bookings, orders, stock, invoices. Only rendered
+                 when the feature is on and there is something to show. --}}
+            @if ($commerceTiles)
             <div class="grid grid-cols-2 gap-3">
-                @foreach ([
-                    ['Pages',$pagesCount,'pages','#d9f068','#2b3110','M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.6a1 1 0 01.7.3l5.4 5.4a1 1 0 01.3.7V19a2 2 0 01-2 2z'],
-                    ['Assets',$mediaCount,'media','#d7c3f5','#33245c','M4 16l4.6-4.6a2 2 0 012.8 0L16 16m-2-2l1.6-1.6a2 2 0 012.8 0L20 14M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z'],
-                    ['Forms',$formsCount,'forms','#e6d6c6','#4a3628','M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
-                ] as [$lbl,$val,$seg,$bg,$fg,$icon])
-                    <a href="{{ url($site->name.'/'.$seg) }}"
+                @foreach ($commerceTiles as $t)
+                    <a href="{{ url($site->name.'/'.$t['seg']) }}"
                        class="bg-[#f2efe8] dark:bg-[#282433] rounded-[1.4rem] p-3.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
-                        <span class="w-8 h-8 rounded-full flex items-center justify-center mb-2" style="background:{{ $bg }};color:{{ $fg }}">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}"/></svg>
+                        <span class="w-8 h-8 rounded-full flex items-center justify-center mb-2" style="background:{{ $t['bg'] }};color:{{ $t['fg'] }}">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $t['icon'] }}"/></svg>
                         </span>
-                        <p class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">{{ $val }}</p>
-                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{{ $lbl }}</p>
+                        <p class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">{{ $t['value'] }}</p>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{{ $t['label'] }}</p>
+                        @if ($t['hint']) <p class="text-[10px] font-semibold text-rose-500 mt-0.5">{{ $t['hint'] }}</p> @endif
                     </a>
                 @endforeach
             </div>
+            @endif
 
             {{-- KPI pair — ink hero + lime accent --}}
             <div class="grid grid-cols-2 gap-3">
@@ -234,7 +223,7 @@
             {{-- Quick links --}}
             <div class="flex items-center justify-between pt-1 shrink-0">
                 <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">Quick access</h3>
-                <a href="{{ url($site->name.'/todos') }}" class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">+ Task</a>
+                <a href="{{ url($site->name.'/tasks') }}" class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">+ Task</a>
             </div>
 
             @foreach([

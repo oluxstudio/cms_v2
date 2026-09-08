@@ -1,23 +1,23 @@
 <script setup lang="ts">
-
-const olux = useOluxContent('hero')
-const oluxFb: Record<string, string> = {"Text":"Salon & Hair Care","Headline":"Beautiful hair begins the moment you walk in","Text B":"From precision cuts to gentle coloring and deep-care routines, our stylists shape a look that feels unmistakably you.","CTA Label":"Book an appointment","CTA Link":"/appointment","CTA B Label":"Explore services","CTA B Link":"/services","Image":"/assets/images/hero.svg"}
+const oluxCms = useOluxContent('hero')
+const oluxFb: Record<string, string> = {"Image":"/assets/images/hero.jpg"}
+const { field } = useCms()
 </script>
 
 <template>
-  <section class="hero" v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">
+  <section class="hero" data-olx-key="hero" data-olx-kind="component" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div>
-        <p class="eyebrow">{{ olux.t('Text', oluxFb['Text']) }}</p>
-        <h1>{{ olux.t('Headline', oluxFb['Headline']) }}</h1>
-        <p class="lead">{{ olux.t('Text B', oluxFb['Text B']) }}</p>
+        <p class="eyebrow" data-olx-field="caption">{{ field('hero', 'caption', 'Salon & Hair Care') }}</p>
+        <h1 data-olx-field="heading">{{ field('hero', 'heading', 'Beautiful hair begins the moment you walk in') }}</h1>
+        <p class="lead" data-olx-field="lead">{{ field('hero', 'lead', 'From precision cuts to gentle coloring and deep-care routines, our stylists shape a look that feels unmistakably you.') }}</p>
         <div class="actions">
-          <a class="btn" :href="olux.t('CTA Link', oluxFb['CTA Link'])">{{ olux.t('CTA Label', oluxFb['CTA Label']) }}</a>
-          <a class="btn ghost" :href="olux.t('CTA B Link', oluxFb['CTA B Link'])">{{ olux.t('CTA B Label', oluxFb['CTA B Label']) }}</a>
+          <a class="btn" href="/appointment" data-olx-field="heroButton">{{ field('hero', 'heroButton', 'Book an appointment') }}</a>
+          <a class="btn ghost" href="/services" data-olx-field="servicesButton">{{ field('hero', 'servicesButton', 'Explore services') }}</a>
         </div>
       </div>
       <div class="visual">
-        <img :src="olux.t('Image', oluxFb['Image'])" alt="Salon styling">
+        <img :src="oluxCms.t('Image', oluxFb['Image'])" alt="Inside the Hair Co. salon" data-olx-field="image">
       </div>
     </div>
   </section>

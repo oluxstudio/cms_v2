@@ -40,10 +40,7 @@ class TemplateSecurity
                 continue; // directory entry
             }
 
-            // Path traversal / absolute paths.
-            if (str_contains($name, '..') || str_starts_with($name, '/') || preg_match('#^[A-Za-z]:#', $name)) {
-                throw new RuntimeException("Unsafe path in archive: {$name}");
-            }
+            $this->assertSafeEntryName($name);
 
             $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
             if ($ext === '' || ! in_array($ext, $allowed, true)) {
@@ -52,6 +49,67 @@ class TemplateSecurity
 
             $stat = $zip->statIndex($i);
             $size = (int) ($stat['size'] ?? 0); // uncompressed
+            if ($size > $maxFile) {
+                throw new RuntimeException("File too large in archive: {$name}");
+            }
+            $total += $size;
+            if ($total > $maxTotal) {
+                throw new RuntimeException('Archive contents exceed the size limit.');
+            }
+        }
+    }
+
+    private function assertSafeEntryName(string $name): void
+    {
+        if (str_contains($name, '..') || str_starts_with($name, '/') || preg_match('#^[A-Za-z]:#', $name)) {
+            throw new RuntimeException("Unsafe path in archive: {$name}");
+        }
+    }
+
+    /**
+     * Validate a zipped Nuxt TEMPLATE APP (source code, not a split-file
+     * package): app-profile limits, denied build/vcs dirs, no symlinks.
+     */
+    public function inspectAppZip(ZipArchive $zip): void
+    {
+        $lim = config('templates.limits_app');
+        $allowed = array_map('strtolower', $lim['allowed_ext']);
+        $denied = (array) $lim['denied_dirs'];
+        $maxFiles = (int) $lim['max_files'];
+        $maxTotal = (int) $lim['max_total_mb'] * 1024 * 1024;
+        $maxFile = (int) $lim['max_file_mb'] * 1024 * 1024;
+
+        if ($zip->numFiles > $maxFiles) {
+            throw new RuntimeException("Archive has too many files ({$zip->numFiles} > {$maxFiles}).");
+        }
+
+        $total = 0;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if ($name === false || str_ends_with($name, '/')) {
+                continue;
+            }
+            $this->assertSafeEntryName($name);
+
+            foreach ($denied as $dir) {
+                if (preg_match('#(^|/)'.preg_quote($dir, '#').'(/|$)#', $name)) {
+                    throw new RuntimeException("Archive must not contain {$dir}/ — export the app source only ({$name}).");
+                }
+            }
+
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if ($ext === '' || ! in_array($ext, $allowed, true)) {
+                throw new RuntimeException("Disallowed file type in app archive: {$name}");
+            }
+
+            $stat = $zip->statIndex($i);
+            // Reject symlink entries (unix mode S_IFLNK in the external attrs).
+            $mode = (($stat['opsys'] ?? 3) === 3) ? ((($stat['external_attributes'] ?? ($stat['attr'] ?? 0)) >> 16) & 0xF000) : 0;
+            if ($mode === 0xA000) {
+                throw new RuntimeException("Symbolic links are not allowed in app archives: {$name}");
+            }
+
+            $size = (int) ($stat['size'] ?? 0);
             if ($size > $maxFile) {
                 throw new RuntimeException("File too large in archive: {$name}");
             }

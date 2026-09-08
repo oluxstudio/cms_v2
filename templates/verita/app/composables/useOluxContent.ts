@@ -101,8 +101,24 @@ export const useOluxContent = (blockKey: string) => {
    * prefixes (e.g. image folders re-added by the template's own interpolation).
    * Returns a computed so v-for re-renders once content loads.
    */
+
+  /**
+   * Reactive ARRAY that tracks a computed list. Rewritten templates replace
+   * plain `const rows = […]` with these — returning a computed ref would
+   * silently break script usage like `rows.length` (NaN step bugs), so we
+   * keep real array semantics and sync contents reactively.
+   */
+  const trackedArray = <T>(compute: () => T[]): T[] => {
+    const arr = reactive([] as T[]) as T[]
+    watchEffect(() => {
+      const next = compute()
+      arr.splice(0, arr.length, ...next)
+    })
+    return arr
+  }
+
   const items = (prefix: string, fields: Record<string, string>, fallback: Row[], strip: Record<string, string> = {}) =>
-    computed<Row[]>(() => {
+    trackedArray<Row>(() => {
       const block = findBlock()
       if (!block?.nodes?.length) return fallback
       const rows: Row[] = []
@@ -140,7 +156,7 @@ export const useOluxContent = (blockKey: string) => {
    * data like FAQ questions). Returns a computed so v-for re-renders.
    */
   const list = (prefix: string, fallback: string[]) =>
-    computed<string[]>(() => {
+    trackedArray<string>(() => {
       const block = findBlock()
       if (!block?.nodes?.length) return fallback
       const out: string[] = []

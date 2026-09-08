@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BookingApiController;
 use App\Http\Controllers\Api\CollectionApiController;
 use App\Http\Controllers\Api\CommentApiController;
 use App\Http\Controllers\Api\ComponentApiController;
+use App\Http\Controllers\Api\ConnectTokenController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\EstimatorController;
 use App\Http\Controllers\Api\FormApiController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Api\PostApiController;
 use App\Http\Controllers\Api\ServiceApiController;
 use App\Http\Controllers\Api\SiteContentController;
 use App\Http\Controllers\Api\SitePublishController;
+use App\Http\Controllers\Api\StoreApiController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\TemplatePreviewController;
 use App\Http\Controllers\Api\V1\ConnectController;
@@ -145,6 +147,15 @@ Route::get('/sites/{siteName}/booking/availability', [BookingApiController::clas
 Route::post('/sites/{siteName}/booking', [BookingApiController::class, 'store'])->middleware(['throttle:booking-write', 'site.origin'])->name('api.booking.store');
 Route::get('/sites/{siteName}/booking/{reference}', [BookingApiController::class, 'show'])
     ->where('reference', '[A-Za-z0-9]{6,14}')->name('api.booking.show');
+
+// ── Store: products + headless checkout (templates call these) ──────────────
+Route::get('/sites/{siteName}/products', [StoreApiController::class, 'index'])->name('api.store.products');
+Route::get('/sites/{siteName}/products/{slug}', [StoreApiController::class, 'show'])->name('api.store.product');
+Route::post('/sites/{siteName}/store/checkout', [StoreApiController::class, 'checkout'])->middleware(['throttle:booking-write', 'site.origin'])->name('api.store.checkout');
+Route::post('/sites/{siteName}/store/orders/{order}/confirm', [StoreApiController::class, 'confirmOrder'])->middleware(['throttle:track', 'site.origin'])->name('api.store.confirm');
+Route::post('/sites/{siteName}/products/{slug}/event', [StoreApiController::class, 'event'])->middleware(['throttle:track', 'site.origin'])->name('api.store.event');
+Route::get('/sites/{siteName}/products/{slug}/reviews', [StoreApiController::class, 'reviews'])->name('api.store.reviews');
+Route::post('/sites/{siteName}/products/{slug}/reviews', [StoreApiController::class, 'submitReview'])->middleware(['throttle:booking-write', 'site.origin'])->name('api.store.review.submit');
 
 // ── Components (classic content components + their nodes) ───────────────────
 Route::get('/sites/{siteName}/components', [ComponentApiController::class, 'index'])->name('api.components.index');
@@ -309,5 +320,5 @@ Route::prefix('site')->middleware(['auth.token', 'token.site', 'throttle:token-a
 
     // The site's PUBLIC connect key (publish.manage) — lets the client build
     // inject the connect.js token without it living in the client's .env.
-    Route::get('/connect-token', \App\Http\Controllers\Api\ConnectTokenController::class)->name('api.site.connect-token');
+    Route::get('/connect-token', ConnectTokenController::class)->name('api.site.connect-token');
 });

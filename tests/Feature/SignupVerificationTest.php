@@ -13,7 +13,7 @@ function startSignup(string $email = 'a@test.com'): array
     $token = $svc->start(['name' => 'Ada', 'phone' => '123', 'email' => $email, 'password' => 'secret123']);
 
     $code = null;
-    Mail::assertSent(VerificationCode::class, function ($m) use (&$code, $email) {
+    Mail::assertQueued(VerificationCode::class, function ($m) use (&$code, $email) {
         $code = $m->code;
 
         return $m->hasTo($email);

@@ -11,9 +11,10 @@ import ContactBlock from '~/components/ContactBlock.vue'
 import HeroBlock from '~/components/HeroBlock.vue'
 import ServicesBlock from '~/components/ServicesBlock.vue'
 import PricingBlock from '~/components/PricingBlock.vue'
+import ShopBlock from '~/components/ShopBlock.vue'
 
 const route = useRoute()
-const oluxBlocks: Record<string, any> = { 'site-header': SiteHeader, 'about': AboutBlock, 'stats': StatsBlock, 'team': TeamBlock, 'testimonials': TestimonialsBlock, 'cta': CtaBlock, 'site-footer': SiteFooter, 'appointment': AppointmentBlock, 'contact': ContactBlock, 'hero': HeroBlock, 'services': ServicesBlock, 'pricing': PricingBlock }
+const oluxBlocks: Record<string, any> = { 'site-header': SiteHeader, 'about': AboutBlock, 'stats': StatsBlock, 'team': TeamBlock, 'testimonials': TestimonialsBlock, 'cta': CtaBlock, 'site-footer': SiteFooter, 'appointment': AppointmentBlock, 'contact': ContactBlock, 'hero': HeroBlock, 'services': ServicesBlock, 'pricing': PricingBlock, 'shop': ShopBlock }
 // Reactive URL getter — this component is reused across navigations.
 const oluxPage = useOluxPageOrder(() => route.path, oluxBlocks)
 </script>
@@ -21,6 +22,6 @@ const oluxPage = useOluxPageOrder(() => route.path, oluxBlocks)
 <template>
   <div>
     <div id="preloader"></div>
-    <component :is="b.comp" v-for="(b, i) in oluxPage" :key="`${b.key}-${i}`" />
+    <component :is="b.comp" v-for="(b, i) in oluxPage" :key="`${b.key}-${i}`" :data-olx-key="b.key" data-olx-kind="component" />
   </div>
 </template>

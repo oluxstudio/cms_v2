@@ -1,6 +1,7 @@
 <?php
 
 use App\Mail\TutorialWelcome;
+use App\Mail\VerificationCode;
 use App\Models\User;
 use App\Services\PlatformBilling;
 use Illuminate\Support\Facades\Mail;
@@ -40,11 +41,11 @@ test('activating a paid plan sends the tutorial welcome email once', function ()
     $billing = app(PlatformBilling::class);
 
     $billing->activate($user, 'pro');
-    Mail::assertSent(TutorialWelcome::class, 1);
+    Mail::assertQueued(TutorialWelcome::class, 1);
 
     // Re-activating the same active plan does not resend.
     $billing->activate($user, 'pro');
-    Mail::assertSent(TutorialWelcome::class, 1);
+    Mail::assertQueued(TutorialWelcome::class, 1);
 });
 
 test('new users can register with a phone number (via the code step)', function () {
@@ -60,7 +61,7 @@ test('new users can register with a phone number (via the code step)', function 
         ->call('startVerification');
 
     $code = null;
-    Mail::assertSent(App\Mail\VerificationCode::class, function ($m) use (&$code) {
+    Mail::assertQueued(VerificationCode::class, function ($m) use (&$code) {
         $code = $m->code;
 
         return true;
@@ -68,5 +69,5 @@ test('new users can register with a phone number (via the code step)', function 
 
     $component->set('code', $code)->call('verifyCode');
 
-    expect(User::where('phone', '+44 7700 900123')->where('email', $email)->exists())->toBeTrue();
+    expect(User::where('phone', '+447700900123')->where('email', $email)->exists())->toBeTrue();
 });

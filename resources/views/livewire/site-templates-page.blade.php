@@ -38,7 +38,7 @@
         <p class="text-xs font-bold tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-1">{{ $site->name }}</p>
         <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Your Templates</h1>
         <p class="mt-1.5 text-gray-500 dark:text-gray-400 text-sm max-w-xl">
-            Templates installed to this site. Apply one to rebuild your pages &amp; theme, preview it, or generate the site files.
+            Your saved designs. Make one the site's active look — switching keeps your content and only adds missing pages. <a href="{{ route('templates') }}" class="font-bold text-indigo-500 hover:underline">Find more designs →</a>
             Get more from the <a href="{{ url($site->name.'/marketplace') }}" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Marketplace</a>.
         </p>
     </div>
@@ -64,9 +64,9 @@
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12C4 7 8 4 12 4s8 3 9.5 8c-1.5 5-5.5 8-9.5 8s-8-3-9.5-8z"/></svg>
                             Live preview
                         </a>
-                        <button type="button" wire:click="useCurated('{{ $c['key'] }}')" wire:loading.attr="disabled"
+                        <button type="button" wire:click="useDesign('{{ $c['key'] }}')" wire:loading.attr="disabled"
                             class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">
-                            {{ $c['installed'] ? 'Use again' : 'Use this template' }}
+                            {{ $c['installed'] ? 'Use again' : 'Use this design' }}
                         </button>
                     </div>
                 </div>
@@ -222,42 +222,29 @@
                 </button>
             @else
                 <button wire:click="applyTemplate"
-                        data-confirm="Use this template? Its pages, theme, font and assets will be added to {{ $site->name }} (you can stop using it later to remove them)."
+                        data-confirm="Make this the active design for {{ $site->name }}? Missing pages are added; your existing content is untouched."
                         wire:loading.attr="disabled" wire:target="applyTemplate"
                         class="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white cursor-pointer transition-opacity hover:opacity-90 shadow-sm"
                         style="background:#10b981">
                     <span wire:loading.remove wire:target="applyTemplate" class="flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        Use this Template
+                        Use this design
                     </span>
                     <span wire:loading wire:target="applyTemplate" class="flex items-center gap-2">
                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
                         Applying…
                     </span>
                 </button>
+
+                <button wire:click="removeTemplate('{{ $tpl['key'] }}')" data-confirm="Remove this saved design from the site?"
+                        class="px-4 py-2.5 rounded-xl text-sm font-semibold text-rose-600 border border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10">Remove</button>
+                @if ($tpl['applied'] ?? false)
+                    <a href="{{ url($site->name.'/pages') }}" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-indigo-600 border border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">Edit pages →</a>
+                @endif
             @endif
 
             {{-- Generate static Vue site files --}}
-            <button wire:click="generate"
-                    wire:loading.attr="disabled"
-                    wire:target="generate"
-                    class="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold
-                           text-white cursor-pointer transition-opacity hover:opacity-90 shadow-sm"
-                    style="background:var(--primary)">
-                <span wire:loading.remove wire:target="generate" class="flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                    </svg>
-                    Generate Site
-                </span>
-                <span wire:loading wire:target="generate" class="flex items-center gap-2">
-                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    Generating…
-                </span>
-            </button>
+            
         </div>
     </div>
 
@@ -417,26 +404,7 @@
                 Preview in New Window
             </button>
 
-            <button wire:click="generate"
-                    wire:loading.attr="disabled"
-                    wire:target="generate"
-                    class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold
-                           text-white cursor-pointer transition-opacity hover:opacity-90 shadow-sm"
-                    style="background:var(--primary)">
-                <span wire:loading.remove wire:target="generate" class="flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                    </svg>
-                    Generate Site
-                </span>
-                <span wire:loading wire:target="generate" class="flex items-center gap-2">
-                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    Generating…
-                </span>
-            </button>
+            
         </div>
 
     </div>
@@ -603,11 +571,20 @@
             <a href="{{ url($site->name.'/pages') }}" class="py-2.5 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">View Pages</a>
             <a href="{{ url($site->name.'/components') }}" class="py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">View Components</a>
         </div>
-        <a href="{{ url('preview/'.$site->name.'/').'?preview=1' }}" target="_blank"
-           class="mt-2 flex items-center justify-center gap-2 w-full py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-            Preview Home Page
-        </a>
+        <div class="grid grid-cols-2 gap-2 mt-2">
+            <a href="{{ $site->templatePreviewUrl() }}" target="_blank" rel="noopener"
+               title="Your site exactly as visitors see it"
+               class="flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                Live preview
+            </a>
+            <a href="{{ url($site->name.'/connect') }}"
+               title="Template edit mode — click any block to edit its content"
+               class="flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l12.682-12.68z"/></svg>
+                Edit content
+            </a>
+        </div>
 
         <button wire:click="backToGallery"
                 class="w-full py-3 mt-1 text-sm font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer">

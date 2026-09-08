@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Module;
 use App\Models\Site;
+use App\Services\TaskLogger;
 use App\Support\FieldSchemaPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 /**
  * Standard JSON API for declarative modules, consumed by the in-site ModuleWidget.
@@ -93,6 +95,16 @@ class ModuleController extends Controller
             'status' => $c->auto_publish ? 'published' : 'pending',
             'ip_address' => $request->ip(),
         ]);
+
+        try {
+            app(TaskLogger::class)->alert($c->site,
+                'New '.Str::singular($c->name ?: 'collection').' submission',
+                'module', 'info',
+                $item->status === 'pending' ? 'Held for review.' : 'Published automatically.',
+                null, 'all', null);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'ok' => true,

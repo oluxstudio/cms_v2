@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Site;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 /**
  * Notifies site admins that the AI assistant created a new declarative module.
  */
-class ModuleCreatedNotification extends Mailable
+class ModuleCreatedNotification extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

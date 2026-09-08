@@ -23,7 +23,7 @@ class AnthropicDriver implements LlmDriverInterface
         array $messages,
         array $tools,
         callable $executeTool,
-    ): string {
+    ): LlmResult {
         // Stable system block — eligible for Anthropic prompt caching.
         $system = [[
             'type' => 'text',
@@ -39,6 +39,8 @@ class AnthropicDriver implements LlmDriverInterface
 
         $finalText = '';
         $toolsCalledAll = [];
+        $inTokens = 0;
+        $outTokens = 0;
 
         for ($i = 0; $i < 12; $i++) {
             $response = $this->client->messages->create(
@@ -49,6 +51,9 @@ class AnthropicDriver implements LlmDriverInterface
                 thinking: ['type' => 'disabled'],
                 messages: $apiMessages,
             );
+
+            $inTokens += (int) ($response->usage?->inputTokens ?? 0);
+            $outTokens += (int) ($response->usage?->outputTokens ?? 0);
 
             // Collect text + execute any tool calls in this response.
             $toolResults = [];
@@ -92,7 +97,7 @@ class AnthropicDriver implements LlmDriverInterface
             $finalText = '';
         }
 
-        return trim($finalText) ?: 'Done.';
+        return new LlmResult(trim($finalText) ?: 'Done.', $inTokens, $outTokens, count($toolsCalledAll));
     }
 
     public function prefersCompactPrompt(): bool

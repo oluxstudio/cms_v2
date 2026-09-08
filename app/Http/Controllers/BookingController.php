@@ -6,10 +6,11 @@ use App\Models\Booking;
 use App\Models\Contact;
 use App\Models\Service;
 use App\Models\Site;
+use App\Payments\PaymentManager;
+use App\Payments\WebhookEventKind;
 use App\Services\ActivityLogger;
 use App\Services\Booking\BookingNotifications;
 use App\Services\BookingService;
-use App\Services\Stripe\StripeGateway;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -22,7 +23,7 @@ class BookingController extends Controller
 {
     public function __construct(
         private BookingService $booking,
-        private StripeGateway $stripe,
+        private PaymentManager $payments,
     ) {}
 
     private function site(string $siteName): Site
@@ -114,9 +115,8 @@ class BookingController extends Controller
         // The status guard keeps this idempotent if the webhook got there first.
         if ($appt && $appt->status === 'awaiting_payment' && $appt->stripe_session_id) {
             try {
-                $session = $this->stripe->retrieveCheckoutSession($site, $appt->stripe_session_id);
-                if ($session->payment_status === 'paid') {
-                    $this->confirmPaid($appt, $site, (int) ($session->metadata->charge_cents ?? $appt->total_cents));
+                if ($this->payments->for($site)->checkoutIsPaid($site, $appt->stripe_session_id)) {
+                    $this->confirmPaid($appt, $site, (int) ($appt->params['charge_cents'] ?? $appt->total_cents));
                     $appt->refresh();
                 }
             } catch (\Throwable $e) {
@@ -158,23 +158,24 @@ class BookingController extends Controller
     {
         $site = $this->site($siteName);
 
+        $gateway = $this->payments->for($site);
+
         try {
-            $event = $this->stripe->verifyWebhook($site, $request->getContent(), (string) $request->header('Stripe-Signature'));
+            $event = $gateway->verifyWebhook($site, $request->getContent(), $request->header($gateway->signatureHeaderName()));
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Invalid signature.'], 400);
         }
 
-        if (in_array($event->type, ['checkout.session.completed', 'checkout.session.expired'], true)) {
-            $session = $event->data->object;
-            $booking = isset($session->metadata->booking_id)
-                ? $site->bookings()->find($session->metadata->booking_id)
-                : $site->bookings()->where('stripe_session_id', $session->id)->first();
+        if (in_array($event->kind, [WebhookEventKind::Completed, WebhookEventKind::Expired], true)) {
+            $booking = isset($event->metadata['booking_id'])
+                ? $site->bookings()->find($event->metadata['booking_id'])
+                : $site->bookings()->where('stripe_session_id', $event->sessionId)->first();
 
             if ($booking && $booking->status === 'awaiting_payment') {
-                if ($event->type === 'checkout.session.completed') {
+                if ($event->kind === WebhookEventKind::Completed) {
                     // Record what was actually charged (deposit or full total),
                     // confirm, and email both the customer and the owner.
-                    $this->confirmPaid($booking, $site, (int) ($session->metadata->charge_cents ?? $booking->total_cents));
+                    $this->confirmPaid($booking, $site, (int) ($event->metadata['charge_cents'] ?? $booking->total_cents));
                 } else {
                     $booking->markCancelled(); // hold released
                 }

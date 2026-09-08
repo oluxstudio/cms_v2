@@ -24,7 +24,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        'name', 'email', 'password', 'phone',
+        'name', 'email', 'password', 'password_changed_at', 'phone',
         'social_id', 'social_type', 'avatar',
         'email_verified_at',
         'job_title', 'department', 'timezone', 'language',
@@ -41,6 +41,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'password_changed_at' => 'datetime',
             'password' => 'hashed',
             'notif_email' => 'boolean',
             'notif_inapp' => 'boolean',
@@ -155,27 +156,69 @@ class User extends Authenticatable
         return $this->hasMany(Role::class, 'account_id');
     }
 
-    /** Per-request memo: account_id => ?AccountMember. */
+    /** Per-request memo: site_id => ?AccountMember (keyed per SITE, not account). */
     private array $membershipMemo = [];
 
-    /** This user's membership in the given account, if any. */
-    public function membershipIn(string $accountId): ?AccountMember
+    /**
+     * This user's membership that covers the given site, if any: a row scoped
+     * to exactly that site wins; an account-wide row (site_id null) covers
+     * every site the account owns.
+     */
+    public function membershipFor(Site $site): ?AccountMember
     {
-        return $this->membershipMemo[$accountId]
-            ??= $this->memberships()->with('role')->where('account_id', $accountId)->first();
+        return $this->membershipMemo[$site->id]
+            ??= $this->memberships()->with('role')
+                ->where('account_id', $site->user_id)
+                ->where(fn ($q) => $q->whereNull('site_id')->orWhere('site_id', $site->id))
+                ->orderByRaw('site_id is null')
+                ->first();
     }
 
     /**
-     * Does this user hold a permission inside the given client account?
-     * Owners of the account and super admins implicitly hold everything;
-     * members are checked against their role's permission list.
+     * Does this user hold a permission on the given site? The site's owner and
+     * super admins implicitly hold everything; members are checked against the
+     * role of the membership that covers this site.
      */
-    public function canInAccount(string $accountId, string $permission): bool
+    public function canOnSite(Site $site, string $permission): bool
     {
-        if ($this->isSuper() || $this->id === $accountId) {
+        if ($this->isSuper() || $this->id === $site->user_id) {
             return true;
         }
 
-        return (bool) $this->membershipIn($accountId)?->role?->allows($permission);
+        return (bool) $this->membershipFor($site)?->role?->allows($permission);
+    }
+
+    /** Every site this user can open through team memberships (not ownership). */
+    public function memberSiteNames()
+    {
+        $memberships = $this->memberships()->get(['site_id', 'account_id']);
+
+        return Site::query()
+            ->where(fn ($q) => $q
+                ->whereIn('id', $memberships->whereNotNull('site_id')->pluck('site_id'))
+                ->orWhereIn('user_id', $memberships->whereNull('site_id')->pluck('account_id')))
+            ->pluck('name');
+    }
+
+    /**
+     * Where this user should land after logging in: invited members who own
+     * nothing go straight to their (only) site's dashboard; owners resume the
+     * signup wizard until it's done, then get the site picker.
+     */
+    public function landingUrl(): string
+    {
+        $ownsSites = $this->sites()->exists();
+        if (! $ownsSites && $this->memberships()->exists()) {
+            $names = $this->memberSiteNames();
+
+            return $names->count() === 1 ? url('/'.$names->first().'/dashboard') : route('home');
+        }
+
+        $wizard = (array) (($this->onboarding ?? [])['wizard'] ?? []);
+        if ($ownsSites && ($wizard === [] || ! empty($wizard['done']))) {
+            return route('home');
+        }
+
+        return route('start');
     }
 }

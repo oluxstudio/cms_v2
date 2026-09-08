@@ -4,12 +4,17 @@ namespace App\Services;
 
 use App\Mail\ModuleCreatedNotification;
 use App\Models\Collection;
+use App\Models\FormResponse;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\User;
+use App\Models\Visit;
 use App\Modules\ModuleRegistry;
 use App\Services\Modules\DeclarativeModuleEngine;
+use App\Support\Money;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -117,6 +122,43 @@ class SiteTools
             ], ['name', 'fields']);
         }
 
+        // ── Task-performing tools: collaborate with the team and edit content.
+        $tools[] = $this->tool('message_team', 'Send a message to the team inbox — broadcast to everyone, or a direct message when "to" names a team member.', [
+            'body' => ['type' => 'string', 'description' => 'The message text.'],
+            'to' => ['type' => 'string', 'description' => 'Optional: a team member name or email for a direct message. Omit to message the whole team.'],
+        ], ['body']);
+        $tools[] = $this->tool('create_task', 'Create a to-do task for the team (optionally assigned and with a due date).', [
+            'title' => ['type' => 'string'],
+            'description' => ['type' => 'string'],
+            'assignee' => ['type' => 'string', 'description' => 'Optional team member name or email.'],
+            'priority' => ['type' => 'string', 'enum' => ['low', 'normal', 'high']],
+            'due' => ['type' => 'string', 'description' => 'Optional due date, YYYY-MM-DD.'],
+        ], ['title']);
+        $tools[] = $this->tool('list_components', 'List the site\'s content components and their editable fields (labels + current values) — use before editing content.', [
+            'component' => ['type' => 'string', 'description' => 'Optional: only this component (by name).'],
+        ]);
+        $tools[] = $this->tool('update_content', 'Change an existing piece of site content: set a field (node) of a component to a new value.', [
+            'component' => ['type' => 'string', 'description' => 'Component name, e.g. "Hero" or "Faq".'],
+            'label' => ['type' => 'string', 'description' => 'The field label, e.g. "Headline".'],
+            'value' => ['type' => 'string', 'description' => 'The new content.'],
+        ], ['component', 'label', 'value']);
+        $tools[] = $this->tool('add_content', 'Add a NEW field (node) with content to an existing component.', [
+            'component' => ['type' => 'string'],
+            'label' => ['type' => 'string'],
+            'value' => ['type' => 'string'],
+        ], ['component', 'label', 'value']);
+        $tools[] = $this->tool('page_links', 'Links to view each page: the live preview URL plus where to edit it in the CMS.', []);
+
+        // ── Read-only analysis tools: answer questions about the business's
+        // own data with real numbers instead of guesses.
+        $period = ['type' => 'string', 'enum' => ['7d', '30d', '90d', 'all'], 'description' => 'Time window (default 30d).'];
+        $tools[] = $this->tool('get_sales_stats', 'Sales analytics: order count, revenue, average order value, status breakdown and top products for a period.', ['period' => $period]);
+        $tools[] = $this->tool('get_booking_stats', 'Booking analytics: bookings by status, upcoming count, busiest service and booking revenue for a period.', ['period' => $period]);
+        $tools[] = $this->tool('get_traffic_stats', 'Website traffic: human visits, top pages, top sources and device split for a period.', ['period' => $period]);
+        $tools[] = $this->tool('get_leads_stats', 'Audience analytics: new contacts, form responses and subscribers for a period.', ['period' => $period]);
+        $tools[] = $this->tool('list_recent_orders', 'The most recent orders with status and totals.', ['limit' => ['type' => 'integer', 'description' => 'Max 10.']]);
+        $tools[] = $this->tool('search_contacts', 'Find contacts by name or email.', ['query' => ['type' => 'string']], ['query']);
+
         return $tools;
     }
 
@@ -132,6 +174,7 @@ class SiteTools
         'create_product', 'toggle_feature',
 
         'create_service', 'add_booking_page', 'create_module',
+        'message_team', 'create_task', 'update_content', 'add_content',
     ];
 
     /** Max fields an AI-created declarative module may define. */
@@ -155,6 +198,18 @@ class SiteTools
                 'create_service' => $this->createService($site, $input),
                 'add_booking_page' => $this->addBookingPage($site, $input),
                 'list_modules' => $this->listModules($site),
+                'message_team' => $this->messageTeam($site, $user, $input),
+                'create_task' => $this->createTask($site, $user, $input),
+                'list_components' => $this->listComponents($site, $input),
+                'update_content' => $this->updateContent($site, $input),
+                'add_content' => $this->addContent($site, $input),
+                'page_links' => $this->pageLinks($site),
+                'get_sales_stats' => $this->salesStats($site, $input),
+                'get_booking_stats' => $this->bookingStats($site, $input),
+                'get_traffic_stats' => $this->trafficStats($site, $input),
+                'get_leads_stats' => $this->leadsStats($site, $input),
+                'list_recent_orders' => $this->recentOrders($site, $input),
+                'search_contacts' => $this->searchContacts($site, $input),
                 'create_module' => $this->createModule($site, $user, $input),
                 default => $this->err("Unknown action: {$name}."),
             };
@@ -573,5 +628,265 @@ class SiteTools
     private function err(string $msg): array
     {
         return ['ok' => false, 'message' => $msg];
+    }
+
+    // ── Analysis handlers (read-only, always site-scoped) ───────────────
+
+    private function since(array $input): ?Carbon
+    {
+        return match ($input['period'] ?? '30d') {
+            '7d' => now()->subDays(7),
+            '90d' => now()->subDays(90),
+            'all' => null,
+            default => now()->subDays(30),
+        };
+    }
+
+    private function salesStats(Site $site, array $input): array
+    {
+        $since = $this->since($input);
+        $orders = $site->orders()->when($since, fn ($q) => $q->where('created_at', '>=', $since))->get(['status', 'total_cents', 'currency']);
+        $paid = $orders->filter(fn ($o) => in_array($o->status, ['paid', 'shipped', 'delivered', 'fulfilled'], true));
+        $revenue = (int) $paid->sum('total_cents');
+        $top = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.site_id', $site->id)
+            ->whereIn('orders.status', ['paid', 'shipped', 'delivered', 'fulfilled'])
+            ->when($since, fn ($q) => $q->where('orders.paid_at', '>=', $since))
+            ->selectRaw('order_items.name as n, SUM(order_items.qty) as q')
+            ->groupBy('n')->orderByDesc('q')->limit(5)->get();
+
+        return $this->ok(json_encode([
+            'period' => $input['period'] ?? '30d',
+            'orders' => $orders->count(),
+            'paid_orders' => $paid->count(),
+            'revenue' => Money::format($revenue, $site->currency ?? 'gbp'),
+            'avg_order_value' => $paid->count() ? Money::format((int) round($revenue / $paid->count()), $site->currency ?? 'gbp') : null,
+            'by_status' => $orders->groupBy('status')->map->count(),
+            'top_products' => $top->map(fn ($r) => $r->n.' × '.$r->q)->all(),
+        ]));
+    }
+
+    private function bookingStats(Site $site, array $input): array
+    {
+        $since = $this->since($input);
+        $bookings = $site->bookings()->when($since, fn ($q) => $q->where('created_at', '>=', $since))->with('service:id,name')->get();
+
+        return $this->ok(json_encode([
+            'period' => $input['period'] ?? '30d',
+            'total' => $bookings->count(),
+            'by_status' => $bookings->groupBy('status')->map->count(),
+            'upcoming' => $site->bookings()->where('starts_at', '>=', now())->count(),
+            'busiest_service' => $bookings->groupBy(fn ($b) => $b->service?->name ?? '—')->map->count()->sortDesc()->keys()->first(),
+            'revenue' => Money::format((int) $bookings->sum('total_cents'), $site->currency ?? 'gbp'),
+        ]));
+    }
+
+    private function trafficStats(Site $site, array $input): array
+    {
+        $since = $this->since($input);
+        $base = Visit::forSite($site->id)->humans()->when($since, fn ($q) => $q->where('created_at', '>=', $since));
+
+        return $this->ok(json_encode([
+            'period' => $input['period'] ?? '30d',
+            'visits' => (clone $base)->count(),
+            'top_pages' => (clone $base)->selectRaw('path, count(*) as n')->groupBy('path')->orderByDesc('n')->limit(5)->pluck('n', 'path'),
+            'top_sources' => (clone $base)->selectRaw("coalesce(nullif(source, ''), 'direct') as s, count(*) as n")->groupBy('s')->orderByDesc('n')->limit(5)->pluck('n', 's'),
+            'devices' => (clone $base)->selectRaw('device_type, count(*) as n')->groupBy('device_type')->pluck('n', 'device_type'),
+        ]));
+    }
+
+    private function leadsStats(Site $site, array $input): array
+    {
+        $since = $this->since($input);
+
+        return $this->ok(json_encode([
+            'period' => $input['period'] ?? '30d',
+            'new_contacts' => $site->contacts()->when($since, fn ($q) => $q->where('created_at', '>=', $since))->count(),
+            'form_responses' => FormResponse::whereIn('form_id', $site->forms()->select('id'))
+                ->when($since, fn ($q) => $q->where('created_at', '>=', $since))->count(),
+            'subscribers' => $site->subscriptions()->when($since, fn ($q) => $q->where('created_at', '>=', $since))->count(),
+            'recent_contacts' => $site->contacts()->latest()->limit(5)->pluck('name'),
+        ]));
+    }
+
+    private function recentOrders(Site $site, array $input): array
+    {
+        $orders = $site->orders()->latest()->limit(min(10, max(1, (int) ($input['limit'] ?? 5))))->get()
+            ->map(fn ($o) => $o->displayNumber().' · '.$o->displayStatus().' · '.$o->formattedTotal().' · '.($o->customer_name ?: $o->customer_email ?: 'guest').' · '.$o->created_at->format('M j'));
+
+        return $this->ok($orders->isEmpty() ? 'No orders yet.' : $orders->implode("\n"));
+    }
+
+    private function searchContacts(Site $site, array $input): array
+    {
+        $term = '%'.trim((string) ($input['query'] ?? '')).'%';
+        $hits = $site->contacts()->where(fn ($q) => $q->where('name', 'like', $term)->orWhere('email', 'like', $term))
+            ->limit(8)->get(['name', 'email', 'status'])
+            ->map(fn ($c) => $c->name.' <'.$c->email.'> ('.$c->status.')');
+
+        return $this->ok($hits->isEmpty() ? 'No matching contacts.' : $hits->implode("\n"));
+    }
+
+    // ── Team collaboration & content-editing handlers ───────────────────
+
+    /** Resolve a team member (owner included) by name or email. */
+    private function findMember(Site $site, string $who): ?User
+    {
+        $who = mb_strtolower(trim($who));
+        if ($who === '') {
+            return null;
+        }
+        $people = $site->members()->get(['users.id', 'name', 'email']);
+        if ($site->user && ! $people->contains('id', $site->user->id)) {
+            $people->push($site->user);
+        }
+
+        return $people->first(fn ($u) => mb_strtolower($u->email) === $who
+            || str_contains(mb_strtolower($u->name), $who));
+    }
+
+    private function messageTeam(Site $site, User $user, array $input): array
+    {
+        $body = trim((string) ($input['body'] ?? ''));
+        if ($body === '') {
+            return $this->err('The message body is empty.');
+        }
+        $recipient = null;
+        if (filled($input['to'] ?? null)) {
+            $recipient = $this->findMember($site, (string) $input['to']);
+            if (! $recipient) {
+                return $this->err('No team member matches "'.$input['to'].'". Message the whole team by omitting "to".');
+            }
+        }
+
+        $site->messages()->create([
+            'sender_id' => $user->id,
+            'recipient_id' => $recipient?->id,
+            'body' => $body,
+        ]);
+
+        try {
+            app(TaskLogger::class)->alert($site,
+                '💬 New message from '.$user->name.' (via assistant)', 'message', 'info',
+                Str::limit($body, 120), $recipient, 'all',
+                url($site->name.'/messages'),
+                [], 'msg:'.($recipient?->id ?: 'team').':'.$user->id.':'.now()->format('Y-m-d-H'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $this->ok($recipient
+            ? '✓ Direct message sent to '.$recipient->name.'.'
+            : '✓ Message posted to the whole team.');
+    }
+
+    private function createTask(Site $site, User $user, array $input): array
+    {
+        $title = trim((string) ($input['title'] ?? ''));
+        if ($title === '') {
+            return $this->err('The task needs a title.');
+        }
+        $assignee = filled($input['assignee'] ?? null) ? $this->findMember($site, (string) $input['assignee']) : null;
+        $due = null;
+        if (filled($input['due'] ?? null)) {
+            try {
+                $due = Carbon::parse((string) $input['due']);
+            } catch (\Throwable) {
+            }
+        }
+
+        $site->todos()->create([
+            'user_id' => $user->id,
+            'assigned_user_id' => $assignee?->id,
+            'title' => $title,
+            'description' => $input['description'] ?? null,
+            'status' => 'open',
+            'priority' => in_array($input['priority'] ?? null, ['low', 'normal', 'high'], true) ? $input['priority'] : 'normal',
+            'due_at' => $due,
+        ]);
+
+        return $this->ok('✓ Task created: "'.$title.'"'
+            .($assignee ? ' — assigned to '.$assignee->name : '')
+            .($due ? ', due '.$due->format('M j') : '').'.');
+    }
+
+    /** Find a content component by (case/format-insensitive) name. */
+    private function findComponent(Site $site, string $name)
+    {
+        $needle = mb_strtolower(str_replace([' ', '-', '_'], '', trim($name)));
+
+        return $site->contentComponents()->get()->first(fn ($c) => mb_strtolower(str_replace([' ', '-', '_'], '', $c->name)) === $needle)
+            ?? $site->contentComponents()->get()->first(fn ($c) => str_contains(mb_strtolower($c->name), mb_strtolower(trim($name))));
+    }
+
+    private function listComponents(Site $site, array $input): array
+    {
+        $components = $site->contentComponents()->with('nodes')->get();
+        if (filled($input['component'] ?? null)) {
+            $one = $this->findComponent($site, (string) $input['component']);
+            $components = $one ? collect([$one->load('nodes')]) : collect();
+        }
+        if ($components->isEmpty()) {
+            return $this->ok('No matching components.');
+        }
+
+        $out = $components->map(function ($c) {
+            $fields = $c->nodes->map(fn ($n) => ($n->label ?: '(unlabelled)').': "'.Str::limit((string) $n->value, 60).'"')->take(20)->implode('; ');
+
+            return $c->name.' — '.($fields ?: 'no fields');
+        })->implode("\n");
+
+        return $this->ok($out);
+    }
+
+    private function updateContent(Site $site, array $input): array
+    {
+        $component = $this->findComponent($site, (string) ($input['component'] ?? ''));
+        if (! $component) {
+            return $this->err('No component named "'.($input['component'] ?? '').'". Call list_components to see what exists.');
+        }
+        $label = mb_strtolower(trim((string) ($input['label'] ?? '')));
+        $node = $component->nodes()->get()->first(fn ($n) => mb_strtolower((string) $n->label) === $label)
+            ?? $component->nodes()->get()->first(fn ($n) => str_contains(mb_strtolower((string) $n->label), $label));
+        if (! $node) {
+            return $this->err('Component "'.$component->name.'" has no field labelled "'.($input['label'] ?? '').'". Fields: '
+                .$component->nodes()->pluck('label')->filter()->take(15)->implode(', '));
+        }
+
+        $node->update(['value' => (string) ($input['value'] ?? '')]);
+
+        return $this->ok('✓ Updated '.$component->name.' → '.$node->label.'.');
+    }
+
+    private function addContent(Site $site, array $input): array
+    {
+        $component = $this->findComponent($site, (string) ($input['component'] ?? ''));
+        if (! $component) {
+            return $this->err('No component named "'.($input['component'] ?? '').'". Call list_components first.');
+        }
+
+        $component->nodes()->create([
+            'label' => trim((string) ($input['label'] ?? 'Field')),
+            'type' => 'text',
+            'value' => (string) ($input['value'] ?? ''),
+            'parent' => '0',
+            'order' => ((int) $component->nodes()->max('order')) + 1,
+        ]);
+
+        return $this->ok('✓ Added "'.($input['label'] ?? 'Field').'" to '.$component->name.'.');
+    }
+
+    private function pageLinks(Site $site): array
+    {
+        $pages = $site->pages()->get(['name', 'url', 'is_published']);
+        if ($pages->isEmpty()) {
+            return $this->ok('No pages yet.');
+        }
+        $lines = $pages->map(fn ($p) => $p->name.' ('.($p->is_published ? 'live' : 'draft').') — view: '
+            .($site->previewUrl($p->url) ?: url('preview/'.$site->name.rtrim('/'.ltrim($p->url, '/'), '/')))
+            .' · edit in CMS: '.url($site->name.'/pages'));
+
+        return $this->ok($lines->implode("\n"));
     }
 }

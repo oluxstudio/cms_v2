@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Site;
+use App\Models\Template;
 use App\Services\StripeConnect;
+use App\Services\TemplateCommerce;
+use App\Services\TemplateInstaller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -55,10 +59,27 @@ class TemplateCommerceController extends Controller
     /** Buyer returns after a successful checkout (entitlement is granted by webhook). */
     public function checkoutSuccess(Request $request)
     {
-        $site = $request->query('site');
+        $siteName = $request->query('site');
+        $site = $siteName ? Site::where('name', $siteName)->first() : null;
 
-        return redirect($site ? url($site.'/marketplace') : route('templates'))
-            ->with('status', 'Purchase complete — you can now install the template.');
+        // If the webhook already granted the entitlement, finish the save so
+        // the template is waiting in My Designs when the buyer lands there.
+        if ($site && ($uuid = $request->query('template')) && $request->user()) {
+            $tpl = Template::where('uuid', $uuid)->first();
+            if ($tpl && app(TemplateCommerce::class)->entitled($request->user(), $tpl)) {
+                try {
+                    app(TemplateInstaller::class)->saveCatalogToSite($request->user(), $site, $tpl);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+
+                return redirect(url($site->name.'/designs'))
+                    ->with('status', 'Purchase complete — “'.$tpl->name.'” is in My Designs.');
+            }
+        }
+
+        return redirect($site ? url($site->name.'/designs') : route('templates'))
+            ->with('status', 'Purchase complete — payment is processing; your template appears in My Designs shortly.');
     }
 
     public function checkoutCancel(Request $request)

@@ -51,7 +51,8 @@
             @else
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
                     @foreach($pages as $page)
-                        <div class="group flex flex-col bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                        <div x-on:click="window.location = '{{ url($site->name.'/pages/'.$page->id.'/details') }}'" role="button"
+                             class="group flex flex-col bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer">
                             <div class="p-5 flex-1">
                                 <div class="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center">
                                     <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -66,25 +67,25 @@
                                 <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Created {{ $page->created_at->format('M d, Y') }}</p>
                             </div>
                             <div class="flex items-center gap-1 px-3 py-2.5 border-t border-gray-50 dark:border-white/[0.04]">
-                                <a href="{{ url('preview/'.$site->name.'/'.ltrim($page->url,'/')).'?preview=1' }}" target="_blank"
+                                <a href="{{ url('preview/'.$site->name.'/'.ltrim($page->url,'/')).'?preview=1' }}" target="_blank" x-on:click.stop
                                    class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors" title="Preview page">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 </a>
-                                <a href="{{ url($site->name.'/pages/'.$page->id.'/builder') }}"
+                                <a href="{{ url($site->name.'/pages/'.$page->id.'/builder') }}" x-on:click.stop
                                    class="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors" title="Page Builder">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
                                 </a>
                                 <div class="ml-auto flex items-center gap-1">
-                                    <button wire:click="openPicker('{{ $page->id }}')"
+                                    <button wire:click.stop="openPicker('{{ $page->id }}')"
                                             class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Components ({{ $page->components()->count() }})">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M11 4a1 1 0 112 0v1h3a1 1 0 011 1v3h1a1 1 0 110 2h-1v3a1 1 0 01-1 1h-3v1a1 1 0 11-2 0v-1H8a1 1 0 01-1-1v-3H6a1 1 0 110-2h1V6a1 1 0 011-1h3V4z"/>
                                         </svg>
                                     </button>
-                                    <button wire:click="openEdit('{{ $page->id }}')" class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Edit metadata">
+                                    <button wire:click.stop="openEdit('{{ $page->id }}')" class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Edit metadata">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     </button>
-                                    <button wire:click="deletePage('{{ $page->id }}')" data-confirm="Delete this page and all its blocks?" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors" title="Delete">
+                                    <button wire:click.stop="deletePage('{{ $page->id }}')" data-confirm="Delete this page and all its blocks?" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors" title="Delete">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                     </button>
                                 </div>
@@ -111,7 +112,8 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-white/[0.04]">
                         @forelse($pages as $page)
-                            <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors group">
+                            <tr x-on:click="window.location = '{{ url($site->name.'/pages/'.$page->id.'/details') }}'" role="button"
+                                class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer">
                                 <td class="{{ $pad }} font-medium text-gray-900 dark:text-white">{{ $page->name }}</td>
                                 <td class="{{ $pad }} text-gray-500 dark:text-gray-400 font-mono text-xs">{{ $page->url }}</td>
                                 @unless($compact)
@@ -126,32 +128,32 @@
                                 @endunless
                                 <td class="{{ $pad }}">
                                     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                                        <a href="{{ url('preview/'.$site->name.'/'.ltrim($page->url,'/')).'?preview=1' }}" target="_blank"
+                                        <a href="{{ url('preview/'.$site->name.'/'.ltrim($page->url,'/')).'?preview=1' }}" target="_blank" x-on:click.stop
                                            class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors" title="Preview page">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                             </svg>
                                         </a>
-                                        <a href="{{ url($site->name.'/pages/'.$page->id.'/builder') }}"
+                                        <a href="{{ url($site->name.'/pages/'.$page->id.'/builder') }}" x-on:click.stop
                                            class="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors" title="Page Builder">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
                                             </svg>
                                         </a>
-                                        <button wire:click="openPicker('{{ $page->id }}')"
+                                        <button wire:click.stop="openPicker('{{ $page->id }}')"
                                                 class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Components ({{ $page->components()->count() }})">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 4a1 1 0 112 0v1h3a1 1 0 011 1v3h1a1 1 0 110 2h-1v3a1 1 0 01-1 1h-3v1a1 1 0 11-2 0v-1H8a1 1 0 01-1-1v-3H6a1 1 0 110-2h1V6a1 1 0 011-1h3V4z"/>
                                             </svg>
                                         </button>
-                                        <button wire:click="openEdit('{{ $page->id }}')"
+                                        <button wire:click.stop="openEdit('{{ $page->id }}')"
                                                 class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Edit metadata">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
                                         </button>
-                                        <button wire:click="deletePage('{{ $page->id }}')" data-confirm="Delete this page and all its blocks?"
+                                        <button wire:click.stop="deletePage('{{ $page->id }}')" data-confirm="Delete this page and all its blocks?"
                                                 class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors" title="Delete">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -306,5 +308,100 @@
             </div>
         </div>
     </div>
+    @endif
+
+    {{-- ── Selected-page detail: metadata, preview & layout ── --}}
+    @if($detailPageId && $this->detailPage)
+    @php $dp = $this->detailPage; $preview = $site->previewUrl($dp->url); @endphp
+    <x-lightbox close="closeDetail" :drawer="true" max-width="max-w-2xl" icon="📄"
+                :title="$dp->name" :subtitle="$dp->url" wire:key="page-detail-{{ $dp->id }}">
+        <x-slot:badge>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full {{ $dp->is_published ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-200 text-gray-600 dark:bg-black/40 dark:text-gray-300' }}">
+                {{ $dp->is_published ? 'Live' : 'Draft' }}
+            </span>
+        </x-slot:badge>
+
+        {{-- Quick actions --}}
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button wire:click="openEdit('{{ $dp->id }}')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">✏️ Edit page</button>
+            <a href="{{ route('blocks', ['siteID' => $site->name]) }}" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] text-xs font-semibold text-gray-600 dark:text-gray-300">🧱 Open in builder</a>
+            @if($preview)
+                <a href="{{ $preview }}" target="_blank" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] text-xs font-semibold text-gray-600 dark:text-gray-300">↗ View live</a>
+            @endif
+        </div>
+
+        {{-- Preview --}}
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">Page preview</p>
+        @if($preview)
+            <iframe src="{{ $preview }}" loading="lazy"
+                    class="w-full min-h-[360px] rounded-xl border border-gray-100 dark:border-white/[0.06] bg-white mb-5"></iframe>
+        @else
+            <p class="text-xs text-gray-400 mb-5 px-3 py-4 rounded-xl bg-gray-50 dark:bg-white/[0.03]">The preview renderer isn't built yet for this site.</p>
+        @endif
+
+        {{-- Metadata --}}
+        <form wire:submit="saveMeta" class="space-y-3 mb-5">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Metadata</p>
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Meta description <span class="font-normal text-gray-400">— shown in search results</span></label>
+                <textarea wire:model="metaDescription" rows="3" maxlength="5000" placeholder="A short summary of this page for search engines and link previews…"
+                          class="w-full px-3 py-2 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] resize-y"></textarea>
+                <p class="text-[10px] text-gray-400 mt-0.5 text-right">{{ mb_strlen($metaDescription) }} chars</p>
+                @error('metaDescription')<p class="text-xs text-red-500">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Keywords <span class="font-normal text-gray-400">— comma separated</span></label>
+                <input wire:model="metaKeywords" type="text" class="w-full px-3 py-2 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
+                @error('metaKeywords')<p class="text-xs text-red-500">{{ $message }}</p>@enderror
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Social share image (og:image URL)</label>
+                <input wire:model="ogImage" type="text" placeholder="https://…" class="w-full px-3 py-2 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
+                @error('ogImage')<p class="text-xs text-red-500">{{ $message }}</p>@enderror
+            </div>
+            <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
+                <input wire:model="isPublished" type="checkbox" class="rounded"> Published (visible on the site)
+            </label>
+
+            <x-panel-group label="Custom attributes" hint="key / value pairs exposed to the site & API">
+                @foreach($attrRows as $i => $row)
+                <div class="flex items-center gap-2" wire:key="attr-{{ $i }}">
+                    <input wire:model="attrRows.{{ $i }}.key" placeholder="key" class="w-40 px-2.5 py-1.5 rounded-lg text-xs font-mono bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
+                    <input wire:model="attrRows.{{ $i }}.value" placeholder="value" class="flex-1 px-2.5 py-1.5 rounded-lg text-xs bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
+                    <button type="button" wire:click="removeAttrRow({{ $i }})" class="text-gray-400 hover:text-red-500 text-sm">✕</button>
+                </div>
+                @error('attrRows.'.$i.'.key')<p class="text-xs text-red-500">{{ $message }}</p>@enderror
+                @endforeach
+                <button type="button" wire:click="addAttrRow" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">＋ Add attribute</button>
+                @if($dp->getAttr('custom_js') !== null || $dp->getAttr('page_styles') !== null)
+                    <p class="text-[10px] text-gray-400">custom_js / page_styles are managed by the builder and not shown here.</p>
+                @endif
+            </x-panel-group>
+
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">
+                <span wire:loading.remove wire:target="saveMeta">Save metadata</span>
+                <span wire:loading wire:target="saveMeta">Saving…</span>
+            </button>
+        </form>
+
+        {{-- Layout --}}
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">Page layout</p>
+        @php $ordered = $dp->components()->withCount('nodes')->orderBy('page_component.order')->get(); @endphp
+        @if($ordered->isEmpty())
+            <p class="text-xs text-gray-400 px-3 py-4 rounded-xl bg-gray-50 dark:bg-white/[0.03]">No components attached yet — use the component picker
+                <button wire:click="openPicker('{{ $dp->id }}')" class="text-indigo-500 font-semibold hover:underline">open picker</button>.</p>
+        @else
+            <div class="space-y-1.5 mb-2">
+                @foreach($ordered as $i => $comp)
+                <div class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.05]">
+                    <span class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold flex items-center justify-center shrink-0">{{ $i + 1 }}</span>
+                    <span class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ $comp->name }}</span>
+                    <span class="ml-auto text-[11px] text-gray-400 shrink-0">{{ $comp->nodes_count }} {{ Str::plural('field', $comp->nodes_count) }}</span>
+                </div>
+                @endforeach
+            </div>
+            <a href="{{ route('blocks', ['siteID' => $site->name]) }}" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Rearrange in builder →</a>
+        @endif
+    </x-lightbox>
     @endif
 </x-page-layout>

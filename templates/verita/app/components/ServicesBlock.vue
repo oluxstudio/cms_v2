@@ -1,7 +1,7 @@
 <script setup lang="ts">
-const olux = useOluxContent('services')
+const oluxCms = useOluxContent('services')
 const oluxFb: Record<string, string> = {"Text":"What we do","Headline":"Services built around outcomes","Text B":"Every engagement ends with a deliverable you own \u2014 no decks that gather dust."}
-const services = olux.items('Service', {"Title":"title","Text":"text"}, [
+const services = oluxCms.items('Service', {"Title":"title","Text":"text"}, [
   { title: 'Strategy Sprints', text: 'Two-week engagements that turn a fuzzy goal into a costed, sequenced plan.' },
   { title: 'Operations Review', text: 'We map your processes, find the bottlenecks and fix the three that matter.' },
   { title: 'Finance Foundations', text: 'Budgets, forecasts and reporting your board will actually read.' },
@@ -9,12 +9,12 @@ const services = olux.items('Service', {"Title":"title","Text":"text"}, [
 </script>
 
 <template>
-  <section class="services" v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">
+  <section class="services" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head">
-        <p class="eyebrow">{{ olux.t('Text', oluxFb['Text']) }}</p>
-        <h2>{{ olux.t('Headline', oluxFb['Headline']) }}</h2>
-        <p>{{ olux.t('Text B', oluxFb['Text B']) }}</p>
+        <p data-olx-field="text" class="eyebrow">{{ oluxCms.t('Text', oluxFb['Text']) }}</p>
+        <h2 data-olx-field="headline">{{ oluxCms.t('Headline', oluxFb['Headline']) }}</h2>
+        <p data-olx-field="textB">{{ oluxCms.t('Text B', oluxFb['Text B']) }}</p>
       </div>
       <div class="grid-3">
         <div v-for="s in services" :key="s.title" class="card">

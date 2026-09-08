@@ -38,6 +38,8 @@ class TemplatePublisher
      */
     public function publishFromZip(User $creator, string $zipPath, array $meta = []): Template
     {
+        $this->guardPlan($creator);
+
         $zip = new ZipArchive;
         if ($zip->open($zipPath) !== true) {
             throw new RuntimeException('Could not open the .zip file.');
@@ -67,6 +69,7 @@ class TemplatePublisher
                 // Publish assets (sanitised) → disk, baking absolute URLs into pages.
                 [$pages, $assetMap] = $this->publishAssets($zip, $uuid, $pages);
                 $thumbUrl = $this->publishThumbnail($zip, $uuid);
+                $shots = $this->publishScreenshots($zip, $uuid);
 
                 $template = Template::create([
                     'uuid' => $uuid,
@@ -78,14 +81,14 @@ class TemplatePublisher
                     'tags' => array_slice((array) ($manifest['tags'] ?? []), 0, 12),
                     'status' => 'draft',
                     'price_cents' => max(0, (int) ($meta['price_cents'] ?? 0)),
-                    'currency' => 'usd',
+                    'currency' => (string) config('templates.currency', 'gbp'),
                     'source' => 'custom',
                     'accent_color' => $this->security->sanitizePlain($manifest['accentColor'] ?? '#6366f1'),
                     'gradient_class' => $this->security->sanitizePlain($manifest['gradientClass'] ?? 'from-slate-400 to-slate-600'),
                     'thumbnail_url' => $thumbUrl,
                 ]);
 
-                $version = $this->makeVersion($template, '1.0.0', $manifest, $pages);
+                $version = $this->makeVersion($template, '1.0.0', $manifest, $pages, $shots);
                 $template->update(['latest_version_id' => $version->id]);
 
                 return $template;
@@ -110,8 +113,9 @@ class TemplatePublisher
 
             return DB::transaction(function () use ($template, $zip, $manifest, $pages) {
                 [$pages] = $this->publishAssets($zip, $template->uuid, $pages);
+                $shots = $this->publishScreenshots($zip, $template->uuid);
                 $next = $this->bumpVersion($template->versions()->max('version') ?: '1.0.0');
-                $version = $this->makeVersion($template, $next, $manifest, $pages);
+                $version = $this->makeVersion($template, $next, $manifest, $pages, $shots);
                 $template->update(['latest_version_id' => $version->id, 'status' => 'draft', 'submitted_at' => null]);
 
                 return $version;
@@ -121,9 +125,27 @@ class TemplatePublisher
         }
     }
 
+    /**
+     * Marketplace publishing is a Business-plan feature ("Template marketplace
+     * publishing" on the pricing page). Moderators bypass — first-party
+     * templates and templates:sync are theirs.
+     */
+    public function guardPlan(User $creator): void
+    {
+        if ($this->isModerator($creator)) {
+            return;
+        }
+        if (! $creator->currentSubscription()->allowsMarketplacePublishing()) {
+            throw new RuntimeException('Publishing to the template marketplace needs the Business plan — upgrade to publish and sell your templates.');
+        }
+    }
+
     // ── Moderation lifecycle ──
     public function submit(Template $t): void
     {
+        if ($t->user) {
+            $this->guardPlan($t->user);
+        }
         if (in_array($t->status, ['draft', 'rejected'], true)) {
             $t->update(['status' => 'in_review', 'submitted_at' => now(), 'rejection_reason' => null]);
         }
@@ -141,7 +163,7 @@ class TemplatePublisher
 
     // ── internals ──
 
-    private function makeVersion(Template $t, string $version, array $manifest, array $pages): TemplateVersion
+    private function makeVersion(Template $t, string $version, array $manifest, array $pages, array $screenshots = []): TemplateVersion
     {
         return $t->versions()->create([
             'version' => $version,
@@ -159,6 +181,7 @@ class TemplatePublisher
                 'fonts' => is_array($manifest['fonts'] ?? null) ? $manifest['fonts'] : [],
                 'css' => $this->security->sanitizeCss($manifest['css'] ?? ''),
                 'pages' => $pages,
+                'screenshots' => $screenshots,
             ],
             'status' => 'published',
         ]);
@@ -194,6 +217,34 @@ class TemplatePublisher
         }
 
         return [$this->rewritePages($pages, $map), $map];
+    }
+
+    /**
+     * Publish screenshot-*.png/jpg/webp from the zip (max 6) for the detail
+     * page slideshow; returns their public URLs.
+     *
+     * @return list<string>
+     */
+    private function publishScreenshots(ZipArchive $zip, string $uuid): array
+    {
+        $disk = Storage::disk(config('templates.disk'));
+        $urls = [];
+        for ($i = 0; $i < $zip->numFiles && count($urls) < 6; $i++) {
+            $entry = $zip->getNameIndex($i);
+            if ($entry === false || ! preg_match('#(^|/)screenshot-[\w.-]+\.(png|jpe?g|webp)$#i', $entry)) {
+                continue;
+            }
+            $data = $zip->getFromIndex($i);
+            if ($data === false) {
+                continue;
+            }
+            $key = "{$uuid}/screenshots/".basename($entry);
+            $disk->put($key, $data);
+            $urls[] = $disk->url($key);
+        }
+        sort($urls);
+
+        return $urls;
     }
 
     private function publishThumbnail(ZipArchive $zip, string $uuid): ?string

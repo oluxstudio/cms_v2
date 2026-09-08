@@ -9,7 +9,7 @@
     $b = $booking;
     $p = (array) ($b->params ?? []);
     $kind = $b->service?->kind ?? 'slot';
-    $statusChip = ['confirmed' => 'Confirmed', 'pending' => 'Pending',
+    $statusChip = ['confirmed' => 'Confirmed', 'pending' => 'Pending', 'no_show' => 'No-show',
                    'awaiting_payment' => 'Awaiting payment', 'cancelled' => 'Cancelled'][$b->status] ?? ucfirst($b->status);
 
     $when = match ($kind) {
@@ -72,7 +72,7 @@
                 </div>
             </div>
             <span class="shrink-0 mt-0.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.08em]
-                {{ $b->status === 'cancelled' ? 'text-rose-300' : 'text-[#e8dfc9]' }}"
+                {{ $b->status === 'cancelled' ? 'text-rose-300' : ($b->status === 'no_show' ? 'text-amber-300' : 'text-[#e8dfc9]') }}"
                   style="background:rgba(236,229,216,.07); border:1px solid rgba(236,229,216,.14)">{{ $statusChip }}</span>
         </div>
 

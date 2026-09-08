@@ -11,6 +11,15 @@ services:
       - traefik.http.routers.cms.entrypoints=websecure
       - traefik.http.routers.cms.tls.certresolver=le
       - traefik.http.services.cms.loadbalancer.server.port=80
+      # Instant site subdomains ({site}.oluxstudio.com). TLS at the edge comes
+      # from the Cloudflare proxy (SSL mode "Full"), so this router only needs
+      # Traefik's default certificate — no ACME per subdomain. Priority 1 so
+      # explicit Host() routers (cms, hairco, v2hairco…) always win.
+      - traefik.http.routers.cms-sites.rule=HostRegexp(`^[a-z0-9-]+\.oluxstudio\.com$`)
+      - traefik.http.routers.cms-sites.entrypoints=websecure
+      - traefik.http.routers.cms-sites.tls=true
+      - traefik.http.routers.cms-sites.priority=1
+      - traefik.http.routers.cms-sites.service=cms
 networks:
   edge:
     external: true

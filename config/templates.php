@@ -10,6 +10,11 @@ return [
     'disk' => env('TEMPLATES_DISK', 'templates'),
 
     /*
+    | Currency every catalog template is priced and sold in.
+    */
+    'currency' => env('TEMPLATES_CURRENCY', 'gbp'),
+
+    /*
     | Marketplace listing page size.
     */
     'per_page' => env('TEMPLATES_PER_PAGE', 12),
@@ -30,12 +35,29 @@ return [
     /*
     | UGC upload limits (security hardening for the .zip import path).
     */
+    // Zip-of-Nuxt-APP intake (Submissions upload / template:import) — a
+    // different profile from the split-file package limits below.
+    'limits_app' => [
+        'max_files' => 600,
+        'max_total_mb' => 60,
+        'max_file_mb' => 10,
+        'allowed_ext' => ['vue', 'ts', 'js', 'mjs', 'json', 'css', 'scss', 'md', 'txt',
+            'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'otf', 'eot'],
+        'denied_dirs' => ['node_modules', '.nuxt', '.output', '.git', '.github'],
+    ],
+
+    // Repo-first intake: PAT for private https clones + push-webhook secret.
+    'git' => [
+        'token' => env('TEMPLATES_GIT_TOKEN'),
+        'webhook_secret' => env('TEMPLATES_REPO_WEBHOOK_SECRET'),
+    ],
+
     'limits' => [
-        'max_files'      => 200,
-        'max_total_mb'   => 30,   // total uncompressed
-        'max_file_mb'    => 8,    // per extracted file
-        'max_pages'      => 30,
-        'allowed_ext'    => ['json', 'css', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'woff', 'woff2', 'ttf', 'md'],
+        'max_files' => 200,
+        'max_total_mb' => 30,   // total uncompressed
+        'max_file_mb' => 8,    // per extracted file
+        'max_pages' => 30,
+        'allowed_ext' => ['json', 'css', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'woff', 'woff2', 'ttf', 'md'],
     ],
 
 ];

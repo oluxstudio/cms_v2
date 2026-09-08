@@ -477,7 +477,7 @@
                                 </button>
                             </div>
 
-                            {{-- Row 1: label + key + type --}}
+                            {{-- Row 1: the essentials — label, type, required --}}
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                                 <div>
                                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -485,15 +485,6 @@
                                     </label>
                                     <x-field.text wire:model.blur="fbFields.{{ $index }}.label" placeholder="First Name" />
                                     @error("fbFields.{$index}.label")
-                                        <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                        Key <span class="text-red-500">*</span>
-                                    </label>
-                                    <x-field.text wire:model.blur="fbFields.{{ $index }}.key" placeholder="first_name" mono />
-                                    @error("fbFields.{$index}.key")
                                         <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p>
                                     @enderror
                                 </div>
@@ -519,47 +510,55 @@
                                         </optgroup>
                                     </select>
                                 </div>
-                            </div>
-
-                            {{-- Row 2: placeholder + required + range OR options --}}
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                                {{-- Placeholder (not for checkbox) --}}
-                                @if (($field['type'] ?? 'text') !== 'checkbox')
-                                    <div>
-                                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Placeholder</label>
-                                        <x-field.text model="fbFields.{{ $index }}.placeholder" placeholder="Optional hint…" />
-                                    </div>
-                                @endif
-
                                 {{-- Required toggle --}}
                                 <div class="flex items-end pb-0.5">
                                     <x-field.check model="fbFields.{{ $index }}.required" text="Required" />
                                 </div>
-
-                                {{-- Min / Max (text types) --}}
-                                @if ($needsRange)
-                                    <div class="flex gap-2">
-                                        <div class="flex-1">
-                                            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Min</label>
-                                            <x-field.text model="fbFields.{{ $index }}.min" placeholder="—" />
-                                        </div>
-                                        <div class="flex-1">
-                                            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Max</label>
-                                            <x-field.text model="fbFields.{{ $index }}.max" placeholder="—" />
-                                        </div>
-                                    </div>
-                                @endif
-
-                                {{-- Options (select / radio) --}}
-                                @if ($needsOptions)
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                            Options <span class="font-normal">(comma-separated)</span>
-                                        </label>
-                                        <x-field.text model="fbFields.{{ $index }}.options" placeholder="Option A, Option B, Option C" />
-                                    </div>
-                                @endif
                             </div>
+
+                            {{-- Options (select / radio) stay visible — they define the field. --}}
+                            @if ($needsOptions)
+                                <div>
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                        Options <span class="font-normal">(comma-separated)</span>
+                                    </label>
+                                    <x-field.text model="fbFields.{{ $index }}.options" placeholder="Option A, Option B, Option C" />
+                                </div>
+                            @endif
+
+                            <x-panel-group label="Field options" hint="key, placeholder, limits">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                            Key <span class="text-red-500">*</span>
+                                        </label>
+                                        <x-field.text wire:model.blur="fbFields.{{ $index }}.key" placeholder="first_name" mono />
+                                        @error("fbFields.{$index}.key")
+                                            <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    {{-- Placeholder (not for checkbox) --}}
+                                    @if (($field['type'] ?? 'text') !== 'checkbox')
+                                        <div>
+                                            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Placeholder</label>
+                                            <x-field.text model="fbFields.{{ $index }}.placeholder" placeholder="Optional hint…" />
+                                        </div>
+                                    @endif
+                                    {{-- Min / Max (text types) --}}
+                                    @if ($needsRange)
+                                        <div class="flex gap-2">
+                                            <div class="flex-1">
+                                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Min</label>
+                                                <x-field.text model="fbFields.{{ $index }}.min" placeholder="—" />
+                                            </div>
+                                            <div class="flex-1">
+                                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Max</label>
+                                                <x-field.text model="fbFields.{{ $index }}.max" placeholder="—" />
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            </x-panel-group>
 
                         </div>
                     @endforeach

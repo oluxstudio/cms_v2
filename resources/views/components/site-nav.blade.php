@@ -23,6 +23,7 @@
     // The /blocks route stays functional for direct access.
     $topLevel = [
         $link('dashboard', 'Dashboard'),
+        $link('marketplace', 'Marketplace'),
     ];
     $menus = [
         'Content' => [
@@ -42,10 +43,10 @@
         ],
         'Site' => [
             $link('analytics', 'Analytics'),
+            $link('designs', 'My Designs'),
             $link('publish', 'Go live'),
+            $link('payments', 'Payments'),
             $link('api-docs', 'API docs'),
-            // Feature toggles + templates, tucked away (Marketplace demoted).
-            $link('marketplace', 'Add-ons'),
         ],
     ];
 

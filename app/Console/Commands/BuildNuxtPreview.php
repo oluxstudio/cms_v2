@@ -183,11 +183,17 @@ class BuildNuxtPreview extends Command
                 continue;
             }
             $src = File::get($file->getPathname());
+            // Nuxt ≥3.8 wraps static asset srcs in a base-aware helper —
+            // `x(`/assets/…`)` — which prepends NUXT_APP_BASE_URL at runtime.
+            // Rewriting those too would double the prefix, so shield them.
+            $sentinel = "\x00OLX_BASE_AWARE\x00";
+            $src = str_replace('(`/assets/', $sentinel, $src);
             $new = str_replace(
                 ['"/assets/', "'/assets/", '`/assets/', 'url(/assets/', '(/assets/'],
                 ['"'.$prefix.'/assets/', "'".$prefix.'/assets/', '`'.$prefix.'/assets/', 'url('.$prefix.'/assets/', '('.$prefix.'/assets/'],
                 $src
             );
+            $new = str_replace($sentinel, '(`/assets/', $new);
             if ($new !== $src) {
                 File::put($file->getPathname(), $new);
                 $rewritten++;

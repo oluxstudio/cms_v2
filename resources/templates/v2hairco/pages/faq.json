@@ -1,0 +1,114 @@
+{
+    "name": "Faq",
+    "url": "/faq",
+    "layout": "default",
+    "keywords": "faq",
+    "attributes": {
+        "title": "FAQ"
+    },
+    "blocks": [
+        {
+            "type": "app:v2hairco:faq",
+            "name": "Faq",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Good to know",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Frequently Asked Questions",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "Everything about visits, bookings and our products \u2014 and we\u2019re one call away for anything else.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Fallback Faq 1 Title",
+                    "type": "text",
+                    "value": "Do I need to book an appointment?",
+                    "order": 3,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Faq 1 Text",
+                    "type": "text",
+                    "value": "Walk-ins are welcome when a chair is free, but booking through our appointment page guarantees your slot with your preferred stylist.",
+                    "order": 4,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Faq 2 Title",
+                    "type": "text",
+                    "value": "How early should I arrive?",
+                    "order": 5,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Faq 2 Text",
+                    "type": "text",
+                    "value": "Five to ten minutes before your appointment is perfect \u2014 it gives us time for a quick consultation before we start.",
+                    "order": 6,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Faq 3 Title",
+                    "type": "text",
+                    "value": "Can I reschedule or cancel?",
+                    "order": 7,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Faq 3 Text",
+                    "type": "text",
+                    "value": "Of course. Use the link in your confirmation email, or give us a call at least 24 hours ahead so we can offer the slot to someone else.",
+                    "order": 8,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Faq 4 Title",
+                    "type": "text",
+                    "value": "Do you sell the products you use?",
+                    "order": 9,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Faq 4 Text",
+                    "type": "text",
+                    "value": "Yes \u2014 everything we use in the salon is available in our shop, with delivery straight to your door.",
+                    "order": 10,
+                    "description": "item:text"
+                }
+            ]
+        },
+        {
+            "type": "app:v2hairco:cta",
+            "name": "Cta",
+            "nodes": [
+                {
+                    "label": "CTA Label",
+                    "type": "text",
+                    "value": "Book an appointment",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "CTA Link",
+                    "type": "url",
+                    "value": "/appointment",
+                    "order": 1,
+                    "description": "attr:href"
+                }
+            ]
+        }
+    ]
+}

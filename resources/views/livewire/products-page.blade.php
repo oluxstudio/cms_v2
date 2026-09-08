@@ -10,15 +10,22 @@
         <div>
             <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">Store</h1>
             <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">
-                {{ $this->products->count() }}/{{ $this->productLimit }} products ·
+                {{ $this->products->total() }}/{{ $this->productLimit }} products ·
                 <a href="{{ url($site->name.'/store') }}" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline">View public storefront ↗</a>
             </p>
         </div>
+        <div class="flex items-center gap-2">
+        <button wire:click="toggleStoreReviews"
+                title="Master switch — individual products can still be toggled on their own page"
+                class="px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors {{ $this->storeReviewsOn ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400' }}">
+            Reviews: {{ $this->storeReviewsOn ? 'ON' : 'OFF' }}
+        </button>
         <button wire:click="create"
                 class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             New Product
         </button>
+        </div>
     </div>
 
     @unless($site->stripeReady())
@@ -40,6 +47,42 @@
                 :sub="$allProducts->where('inventory', 0)->count() > 0 ? 'needs restocking' : 'all stocked'" />
     </div>
 
+    {{-- Product insights --}}
+    @php $ins = $this->insights; @endphp
+    @if($ins['best_labels'] !== [] || $ins['popular'] !== [] || $ins['reviewed'] !== [])
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
+            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-1">Best sellers</h2>
+            <p class="text-xs text-gray-400 mb-2">Units sold, last 30 days.</p>
+            <div id="store-best-chart" wire:ignore></div>
+        </div>
+        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
+            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-3">Most popular</h2>
+            <p class="text-xs text-gray-400 mb-2">Storefront views &amp; basket adds, 30 days.</p>
+            @if(count($ins['popular'])) <x-analytics.bar-list :items="$ins['popular']" />
+            @else <p class="text-sm text-gray-400 py-4">No interest data yet.</p> @endif
+        </div>
+        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
+            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-3">Most reviewed</h2>
+            <p class="text-xs text-gray-400 mb-2">Approved reviews with average rating.</p>
+            @if(count($ins['reviewed'])) <x-analytics.bar-list :items="$ins['reviewed']" />
+            @else <p class="text-sm text-gray-400 py-4">No reviews yet.</p> @endif
+        </div>
+    </div>
+    @endif
+
+    {{-- Category filter chips --}}
+    @if($this->categories !== [])
+    <div class="flex flex-wrap gap-1.5 mb-4">
+        <button wire:click="filterCategory('')" class="px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors
+                {{ $categoryFilter === '' ? 'bg-indigo-600 text-white border-indigo-600' : 'text-gray-500 border-gray-200 dark:border-white/[0.08]' }}">All</button>
+        @foreach($this->categories as $cat)
+            <button wire:click="filterCategory('{{ $cat }}')" class="px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors
+                    {{ $categoryFilter === $cat ? 'bg-indigo-600 text-white border-indigo-600' : 'text-gray-500 border-gray-200 dark:border-white/[0.08]' }}">{{ $cat }}</button>
+        @endforeach
+    </div>
+    @endif
+
     {{-- Search --}}
     <div class="relative mb-5 max-w-xs">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -57,7 +100,8 @@
     @else
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         @foreach($this->products as $p)
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden">
+        <div x-on:click="window.location = '{{ url($site->name.'/store/'.$p->id) }}'" wire:key="prod-{{ $p->id }}" role="button"
+             class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all">
             <div class="aspect-[4/3] bg-gray-100 dark:bg-white/[0.04] relative">
                 @if($p->image)
                     <img src="{{ Storage::url($p->image) }}" class="w-full h-full object-cover">
@@ -73,43 +117,102 @@
                     <h3 class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ $p->name }}</h3>
                     <span class="text-sm font-extrabold text-gray-900 dark:text-white shrink-0">{{ $p->formattedPrice() }}</span>
                 </div>
+                @if($p->category)<span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">{{ $p->category }}</span>@endif
                 <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-2">{{ $p->description }}</p>
                 <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-2">{{ $p->inventory === null ? 'Unlimited stock' : $p->inventory.' in stock' }}</p>
 
                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-white/[0.04]">
-                    <button wire:click="edit('{{ $p->id }}')" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Edit</button>
-                    <button wire:click="toggleActive('{{ $p->id }}')" class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">{{ $p->is_active ? 'Hide' : 'Show' }}</button>
-                    <button wire:click="delete('{{ $p->id }}')" data-confirm="Delete this product?" class="ml-auto text-xs font-medium text-red-500 hover:text-red-700">Delete</button>
+                    <button wire:click.stop="show('{{ $p->id }}')" x-on:click.stop title="Quick view" class="text-xs">👁</button>
+                    <button wire:click.stop="edit('{{ $p->id }}')" x-on:click.stop class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Edit</button>
+                    <button wire:click.stop="toggleActive('{{ $p->id }}')" class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">{{ $p->is_active ? 'Hide' : 'Show' }}</button>
+                    <button wire:click.stop="delete('{{ $p->id }}')" data-confirm="Delete this product?" class="ml-auto text-xs font-medium text-red-500 hover:text-red-700">Delete</button>
                 </div>
             </div>
         </div>
         @endforeach
     </div>
+
+    <div class="mt-6">
+        {{ $this->products->links() }}
+    </div>
     @endif
 
-    {{-- Create / edit modal --}}
-    @if($showForm)
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.45)">
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl shadow-2xl w-full max-w-lg p-7 border border-gray-100 dark:border-white/[0.05] max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-5">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ $editingId ? 'Edit product' : 'New product' }}</h2>
-                <button wire:click="$set('showForm', false)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
+    {{-- Product detail — read-only right drawer --}}
+    @if($this->viewedProduct)
+    @php $vp = $this->viewedProduct; @endphp
+    <x-lightbox close="closeView" :drawer="true" max-width="max-w-md" icon="🛍️"
+                :title="$vp->name" :subtitle="$vp->formattedPrice()" wire:key="product-view-{{ $vp->id }}">
+        <x-slot:badge>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full {{ $vp->is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-200 text-gray-600 dark:bg-black/40 dark:text-gray-300' }}">
+                {{ $vp->is_active ? 'Active' : 'Hidden' }}
+            </span>
+        </x-slot:badge>
 
+        <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/[0.04] mb-4">
+            @if($vp->image)
+                <img src="{{ Storage::url($vp->image) }}" class="w-full h-full object-cover">
+            @else
+                <div class="w-full h-full flex items-center justify-center text-5xl">🛍️</div>
+            @endif
+        </div>
+
+        <div class="space-y-3 text-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-gray-400">Price</span>
+                <span class="font-extrabold text-gray-900 dark:text-white">{{ $vp->formattedPrice() }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-gray-400">Stock</span>
+                <span class="font-semibold {{ $vp->inventory === 0 ? 'text-rose-500' : '' }}">
+                    {{ $vp->inventory === null ? 'Unlimited' : ($vp->inventory === 0 ? 'Out of stock' : $vp->inventory.' in stock') }}
+                </span>
+            </div>
+            @if($vp->inventory !== null)
+            <div class="flex items-center gap-2">
+                <input type="number" min="1" wire:model="restockQty" placeholder="Qty"
+                       class="w-20 px-2.5 py-1.5 rounded-lg text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
+                <button wire:click="addStock('{{ $vp->id }}')"
+                        class="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">＋ Add stock</button>
+            </div>
+            @endif
+            @if($vp->category || $vp->tags)
+                <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 dark:border-white/[0.06]">
+                    @if($vp->category)<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">{{ $vp->category }}</span>@endif
+                    @foreach($vp->tags ?? [] as $tag)
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">#{{ $tag }}</span>
+                    @endforeach
+                </div>
+            @endif
+            @if($vp->description)
+                <div class="pt-2 border-t border-gray-100 dark:border-white/[0.06]">
+                    <p class="text-gray-500 dark:text-gray-400 leading-relaxed">{{ $vp->description }}</p>
+                </div>
+            @endif
+        </div>
+
+        <x-slot:footer>
+            <div class="flex gap-2">
+                <button wire:click="edit('{{ $vp->id }}')" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">Edit product</button>
+                <button wire:click="toggleActive('{{ $vp->id }}')" class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300">{{ $vp->is_active ? 'Hide' : 'Show' }}</button>
+            </div>
+        </x-slot:footer>
+    </x-lightbox>
+    @endif
+
+    {{-- Create / edit — right-side drawer (same shell as the bookings panels) --}}
+    @if($showForm)
+    <x-lightbox close="closeForm" :drawer="true" max-width="max-w-md" icon="🛍️"
+                :title="$editingId ? 'Edit product' : 'New product'"
+                :subtitle="$editingId ? $name : 'Name, price and photo — details under More options'"
+                wire:key="product-form-{{ $editingId ?? 'new' }}">
             <form wire:submit="save" class="space-y-4">
                 <div>
                     <x-field.text label="Name" model="name" />
                     @error('name') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
-                <x-field.textarea label="Description" model="description" rows="3" class="resize-none" />
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <x-field.text label="Price ({{ \App\Support\Money::symbol($this->currency) }})" model="price" type="number" step="0.01" min="0" placeholder="9.99" />
-                        @error('price') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                    </div>
-                    <x-field.text label="Inventory (blank = ∞)" model="inventory" type="number" min="0" placeholder="Unlimited" />
+                <div>
+                    <x-field.text label="Price ({{ \App\Support\Money::symbol($this->currency) }})" model="price" type="number" step="0.01" min="0" placeholder="9.99" />
+                    @error('price') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Image</label>
@@ -127,16 +230,33 @@
                 </div>
                 <x-field.check model="is_active" text="Active (visible in storefront)" />
 
+                <div class="olx-adv-lead">More options</div>
+                <x-panel-group label="Description & stock" hint="storefront text, inventory">
+                    <x-field.textarea label="Description" model="description" rows="3" class="resize-none" />
+                    <x-field.text label="Inventory (blank = ∞)" model="inventory" type="number" min="0" placeholder="Unlimited" />
+                </x-panel-group>
+                <x-panel-group label="Organisation" hint="category & tags for the shop">
+                    <div>
+                        <label class="bkf-label">Category</label>
+                        <input wire:model="category" list="product-categories" placeholder="e.g. Styling"
+                               class="bkf-input">
+                        <datalist id="product-categories">
+                            @foreach($this->categories as $cat)<option value="{{ $cat }}">@endforeach
+                        </datalist>
+                    </div>
+                    <x-field.text label="Tags" model="tagsInput" placeholder="curly, colour-safe, heat"
+                                  hint="Comma-separated — used for search and shop filters." />
+                </x-panel-group>
+
                 <div class="flex gap-2 pt-2">
                     <button type="submit" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">
                         <span wire:loading.remove wire:target="save">{{ $editingId ? 'Save changes' : 'Create product' }}</span>
                         <span wire:loading wire:target="save">Saving…</span>
                     </button>
-                    <button type="button" wire:click="$set('showForm', false)" class="px-4 py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">Cancel</button>
+                    <button type="button" wire:click="closeForm" class="px-4 py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
+    </x-lightbox>
     @endif
 
     {{-- Toast --}}
@@ -148,3 +268,26 @@
         <span x-text="toast"></span>
     </div>
 </div>
+
+@script
+<script>
+(function () {
+    const el = document.querySelector('#store-best-chart');
+    if (!el || typeof ApexCharts === 'undefined') return;
+    const isDark = document.documentElement.classList.contains('dark');
+    const sub = isDark ? '#9ca3af' : '#6b7280';
+    new ApexCharts(el, {
+        chart: { type: 'bar', height: 200, background: 'transparent', toolbar: { show: false }, animations: { speed: 400 } },
+        series: [{ name: 'Units sold', data: @js($this->insights['best_units']) }],
+        xaxis: { categories: @js($this->insights['best_labels']), labels: { style: { colors: sub, fontSize: '10px' }, trim: true, rotate: 0, hideOverlappingLabels: false }, axisBorder: { show: false }, axisTicks: { show: false } },
+        yaxis: { show: false },
+        plotOptions: { bar: { distributed: true, borderRadius: 6, borderRadiusApplication: 'end', columnWidth: '50%' } },
+        colors: ['#7a7df2', '#34d399', '#f6ad55', '#f687b3', '#63b3ed'],
+        dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: '600' }, offsetY: -6 },
+        grid: { show: false }, legend: { show: false },
+        tooltip: { theme: isDark ? 'dark' : 'light' },
+        noData: { text: 'No sales yet', style: { color: sub } },
+    }).render();
+})();
+</script>
+@endscript

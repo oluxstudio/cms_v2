@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Features\FeatureRegistry;
+use App\Payments\PaymentGateway;
+use App\Payments\PaymentManager;
 use App\Templates\TemplateAppRegistry;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -74,11 +76,14 @@ class Site extends Model
             $key = ($renderer && TemplateAppRegistry::exists($renderer)) ? $renderer : TemplateAppRegistry::BLANK;
         }
 
-        // Wireframes are gone — every build previews through the generic block renderer.
-        $key = TemplateAppRegistry::BLANK;
-
+        // Preview through the site's ACTIVE renderer; fall back to the generic
+        // block renderer whenever the keyed shell hasn't been built.
         $dir = $key === TemplateAppRegistry::BLANK ? 'nuxt-preview' : "nuxt-preview/{$key}";
         $index = public_path("{$dir}/index.html");
+        if (! is_file($index)) {
+            $dir = 'nuxt-preview';
+            $index = public_path("{$dir}/index.html");
+        }
         if (! is_file($index)) {
             return null;
         }
@@ -96,6 +101,90 @@ class Site extends Model
      * Normalize a user-entered domain: strip scheme/path/port/www, lowercase.
      * Returns null when nothing valid remains.
      */
+    /**
+     * Preview through the site's OWN template renderer (hairco, verita…) —
+     * what a live domain serves — falling back to the generic block renderer.
+     * Used where the visitor must see their real site (signup wizard, "view
+     * site" links), not the block editor's preview.
+     */
+    public function templatePreviewUrl(?string $pageUrl = null): ?string
+    {
+        $found = $this->liveShell();
+        if ($found && $this->renderTemplateKey() !== TemplateAppRegistry::BLANK && str_contains($found[1], '/nuxt-preview/')) {
+            [$index, $base] = $found;
+            if (trim($base, '/') !== 'nuxt-preview') {
+                $base = trim($base, '/');
+                $page = trim((string) $pageUrl, '/');
+
+                // Deep-link by PATH — the static shells route by URL path and
+                // ignore a ?page= param. Only when the generated page exists;
+                // CMS-only pages fall back to the shell root.
+                $path = '';
+                if ($page !== '' && is_file(public_path("{$base}/{$page}/index.html"))) {
+                    $path = '/'.$page;
+                }
+
+                $query = http_build_query([
+                    'site' => $this->name,
+                    'v' => (string) filemtime($index),
+                ]);
+
+                return url($base).$path.'/?'.$query;
+            }
+        }
+
+        return $this->previewUrl($pageUrl);
+    }
+
+    // ── Instant subdomains ({name}.{publishing.subdomain_base}) ─────────────
+
+    /** The site's automatic host, e.g. janes-salon.oluxstudio.com (null when disabled). */
+    public function subdomainHost(): ?string
+    {
+        $base = (string) config('publishing.subdomain_base');
+
+        return $base !== '' ? "{$this->name}.{$base}" : null;
+    }
+
+    /** Best public address: verified live custom domain → subdomain → renderer preview. */
+    public function publicUrl(): ?string
+    {
+        if ($this->live && $this->domain && $this->domain_verified_at) {
+            return 'https://'.$this->domain;
+        }
+        if ($host = $this->subdomainHost()) {
+            return 'https://'.$host;
+        }
+
+        return $this->templatePreviewUrl();
+    }
+
+    /** A valid, unreserved DNS label for a site subdomain (also the site name). */
+    public static function validSubdomainLabel(string $label): bool
+    {
+        $label = strtolower(trim($label));
+
+        // 3–63 chars, letters/digits/hyphens, no leading/trailing hyphen.
+        return preg_match('/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/', $label) === 1
+            && ! in_array($label, (array) config('publishing.reserved_subdomains', []), true);
+    }
+
+    /** Resolve an incoming Host header to the site it is the subdomain of. */
+    public static function forSubdomainHost(string $host): ?self
+    {
+        $base = (string) config('publishing.subdomain_base');
+        $host = strtolower($host);
+        if ($base === '' || ! str_ends_with($host, '.'.$base)) {
+            return null;
+        }
+        $label = substr($host, 0, -strlen('.'.$base));
+        if (! self::validSubdomainLabel($label)) {
+            return null;
+        }
+
+        return self::where('name', $label)->first();
+    }
+
     public static function normalizeDomain(?string $input): ?string
     {
         $d = strtolower(trim((string) $input));
@@ -183,7 +272,7 @@ class Site extends Model
         if ($permission === null) { // page open to any member
             return $this->accessibleBy($user);
         }
-        if ($this->user_id !== null && $user->canInAccount($this->user_id, $permission)) {
+        if ($this->user_id !== null && $user->canOnSite($this, $permission)) {
             return true;
         }
 
@@ -206,7 +295,7 @@ class Site extends Model
 
         return $user->isSuper()
             || ($this->user_id !== null && $this->user_id === $user->id)
-            || ($this->user_id !== null && $user->membershipIn($this->user_id) !== null)
+            || ($this->user_id !== null && $user->membershipFor($this) !== null)
             || $this->roleFor($user) !== null;
     }
 
@@ -479,8 +568,21 @@ class Site extends Model
     }
 
     /** Whether this site can take payments (Stripe keys present). */
+    /** The payment gateway for this site (OFF gateway until the owner enables payments). */
+    public function paymentGateway(): PaymentGateway
+    {
+        return app(PaymentManager::class)->for($this);
+    }
+
+    /** Accepting payments = the "Accept payments" switch is on AND the gateway has its keys. */
+    public function paymentsEnabled(): bool
+    {
+        return $this->paymentGateway()->available($this);
+    }
+
+    /** @deprecated use paymentsEnabled() — kept for the many blade/checklist call sites. */
     public function stripeReady(): bool
     {
-        return (bool) $this->paymentSettings?->isConfigured();
+        return $this->paymentsEnabled();
     }
 }

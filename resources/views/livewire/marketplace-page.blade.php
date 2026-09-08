@@ -9,8 +9,8 @@
         <x-stat-tile label="Enabled" :value="$mpEnabled" :sub="count($mpAll).' total'" color="#10b981"
             :bar="count($mpAll) ? round($mpEnabled / count($mpAll) * 100) : 0"
             icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        <x-stat-tile label="Payments" :value="$site->stripeReady() ? 'Connected' : 'Off'"
-            :color="$site->stripeReady() ? '#10b981' : '#f59e0b'"
+        <x-stat-tile label="Payments" :value="$site->paymentsEnabled() ? 'On' : (($site->paymentSettings?->isConfigured()) ? 'Off (keys saved)' : 'Not connected')"
+            :color="$site->paymentsEnabled() ? '#10b981' : '#f59e0b'"
             icon="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
     </x-slot:stats>
 
@@ -28,14 +28,14 @@
             <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">Add or remove features for <span class="font-medium text-gray-600 dark:text-gray-300">{{ ucwords(str_replace('-', ' ', $site->name)) }}</span>.</p>
         </div>
         @if($this->needsPayments)
-        <button wire:click="openPayments"
+        <a href="{{ url($site->name.'/payments') }}"
                 class="flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border transition-colors
                        {{ $site->stripeReady()
                             ? 'border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
                             : 'border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10' }}">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-            {{ $site->stripeReady() ? 'Payments connected' : 'Connect Stripe' }}
-        </button>
+            {{ $site->paymentsEnabled() ? 'Payments on' : ($site->paymentSettings?->isConfigured() ? 'Payments off' : 'Connect Stripe') }}
+        </a>
         @endif
     </div>
 
@@ -49,7 +49,7 @@
     @if($this->needsPayments && ! $site->stripeReady())
     <div class="mb-5 px-4 py-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-sm text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        A payment-enabled feature is on, but Stripe isn't connected yet. Click <strong>Connect Stripe</strong> to start accepting payments.
+        A payment-enabled feature is on, but this site isn't accepting payments yet — <a href="{{ url($site->name.'/payments') }}" class="font-bold underline">open the Payments page</a> to start taking money.
     </div>
     @endif
 
@@ -63,6 +63,9 @@
 
     {{-- ════════ FEATURES ════════ --}}
     <div x-show="mtab==='features'">
+    @if (session('mp-message'))
+        <p class="mb-4 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-sm font-semibold text-emerald-700 dark:text-emerald-400">{{ session('mp-message') }}</p>
+    @endif
     {{-- Feature cards --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         @foreach($this->features as $f)
@@ -78,6 +81,9 @@
 
             <h3 class="text-sm font-bold text-gray-900 dark:text-white">{{ $f['name'] }}</h3>
             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 leading-relaxed flex-1">{{ $f['description'] }}</p>
+            @if (! $f['enabled'] && ! empty($f['nav']))
+                <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5">Adds to your menu: <span class="font-semibold text-gray-500 dark:text-gray-400">{{ collect($f['nav'])->pluck('label')->implode(', ') }}</span></p>
+            @endif
 
             @if(($f['tier'] ?? 'basic') === 'premium')
                 <span class="inline-flex items-center text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded mb-1"
@@ -101,12 +107,20 @@
                 </button>
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ $f['enabled'] ? 'On' : 'Off' }}</span>
 
-                @if(!empty($f['settings']))
-                <button wire:click="openSettings('{{ $f['key'] }}')"
-                        class="ml-auto text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-                    Settings
-                </button>
-                @endif
+                <span class="ml-auto flex items-center gap-2.5">
+                    @if ($f['enabled'])
+                        @foreach ($f['nav'] ?? [] as $navItem)
+                            <a href="{{ url($site->name.'/'.$navItem['seg']) }}" wire:navigate
+                               class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">{{ $navItem['label'] }} →</a>
+                        @endforeach
+                    @endif
+                    @if(!empty($f['settings']))
+                    <button wire:click="openSettings('{{ $f['key'] }}')"
+                            class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:underline">
+                        Settings
+                    </button>
+                    @endif
+                </span>
             </div>
         </div>
         @endforeach
@@ -335,62 +349,6 @@
                 <div class="flex gap-2 pt-2">
                     <button type="submit" @disabled(! $canManage) class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors">Save settings</button>
                     <button type="button" wire:click="closeSettings" class="px-4 py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    @endif
-
-    {{-- ════════ Stripe payments drawer ════════ --}}
-    @if($showPayments)
-    <div class="fixed inset-0 z-50 flex justify-end">
-        <div class="absolute inset-0 bg-black/40" wire:click="$set('showPayments', false)"></div>
-        <div class="relative w-full max-w-md h-full bg-white dark:bg-[#1d1e2a] border-l border-gray-100 dark:border-white/[0.05] shadow-2xl overflow-y-auto">
-            <div class="sticky top-0 bg-white dark:bg-[#1d1e2a] border-b border-gray-100 dark:border-white/[0.05] px-6 py-4 flex items-center justify-between z-10">
-                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Connect Stripe</h2>
-                <button wire:click="$set('showPayments', false)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
-            <form wire:submit="savePayments" class="p-6 space-y-5">
-                <p class="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-                    Paste your own Stripe API keys so payments go directly to your account. Find them in the
-                    <span class="font-medium text-gray-600 dark:text-gray-300">Stripe Dashboard → Developers → API keys</span>. Secrets are stored encrypted.
-                </p>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Publishable key</label>
-                    <input wire:model="pubKey" type="text" placeholder="pk_test_…" class="w-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-900 dark:text-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
-                    @error('pubKey') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
-                        Secret key @if($hasSecret)<span class="text-emerald-500 normal-case font-normal">· saved (leave blank to keep)</span>@endif
-                    </label>
-                    <input wire:model="secretKey" type="password" placeholder="{{ $hasSecret ? '•••••••••••••••• (saved)' : 'sk_test_…' }}" class="w-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-900 dark:text-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Webhook signing secret</label>
-                    <input wire:model="webhookSecret" type="password" placeholder="whsec_…" class="w-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-900 dark:text-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
-                    <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">In Stripe, add an endpoint pointing to <code class="text-indigo-500">{{ url($site->name.'/store/webhook') }}</code> (and <code class="text-indigo-500">/donate/webhook</code>) for event <code>checkout.session.completed</code>, then paste its signing secret here.</p>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Currency</label>
-                    <select wire:model="siteCurrency" class="w-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-900 dark:text-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                        @foreach(\App\Support\Money::options() as $code => $label)
-                            <option value="{{ $code }}">{{ strtoupper($code) }} — {{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">Used for every price, invoice, booking and checkout on this site. Default: £ British Pound.</p>
-                </div>
-
-                <div class="flex gap-2 pt-2">
-                    <button type="submit" @disabled(! $canManage) class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors">Save Stripe keys</button>
-                    <button type="button" wire:click="$set('showPayments', false)" class="px-4 py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">Cancel</button>
                 </div>
             </form>
         </div>

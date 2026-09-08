@@ -56,11 +56,13 @@ new #[Layout('components.layouts.bare')] class extends Component {
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        // A plan chosen on the landing page sends the user straight to checkout.
+        // A plan chosen on the landing page sends the user straight to checkout;
+        // otherwise land where this account belongs: an invited member goes to
+        // their site's dashboard, an owner to the wizard or the site picker.
         $plan = session('intended_plan');
         $default = $plan
             ? route('account.subscription', ['plan' => $plan], absolute: false)
-            : route('home', absolute: false);
+            : Auth::user()->landingUrl();
 
         $this->redirectIntended(default: $default, navigate: true);
     }
@@ -73,17 +75,18 @@ new #[Layout('components.layouts.bare')] class extends Component {
     {
         $validated = $this->validate([
             'name'                         => ['required', 'string', 'max:255'],
-            'registerPhone'                => ['required', 'string', 'max:32'],
+            'registerPhone'                => ['required', 'string', 'max:32', 'regex:/^\+?[0-9][0-9 ()\-]{8,19}$/'],
             'registerEmail'                => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class . ',email'],
             'registerPassword'             => ['required', 'string', 'min:8', 'same:registerPasswordConfirmation'],
             'registerPasswordConfirmation' => ['required', 'string'],
         ], [
             'registerPassword.same' => 'Passwords do not match.',
+            'registerPhone.regex' => 'Enter a phone number we can reach you on, e.g. 07700 900000.',
         ]);
 
         $this->pendingToken = app(SignupVerification::class)->start([
             'name'     => $validated['name'],
-            'phone'    => $validated['registerPhone'],
+            'phone'    => preg_replace('/[^\d+]/', '', $validated['registerPhone']),
             'email'    => $validated['registerEmail'],
             'password' => $validated['registerPassword'],
         ]);
@@ -105,6 +108,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
             'phone'             => $data['phone'],
             'email'             => $data['email'],
             'password'          => Hash::make($data['password']),
+            'password_changed_at' => now(), // they chose it themselves
             'email_verified_at' => now(),
         ]);
 
@@ -112,10 +116,11 @@ new #[Layout('components.layouts.bare')] class extends Component {
         Auth::login($user);
         $this->reset('pendingToken', 'pendingEmail', 'code');
 
+        // A verified account → straight into the signup wizard (business → site → checklist).
         $plan = session('intended_plan');
         $default = $plan
             ? route('account.subscription', ['plan' => $plan], absolute: false)
-            : route('home', absolute: false);
+            : Auth::user()->landingUrl();
 
         $this->redirectIntended(default: $default, navigate: true);
     }
@@ -153,16 +158,16 @@ new #[Layout('components.layouts.bare')] class extends Component {
 }; ?>
 
 <div
-    x-data="{ mode: 'login' }"
+    x-data="{ mode: '{{ request()->query('mode') === 'register' ? 'register' : 'login' }}' }"
     class="auth-screen min-h-screen flex items-center justify-center p-4"
 >
-    <div class="auth-card w-full max-w-[900px] rounded-3xl shadow-2xl overflow-hidden relative">
+    <div class="auth-card w-full max-w-[65rem] rounded-3xl shadow-2xl overflow-hidden relative">
 
         {{-- ════════════════════════════════════
              FORM PANEL — slides left ↔ right
         ════════════════════════════════════ --}}
-        <div class="relative w-full px-6 py-12 md:absolute md:top-0 md:bottom-0 md:w-1/2 md:px-10 md:py-20
-                    flex flex-col justify-center z-10 transition-all duration-500 ease-in-out"
+        <div class="relative w-full px-6 py-12 md:absolute md:top-0 md:bottom-0 md:w-1/2 md:px-7 md:py-4
+                    flex flex-col justify-start z-10 transition-all duration-500 ease-in-out"
              :class="mode === 'login' ? 'md:left-0' : 'md:left-1/2'">
 
             {{-- Logo --}}
@@ -178,7 +183,8 @@ new #[Layout('components.layouts.bare')] class extends Component {
             {{-- ── LOGIN FORM ── --}}
             <div x-show="mode === 'login'" x-transition:enter="transition-opacity duration-300 delay-200"
                  x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition-opacity duration-150" x-transition:leave-end="opacity-0">
+                 x-transition:leave="transition-opacity duration-150" x-transition:leave-end="opacity-0"
+                 class="flex-1 flex flex-col justify-center">
 
                 <h1 class="text-[26px] mb-1">Welcome Back</h1>
                 <p class="text-sm text-gray-400 mb-6">Let's login to your studio account</p>
@@ -296,10 +302,17 @@ new #[Layout('components.layouts.bare')] class extends Component {
             <div x-show="mode === 'register'" x-transition:enter="transition-opacity duration-300 delay-200"
                  x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                  x-transition:leave="transition-opacity duration-150" x-transition:leave-end="opacity-0"
-                 x-cloak>
+                 x-cloak class="flex-1 flex flex-col">
 
-                <h1 class="text-[26px] mb-1">Create Account</h1>
-                <p class="text-sm text-gray-400 mb-6">Sign up to get started with Olux CMS</p>
+                {{-- Wizard header — pinned to the top of the panel --}}
+                <div class="signup-header pb-4">
+                    <x-signup-steps :current="$pendingToken ? 2 : 1" />
+                </div>
+
+                {{-- Step content — vertically centred in the remaining space --}}
+                <div class="flex-1 flex flex-col justify-center py-4">
+                <h1 class="text-[26px] mb-1">{{ $pendingToken ? 'Check your email' : 'Create Account' }}</h1>
+                <p class="text-sm text-gray-400 mb-6">{{ $pendingToken ? 'Step 2 of 4 — confirm it’s really you.' : 'Step 1 of 4 — your details. Next we verify your email, then set up your business.' }}</p>
 
                 @if (! $pendingToken)
                 <form wire:submit="startVerification" class="flex flex-col gap-3.5">
@@ -389,8 +402,10 @@ new #[Layout('components.layouts.bare')] class extends Component {
                     </div>
                 </div>
                 @endif
+                </div>
 
-                <p class="text-center text-sm text-gray-400 mt-5">
+                {{-- Footer — pinned to the bottom of the panel --}}
+                <p class="text-center text-sm text-gray-400 pt-4 mt-auto">
                     Already have an account?
                     <button type="button" @click="mode = 'login'"
                         class="font-semibold hover:underline" style="color:var(--penta)">Login</button>
@@ -457,21 +472,25 @@ new #[Layout('components.layouts.bare')] class extends Component {
         background: var(--bg); font-family: 'garet', sans-serif; color: var(--on-bg);
     }
     .auth-card { background: var(--surface); border: 1px solid var(--line-inv); }
-    @media (min-width: 768px) { .auth-card { min-height: 710px; } }
+    @media (min-width: 768px) { .auth-card { min-height: 750px; } }
     .auth-screen h1 { font-family: 'junegull', 'trebuchet ms', sans-serif; text-transform: uppercase; color: var(--on-bg); font-weight: 400; }
     .auth-logo-text { font-family: 'junegull', sans-serif; color: var(--on-bg); }
     .auth-screen label, .auth-screen .text-xs, .auth-screen .text-sm { font-family: 'comforta', sans-serif; }
 
     /* Inputs on dark */
-    .auth-screen input[type="email"], .auth-screen input[type="password"], .auth-screen input[type="text"] {
+    .auth-screen input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]), .auth-screen textarea, .auth-screen select {
         background: rgba(255,255,255,.05); border-color: var(--line-inv); color: var(--on-bg);
     }
-    .auth-screen input::placeholder { color: rgba(248,245,242,.55); }
+    .auth-screen input::placeholder, .auth-screen textarea::placeholder { color: rgba(248,245,242,.55); }
+    .auth-screen input:-webkit-autofill, .auth-screen input:-webkit-autofill:hover, .auth-screen input:-webkit-autofill:focus, .auth-screen textarea:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 1000px #241d29 inset; -webkit-text-fill-color: var(--on-bg); caret-color: var(--on-bg); border-color: var(--line-inv); transition: background-color 9999s ease-out;
+    }
 
     /* Social buttons + divider on dark */
     .auth-screen .grid.grid-cols-2 a { border-color: var(--line-inv); color: var(--on-bg-soft); }
     .auth-screen .grid.grid-cols-2 a:hover { background: rgba(255,255,255,.06); border-color: var(--primary); }
     .auth-screen .h-px { background: var(--line-inv); }
+    .auth-screen .signup-steps .step-bg { background: var(--surface); }
     .auth-screen .text-gray-600, .auth-screen .text-gray-700 { color: var(--on-bg-soft); }
 
     /* Submit buttons: orange gradient with glow */

@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Site;
-use App\Services\Stripe\StripeGateway;
+use App\Payments\CheckoutLine;
+use App\Payments\CheckoutRequest;
+use App\Payments\PaymentManager;
+use App\Payments\WebhookEventKind;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class StoreFrontController extends Controller
 {
-    public function __construct(private StripeGateway $stripe) {}
+    public function __construct(private PaymentManager $payments) {}
 
     private function site(string $siteName): Site
     {
@@ -46,7 +49,8 @@ class StoreFrontController extends Controller
         $product = $site->products()->where('id', $data['product_id'])->where('is_active', true)->firstOrFail();
         $qty = $data['qty'] ?? 1;
 
-        if (! $site->stripeReady()) {
+        $gateway = $this->payments->for($site);
+        if (! $gateway->available($site)) {
             return back()->with('store_error', 'This store is not accepting payments yet.');
         }
 
@@ -65,21 +69,13 @@ class StoreFrontController extends Controller
         ]);
 
         try {
-            $session = $this->stripe->createCheckoutSession(
-                site: $site,
-                lineItems: [[
-                    'price_data' => [
-                        'currency' => $product->currency,
-                        'product_data' => ['name' => $product->name],
-                        'unit_amount' => $product->price_cents,
-                    ],
-                    'quantity' => $qty,
-                ]],
-                successUrl: url($site->name.'/store/success').'?session_id={CHECKOUT_SESSION_ID}',
-                cancelUrl: url($site->name.'/store/'.$product->slug),
+            $session = $gateway->createCheckout($site, new CheckoutRequest(
+                lines: [new CheckoutLine($product->name, $product->price_cents, $product->currency, $qty)],
+                successUrl: url('preview/'.$site->name.'/store/success').'?session_id={CHECKOUT_SESSION_ID}',
+                cancelUrl: url('preview/'.$site->name.'/store/'.$product->slug),
                 metadata: ['order_id' => $order->id, 'site_id' => $site->id],
                 customerEmail: $data['email'] ?? null,
-            );
+            ));
         } catch (\Throwable $e) {
             Log::error('Stripe checkout failed', ['site' => $site->id, 'msg' => $e->getMessage()]);
             $order->update(['status' => 'cancelled']);
@@ -112,30 +108,27 @@ class StoreFrontController extends Controller
     {
         $site = $this->site($siteName);
 
+        $gateway = $this->payments->for($site);
+
         try {
-            $event = $this->stripe->verifyWebhook(
-                $site,
-                $request->getContent(),
-                $request->header('Stripe-Signature', ''),
-            );
+            $event = $gateway->verifyWebhook($site, $request->getContent(), $request->header($gateway->signatureHeaderName()));
         } catch (\Throwable $e) {
             return response('Invalid signature', 400);
         }
 
-        if ($event->type === 'checkout.session.completed') {
-            $session = $event->data->object;
-            $orderId = $session->metadata->order_id ?? null;
+        if ($event->kind === WebhookEventKind::Completed) {
+            $orderId = $event->metadata['order_id'] ?? null;
 
             $order = $orderId
                 ? $site->orders()->find($orderId)
-                : $site->orders()->where('stripe_session_id', $session->id)->first();
+                : $site->orders()->where('stripe_session_id', $event->sessionId)->first();
 
             if ($order) {
                 $order->update([
-                    'customer_email' => $order->customer_email ?: ($session->customer_details->email ?? null),
-                    'customer_name' => $order->customer_name ?: ($session->customer_details->name ?? null),
+                    'customer_email' => $order->customer_email ?: $event->payerEmail,
+                    'customer_name' => $order->customer_name ?: $event->payerName,
                 ]);
-                $order->markPaid($session->payment_intent ?? null);
+                $order->markPaid($event->paymentRef);
             }
         }
 

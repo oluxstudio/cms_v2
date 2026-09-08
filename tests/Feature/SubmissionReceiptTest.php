@@ -27,8 +27,8 @@ test('a contact submission emails BOTH the visitor (branded receipt) and the adm
         'name' => 'Jo', 'email' => 'jo@example.com', 'message' => 'Hello there',
     ])->assertCreated();
 
-    Mail::assertSent(SubmissionReceipt::class, fn ($m) => $m->hasTo('jo@example.com'));      // visitor
-    Mail::assertSent(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email)); // admin
+    Mail::assertQueued(SubmissionReceipt::class, fn ($m) => $m->hasTo('jo@example.com'));      // visitor
+    Mail::assertQueued(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email)); // admin
 });
 
 test('an interest submission now emails the visitor a receipt too', function () {
@@ -39,8 +39,8 @@ test('an interest submission now emails the visitor a receipt too', function () 
         'name' => 'Ada', 'email' => 'ada@example.com', 'message' => 'Interested!',
     ])->assertCreated();
 
-    Mail::assertSent(SubmissionReceipt::class, fn ($m) => $m->hasTo('ada@example.com'));
-    Mail::assertSent(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email));
+    Mail::assertQueued(SubmissionReceipt::class, fn ($m) => $m->hasTo('ada@example.com'));
+    Mail::assertQueued(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email));
 });
 
 test('a form submission emails the visitor the branded receipt', function () {
@@ -53,7 +53,7 @@ test('a form submission emails the visitor the branded receipt', function () {
 
     $this->postJson("/api/sites/{$site->name}/form/enquiry", ['name' => 'Sam', 'email' => 'sam@example.com'])->assertCreated();
 
-    Mail::assertSent(SubmissionReceipt::class, fn ($m) => $m->hasTo('sam@example.com'));
+    Mail::assertQueued(SubmissionReceipt::class, fn ($m) => $m->hasTo('sam@example.com'));
 });
 
 test('the receipt uses the admin-edited subject and body', function () {

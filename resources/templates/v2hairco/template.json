@@ -1,0 +1,458 @@
+{
+    "forms": [
+        {
+            "name": "appointment",
+            "title": "Book an appointment",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "email",
+                    "required": true
+                },
+                {
+                    "key": "phone",
+                    "label": "Phone",
+                    "type": "tel",
+                    "required": false
+                },
+                {
+                    "key": "notes",
+                    "label": "Notes",
+                    "type": "textarea",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "contact",
+            "title": "Contact us",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "email",
+                    "required": true
+                },
+                {
+                    "key": "message",
+                    "label": "Message",
+                    "type": "textarea",
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "booking": {
+        "services": [
+            {
+                "name": "Haircut",
+                "kind": "slot",
+                "duration_min": 45,
+                "price_cents": 3800,
+                "description": "Precision cut & finish"
+            },
+            {
+                "name": "Colouring",
+                "kind": "slot",
+                "duration_min": 90,
+                "price_cents": 6000
+            }
+        ],
+        "availability": {
+            "days": "mon,tue,wed,thu,fri,sat",
+            "open_time": "09:00",
+            "close_time": "18:00",
+            "slot_minutes": 30
+        }
+    },
+    "collections": [
+        {
+            "name": "About Points",
+            "fields": [
+                {
+                    "key": "point",
+                    "label": "Point",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "point": "Long-Lasting Hold"
+                },
+                {
+                    "point": "Effective Ingredients"
+                },
+                {
+                    "point": "Gentle Formulas"
+                },
+                {
+                    "point": "Deep Hydration"
+                }
+            ]
+        },
+        {
+            "name": "Footer Links",
+            "fields": [
+                {
+                    "key": "href",
+                    "label": "Href",
+                    "type": "text"
+                },
+                {
+                    "key": "label",
+                    "label": "Label",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "href": "/about",
+                    "label": "About Us"
+                },
+                {
+                    "href": "/services",
+                    "label": "Services"
+                },
+                {
+                    "href": "/appointment",
+                    "label": "Appointment"
+                },
+                {
+                    "href": "/contact-us",
+                    "label": "Contact Us"
+                }
+            ]
+        },
+        {
+            "name": "Footer Services",
+            "fields": [
+                {
+                    "key": "href",
+                    "label": "Href",
+                    "type": "text"
+                },
+                {
+                    "key": "label",
+                    "label": "Label",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "href": "/services",
+                    "label": "Hairstyles"
+                },
+                {
+                    "href": "/services",
+                    "label": "Coloring"
+                },
+                {
+                    "href": "/services",
+                    "label": "Hair Curly"
+                },
+                {
+                    "href": "/services",
+                    "label": "Lamination"
+                }
+            ]
+        },
+        {
+            "name": "Hero Tags",
+            "fields": [
+                {
+                    "key": "label",
+                    "label": "Label",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "label": "Salon-grade products"
+                },
+                {
+                    "label": "Gentle formulas"
+                },
+                {
+                    "label": "Curl specialists"
+                },
+                {
+                    "label": "Personal care plans"
+                }
+            ]
+        },
+        {
+            "name": "Pricing",
+            "fields": [
+                {
+                    "key": "desc",
+                    "label": "Desc",
+                    "type": "text"
+                },
+                {
+                    "key": "price",
+                    "label": "Price",
+                    "type": "text"
+                },
+                {
+                    "key": "title",
+                    "label": "Title",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "desc": "Consultation, wash, precision cut and finish.",
+                    "price": "$45",
+                    "title": "Signature Cut & Style"
+                },
+                {
+                    "desc": "Single-process color with gloss and blowout.",
+                    "price": "$66",
+                    "title": "Full Color"
+                },
+                {
+                    "desc": "Hand-painted dimension with toner.",
+                    "price": "$58",
+                    "title": "Balayage / Highlights"
+                },
+                {
+                    "desc": "Hydration, shaping and diffuse styling for curls.",
+                    "price": "$49",
+                    "title": "Curl Definition"
+                },
+                {
+                    "desc": "Glass-shine treatment that smooths for weeks.",
+                    "price": "$52",
+                    "title": "Lamination"
+                },
+                {
+                    "desc": "Wash, blow-dry and quick finish.",
+                    "price": "$35",
+                    "title": "Express Blowout"
+                }
+            ]
+        },
+        {
+            "name": "Services",
+            "fields": [
+                {
+                    "key": "icon",
+                    "label": "Icon",
+                    "type": "text"
+                },
+                {
+                    "key": "text",
+                    "label": "Text",
+                    "type": "text"
+                },
+                {
+                    "key": "title",
+                    "label": "Title",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "icon": "\u2702",
+                    "text": "Signature cuts and styling shaped to your face, texture and daily routine.",
+                    "title": "Hairstyles"
+                },
+                {
+                    "icon": "\ud83c\udfa8",
+                    "text": "Balayage, gloss and full color with gentle, salon-grade pigments.",
+                    "title": "Coloring"
+                },
+                {
+                    "icon": "\ud83c\udf00",
+                    "text": "Curl definition, perms and care plans that keep every coil bouncy.",
+                    "title": "Hair Curly"
+                },
+                {
+                    "icon": "\u2728",
+                    "text": "Glass-shine lamination that seals, smooths and protects for weeks.",
+                    "title": "Lamination"
+                }
+            ]
+        },
+        {
+            "name": "Stats",
+            "fields": [
+                {
+                    "key": "text",
+                    "label": "Text",
+                    "type": "text"
+                },
+                {
+                    "key": "title",
+                    "label": "Title",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "text": "International Branches",
+                    "title": "30+"
+                },
+                {
+                    "text": "Happy Clients World Wide",
+                    "title": "12k"
+                },
+                {
+                    "text": "Years of In-Field Experience",
+                    "title": "15"
+                },
+                {
+                    "text": "Positive Client Reviews",
+                    "title": "98%"
+                }
+            ]
+        },
+        {
+            "name": "Team",
+            "fields": [
+                {
+                    "key": "image",
+                    "label": "Image",
+                    "type": "text"
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text"
+                },
+                {
+                    "key": "role",
+                    "label": "Role",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "name": "Amara Ellis",
+                    "role": "Creative Director",
+                    "image": "/nuxt-preview/v2hairco/assets/images/team-1.jpg"
+                },
+                {
+                    "name": "Rosa Delgado",
+                    "role": "Color Specialist",
+                    "image": "/nuxt-preview/v2hairco/assets/images/team-2.jpg"
+                },
+                {
+                    "name": "Maya Chen",
+                    "role": "Curl Expert",
+                    "image": "/nuxt-preview/v2hairco/assets/images/team-3.jpg"
+                },
+                {
+                    "name": "Jules Baptiste",
+                    "role": "Senior Stylist",
+                    "image": "/nuxt-preview/v2hairco/assets/images/team-4.jpg"
+                }
+            ]
+        },
+        {
+            "name": "Testimonials",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text"
+                },
+                {
+                    "key": "quote",
+                    "label": "Quote",
+                    "type": "text"
+                },
+                {
+                    "key": "role",
+                    "label": "Role",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "name": "Priya N.",
+                    "role": "Coloring client",
+                    "quote": "The consultation alone was worth the visit \u2014 my color has never looked this natural."
+                },
+                {
+                    "name": "Dana W.",
+                    "role": "Curl care client",
+                    "quote": "Three salons gave up on my curls. Hair Co. gave me a routine that actually works."
+                },
+                {
+                    "name": "Elena M.",
+                    "role": "Styling client",
+                    "quote": "Booked at noon, transformed by three. Effortless from start to finish."
+                }
+            ]
+        },
+        {
+            "name": "Working Hours",
+            "fields": [
+                {
+                    "key": "text",
+                    "label": "Text",
+                    "type": "text"
+                },
+                {
+                    "key": "title",
+                    "label": "Title",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "text": "9:00 \u2014 20:00",
+                    "title": "Monday \u2014 Friday"
+                },
+                {
+                    "text": "10:00 \u2014 18:00",
+                    "title": "Saturday"
+                },
+                {
+                    "text": "Closed",
+                    "title": "Sunday"
+                }
+            ]
+        }
+    ],
+    "key": "v2hairco",
+    "name": "V2Hairco",
+    "description": "Marketplace template \u2014 replicates the V2Hairco app exactly, with editable content.",
+    "category": "Marketplace",
+    "accentColor": "#146aa8",
+    "author": "Olux Marketplace",
+    "version": "1.0.0",
+    "createdAt": "2026-09-08",
+    "tags": [
+        "App"
+    ],
+    "features": [
+        "7 page(s) \u00b7 40 content blocks",
+        "Pixel-exact replica of the original app",
+        "Content, order and visibility editable in Configure"
+    ],
+    "renderer": "v2hairco",
+    "pages": [
+        "about",
+        "appointment",
+        "contact-us",
+        "faq",
+        "home",
+        "services",
+        "shop"
+    ]
+}

@@ -22,7 +22,7 @@ class TemplateSubmission extends Model
 
     public const STATUS_REJECTED = 'rejected';
 
-    protected $fillable = ['key', 'name', 'status', 'extraction', 'note', 'reviewed_by', 'reviewed_at'];
+    protected $fillable = ['key', 'name', 'status', 'extraction', 'repo_url', 'repo_branch', 'note', 'reviewed_by', 'reviewed_at'];
 
     protected $casts = [
         'extraction' => 'array',

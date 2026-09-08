@@ -1,8 +1,8 @@
 <script setup lang="ts">
-const olux = useOluxContent('faq')
+const oluxCms = useOluxContent('faq')
 const oluxFb: Record<string, string> = {"Subheadline":"Frequently Asked <strong>Questions</strong>","Text":"Lorem ipsum dolor sit amet, consectetur adipiscing elit"}
-const answer = olux.tRef('Answer', 'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.')
-const faqs = olux.list('Faq', [
+const answer = oluxCms.tRef('Answer', 'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.')
+const faqs = oluxCms.list('Faq', [
   'What is web domain and hosting?',
   'Which server is best for websites linux or windows?',
   'Google cloud or Amazon server which one is best and fast?',
@@ -11,13 +11,13 @@ const faqs = olux.list('Faq', [
 </script>
 
 <template>
-  <section id="faq" class="faq" v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">
+  <section id="faq" class="faq" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container" data-aos="fade-up">
       <div class="row gy-4">
         <div class="col-lg-12">
           <div class="content text-center">
-            <h3 v-html="olux.t('Subheadline', oluxFb['Subheadline'])"></h3>
-            <p>{{ olux.t('Text', oluxFb['Text']) }}</p>
+            <h3 data-olx-field="subheadline" v-html="oluxCms.t('Subheadline', oluxFb['Subheadline'])"></h3>
+            <p data-olx-field="text">{{ oluxCms.t('Text', oluxFb['Text']) }}</p>
           </div>
         </div>
         <div class="col-lg-12">

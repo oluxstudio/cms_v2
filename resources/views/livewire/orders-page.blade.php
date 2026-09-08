@@ -1,8 +1,13 @@
 @php
     $statusStyles = [
         'pending'   => 'bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400',
-        'paid'      => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400',
-        'fulfilled' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-400/10 dark:text-indigo-400',
+        'paid'      => 'bg-blue-100 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400',
+        'shipped'   => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-400/10 dark:text-indigo-400',
+        'delivered' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400',
+        'fulfilled' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400',
+        'return_requested' => 'bg-orange-100 text-orange-700 dark:bg-orange-400/10 dark:text-orange-400',
+        'returned'  => 'bg-violet-100 text-violet-700 dark:bg-violet-400/10 dark:text-violet-400',
+        'refunded'  => 'bg-rose-100 text-rose-700 dark:bg-rose-400/10 dark:text-rose-400',
         'cancelled' => 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400',
     ];
     $statuses = \App\Models\Order::STATUSES;
@@ -14,8 +19,9 @@
 @endphp
 
 <div class="main-body p-5 sm:p-6"
-     x-data="{ toast:'' }"
-     x-init="$watch('$wire.successMessage', v => { if(v){ toast=v; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } })">
+     x-init="$watch('$wire.successMessage', v => { if(v){ toast=v; toastErr=false; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } });
+             $watch('$wire.errorMessage',   v => { if(v){ toast=v; toastErr=true;  setTimeout(()=>{ toast=''; $wire.errorMessage='';   }, 5000) } })"
+     x-data="{ toast:'', toastErr:false }">
 
     {{-- ══ Greeting ══ --}}
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -118,7 +124,7 @@
         @foreach([
             ['pending',   'New / pending orders', 'linear-gradient(120deg,#dbeafe,#eef2ff)', 'linear-gradient(120deg,#1e3a5f33,#3730a333)'],
             ['paid',      'Paid orders',          'linear-gradient(120deg,#d1fae5,#ecfdf5)', 'linear-gradient(120deg,#064e3b33,#065f4633)'],
-            ['fulfilled', 'Fulfilled orders',     'linear-gradient(120deg,#fef3c7,#fffbeb)', 'linear-gradient(120deg,#78350f33,#92400e33)'],
+            ['delivered', 'Delivered orders',     'linear-gradient(120deg,#fef3c7,#fffbeb)', 'linear-gradient(120deg,#78350f33,#92400e33)'],
             ['cancelled', 'Cancelled orders',     'linear-gradient(120deg,#f3f4f6,#fafafa)', 'linear-gradient(120deg,#1f293733,#37415133)'],
         ] as [$st, $label, $grad, $gradDark])
             @php $wk = $ins['weekly'][$st]; @endphp
@@ -172,7 +178,10 @@
                 <tbody>
                     @forelse($this->orders as $order)
                         <tr class="border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors">
-                            <td class="px-4 py-3 text-xs font-bold text-gray-900 dark:text-white cursor-pointer" wire:click="open('{{ $order->id }}')">#{{ $order->id }}</td>
+                            <td class="px-4 py-3 text-xs font-bold text-gray-900 dark:text-white cursor-pointer whitespace-nowrap" wire:click="open('{{ $order->id }}')">
+                                {{ $order->displayNumber() }}
+                                <span class="block text-[10px] font-medium text-gray-400">{{ $order->fulfilment === 'collection' ? '🏪 Collection' : '🚚 Delivery' }}</span>
+                            </td>
                             <td class="px-4 py-3 cursor-pointer" wire:click="open('{{ $order->id }}')">
                                 <p class="text-xs font-semibold text-gray-900 dark:text-white truncate max-w-[160px]">{{ $order->customer_name ?: 'Guest' }}</p>
                                 <p class="text-[10px] text-gray-400 truncate max-w-[160px]">{{ $order->customer_email }}</p>
@@ -208,7 +217,9 @@
         <div class="absolute inset-0 bg-black/40" wire:click="closeDetail"></div>
         <div class="relative w-full max-w-md h-full bg-white dark:bg-[#1d1e2a] border-l border-gray-100 dark:border-white/[0.05] shadow-2xl overflow-y-auto">
             <div class="sticky top-0 bg-white dark:bg-[#1d1e2a] border-b border-gray-100 dark:border-white/[0.05] px-6 py-4 flex items-center justify-between z-10">
-                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Order #{{ $o->id }}</h2>
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Order {{ $o->displayNumber() }}
+                    <span class="ml-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">{{ $o->fulfilment === 'collection' ? '🏪 Collection' : '🚚 Delivery' }}</span>
+                </h2>
                 <button wire:click="closeDetail" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
@@ -218,6 +229,12 @@
                     <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full capitalize {{ $statusStyles[$o->status] ?? '' }}">{{ $o->status }}</span>
                     <span class="text-lg font-extrabold text-gray-900 dark:text-white">{{ $o->formattedTotal() }}</span>
                 </div>
+                @if($o->vatLabel())
+                    <p class="text-[11px] text-gray-400 -mt-3 mb-4 text-right">{{ $o->vatLabel() }}</p>
+                @endif
+                @if($o->delivery_notes)
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/[0.08]">📝 {{ $o->delivery_notes }}</p>
+                @endif
                 <div class="mb-5 text-sm">
                     <p class="font-semibold text-gray-900 dark:text-white">{{ $o->customer_name ?: 'Guest' }}</p>
                     <p class="text-gray-400 dark:text-gray-500">{{ $o->customer_email }}</p>
@@ -234,9 +251,107 @@
                     @endforeach
                 </div>
 
+                {{-- Order history stepper --}}
+                @php
+                    $stepMeta = [
+                        'placed'           => ['icon' => '🧾', 'label' => 'Placed',           'dot' => 'bg-amber-400'],
+                        'pending'          => ['icon' => '🧾', 'label' => 'Placed',           'dot' => 'bg-amber-400'],
+                        'paid'             => ['icon' => '💳', 'label' => 'Paid',             'dot' => 'bg-blue-500'],
+                        'shipped'          => ['icon' => '📦', 'label' => $o->fulfilment === 'collection' ? 'Ready to collect' : 'Shipped', 'dot' => 'bg-indigo-500'],
+                        'delivered'        => ['icon' => '✅', 'label' => 'Delivered',        'dot' => 'bg-emerald-500'],
+                        'courier_invited'  => ['icon' => '🚚', 'label' => 'Courier invited',  'dot' => 'bg-sky-500'],
+                        'return_requested' => ['icon' => '↩️', 'label' => 'Return requested', 'dot' => 'bg-orange-500'],
+                        'returned'         => ['icon' => '📥', 'label' => 'Returned',         'dot' => 'bg-violet-500'],
+                        'refunded'         => ['icon' => '💸', 'label' => 'Refunded',         'dot' => 'bg-rose-500'],
+                        'cancelled'        => ['icon' => '❌', 'label' => 'Cancelled',        'dot' => 'bg-rose-500'],
+                    ];
+
+                    // Every recorded step, in order — Placed always leads.
+                    $steps = [['icon' => '🧾', 'label' => 'Placed', 'at' => $o->created_at, 'dot' => 'bg-amber-400', 'by' => null]];
+                    if ($o->events->isNotEmpty()) {
+                        foreach ($o->events as $ev) {
+                            $m = $stepMeta[$ev->status] ?? ['icon' => '•', 'label' => ucfirst(str_replace('_', ' ', $ev->status)), 'dot' => 'bg-gray-400'];
+                            $steps[] = $m + ['at' => $ev->created_at, 'by' => $ev->user?->name];
+                        }
+                    } else {
+                        // Legacy orders without history rows: rebuild from the timestamps.
+                        foreach ([['paid', $o->paid_at], ['shipped', $o->shipped_at], ['delivered', $o->delivered_at], ['returned', $o->returned_at], ['refunded', $o->refunded_at]] as [$st, $at]) {
+                            if ($at) {
+                                $steps[] = $stepMeta[$st] + ['at' => $at, 'by' => null];
+                            }
+                        }
+                        if ($o->status === 'cancelled') {
+                            $steps[] = $stepMeta['cancelled'] + ['at' => $o->updated_at, 'by' => null];
+                        }
+                    }
+
+                    // Dimmed remaining happy path while the order is still en route.
+                    if (in_array($o->displayStatus(), ['pending', 'paid', 'shipped'], true)) {
+                        $ahead = ['pending' => ['paid', 'shipped', 'delivered'], 'paid' => ['shipped', 'delivered'], 'shipped' => ['delivered']][$o->displayStatus()];
+                        foreach ($ahead as $st) {
+                            $steps[] = $stepMeta[$st] + ['at' => null, 'by' => null];
+                        }
+                    }
+                @endphp
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">Order history</p>
+                <ol class="mb-5">
+                    @foreach($steps as $i => $step)
+                    <li class="relative flex items-start gap-3 pb-4 last:pb-0">
+                        @unless($loop->last)
+                        <span class="absolute left-[5px] top-4 bottom-0 w-px {{ $step['at'] && ($steps[$i + 1]['at'] ?? null) ? 'bg-gray-300 dark:bg-white/20' : 'bg-gray-100 dark:bg-white/[0.06]' }}"></span>
+                        @endunless
+                        <span class="relative mt-1 w-[11px] h-[11px] rounded-full shrink-0 {{ $step['at'] ? $step['dot'] : 'bg-gray-200 dark:bg-white/[0.1]' }}"></span>
+                        <div class="min-w-0 {{ $step['at'] ? '' : 'opacity-50' }}">
+                            <p class="text-xs font-semibold text-gray-900 dark:text-white leading-tight">{{ $step['icon'] }} {{ $step['label'] }}</p>
+                            <p class="text-[11px] text-gray-400 dark:text-gray-500">
+                                {{ $step['at'] ? $step['at']->format('M j, g:i A') : 'Not yet' }}@if($step['by'] ?? null) · by {{ $step['by'] }}@endif
+                            </p>
+                        </div>
+                    </li>
+                    @endforeach
+                </ol>
                 @if($o->status === 'paid')
-                <button wire:click="markFulfilled('{{ $o->id }}')" data-confirm="Mark this order as fulfilled?" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors mb-2">Mark as fulfilled</button>
+                <button wire:click="markShipped('{{ $o->id }}')" data-confirm="Mark this order as shipped?" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors mb-2">📦 Mark as shipped</button>
+                @elseif($o->status === 'shipped')
+                <button wire:click="markDelivered('{{ $o->id }}')" data-confirm="Mark this order as delivered?" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors mb-2">✅ Mark as delivered</button>
+                @elseif($o->status === 'return_requested')
+                <button wire:click="markReturned('{{ $o->id }}')" data-confirm="Confirm the items are back? Stock will be topped up." class="w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors mb-2">📥 Mark as returned</button>
                 @endif
+
+                @if(in_array($o->status, ['paid', 'shipped', 'delivered'], true))
+                <div class="flex gap-2 mb-2">
+                    <button wire:click="markReturned('{{ $o->id }}')" data-confirm="Mark this order as returned? The items go back into stock."
+                            class="flex-1 py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">↩️ Returned</button>
+                    <button wire:click="refundOrder('{{ $o->id }}')" data-confirm="Refund {{ $o->formattedTotal() }} to the customer? {{ $o->stripe_payment_intent ? 'The money is sent back via Stripe.' : 'No card payment on file — the order is only marked refunded.' }}"
+                            class="flex-1 py-2.5 border border-rose-200 dark:border-rose-500/30 text-sm font-semibold text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">💸 Refund</button>
+                </div>
+                @elseif($o->status === 'returned')
+                <button wire:click="refundOrder('{{ $o->id }}')" data-confirm="Refund {{ $o->formattedTotal() }} to the customer? {{ $o->stripe_payment_intent ? 'The money is sent back via Stripe.' : 'No card payment on file — the order is only marked refunded.' }}"
+                        class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition-colors mb-2">💸 Refund {{ $o->formattedTotal() }}</button>
+                @endif
+                {{-- Courier delivery (delivery orders only) --}}
+                @if($o->fulfilment !== 'collection' && in_array($o->status, ['paid', 'shipped'], true))
+                <div class="mb-3 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03]">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-2">🚚 Delivery</p>
+                    @if($o->shipping_address)
+                        <p class="text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line mb-2">{{ $o->shipping_address }}</p>
+                    @else
+                        <p class="text-xs text-amber-600 dark:text-amber-400 mb-2">No delivery address on file.</p>
+                    @endif
+                    @if($o->courier_invited_at)
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Invited <b>{{ $o->courier_email }}</b> {{ $o->courier_invited_at->diffForHumans() }}.</p>
+                    @endif
+                    <div class="flex items-center gap-2">
+                        <input type="email" wire:model="courierEmail" placeholder="courier@email.com"
+                               class="flex-1 px-2.5 py-1.5 rounded-lg text-xs bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
+                        <button wire:click="inviteCourier('{{ $o->id }}')"
+                                class="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold whitespace-nowrap">
+                            {{ $o->courier_invited_at ? 'Resend' : 'Invite courier' }}
+                        </button>
+                    </div>
+                </div>
+                @endif
+
                 <button wire:click="invoiceOrder('{{ $o->id }}')" data-confirm="Create a draft invoice from this order? You'll be taken to the Invoices page."
                         class="w-full py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">🧾 Invoice this order</button>
             </div>
@@ -292,7 +407,8 @@
     @endif
 
     {{-- Toast --}}
-    <div x-show="toast" x-cloak x-transition class="fixed bottom-6 right-6 z-[60] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-medium bg-gray-900 text-white">
+    <div x-show="toast" x-cloak x-transition class="fixed bottom-6 right-6 z-[60] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-medium text-white"
+         :class="toastErr ? 'bg-red-600' : 'bg-gray-900'">
         <span x-text="toast"></span>
     </div>
 </div>

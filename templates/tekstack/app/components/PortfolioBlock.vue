@@ -1,14 +1,14 @@
 <script setup lang="ts">
-const olux = useOluxContent('portfolio')
+const oluxCms = useOluxContent('portfolio')
 const oluxFb: Record<string, string> = {"Headline":"Our Portfolio","Text":"Lorem ipsum dolor sit amet, consectetur adipiscing elit"}
-const filters = olux.items('Filter', {"F":"f","Label":"label","Active":"active"}, [
+const filters = oluxCms.items('Filter', {"F":"f","Label":"label","Active":"active"}, [
   { f: '*', label: 'All', active: true },
   { f: '.filter-app', label: 'App Design' },
   { f: '.filter-product', label: 'App Development' },
   { f: '.filter-branding', label: 'Branding' },
   { f: '.filter-books', label: 'It Solutions' },
 ], {})
-const items = olux.items('Portfolio', {"Image":"img","Cls":"cls","Title":"title","T Img":"tImg"}, [
+const items = oluxCms.items('Portfolio', {"Image":"img","Cls":"cls","Title":"title","T Img":"tImg"}, [
   { img: 'portfolio/app-1.jpg', cls: 'filter-app', title: 'App 1', tImg: 'testimonials/testimonial-1.jpg' },
   { img: 'portfolio/product-1.jpg', cls: 'filter-product', title: 'Product 1', tImg: 'testimonials/testimonial-2.jpg' },
   { img: 'portfolio/branding-1.jpg', cls: 'filter-branding', title: 'Branding 1', tImg: 'testimonials/testimonial-3.jpg' },
@@ -16,15 +16,15 @@ const items = olux.items('Portfolio', {"Image":"img","Cls":"cls","Title":"title"
   { img: 'portfolio/app-2.jpg', cls: 'filter-app', title: 'App 2', tImg: 'testimonials/testimonial-1.jpg' },
   { img: 'portfolio/product-2.jpg', cls: 'filter-product', title: 'Product 2', tImg: 'testimonials/testimonial-2.jpg' },
 ], {"img":"/assets/images/"})
-const quote = olux.tRef('Quote', 'Export tempor illum tamen malis malis eram quae irure esse labore quem cillum quid cillum eram malis quorum velit fore eram velit sunt aliqua noster fugiat irure amet legam anim culpa.')
+const quote = oluxCms.tRef('Quote', 'Export tempor illum tamen malis malis eram quae irure esse labore quem cillum quid cillum eram malis quorum velit fore eram velit sunt aliqua noster fugiat irure amet legam anim culpa.')
 </script>
 
 <template>
-  <div id="portfolio" class="portfolio section" v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">
+  <div id="portfolio" class="portfolio section" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container" data-aos="fade-up">
       <div class="section-header">
-        <h2>{{ olux.t('Headline', oluxFb['Headline']) }}</h2>
-        <p>{{ olux.t('Text', oluxFb['Text']) }}</p>
+        <h2 data-olx-field="headline">{{ oluxCms.t('Headline', oluxFb['Headline']) }}</h2>
+        <p data-olx-field="text">{{ oluxCms.t('Text', oluxFb['Text']) }}</p>
       </div>
       <div class="portfolio-isotope" data-portfolio-filter="*" data-portfolio-layout="masonry" data-portfolio-sort="original-order" data-aos="fade-up" data-aos-delay="100">
         <div>

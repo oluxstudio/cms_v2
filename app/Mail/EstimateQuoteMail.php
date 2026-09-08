@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\Estimate;
 use App\Models\Site;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -15,7 +16,7 @@ use Illuminate\Queue\SerializesModels;
  * the Estimates page (site attrs estimator.email_subject / .email_body) with
  * {placeholders}; the calculated results table is appended automatically.
  */
-class EstimateQuoteMail extends Mailable
+class EstimateQuoteMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

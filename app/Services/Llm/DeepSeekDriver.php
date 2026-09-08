@@ -33,7 +33,7 @@ class DeepSeekDriver implements LlmDriverInterface
         array $messages,
         array $tools,
         callable $executeTool,
-    ): string {
+    ): LlmResult {
         $openAiTools = $this->convertTools($tools);
 
         // Qwen3 supports /no_think to suppress verbose reasoning. DeepSeek-R1 always reasons (no equivalent flag).
@@ -113,7 +113,7 @@ class DeepSeekDriver implements LlmDriverInterface
             break;
         }
 
-        return trim($finalText) ?: 'Done.';
+        return new LlmResult(trim($finalText) ?: 'Done.', 0, 0, count($toolsCalledAll));
     }
 
     // ── Streaming helper ───────────────────────────────────────────────────

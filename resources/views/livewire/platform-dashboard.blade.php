@@ -37,6 +37,85 @@
                      icon="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7z" />
     </div>
 
+    {{-- Money row --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+        <x-stat-tile label="Estimated MRR" :value="\App\Support\Money::format($money['mrr_cents'], 'gbp')"
+                     :sub="$money['paying'].' paying · '.$money['trialing'].' trialing'" color="#10b981"
+                     icon="M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8c1.3 0 2.4.5 2.8 1.3M12 8V7m0 10v-1m0 1c-1.3 0-2.4-.5-2.8-1.3M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <x-stat-tile label="Store sales · 30d (GMV)" :value="\App\Support\Money::format($money['gmv_30d_cents'], 'gbp')"
+                     sub="paid orders across all tenants" color="#6366f1"
+                     icon="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        <x-stat-tile label="Invoices collected · 30d" :value="\App\Support\Money::format($money['invoices_30d_cents'], 'gbp')"
+                     sub="tenant invoicing" color="#3b82f6"
+                     icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.6L19 8.4V19a2 2 0 01-2 2z" />
+        <x-stat-tile label="Trials expiring ≤7d" :value="$expiringTrials->count()"
+                     sub="reach out before they lapse" color="#f59e0b"
+                     icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </div>
+
+    {{-- Charts row --}}
+    <div class="grid lg:grid-cols-3 gap-4 mt-4">
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-1">Signups — 30 days</h2>
+            <div id="pd-signups-chart" wire:ignore></div>
+        </div>
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-1">Storage growth (MB)</h2>
+            <div id="pd-storage-chart" wire:ignore></div>
+        </div>
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-1">Plan mix</h2>
+            <div id="pd-plans-chart" wire:ignore class="flex justify-center"></div>
+        </div>
+    </div>
+
+    {{-- Ops lists: storage hogs, expiring trials, traffic leaders --}}
+    <div class="grid lg:grid-cols-3 gap-4 mt-4">
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Top accounts by storage</h2>
+            <div class="space-y-2.5">
+                @forelse($topStorage as $row)
+                <a href="{{ route('admin.account', $row['user']->id) }}" wire:navigate class="block group">
+                    <span class="flex items-center justify-between text-xs">
+                        <b class="text-gray-800 dark:text-gray-100 truncate group-hover:text-indigo-500">{{ $row['user']->name }}</b>
+                        <span class="tabular-nums {{ ($row['pct'] ?? 0) > 85 ? 'text-rose-500 font-bold' : 'text-gray-400' }}">
+                            {{ $fmtBytes($row['bytes']) }}@if($row['pct'] !== null) · {{ $row['pct'] }}%@endif
+                        </span>
+                    </span>
+                    <span class="block mt-1 h-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.07] overflow-hidden">
+                        <span class="block h-full rounded-full {{ ($row['pct'] ?? 0) > 85 ? 'bg-rose-500' : 'bg-indigo-500' }}"
+                              style="width: {{ $row['pct'] ?? 4 }}%"></span>
+                    </span>
+                </a>
+                @empty
+                    <p class="py-6 text-center text-sm text-gray-400">No media stored yet.</p>
+                @endforelse
+            </div>
+        </div>
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Trials expiring soon</h2>
+            @forelse($expiringTrials as $trial)
+                <a href="{{ route('admin.account', $trial->user_id) }}" wire:navigate
+                   class="flex items-center justify-between gap-2 py-2 border-b border-gray-50 dark:border-white/[0.04] last:border-0 group">
+                    <span class="min-w-0">
+                        <b class="block text-xs text-gray-800 dark:text-gray-100 truncate group-hover:text-indigo-500">{{ $trial->user?->name }}</b>
+                        <span class="block text-[11px] text-gray-400 truncate">{{ $trial->user?->email }}</span>
+                    </span>
+                    <span class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full {{ $trial->trialDaysLeft() <= 2 ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-700' }}">
+                        {{ $trial->trialDaysLeft() }}d left
+                    </span>
+                </a>
+            @empty
+                <p class="py-6 text-center text-sm text-gray-400">No trials ending this week.</p>
+            @endforelse
+        </div>
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Busiest accounts — visits 30d</h2>
+            @if(count($topVisits)) <x-analytics.bar-list :items="$topVisits" />
+            @else <p class="py-6 text-center text-sm text-gray-400">No traffic yet.</p> @endif
+        </div>
+    </div>
+
     {{-- CMS totals --}}
     <div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-10 gap-2 mt-3">
         @foreach ([
@@ -115,3 +194,48 @@
         </div>
     </div>
 </div>
+
+@script
+<script>
+(function () {
+    if (typeof ApexCharts === 'undefined') return;
+    const isDark = document.documentElement.classList.contains('dark');
+    const sub = isDark ? '#9ca3af' : '#6b7280';
+    const c = @js($charts);
+    const ax = { categories: c.labels, tickAmount: 6, labels: { style: { colors: sub, fontSize: '10px' } }, axisBorder: { show: false }, axisTicks: { show: false } };
+
+    new ApexCharts(document.querySelector('#pd-signups-chart'), {
+        chart: { type: 'bar', height: 180, background: 'transparent', toolbar: { show: false } },
+        series: [{ name: 'Signups', data: c.signups }],
+        xaxis: ax, yaxis: { labels: { style: { colors: sub, fontSize: '10px' } } },
+        plotOptions: { bar: { borderRadius: 2, columnWidth: '55%' } },
+        colors: ['#6366f1'], dataLabels: { enabled: false },
+        grid: { borderColor: isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)' },
+        tooltip: { theme: isDark ? 'dark' : 'light' },
+        noData: { text: 'No data', style: { color: sub } },
+    }).render();
+
+    new ApexCharts(document.querySelector('#pd-storage-chart'), {
+        chart: { type: 'area', height: 180, background: 'transparent', toolbar: { show: false } },
+        series: [{ name: 'MB stored', data: c.storage_mb }],
+        xaxis: ax, yaxis: { labels: { style: { colors: sub, fontSize: '10px' } } },
+        stroke: { curve: 'smooth', width: 2 }, colors: ['#f59e0b'],
+        fill: { type: 'gradient', gradient: { opacityFrom: 0.3, opacityTo: 0.03 } },
+        dataLabels: { enabled: false },
+        grid: { borderColor: isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)' },
+        tooltip: { theme: isDark ? 'dark' : 'light' },
+        noData: { text: 'No data', style: { color: sub } },
+    }).render();
+
+    new ApexCharts(document.querySelector('#pd-plans-chart'), {
+        chart: { type: 'donut', height: 190, background: 'transparent' },
+        series: c.plan_series, labels: c.plan_labels, colors: c.plan_colors,
+        dataLabels: { enabled: false }, stroke: { show: false },
+        legend: { position: 'bottom', labels: { colors: sub }, fontSize: '11px' },
+        plotOptions: { pie: { donut: { size: '68%' } } },
+        tooltip: { theme: isDark ? 'dark' : 'light' },
+        noData: { text: 'No data', style: { color: sub } },
+    }).render();
+})();
+</script>
+@endscript

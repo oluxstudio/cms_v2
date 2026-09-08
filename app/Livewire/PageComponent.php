@@ -22,6 +22,109 @@ class PageComponent extends Component
 
     public PageForm $form;
 
+    // ── Selected-page detail drawer: metadata, preview & layout ──
+    public ?string $detailPageId = null;
+
+    public string $metaDescription = '';
+
+    public string $metaKeywords = '';
+
+    public string $ogImage = '';
+
+    public bool $isPublished = true;
+
+    /** @var array<int,array{key:string,value:string}> custom page attributes */
+    public array $attrRows = [];
+
+    /** Attribute keys owned by the builder/pipeline — never edited here. */
+    private const MANAGED_ATTRS = ['description', 'og_image', 'custom_js', 'page_styles'];
+
+    public function show(string $pageId): void
+    {
+        $page = Page::where('site_id', $this->site->id)->findOrFail($pageId);
+        $this->detailPageId = $page->id;
+        $this->metaDescription = (string) ($page->getAttr('description') ?? '');
+        $this->metaKeywords = (string) $page->keywords;
+        $this->ogImage = (string) ($page->getAttr('og_image') ?? '');
+        $this->isPublished = (bool) $page->is_published;
+        $this->attrRows = collect($page->attrMap())
+            ->except(self::MANAGED_ATTRS)
+            ->map(fn ($value, $key) => ['key' => (string) $key, 'value' => (string) $value])
+            ->values()->all();
+        $this->resetErrorBag();
+    }
+
+    public function closeDetail(): void
+    {
+        $this->reset(['detailPageId', 'metaDescription', 'metaKeywords', 'ogImage', 'attrRows']);
+    }
+
+    public function getDetailPageProperty(): ?Page
+    {
+        return $this->detailPageId
+            ? Page::where('site_id', $this->site->id)->find($this->detailPageId)
+            : null;
+    }
+
+    public function addAttrRow(): void
+    {
+        if (count($this->attrRows) < 60) {
+            $this->attrRows[] = ['key' => '', 'value' => ''];
+        }
+    }
+
+    public function removeAttrRow(int $i): void
+    {
+        unset($this->attrRows[$i]);
+        $this->attrRows = array_values($this->attrRows);
+    }
+
+    /** Persist metadata + custom attributes (PageApiController's contract). */
+    public function saveMeta(): void
+    {
+        abort_unless($this->site->allows(auth()->user(), 'pages.manage'), 403);
+        $page = Page::where('site_id', $this->site->id)->findOrFail($this->detailPageId);
+
+        $this->validate([
+            'metaDescription' => ['nullable', 'string', 'max:5000'],
+            'metaKeywords' => ['nullable', 'string', 'max:500'],
+            'ogImage' => ['nullable', 'string', 'max:2000'],
+            'attrRows.*.key' => ['nullable', 'string', 'max:60', 'regex:/^[a-zA-Z0-9_\-]*$/'],
+            'attrRows.*.value' => ['nullable', 'string', 'max:5000'],
+        ], [
+            'attrRows.*.key.regex' => 'Attribute keys may only contain letters, numbers, dashes and underscores.',
+        ]);
+
+        $page->update(['keywords' => trim($this->metaKeywords), 'is_published' => $this->isPublished]);
+
+        // Managed meta: blank clears the attribute entirely.
+        trim($this->metaDescription) !== ''
+            ? $page->setAttr('description', trim($this->metaDescription))
+            : $page->forgetAttr('description');
+        trim($this->ogImage) !== ''
+            ? $page->setAttr('og_image', trim($this->ogImage))
+            : $page->forgetAttr('og_image');
+
+        // Reconcile custom attributes: write the rows, forget removed keys.
+        $kept = [];
+        foreach ($this->attrRows as $row) {
+            $key = trim($row['key']);
+            if ($key === '' || in_array($key, self::MANAGED_ATTRS, true)) {
+                continue;
+            }
+            $page->setAttr($key, (string) $row['value']);
+            $kept[] = $key;
+        }
+        foreach (array_keys($page->attrMap()) as $existing) {
+            if (! in_array($existing, self::MANAGED_ATTRS, true) && ! in_array($existing, $kept, true)) {
+                $page->forgetAttr($existing);
+            }
+        }
+
+        $this->show($page->id); // refresh the drawer's state
+        $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Page metadata updated.');
+    }
+
     // ── Component picker (attach content components to a page) ──
     public ?string $pickerPageId = null;
 

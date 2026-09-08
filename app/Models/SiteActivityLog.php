@@ -103,6 +103,7 @@ class SiteActivityLog extends Model
             'uploaded' => ['Uploaded',    '#eff6ff', '#2563eb'],
             'confirmed' => ['Confirmed',   '#f0fdf4', '#16a34a'],
             'cancelled' => ['Cancelled',   '#fef2f2', '#dc2626'],
+            'no_show' => ['No-show',     '#fffbeb', '#d97706'],
             'sent' => ['Sent',        '#eff6ff', '#2563eb'],
             default => [ucfirst($this->action), '#f9fafb', '#6b7280'],
         };

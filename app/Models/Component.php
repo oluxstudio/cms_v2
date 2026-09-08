@@ -81,7 +81,11 @@ class Component extends Model
                 'id' => $n->id,
                 'label' => $n->label,
                 'type' => $n->type,
-                'value' => $n->value,
+                // @media/… asset refs resolve to served URLs on every public
+                // surface, so swapped assets show consistently everywhere.
+                'value' => str_starts_with((string) $n->value, '@media/')
+                    ? Media::resolveRef($this->site_id, (string) $n->value)
+                    : $n->value,
                 'parent' => $n->parent,
                 'order' => (int) $n->order,
                 'description' => $n->description,

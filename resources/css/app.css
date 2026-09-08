@@ -16,12 +16,44 @@
 /* Landing-page light theme (html.light toggled by its theme button) */
 @custom-variant light (&:where(.light, .light *));
 
+/* ── Editor-panel progressive disclosure (x-panel-group) ─────────────── */
+.olx-adv { border-top: 1px solid rgb(0 0 0 / 0.07); }
+.dark .olx-adv { border-top-color: rgb(255 255 255 / 0.08); }
+.olx-adv > summary {
+    cursor: pointer; list-style: none; user-select: none;
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.7rem 0.25rem; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: rgb(156 163 175);
+}
+.olx-adv > summary::-webkit-details-marker { display: none; }
+.olx-adv > summary::after {
+    content: '›'; margin-left: auto; font-size: 14px; line-height: 1;
+    transition: transform 0.15s; transform: rotate(90deg); color: rgb(156 163 175);
+}
+.olx-adv[open] > summary::after { transform: rotate(-90deg); }
+.olx-adv > summary:hover { color: rgb(107 114 128); }
+.dark .olx-adv > summary:hover { color: rgb(209 213 219); }
+.olx-adv > summary em { font-style: normal; font-weight: 500; letter-spacing: 0; text-transform: none; color: rgb(156 163 175 / 0.8); }
+.olx-adv-body { padding: 0.25rem 0.25rem 1rem; display: flex; flex-direction: column; gap: 0.9rem; }
+/* Divider heading before the first group of a panel's advanced tail. */
+.olx-adv-lead {
+    margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px dashed rgb(0 0 0 / 0.12);
+    font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgb(156 163 175);
+}
+.dark .olx-adv-lead { border-top-color: rgb(255 255 255 / 0.12); }
+
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
     /* Ultra-wide breakpoint: the right rail is only pinned open at ≥4xl;
        below it the rail becomes a toggleable drawer. */
     --breakpoint-4xl: 120rem;
+
+    /* Extra-wide named sizes: enables w-8xl / max-w-8xl (90rem) and
+       w-9xl / max-w-9xl (96rem). */
+    --container-8xl: 90rem;
+    --container-9xl: 96rem;
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;

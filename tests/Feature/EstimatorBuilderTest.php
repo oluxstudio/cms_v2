@@ -98,8 +98,8 @@ test('a visitor request runs the named estimator, emails both parties and posts 
         ->and($estimate->cost_low_cents)->toBe(7000);
 
     // Both emails; the visitor email uses THIS estimator's template.
-    Mail::assertSent(EstimateQuoteMail::class, fn ($m) => $m->hasTo('vera@example.com'));
-    Mail::assertSent(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email));
+    Mail::assertQueued(EstimateQuoteMail::class, fn ($m) => $m->hasTo('vera@example.com'));
+    Mail::assertQueued(FormSubmissionNotification::class, fn ($m) => $m->hasTo($owner->email));
     $mail = new EstimateQuoteMail($site, $estimate->fresh('estimator'), $estimate->results);
     expect($mail->envelope()->subject)->toBe("Your Cleaner quote {$estimate->reference}");
 

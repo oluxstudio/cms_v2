@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -8,8 +10,8 @@ Route::middleware('guest')->group(function () {
     // Combined login + register page
     Volt::route('login', 'auth.login')->name('login');
 
-    // /register redirects to /login (the combined page handles both)
-    Route::get('register', fn () => redirect()->route('login'))->name('register');
+    // /register → the self-serve signup wizard (keeps ?type= / ?plan=)
+    Route::get('register', fn () => redirect()->route('start', request()->only('type', 'plan')))->name('register');
 
     Volt::route('forgot-password', 'auth.forgot-password')
         ->name('password.request');
@@ -30,9 +32,9 @@ Route::middleware('auth')->group(function () {
         ->name('password.confirm');
 });
 
-Route::post('logout', App\Livewire\Actions\Logout::class)
+Route::post('logout', Logout::class)
     ->name('logout');
 
 // Social auth
-Route::get('auth/{provider}/redirect',  [App\Http\Controllers\Auth\SocialAuthController::class, 'redirect'])->name('social.redirect');
-Route::get('auth/{provider}/callback',  [App\Http\Controllers\Auth\SocialAuthController::class, 'callback'])->name('social.callback');
+Route::get('auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])->name('social.redirect');
+Route::get('auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('social.callback');

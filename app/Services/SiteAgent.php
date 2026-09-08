@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Contracts\LlmDriverInterface;
+use App\Models\AiUsage;
 use App\Models\Site;
 use App\Models\User;
 use App\Modules\ModuleRegistry;
+use App\Services\Ai\SiteKnowledge;
 
 /**
  * LLM front-end for "prompting a site".
@@ -109,6 +111,8 @@ class SiteAgent
     private const READ_ONLY_TOOLS = [
         'site_info', 'site_status', 'list_pages', 'list_forms',
         'list_components', 'list_products', 'list_block_types', 'list_modules',
+        'get_sales_stats', 'get_booking_stats', 'get_traffic_stats', 'get_leads_stats',
+        'list_recent_orders', 'search_contacts', 'page_links',
     ];
 
     /**
@@ -138,10 +142,41 @@ class SiteAgent
         }
         $messages[] = ['role' => 'user', 'content' => $prompt];
 
+        // RAG: pull the most relevant passages of the site's own content into
+        // the prompt, and keep the knowledge base fresh in the background.
         try {
-            $text = $this->driver->chat($system, $messages, $toolDefs, $executeTool);
+            $knowledge = app(SiteKnowledge::class);
+            $knowledge->syncIfStale($site);
+            if ($chunks = $knowledge->retrieve($site, $prompt)) {
+                $system .= "\n\n---\n\n## This business's own content (retrieved for this question)\n"
+                    ."Use these passages when answering questions about the business itself:\n\n- "
+                    .implode("\n- ", $chunks);
+            }
+        } catch (\Throwable $e) {
+            report($e); // knowledge is best-effort — never blocks the assistant
+        }
+
+        try {
+            $result = $this->driver->chat($system, $messages, $toolDefs, $executeTool);
+            $text = $result->text;
         } catch (\Throwable $e) {
             return ['ok' => false, 'text' => $this->friendlyError($e), 'built' => false, 'page' => null, 'tools' => $executed];
+        }
+
+        // Per-tenant AI spend accounting (streamed drivers report 0 tokens for now).
+        try {
+            AiUsage::create([
+                'site_id' => $site->id,
+                'user_id' => $user->id,
+                'driver' => (string) config('services.llm.driver', 'anthropic'),
+                'model' => (string) config('services.'.config('services.llm.driver', 'anthropic').'.model', ''),
+                'input_tokens' => $result->inputTokens,
+                'output_tokens' => $result->outputTokens,
+                'tool_calls' => $result->toolCalls,
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         $built = count(array_diff($executed, self::READ_ONLY_TOOLS)) > 0;
@@ -258,6 +293,7 @@ class SiteAgent
             $base.'/skills/cms-operator/references/node-types.md',
             $base.'/skills/cms-operator/references/crud-recipes.md',
             $base.'/skills/cms-operator/references/modules.md',
+            $base.'/references/analysis.md',
         ];
 
         $chunks = [];

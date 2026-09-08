@@ -1,0 +1,8 @@
+{
+    "radius": "6px",
+    "oval": "999px",
+    "arch": "999px 999px 8px 8px",
+    "section-max-width": "1400px",
+    "section-pad-y": "96px",
+    "base-size": "16px"
+}

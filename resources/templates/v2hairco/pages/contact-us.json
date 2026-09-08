@@ -1,0 +1,128 @@
+{
+    "name": "Contact Us",
+    "url": "/contact-us",
+    "layout": "default",
+    "keywords": "contact us",
+    "attributes": {
+        "title": "Contact Us \u2014 Hair Co."
+    },
+    "blocks": [
+        {
+            "type": "app:v2hairco:contact",
+            "name": "Contact",
+            "nodes": [
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Send a message",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Loading the form\u2026",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "The contact form is not available right now \u2014 please call or email us instead.",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline B",
+                    "type": "text",
+                    "value": "Message sent",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Text C",
+                    "type": "text",
+                    "value": "Send another message",
+                    "order": 4,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:v2hairco:stats",
+            "name": "Stats",
+            "nodes": [
+                {
+                    "label": "Image",
+                    "type": "image",
+                    "value": "/assets/images/stats-1.jpg",
+                    "order": 0,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Image B",
+                    "type": "image",
+                    "value": "/assets/images/stats-2.jpg",
+                    "order": 1,
+                    "description": "attr:src"
+                },
+                {
+                    "label": "Fallback Stat 1 Title",
+                    "type": "text",
+                    "value": "30+",
+                    "order": 2,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Stat 1 Text",
+                    "type": "text",
+                    "value": "International Branches",
+                    "order": 3,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Stat 2 Title",
+                    "type": "text",
+                    "value": "12k",
+                    "order": 4,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Stat 2 Text",
+                    "type": "text",
+                    "value": "Happy Clients World Wide",
+                    "order": 5,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Stat 3 Title",
+                    "type": "text",
+                    "value": "15",
+                    "order": 6,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Stat 3 Text",
+                    "type": "text",
+                    "value": "Years of In-Field Experience",
+                    "order": 7,
+                    "description": "item:text"
+                },
+                {
+                    "label": "Fallback Stat 4 Title",
+                    "type": "text",
+                    "value": "98%",
+                    "order": 8,
+                    "description": "item:title"
+                },
+                {
+                    "label": "Fallback Stat 4 Text",
+                    "type": "text",
+                    "value": "Positive Client Reviews",
+                    "order": 9,
+                    "description": "item:text"
+                }
+            ]
+        }
+    ]
+}

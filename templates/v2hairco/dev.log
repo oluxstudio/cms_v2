@@ -1,0 +1,82 @@
+
+> dev
+> nuxt dev
+
+│
+●  Nuxt 4.5.1 (with Nitro 2.13.4, Vite 8.2.0 and Vue 3.5.40)
+[get-port] Unable to find an available port (tried 3000 on any host). Using alternative port 3001.
+
+  ➜ Local:    http://localhost:3001/
+  ➜ Network:  use --host to expose
+
+  ➜ DevTools: press Shift + Alt + D in the browser (v3.4.0)
+
+ℹ Re-optimizing dependencies because vite config has changed
+✔ Vite client built in 160ms
+✔ Vite server built in 91ms
+[nitro] ✔ Nuxt Nitro server built in 3234ms
+ℹ Vite client warmed up in 166ms
+ℹ dependencies optimized: @vue/devtools-core, @vue/devtools-kit
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 0/18 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18  (x2)
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18  (x3)
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 0/18 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18  (x2)
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18  (x3)
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 0/18 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18  (x2)
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 16/18  (x3)
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 0/22 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 20/22 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 20/22  (x2)
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 20/22  (x3)
+
+ℹ hmr update /components/TeamBlock.vue, /components/PricingBlock.vue, /components/TestimonialsBlock.vue, /components/HeroBlock.vue, /components/ServicesBlock.vue, /components/AboutBlock.vue, /components/StatsBlock.vue, /components/HoursBlock.vue, /components/CtaBlock.vue, /components/BlogBlock.vue, /components/SiteFooter.vue, /components/BrandLogo.vue, /components/BookButton.vue, /components/GlobalEmail.vue, /components/GlobalPhone.vue
+ℹ hmr update /app.vue
+ℹ hmr update /components/TeamBlock.vue, /components/PricingBlock.vue, /components/TestimonialsBlock.vue, /components/HeroBlock.vue, /components/ServicesBlock.vue, /components/AboutBlock.vue, /components/StatsBlock.vue, /components/HoursBlock.vue, /components/CtaBlock.vue, /components/BlogBlock.vue, /components/SiteFooter.vue, /components/BrandLogo.vue, /components/BookButton.vue, /components/GlobalEmail.vue, /components/GlobalPhone.vue
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 0/22 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 20/22 
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 20/22  (x2)
+
+
+ WARN  [console.warn] [olux-connect] hydrate applied — matched 20/22  (x3)
+

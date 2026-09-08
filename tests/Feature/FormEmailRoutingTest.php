@@ -31,8 +31,8 @@ it('routes the receipt to the visitor and the alert to the owner on form submit'
         'name' => 'Visitor V', 'email' => 'visitor@example.test', 'message' => 'Hi there',
     ])->assertSuccessful();
 
-    Mail::assertSent(SubmissionReceipt::class, fn ($m) => $m->hasTo('visitor@example.test') && ! $m->hasTo('owner@example.test'));
-    Mail::assertSent(FormSubmissionNotification::class, fn ($m) => $m->hasTo('owner@example.test') && ! $m->hasTo('visitor@example.test'));
+    Mail::assertQueued(SubmissionReceipt::class, fn ($m) => $m->hasTo('visitor@example.test') && ! $m->hasTo('owner@example.test'));
+    Mail::assertQueued(FormSubmissionNotification::class, fn ($m) => $m->hasTo('owner@example.test') && ! $m->hasTo('visitor@example.test'));
 });
 
 it('routes booking confirmation to the customer and the alert to the owner', function () {
@@ -47,6 +47,6 @@ it('routes booking confirmation to the customer and the alert to the owner', fun
 
     app(BookingNotifications::class)->send($booking, $site, confirmed: true);
 
-    Mail::assertSent(BookingConfirmed::class, fn ($m) => $m->hasTo('customer@example.test') && ! $m->hasTo('owner2@example.test'));
-    Mail::assertSent(NewBookingNotification::class, fn ($m) => $m->hasTo('owner2@example.test') && ! $m->hasTo('customer@example.test'));
+    Mail::assertQueued(BookingConfirmed::class, fn ($m) => $m->hasTo('customer@example.test') && ! $m->hasTo('owner2@example.test'));
+    Mail::assertQueued(NewBookingNotification::class, fn ($m) => $m->hasTo('owner2@example.test') && ! $m->hasTo('customer@example.test'));
 });

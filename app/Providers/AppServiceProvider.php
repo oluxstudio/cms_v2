@@ -16,7 +16,11 @@ use App\Observers\FormResponseObserver;
 use App\Observers\MediaObserver;
 use App\Observers\PageObserver;
 use App\Observers\TodoObserver;
+use App\Payments\PaymentManager;
 use App\Services\AccountActivity;
+use App\Services\Domains\FakeRegistrar;
+use App\Services\Domains\Registrar;
+use App\Services\Domains\ResellerClubRegistrar;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Event;
@@ -28,7 +32,16 @@ use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // One manager per request so PaymentManager::fake() reaches every consumer.
+        $this->app->singleton(PaymentManager::class);
+
+        $this->app->bind(Registrar::class, fn () => match (config('domains.driver')) {
+            'resellerclub' => new ResellerClubRegistrar,
+            default => new FakeRegistrar,
+        });
+    }
 
     public function boot(): void
     {

@@ -73,8 +73,7 @@ class SiteRail extends Component
 
         return [
             'alerts' => Alert::visibleTo($this->site, $u)->whereNull('read_at')->count(),
-            'messages' => Message::visibleTo($this->site, $u)->whereNull('read_at')
-                ->where('sender_id', '!=', $u->id)->count(),
+            'messages' => Message::unreadCountFor($this->site, $u),
             'todos' => Todo::visibleTo($this->site, $u)->where('status', 'open')->count(),
         ];
     }
@@ -85,7 +84,7 @@ class SiteRail extends Component
         if ($type === 'alert') {
             Alert::visibleTo($this->site, Auth::user())->whereKey($id)->whereNull('read_at')->update(['read_at' => now()]);
         } elseif ($type === 'message') {
-            Message::visibleTo($this->site, Auth::user())->whereKey($id)->whereNull('read_at')->update(['read_at' => now()]);
+            Message::visibleTo($this->site, Auth::user())->whereKey($id)->first()?->markReadFor(Auth::user());
         }
         // Browser + Livewire event — layout switches the pane, detail component loads it.
         $this->dispatch('rail-open', type: $type, id: $id);

@@ -14,9 +14,26 @@
         @endif
     </div>
 
+    {{-- Every site is instantly served — subdomain when configured, else the live preview. --}}
+    <div class="mb-4 px-4 py-3 rounded-2xl border border-emerald-200 dark:border-emerald-500/25 bg-emerald-50/60 dark:bg-emerald-500/[0.06] flex flex-wrap items-center justify-between gap-2">
+        <div class="text-sm">
+            <span class="font-bold text-emerald-700 dark:text-emerald-400">Your site is already online.</span>
+            <span class="text-gray-500 dark:text-gray-400">A custom domain is optional — visitors can reach it right now:</span>
+        </div>
+        @if ($site->subdomainHost())
+            <a href="https://{{ $site->subdomainHost() }}" target="_blank" rel="noopener"
+               class="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline">{{ $site->subdomainHost() }} ↗</a>
+        @else
+            <a href="{{ $site->templatePreviewUrl() }}" target="_blank" rel="noopener"
+               class="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline">Live preview ↗</a>
+        @endif
+    </div>
+
     @if ($errorMessage)
         <p class="mb-4 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-sm text-rose-600 dark:text-rose-400">{{ $errorMessage }}</p>
     @endif
+
+    <livewire:domain-search :site="$site" />
 
     {{-- ── Step 1 — domain ── --}}
     <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm p-5 mb-4">

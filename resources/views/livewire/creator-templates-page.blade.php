@@ -41,9 +41,17 @@
         </div>
     @endif
 
+    @unless ($this->canPublish)
+        <div class="mb-4 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-sm text-indigo-800 dark:text-indigo-300">
+            <strong>Publishing is a Business-plan feature.</strong> Upgrade to publish and sell your templates on the marketplace.
+            <a href="{{ route('account.subscription', ['plan' => 'business']) }}" class="font-bold underline">See the Business plan →</a>
+        </div>
+    @endunless
+
     {{-- Publish form --}}
     <div class="rounded-2xl border border-dashed border-gray-300 dark:border-white/[0.12] bg-gray-50/60 dark:bg-white/[0.02] p-5 mb-8">
         <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3">Publish a new template (.zip)</h2>
+        @if ($this->canPublish)
         <form wire:submit="publish" class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
             <div class="sm:col-span-2">
                 <label class="block text-[11px] font-semibold text-gray-500 mb-1">Name</label>
@@ -72,6 +80,7 @@
                 </button>
             </div>
         </form>
+        @endif
         <p class="text-[11px] text-gray-400 mt-2">Package format: <code>template.json</code> + <code>tokens/</code> + <code>css/</code> + <code>assets/</code> + <code>pages/</code> (see resources/templates/README.md).</p>
     </div>
 

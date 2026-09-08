@@ -19,7 +19,7 @@ use Illuminate\Support\Str;
  */
 class SyncTemplateCatalog extends Command
 {
-    protected $signature = 'templates:sync';
+    protected $signature = 'templates:sync {--key= : Sync only this template key}';
 
     protected $description = 'Seed/refresh the template catalog from built-in templates & packages';
 
@@ -27,8 +27,12 @@ class SyncTemplateCatalog extends Command
     {
         $disk = Storage::disk(config('templates.disk'));
 
+        $only = (string) $this->option('key');
         foreach (TemplateRegistry::all() as $contract) {
             $slug = $contract->key();
+            if ($only !== '' && $slug !== $only) {
+                continue;
+            }
 
             // 1. Publish assets (packages only) → disk; map "assets/x" → absolute URL.
             $assetMap = $this->publishAssets($contract, $slug, $disk);

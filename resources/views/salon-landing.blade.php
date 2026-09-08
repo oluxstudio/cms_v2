@@ -66,7 +66,7 @@
             @if (config('app.salon_demo_url'))
                 <a class="btn ghost" href="{{ config('app.salon_demo_url') }}" target="_blank" rel="noopener">See a live demo</a>
             @endif
-            <a class="btn" href="{{ url('/register') }}">Start free</a>
+            <a class="btn" href="{{ route('start', ['type' => 'salon']) }}">Start free</a>
         </nav>
     </div>
 </header>
@@ -77,7 +77,7 @@
         <p class="lead">Built for hair salons and barbershops. A proper website with online booking,
             deposits that stop no-shows, per-chair calendars and automatic reminders — for one flat price.</p>
         <div class="cta-row">
-            <a class="btn" href="{{ url('/register') }}">Start your 14-day free trial</a>
+            <a class="btn" href="{{ route('start', ['type' => 'salon']) }}">Start your 14-day free trial</a>
             @if (config('app.salon_demo_url'))
                 <a class="btn ghost" href="{{ config('app.salon_demo_url') }}" target="_blank" rel="noopener">View the demo salon</a>
             @endif
@@ -135,7 +135,7 @@
                 <li>Client CRM, forms &amp; email inbox</li>
                 <li>Hosting, SSL &amp; support included</li>
             </ul>
-            <a class="btn" href="{{ url('/register') }}">Start free — no card needed</a>
+            <a class="btn" href="{{ route('start', ['type' => 'salon']) }}">Start free — no card needed</a>
             <p class="founder">Founding clients: setup fee waived · 14-day free trial</p>
         </div>
     </div>

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-const olux = useOluxContent('clients')
+const oluxCms = useOluxContent('clients')
 const oluxFb: Record<string, string> = {}
 const clients = [1, 2, 3, 4, 5, 6, 7, 8]
 </script>
 
 <template>
-  <section id="clients" class="clients" v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">
+  <section id="clients" class="clients" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container" data-aos="zoom-out">
       <div class="clients-slider swiper">
         <div class="swiper-wrapper align-items-center">

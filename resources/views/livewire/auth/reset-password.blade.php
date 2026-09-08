@@ -46,6 +46,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             function ($user) {
                 $user->forceFill([
                     'password' => Hash::make($this->password),
+                    'password_changed_at' => now(),
                     'remember_token' => Str::random(60),
                 ])->save();
 

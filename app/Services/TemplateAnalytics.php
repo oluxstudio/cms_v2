@@ -49,6 +49,6 @@ class TemplateAnalytics
 
     public static function money(int $cents): string
     {
-        return Money::format($cents, 'gbp');
+        return Money::format($cents, (string) config('templates.currency', 'gbp'));
     }
 }

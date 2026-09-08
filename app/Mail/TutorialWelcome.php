@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -13,7 +14,7 @@ use Illuminate\Queue\SerializesModels;
  * Sent once a paid plan is activated: welcomes the user and links to the
  * getting-started tutorial page.
  */
-class TutorialWelcome extends Mailable
+class TutorialWelcome extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

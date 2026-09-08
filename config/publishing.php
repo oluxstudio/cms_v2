@@ -20,4 +20,20 @@ return [
     // be treated as a client site domain. APP_URL's host is always included.
     // Comma-separated extras: PLATFORM_HOSTS=cms.olux.io,olux.io
     'platform_hosts' => array_filter(array_map('trim', explode(',', (string) env('PLATFORM_HOSTS', '')))),
+
+    // Instant subdomains: every site is reachable at {site-name}.{base} the
+    // moment it exists (no DNS work for the client). Needs a wildcard DNS
+    // record (*.base → this server) and a wildcard-capable edge (Cloudflare
+    // proxy in front of Traefik — see docs/subdomains.md). Blank = disabled.
+    // e.g. PLATFORM_SUBDOMAIN_BASE=oluxstudio.com
+    'subdomain_base' => strtolower(trim((string) env('PLATFORM_SUBDOMAIN_BASE', ''))),
+
+    // Labels that can never be claimed as a site subdomain: platform surfaces,
+    // mail/autodiscovery hosts, and existing hand-deployed sites on the base.
+    'reserved_subdomains' => array_values(array_unique(array_merge([
+        'www', 'cms', 'app', 'admin', 'api', 'mail', 'smtp', 'imap', 'pop', 'webmail', 'ftp',
+        'autoconfig', 'autodiscover', 'ns1', 'ns2', 'mx', 'status', 'help', 'docs', 'blog',
+        'dev', 'staging', 'test', 'demo', 'preview', 'assets', 'cdn', 'static', 'support',
+        'hairco', 'v2hairco',
+    ], array_filter(array_map('trim', explode(',', (string) env('PLATFORM_RESERVED_SUBDOMAINS', ''))))))),
 ];

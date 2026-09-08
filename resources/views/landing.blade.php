@@ -388,6 +388,7 @@
 				<b>.</b>
 			</a>
             <div class="nav-links">
+                <a href="{{ route('templates') }}">Templates</a>
                 <a href="#toolkit">Toolkit</a>
                 <a href="#specialties">Features</a>
                 <a href="#process">How it works</a>

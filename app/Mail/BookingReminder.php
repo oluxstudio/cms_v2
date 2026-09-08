@@ -5,13 +5,14 @@ namespace App\Mail;
 use App\Models\Booking;
 use App\Models\Site;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /** "See you tomorrow" — sent ~24h before a confirmed booking starts. */
-class BookingReminder extends Mailable
+class BookingReminder extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

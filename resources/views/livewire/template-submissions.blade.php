@@ -12,6 +12,38 @@
         </button>
     </div>
 
+    {{-- ── Intake: repo-first (recommended) or zip upload ── --}}
+    <div class="mb-5 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 bg-white dark:bg-[#1e1f2b] p-4">
+        <div class="grid md:grid-cols-2 gap-5">
+            <form wire:submit="importRepo">
+                <p class="text-xs font-bold text-gray-900 dark:text-white mb-1.5">Import from repository <span class="ml-1 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-600 text-white align-middle">Recommended</span></p>
+                <p class="text-[11px] text-gray-400 mb-2">Push your Nuxt template to a repo (private works — set <code>TEMPLATES_GIT_TOKEN</code>), paste its URL, done. "Pull latest" refreshes it after new pushes.</p>
+                <input wire:model="repoUrl" type="text" placeholder="https://github.com/you/my-template.git"
+                       class="w-full px-3 py-2 rounded-xl text-xs bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 font-mono mb-2">
+                <div class="flex gap-2 mb-2">
+                    <input wire:model="repoBranch" type="text" placeholder="branch (optional)" class="flex-1 px-3 py-2 rounded-xl text-xs bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
+                    <input wire:model="repoKey" type="text" placeholder="key (optional)" class="flex-1 px-3 py-2 rounded-xl text-xs bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
+                </div>
+                <button type="submit" wire:loading.attr="disabled" wire:target="importRepo" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">
+                    <span wire:loading.remove wire:target="importRepo">Clone &amp; import</span>
+                    <span wire:loading wire:target="importRepo">Cloning…</span>
+                </button>
+            </form>
+            <form wire:submit="uploadApp">
+                <p class="text-xs font-bold text-gray-900 dark:text-white mb-1.5">Upload app .zip</p>
+                <p class="text-[11px] text-gray-400 mb-2">Zip the app source (no node_modules) — it lands in staging and is scanned automatically.</p>
+                <input type="file" wire:model="appZip" accept=".zip" class="block w-full text-xs text-gray-500 mb-2 file:mr-3 file:px-3 file:py-2 file:rounded-xl file:border-0 file:bg-gray-100 dark:file:bg-white/[0.08] file:text-xs file:font-semibold">
+                <label class="flex items-center gap-2 text-[11px] text-gray-400 mb-2"><input type="checkbox" wire:model="confirmReplace" class="rounded"> Replace an existing staging folder with the same key</label>
+                <button type="submit" wire:loading.attr="disabled" wire:target="uploadApp,appZip" class="px-4 py-2 rounded-xl bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-semibold">
+                    <span wire:loading.remove wire:target="uploadApp,appZip">Upload &amp; scan</span>
+                    <span wire:loading wire:target="uploadApp,appZip">Working…</span>
+                </button>
+                @error('appZip')<p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>@enderror
+            </form>
+        </div>
+        @if ($intakeError)<p class="mt-3 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-xs font-semibold text-rose-600">{{ $intakeError }}</p>@endif
+    </div>
+
     @forelse($subs as $sub)
         @php $s = $sub->summary(); @endphp
         <div wire:key="sub-{{ $sub->id }}" x-data="{ open: false }"
@@ -22,7 +54,12 @@
                     <span class="text-lg leading-none">🧩</span>
                     <div class="min-w-0">
                         <p class="text-sm font-bold text-gray-900 dark:text-white">{{ $sub->name }} <span class="font-mono text-[10px] text-gray-400">{{ $sub->key }}</span></p>
-                        <p class="text-[11px] text-gray-400">Nuxt 4 app · scanned {{ $sub->updated_at->diffForHumans() }}</p>
+                        <p class="text-[11px] text-gray-400">Nuxt 4 app · scanned {{ $sub->updated_at->diffForHumans() }}
+                            @if ($sub->repo_url)
+                                · <span class="font-mono">{{ \Illuminate\Support\Str::limit($sub->repo_url, 42) }}</span>
+                                <button wire:click="pullLatest('{{ $sub->id }}')" wire:loading.attr="disabled" class="ml-1 font-semibold text-indigo-500 hover:underline">Pull latest</button>
+                            @endif
+                        </p>
                     </div>
                     <span class="ml-auto px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide
                         {{ $sub->status === 'pending' ? 'bg-amber-100 dark:bg-amber-400/15 text-amber-600 dark:text-amber-300' : ($sub->status === 'accepted' ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300') }}">

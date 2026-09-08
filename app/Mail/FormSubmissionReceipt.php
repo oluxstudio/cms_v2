@@ -4,13 +4,14 @@ namespace App\Mail;
 
 use App\Models\Site;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /** Visitor receipt: "we got your message" — echoes back what they submitted. */
-class FormSubmissionReceipt extends Mailable
+class FormSubmissionReceipt extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

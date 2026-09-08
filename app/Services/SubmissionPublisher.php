@@ -42,6 +42,11 @@ class SubmissionPublisher
 
         $this->rewriter->rewriteApp($appDir, $manifest);
 
+        // Click-to-edit agent for CMS-embedded previews (/connect): outlines
+        // blocks and posts olx-edit-select messages up to the editor.
+        File::ensureDirectoryExists("$appDir/app/plugins");
+        File::copy(resource_path('site-connect/olux-edit.client.ts'), "$appDir/app/plugins/olux-edit.client.ts");
+
         // Per-template theme bridge: maps site.theme keys onto the template's
         // own CSS custom properties, with the extracted values as defaults. The
         // olux-design plugin injects only user changes, so a pristine site
@@ -108,7 +113,7 @@ class SubmissionPublisher
         }
 
         // 5. Theme & variables: token bridge + manifest + runtime composable.
-        foreach (['app/olux-theme.ts', '.olux/extraction.json', 'app/composables/useOluxContent.ts'] as $f) {
+        foreach (['app/olux-theme.ts', '.olux/extraction.json', 'app/composables/useOluxContent.ts', 'app/plugins/olux-edit.client.ts'] as $f) {
             if (! File::exists("$appDir/$f")) {
                 $missing[] = $f;
             }
@@ -197,11 +202,28 @@ class SubmissionPublisher
         return [$map, $defaults];
     }
 
+    /** Dev-only files kept in the destination across republishes — the
+     * published folder doubles as a local test app, so wiping .env and
+     * node_modules (or the directory inode itself, which breaks any shell
+     * sitting in it) forces a pointless reinstall before every test run. */
+    private const PRESERVE = ['node_modules', '.env'];
+
     /** Copy the staging app, excluding build artefacts. */
     private function copyApp(string $source, string $destination): void
     {
         if (File::isDirectory($destination)) {
-            File::deleteDirectory($destination);
+            // Clear contents in place instead of deleting the directory:
+            // keeps PRESERVE entries and the inode (open shells stay valid).
+            foreach (File::directories($destination) as $dir) {
+                if (! in_array(basename($dir), self::PRESERVE, true)) {
+                    File::deleteDirectory($dir);
+                }
+            }
+            foreach (File::files($destination, true) as $file) {
+                if (! in_array($file->getFilename(), self::PRESERVE, true)) {
+                    File::delete($file->getPathname());
+                }
+            }
         }
         File::ensureDirectoryExists($destination);
 
@@ -223,6 +245,16 @@ class SubmissionPublisher
         $this->manifestName = $manifest['name'] ?? null;
         $key = $manifest['key'];
         $dir = resource_path("templates/{$key}");
+
+        // Curated keys hand-added to the previous manifest (forms the installer
+        // creates, booking services/availability) survive republishes — the
+        // extraction doesn't produce them, so read them BEFORE the wipe.
+        $carried = [];
+        if (File::exists("$dir/template.json")) {
+            $prev = json_decode((string) File::get("$dir/template.json"), true) ?: [];
+            $carried = array_filter(array_intersect_key($prev, array_flip(['forms', 'booking', 'collections'])));
+        }
+
         File::deleteDirectory($dir);
         File::ensureDirectoryExists("$dir/pages");
         File::ensureDirectoryExists("$dir/tokens");
@@ -277,7 +309,7 @@ class SubmissionPublisher
         File::put("$dir/tokens/variables.json", json_encode($variables ?: new \stdClass, JSON_PRETTY_PRINT));
 
         $blockTotal = array_sum(array_map(fn ($p) => count($p['blocks']), $manifest['pages']));
-        File::put("$dir/template.json", json_encode([
+        File::put("$dir/template.json", json_encode($carried + [
             'key' => $key,
             'name' => $manifest['name'],
             'description' => 'Marketplace template — replicates the '.$manifest['name'].' app exactly, with editable content.',

@@ -110,7 +110,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
             return;
         }
 
-        $user->update(['password' => $this->new_password]);
+        $user->update(['password' => $this->new_password, 'password_changed_at' => now()]);
         \App\Services\AccountActivity::passwordChanged($user);
         $this->current_password     = '';
         $this->new_password         = '';

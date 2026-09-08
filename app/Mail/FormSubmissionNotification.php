@@ -4,13 +4,14 @@ namespace App\Mail;
 
 use App\Models\Site;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /** Owner alert: a form on their site was just submitted (contact or custom form). */
-class FormSubmissionNotification extends Mailable
+class FormSubmissionNotification extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

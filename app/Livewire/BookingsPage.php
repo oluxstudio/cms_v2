@@ -1466,17 +1466,22 @@ class BookingsPage extends Component
 
     public function setStatus(string $bookingId, string $status): void
     {
-        if (! in_array($status, ['pending', 'confirmed', 'cancelled'], true)) {
+        if (! in_array($status, ['pending', 'confirmed', 'cancelled', 'no_show'], true)) {
             return;
         }
         $booking = $this->site->bookings()->with('service')->whereKey($bookingId)->first();
         if (! $booking) {
             return;
         }
+        // No-show only makes sense once the appointment time has passed —
+        // and it never emails the customer.
+        if ($status === 'no_show' && ! $booking->starts_at?->isPast()) {
+            return;
+        }
         $was = $booking->status;
         $booking->update(['status' => $status]);
 
-        if (in_array($status, ['confirmed', 'cancelled'], true) && $was !== $status) {
+        if (in_array($status, ['confirmed', 'cancelled', 'no_show'], true) && $was !== $status) {
             try {
                 ActivityLogger::bookingEvent($booking, $status);
             } catch (\Throwable $e) {

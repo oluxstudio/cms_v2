@@ -11,10 +11,12 @@ class SitePaymentSettings extends Model
     use HasUlids;
 
     protected $fillable = [
-        'site_id', 'stripe_secret', 'stripe_publishable', 'stripe_webhook_secret', 'livemode',
+        'site_id', 'provider', 'enabled', 'connect_account_id', 'connect_charges_enabled', 'stripe_secret', 'stripe_publishable', 'stripe_webhook_secret', 'livemode',
     ];
 
     protected $casts = [
+        'enabled' => 'boolean',
+        'connect_charges_enabled' => 'boolean',
         'stripe_secret' => 'encrypted',
         'stripe_webhook_secret' => 'encrypted',
         'livemode' => 'boolean',

@@ -7,9 +7,11 @@ use App\Models\Booking;
 use App\Models\Contact;
 use App\Models\Service;
 use App\Models\Site;
+use App\Payments\CheckoutLine;
+use App\Payments\CheckoutRequest;
+use App\Payments\PaymentManager;
 use App\Services\Booking\BookingNotifications;
 use App\Services\BookingService;
-use App\Services\Stripe\StripeGateway;
 use App\Support\Money;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -33,7 +35,7 @@ class BookingApiController extends Controller
 
     public function __construct(
         private BookingService $booking,
-        private StripeGateway $stripe,
+        private PaymentManager $payments,
     ) {}
 
     private function site(string $siteName): Site
@@ -218,7 +220,7 @@ class BookingApiController extends Controller
             }
         }
 
-        $paid = $svc->requires_payment && $site->stripeReady();
+        $paid = $svc->requires_payment && $site->paymentsEnabled();
         // Auto-confirm: unpaid bookings skip the owner's manual confirmation.
         // Paid ones confirm via the payment webhook regardless.
         $status = $paid ? 'awaiting_payment'
@@ -295,26 +297,19 @@ class BookingApiController extends Controller
         $label = $partial ? 'deposit' : 'booking';
 
         try {
-            $session = $this->stripe->createCheckoutSession(
-                $site,
-                [[
-                    'price_data' => [
-                        'currency' => $booking->currency,
-                        'product_data' => ['name' => "{$svc->name} — {$label} {$booking->reference}"],
-                        'unit_amount' => max(1, $charge),
-                    ],
-                    'quantity' => 1,
-                ]],
+            $booking->update(['params' => array_merge((array) $booking->params, ['charge_cents' => $charge])]);
+            $session = $this->payments->for($site)->createCheckout($site, new CheckoutRequest(
+                lines: [new CheckoutLine("{$svc->name} — {$label} {$booking->reference}", max(1, $charge), $booking->currency)],
                 // Success always lands on the CMS route first: it VERIFIES the payment
-                // with Stripe, confirms + emails, then bounces to the client's page.
-                url("preview/{$site->name}/book/success").'?ref='.$booking->reference,
+                // with the gateway, confirms + emails, then bounces to the client's page.
+                successUrl: url("preview/{$site->name}/book/success").'?ref='.$booking->reference,
                 // Cancel goes straight back to the client's booking page when known.
-                ($ret = $booking->params['return_url'] ?? null)
+                cancelUrl: ($ret = $booking->params['return_url'] ?? null)
                     ? $ret.(str_contains($ret, '?') ? '&' : '?').'booking_cancelled=1'
                     : url("preview/{$site->name}/book"),
-                ['booking_id' => $booking->id, 'site_id' => $site->id, 'charge_cents' => $charge],
-                $booking->customer_email,
-            );
+                metadata: ['booking_id' => $booking->id, 'site_id' => $site->id, 'charge_cents' => $charge],
+                customerEmail: $booking->customer_email,
+            ));
         } catch (\Throwable $e) {
             report($e);
             $booking->markCancelled(); // free the hold

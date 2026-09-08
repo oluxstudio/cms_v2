@@ -20,3 +20,7 @@ Schedule::command('invoices:sweep')->hourly()->withoutOverlapping();
 Schedule::command('bookings:automate reminders')->hourly()->withoutOverlapping();
 Schedule::command('bookings:automate reviews')->hourly()->withoutOverlapping();
 Schedule::command('bookings:automate rebook')->dailyAt('10:00')->withoutOverlapping();
+
+Schedule::command('site:digest')->mondays()->at('08:00')->withoutOverlapping();
+// Abandoned-signup recovery: one nudge after a day of inactivity.
+Schedule::command('signup:nudge')->dailyAt('09:30')->withoutOverlapping();

@@ -85,7 +85,7 @@ class SfcRewriter
 
         $template = "\n  <div>\n"
             ."    <div id=\"preloader\"></div>\n"
-            ."    <component :is=\"b.comp\" v-for=\"(b, i) in oluxPage\" :key=\"`\${b.key}-\${i}`\" />\n"
+            ."    <component :is=\"b.comp\" v-for=\"(b, i) in oluxPage\" :key=\"`\${b.key}-\${i}`\" :data-olx-key=\"b.key\" data-olx-kind=\"component\" />\n"
             ."  </div>\n";
 
         return "<script setup lang=\"ts\">{$script}</script>\n\n<template>{$template}</template>\n";
@@ -120,7 +120,7 @@ class SfcRewriter
 
         $template = "\n  <div>\n"
             ."    <div id=\"preloader\"></div>\n"
-            ."    <component :is=\"b.comp\" v-for=\"(b, i) in oluxPage\" :key=\"`\${b.key}-\${i}`\" />\n"
+            ."    <component :is=\"b.comp\" v-for=\"(b, i) in oluxPage\" :key=\"`\${b.key}-\${i}`\" :data-olx-key=\"b.key\" data-olx-kind=\"component\" />\n"
             ."  </div>\n";
 
         return "<script setup lang=\"ts\">{$script}</script>\n\n<template>{$template}</template>\n";
@@ -174,44 +174,49 @@ class SfcRewriter
         foreach ($fields as $f) {
             $span = substr($template, $f['start'], $f['end'] - $f['start']);
             $label = var_export($f['label'], true); // 'Headline' (single-quoted)
+            // Marker for /connect click-to-edit: same key shape the editor's
+            // nodeByFieldKey() matches ('Cta Label' → ctaLabel).
+            $fieldKey = Str::camel(Str::slug($f['label']));
 
             switch ($f['kind']) {
                 case 'image':
-                    // <img src="/assets/x.png" …> → :src="olux.t('Image', oluxFb['Image'])"
+                    // <img src="/assets/x.png" …> → :src="oluxCms.t('Image', oluxFb['Image'])"
                     $new = preg_replace(
                         '/\ssrc="[^"]*"/',
-                        ' :src="olux.t('.$label.', oluxFb['.$label.'])"',
+                        ' :src="oluxCms.t('.$label.', oluxFb['.$label.'])"',
                         $span,
                         1
                     );
+                    $new = $this->addFieldMarker($new, $fieldKey);
                     break;
 
                 case 'cta':
-                    $new = $this->replaceInner($span, '{{ olux.t('.$label.', oluxFb['.$label.']) }}');
+                    $new = $this->replaceInner($span, '{{ oluxCms.t('.$label.', oluxFb['.$label.']) }}');
                     if (($f['href'] ?? '') !== '') {
                         $link = var_export($f['linkLabel'], true);
                         $new = preg_replace(
                             '/\shref="[^"]*"/',
-                            ' :href="olux.t('.$link.', oluxFb['.$link.'])"',
+                            ' :href="oluxCms.t('.$link.', oluxFb['.$link.'])"',
                             $new,
                             1
                         );
                     }
+                    $new = $this->addFieldMarker($new, $fieldKey);
                     break;
 
                 case 'text':
-                    $new = $this->replaceInner($span, '{{ olux.t('.$label.', oluxFb['.$label.']) }}');
+                    $new = $this->replaceInner($span, '{{ oluxCms.t('.$label.', oluxFb['.$label.']) }}');
+                    $new = $this->addFieldMarker($new, $fieldKey);
                     break;
 
                 case 'html':
                     // Nested markup: bind via v-html; empty the element's inner.
                     $new = $this->replaceInner($span, '');
-                    $new = preg_replace(
-                        '/>/',
-                        ' v-html="olux.t('.$label.', oluxFb['.$label.'])">',
-                        $new,
-                        1
-                    );
+                    $gt = $this->tagEnd($new);
+                    if ($gt !== null) {
+                        $new = substr($new, 0, $gt).' v-html="oluxCms.t('.$label.', oluxFb['.$label.'])"'.substr($new, $gt);
+                    }
+                    $new = $this->addFieldMarker($new, $fieldKey);
                     break;
 
                 default:
@@ -224,15 +229,49 @@ class SfcRewriter
         return $template;
     }
 
+    /** Inject data-olx-field="key" into the span's FIRST open tag (idempotent). */
+    private function addFieldMarker(string $span, string $fieldKey): string
+    {
+        if ($fieldKey === '' || str_contains($span, 'data-olx-field=')) {
+            return $span;
+        }
+
+        return preg_replace(
+            '/<([a-zA-Z][\w-]*)/',
+            '<$1 data-olx-field="'.$fieldKey.'"',
+            $span,
+            1
+        );
+    }
+
     /** Replace the inner content of "<tag …>inner</" span (span ends at the close tag). */
     private function replaceInner(string $span, string $replacement): string
     {
-        $gt = strpos($span, '>');
-        if ($gt === false) {
+        $gt = $this->tagEnd($span);
+        if ($gt === null) {
             return $span;
         }
 
         return substr($span, 0, $gt + 1).$replacement;
+    }
+
+    /**
+     * Position of the open tag's closing '>' — skips quoted attribute values,
+     * so bindings like v-if="step > 0" never truncate the tag early.
+     */
+    private function tagEnd(string $span): ?int
+    {
+        $len = strlen($span);
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $span[$i];
+            if ($ch === '"' || $ch === "'") {
+                for ($i++; $i < $len && $span[$i] !== $ch; $i++);
+            } elseif ($ch === '>') {
+                return $i;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -242,9 +281,18 @@ class SfcRewriter
      */
     private function addRootHiddenGuard(string $template): string
     {
-        return preg_replace(
+        return preg_replace_callback(
             '/<([a-zA-Z][\w-]*)((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>/',
-            '<$1$2 v-if="!olux.hidden()" :style="olux.rootStyle.value" :class="olux.rootClass.value">',
+            function (array $m) {
+                $extra = ' v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value"';
+                // A root that already binds :class must not get a second one
+                // (duplicate attribute) — Motion classes are skipped there.
+                if (! str_contains($m[2], ':class=') && ! str_contains($m[2], 'v-bind:class=')) {
+                    $extra .= ' :class="oluxCms.rootClass.value"';
+                }
+
+                return '<'.$m[1].$m[2].$extra.'>';
+            },
             $template,
             1
         );
@@ -258,7 +306,9 @@ class SfcRewriter
         $blockKey = var_export($blockDef['blockKey'], true);
         $fbJson = json_encode($fallbacks ?: new \stdClass, JSON_UNESCAPED_SLASHES);
 
-        $inject = "const olux = useOluxContent({$blockKey})\n"
+        // Collision-proof name: template apps may declare their own `olux`
+        // (e.g. hairco's `const olux = useOluxSite()`).
+        $inject = "const oluxCms = useOluxContent({$blockKey})\n"
             ."const oluxFb: Record<string, string> = {$fbJson}\n";
 
         $script ??= '';
@@ -266,10 +316,19 @@ class SfcRewriter
         // Wrap standalone string consts (e.g. a shared FAQ answer):
         //   const answer = '…' → const answer = olux.tRef('Answer', '…')
         foreach (SfcParser::scalarStrings($script) as $var => $value) {
+            // ONLY wrap template-consumed strings. If the SCRIPT itself uses
+            // the variable (fetch bodies, keys, math…), a computed ref would
+            // silently change its type — e.g. JSON.stringify on a wrapped
+            // FORM_NAME threw "circular structure" and broke booking submits.
+            $declPattern = '/const\s+'.preg_quote($var, '/').'\s*=/';
+            $withoutDecl = preg_replace($declPattern, '', $script, 1);
+            if (preg_match('/\b'.preg_quote($var, '/').'\b/', (string) $withoutDecl)) {
+                continue;
+            }
             $label = var_export(Str::headline($var), true);
             $script = preg_replace(
                 '/(const\s+'.preg_quote($var, '/').'\s*=\s*)(\'(?:[^\'\\\\]|\\\\.)+\'|"(?:[^"\\\\]|\\\\.)+")/',
-                '$1olux.tRef('.$label.', $2)',
+                '$1oluxCms.tRef('.$label.', $2)',
                 $script,
                 1
             );
@@ -292,7 +351,7 @@ class SfcRewriter
             $original = '['.$body.']';
 
             if (! empty($g['scalar'])) {
-                $wrapped = 'olux.list('.var_export($g['prefix'], true).', '.$original.')';
+                $wrapped = 'oluxCms.list('.var_export($g['prefix'], true).', '.$original.')';
             } else {
                 $fieldsMap = [];
                 $stripMap = [];
@@ -302,7 +361,7 @@ class SfcRewriter
                         $stripMap[$f['key']] = $g['imagePrefix'];
                     }
                 }
-                $wrapped = 'olux.items('.var_export($g['prefix'], true).', '
+                $wrapped = 'oluxCms.items('.var_export($g['prefix'], true).', '
                     .json_encode($fieldsMap, JSON_UNESCAPED_SLASHES).', '
                     .$original.', '
                     .json_encode($stripMap ?: new \stdClass, JSON_UNESCAPED_SLASHES).')';
