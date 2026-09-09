@@ -1,5 +1,5 @@
 <script setup lang="ts">
-useCmsHead('Shop — Hair Co.')
+useHead({ title: 'Shop' })
 </script>
 
 <template>

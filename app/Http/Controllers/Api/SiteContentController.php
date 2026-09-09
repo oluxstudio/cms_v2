@@ -103,6 +103,8 @@ class SiteContentController extends Controller
             'keywords' => $page->keywords,
             'description' => $page->getAttr('description', ''),
             'attributes' => $page->attrMap(),
+            // Content sources set in the CMS page's Sources tab (products/posts filters).
+            'sources' => json_decode((string) $page->getAttr('content_sources'), true) ?: null,
             // Classic components attached to this page (ordered), each with
             // ALL of its nodes (flat + nested tree) + linked collections.
             'components' => $components
@@ -170,7 +172,8 @@ class SiteContentController extends Controller
      */
     private function pageCollections(Page $page, $components): array
     {
-        $attachedIds = $page->collections()->pluck('collections.id');
+        $attached = $page->collections()->get();
+        $attachedIds = $attached->pluck('id');
         $referencedIds = $components
             ->flatMap(fn ($c) => $c->nodes->where('type', 'collection')->pluck('value'))
             ->filter();
@@ -180,8 +183,23 @@ class SiteContentController extends Controller
             return [];
         }
 
+        // Per-page pivot settings (Sources tab): item limits per attachment.
+        $limits = $attached->mapWithKeys(function ($c) {
+            $settings = is_array($c->pivot->settings) ? $c->pivot->settings : json_decode((string) $c->pivot->settings, true);
+
+            return [$c->id => (int) ($settings['limit'] ?? 0)];
+        });
+
         return Collection::whereIn('id', $ids)->with('items')->get()
-            ->map(fn (Collection $c) => $c->toApiArray())->values()->all();
+            ->map(function (Collection $c) use ($limits) {
+                $payload = $c->toApiArray();
+                if (($limit = $limits[$c->id] ?? 0) > 0 && isset($payload['items'])) {
+                    $payload['items'] = array_slice($payload['items'], 0, $limit);
+                }
+                $payload['page_limit'] = ($limits[$c->id] ?? 0) ?: null;
+
+                return $payload;
+            })->values()->all();
     }
 
     /** Full forms referenced by the page's BlockKit form blocks. */

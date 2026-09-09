@@ -21,13 +21,13 @@
         @endif
     </div>
 
-    {{-- ── Panes: sticky left rail | centered main content ── --}}
-    <div class="flex-1 flex flex-col lg:flex-row min-h-0">
+    {{-- ── Panes: mobile swipe carousel · desktop side-by-side ── --}}
+    <x-carousel :labels="['📊 Overview', '📄 Page']" :start="1">
 
         {{-- ════ LEFT RAIL ════ --}}
         @php $s = $this->summary; @endphp
-        <aside class="w-full max-w-[25rem] mx-auto lg:mx-0 lg:w-[280px] shrink-0 px-5 pb-6 space-y-4
-                      lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+        <x-carousel.slide class="lg:!w-[280px] px-5 pb-24 lg:pb-6 space-y-4 max-h-full overflow-y-auto
+                      lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] no-scrollbar">
             {{-- Page identity card --}}
             <div class="rounded-3xl p-5 shadow-sm text-white" style="background:linear-gradient(150deg,#1f2330,#11131c)">
                 <p class="text-sm font-bold truncate">{{ $page->name }}</p>
@@ -50,14 +50,14 @@
                 <x-tile accent="cocoa" :value="$s['updated']?->diffForHumans(short: true) ?? '—'" label="last updated"
                         :sub="$page->is_published ? 'live on the site' : 'draft'" />
             </div>
-        </aside>
+        </x-carousel.slide>
 
         {{-- ════ MAIN CONTENT ════ --}}
-        <div class="flex-1 min-w-0 px-5 pb-6">
+        <x-carousel.slide class="lg:flex-1 px-5 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
             <div class="{{ $tab === 'content' ? '' : 'max-w-3xl mx-auto' }}">
     {{-- Tabs --}}
     <div class="flex gap-1.5 mb-5">
-        @foreach(['edit' => '✏️ Edit', 'meta' => '🏷 Page attributes & meta tags', 'content' => '📝 Content'] as $key => $label)
+        @foreach(['edit' => '✏️ Edit', 'meta' => '🏷 Page attributes & meta tags', 'sources' => '🧩 Sources', 'content' => '📝 Content'] as $key => $label)
             <button wire:click="setTab('{{ $key }}')"
                     class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors
                            {{ $tab === $key ? 'bg-indigo-600 text-white' : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.08]' }}">
@@ -71,6 +71,94 @@
     <div class="min-w-0" wire:ignore>
         <livewire:connect-review-page :site="$site" :preview-path="$page->url" :embedded="true" wire:key="content-editor-{{ $page->id }}" />
     </div>
+
+    @elseif($tab === 'sources')
+    {{-- ── Sources tab: what dynamic content this page shows ── --}}
+    <form wire:submit="saveSources" class="space-y-4">
+        @if($site->hasFeature('store'))
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm p-5">
+            <label class="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
+                <input wire:model.live="srcProducts.enabled" type="checkbox" class="rounded"> 🛍️ Products on this page
+            </label>
+            <p class="text-xs text-gray-400 mt-1">The shop section shows exactly this set instead of every product.</p>
+            @if($srcProducts['enabled'])
+            <div class="grid sm:grid-cols-3 gap-3 mt-3">
+                <div>
+                    <label class="bkf-label">Category</label>
+                    <select wire:model="srcProducts.category" class="bkf-input">
+                        <option value="">All categories</option>
+                        @foreach($this->productCategories as $cat)<option value="{{ $cat }}">{{ $cat }}</option>@endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="bkf-label">Tags <span class="font-normal opacity-60">comma separated</span></label>
+                    <input wire:model="srcProducts.tags" placeholder="repair, bleach-care" class="bkf-input">
+                </div>
+                <div>
+                    <label class="bkf-label">Max products</label>
+                    <input wire:model="srcProducts.limit" type="number" min="1" max="50" class="bkf-input">
+                </div>
+            </div>
+            @endif
+        </div>
+        @endif
+
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm p-5">
+            <label class="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
+                <input wire:model.live="srcPosts.enabled" type="checkbox" class="rounded"> 📰 Posts on this page
+            </label>
+            <p class="text-xs text-gray-400 mt-1">The blog section shows this filtered set instead of the newest posts.</p>
+            @if($srcPosts['enabled'])
+            <div class="grid sm:grid-cols-3 gap-3 mt-3">
+                <div>
+                    <label class="bkf-label">Category</label>
+                    <select wire:model="srcPosts.category" class="bkf-input">
+                        <option value="">All categories</option>
+                        @foreach($this->postCategories as $cat)<option value="{{ $cat }}">{{ $cat }}</option>@endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="bkf-label">Tag</label>
+                    <input wire:model="srcPosts.tag" placeholder="e.g. tips" class="bkf-input">
+                </div>
+                <div>
+                    <label class="bkf-label">Max posts</label>
+                    <input wire:model="srcPosts.limit" type="number" min="1" max="50" class="bkf-input">
+                </div>
+            </div>
+            @endif
+        </div>
+
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm p-5">
+            <p class="text-sm font-bold text-gray-900 dark:text-white">🗂 Collections on this page</p>
+            <p class="text-xs text-gray-400 mt-1 mb-3">Tick a collection to show it on this page; set a limit to cap how many items appear.</p>
+            <input wire:model.live.debounce.300ms="collectionSearch" placeholder="Search collections…"
+                   class="w-full mb-3 px-3 py-2 rounded-xl text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
+            <div class="space-y-1.5 max-h-64 overflow-y-auto">
+                @forelse($this->sourceCollections as $col)
+                <div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/[0.03]" wire:key="src-col-{{ $col->id }}">
+                    <label class="flex items-center gap-2 min-w-0 flex-1 cursor-pointer">
+                        <input wire:model.live="srcCollections.{{ $col->id }}.attached" type="checkbox" class="rounded">
+                        <span class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ $col->name }}</span>
+                        <span class="text-[11px] text-gray-400 shrink-0">{{ $col->items_count }} items</span>
+                    </label>
+                    @if($srcCollections[$col->id]['attached'] ?? false)
+                        <input wire:model="srcCollections.{{ $col->id }}.limit" type="number" min="1" max="50" placeholder="all"
+                               class="w-16 px-2 py-1 rounded-lg text-xs bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08]" title="Max items shown">
+                    @endif
+                </div>
+                @empty
+                <p class="text-sm text-gray-400 py-4 text-center">No collections yet.</p>
+                @endforelse
+            </div>
+        </div>
+
+        <p class="text-xs text-gray-400">Sections (components) are managed in the <b>Content</b> tab and the component picker on the Pages list.</p>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">
+            <span wire:loading.remove wire:target="saveSources">Save content sources</span>
+            <span wire:loading wire:target="saveSources">Saving…</span>
+        </button>
+    </form>
 
     @elseif($tab === 'edit')
     {{-- ── Edit tab ── --}}
@@ -154,8 +242,8 @@
     </form>
     @endif
             </div>{{-- /centered column --}}
-        </div>{{-- /main section --}}
-    </div>{{-- /panes --}}
+        </x-carousel.slide>
+    </x-carousel>
 
     {{-- Toast --}}
     <div x-show="toast" x-cloak x-transition

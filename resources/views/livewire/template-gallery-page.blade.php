@@ -80,11 +80,11 @@
                        class="group block alt rounded-2xl p-3 shadow-sm hover:-translate-y-0.5 transition-all">
                         <div class="rounded-xl overflow-hidden border border-gray-200/70 dark:border-white/[0.08]">
                             @if ($c['screenshots'])
-                                <img src="{{ $c['screenshots'][0] }}" alt="{{ $c['name'] }}" class="w-full aspect-[16/10] object-cover object-top">
+                                <img src="{{ $c['screenshots'][0] }}" alt="{{ $c['name'] }}" class="w-full aspect-[15/16] object-cover object-top">
                             @elseif ($c['thumbnail'])
-                                <img src="{{ $c['thumbnail'] }}" alt="{{ $c['name'] }}" class="w-full aspect-[16/10] object-cover object-top">
+                                <img src="{{ $c['thumbnail'] }}" alt="{{ $c['name'] }}" class="w-full aspect-[15/16] object-cover object-top">
                             @else
-                                <div class="w-full aspect-[16/10] grid place-items-center text-4xl font-black text-white" style="background:{{ $c['accent'] }}">{{ strtoupper(substr($c['name'], 0, 1)) }}</div>
+                                <div class="w-full aspect-[15/16] grid place-items-center text-4xl font-black text-white" style="background:{{ $c['accent'] }}">{{ strtoupper(substr($c['name'], 0, 1)) }}</div>
                             @endif
                         </div>
                         <div class="flex items-start justify-between gap-3 mt-3 px-1 pb-1">

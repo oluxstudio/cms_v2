@@ -1,14 +1,16 @@
 <script setup lang="ts">
+const oluxCms = useOluxContent('appointment')
+const oluxFb: Record<string, string> = {"Text":"Your booking","Caption":"Service","Caption B":"Day","Caption C":"Time","Caption D":"Price","Subheadline":"Book an appointment","Text B":"Loading services\u2026","Subheadline B":"Appointment","Caption E":"Service","Caption F":"Date & time","Caption G":"Duration","Caption H":"Total","Text C":"Please keep your reference handy \u2014 you'll need it for any changes.\n            To reschedule or cancel, call us at <b><GlobalPhone link /></b> during opening hours.","Text D":"Add to calendar","Text E":"Book another appointment","Text F":"Choose a service","Text G":"Pick a day and a time","Text H":"Checking the calendar\u2026","Text I":"No open days in the next few weeks \u2014 call us instead.","Text J":"<i /> Available day","Text K":"Free times will appear here once you pick a day.","Text L":"Checking free times\u2026","Text M":"Fully booked that day \u2014 pick another.","Text N":"Your details","Text O":"Review & confirm","Caption I":"Service","Caption J":"Date & time","Caption K":"Duration","Caption L":"Price","Text P":"\ud83d\udd12 You'll be taken to secure payment to complete this booking.","Text Q":"\u2039 Back","Text R":"Continue \u203a"}
 const { field, items } = useCms()
 
 import { ref, computed, onMounted, watch, unref } from 'vue'
 
 // Handcoded fallback — the CMS "Working Hours" collection overrides these rows.
-const fallbackHours = [
+const fallbackHours = oluxCms.items('Fallback Hour', {"Title":"title","Text":"text"}, [
   { title: 'Monday — Friday', text: '9:00 — 20:00' },
   { title: 'Saturday', text: '10:00 — 18:00' },
   { title: 'Sunday', text: 'Closed' },
-]
+], {})
 const hours = computed(() => items('workingHours', fallbackHours))
 
 
@@ -97,7 +99,7 @@ function addToCalendar() {
   const fmt = (d: Date) =>
     `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}` +
     `T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`
-  const ics = [
+  const ics = oluxCms.list('Ics Item', [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Hair Co.//Booking//EN', 'BEGIN:VEVENT',
     `UID:${c.reference || fmt(start)}@hairco.salon`,
     `DTSTART:${fmt(start)}`, `DTEND:${fmt(end)}`,
@@ -105,7 +107,7 @@ function addToCalendar() {
     `DESCRIPTION:Booking reference ${c.reference}`,
     'LOCATION:14 Rosewood Avenue\\, Suite 2\\, Portland OR',
     'END:VEVENT', 'END:VCALENDAR',
-  ].join('\r\n')
+  ]).join('\r\n')
   const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }))
   const a = document.createElement('a')
   a.href = url
@@ -304,7 +306,7 @@ function bookAnother() {
 }
 
 // ── Wizard: Service → Date & time → Your details → Review ──
-const STEPS = ['Service', 'Date & time', 'Your details', 'Review']
+const STEPS = oluxCms.list('S T E P S Item', ['Service', 'Date & time', 'Your details', 'Review'])
 const step = ref(0)
 const stepError = ref('')
 const requiredMissing = computed(() =>
@@ -345,7 +347,7 @@ function goTo(i: number) { if (i < step.value) { stepError.value = ''; step.valu
 const pickedSlotLabel = computed(() => slots.value.find(s => s.iso === slot.value)?.label || '')
 
 // ── Calendar (Monday-first month grid; only API open days are clickable) ──
-const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+const WEEKDAYS = oluxCms.list('W E E K D A Y S Item', ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'])
 const viewMonth = ref('')  // 'YYYY-MM'
 const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 const openSet = computed(() => new Set(days.value.map(d => d.date)))
@@ -387,7 +389,7 @@ function onSubmit(e: Event) {
 </script>
 
 <template>
-  <section class="appointment">
+  <section class="appointment" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container" style="display:block; margin-bottom:0">
       <div class="section-head centered" data-olx-key="appointmentIntro" data-olx-kind="component">
         <p class="eyebrow" data-olx-field="eyebrow">{{ field('appointmentIntro', 'eyebrow', 'Appointments') }}</p>
@@ -413,20 +415,20 @@ function onSubmit(e: Event) {
 
         <!-- live summary of what has been chosen so far -->
         <div v-if="!loadingCfg && !apiError && status !== 'done'" class="summary">
-          <p class="summary-title">Your booking</p>
+          <p data-olx-field="text" class="summary-title">{{ oluxCms.t('Text', oluxFb['Text']) }}</p>
           <ul>
-            <li :class="{ set: activeSvc }"><span>Service</span><b>{{ activeSvc?.name || '—' }}</b></li>
-            <li :class="{ set: day }"><span>Day</span><b>{{ day ? dayLabel(day) : '—' }}</b></li>
-            <li :class="{ set: slot }"><span>Time</span><b>{{ pickedSlotLabel || '—' }}</b></li>
-            <li v-if="activeSvc?.price" class="set"><span>Price</span><b>{{ activeSvc.price }}</b></li>
+            <li :class="{ set: activeSvc }"><span data-olx-field="caption">{{ oluxCms.t('Caption', oluxFb['Caption']) }}</span><b>{{ activeSvc?.name || '—' }}</b></li>
+            <li :class="{ set: day }"><span data-olx-field="captionB">{{ oluxCms.t('Caption B', oluxFb['Caption B']) }}</span><b>{{ day ? dayLabel(day) : '—' }}</b></li>
+            <li :class="{ set: slot }"><span data-olx-field="captionC">{{ oluxCms.t('Caption C', oluxFb['Caption C']) }}</span><b>{{ pickedSlotLabel || '—' }}</b></li>
+            <li v-if="activeSvc?.price" class="set"><span data-olx-field="captionD">{{ oluxCms.t('Caption D', oluxFb['Caption D']) }}</span><b>{{ activeSvc.price }}</b></li>
           </ul>
         </div>
       </div>
 
       <form class="appt-form wizard" data-olx-key="appointment" data-olx-kind="form" @submit.capture.prevent="onSubmit">
-        <h3 data-olx-field="formTitle">Book an appointment</h3>
+        <h3 data-olx-field="formTitle">{{ oluxCms.t('Subheadline', oluxFb['Subheadline']) }}</h3>
 
-        <p v-if="loadingCfg" class="slot-note">Loading services…</p>
+        <p data-olx-field="textB" v-if="loadingCfg" class="slot-note">{{ oluxCms.t('Text B', oluxFb['Text B']) }}</p>
         <p v-else-if="apiError" class="err">Booking is not available right now — no bookable services were found for “{{ siteName }}”. Please call us instead.</p>
 
         <div v-else-if="status === 'done' && confirmation" class="confirm-panel">
@@ -441,21 +443,18 @@ function onSubmit(e: Event) {
             Booking reference<b>{{ confirmation.reference }}</b>
           </p>
           <div class="confirm-section">
-            <h5>Appointment</h5>
+            <h5 data-olx-field="subheadlineB">{{ oluxCms.t('Subheadline B', oluxFb['Subheadline B']) }}</h5>
             <div class="confirm-grid">
-              <div class="confirm-item"><span>Service</span><b>{{ confirmation.service }}</b></div>
-              <div class="confirm-item"><span>Date &amp; time</span><b>{{ confirmation.when }}</b></div>
-              <div v-if="confirmation.duration" class="confirm-item"><span>Duration</span><b>{{ confirmation.duration }}</b></div>
-              <div v-if="confirmation.total" class="confirm-item"><span>Total</span><b>{{ confirmation.total }}</b></div>
+              <div class="confirm-item"><span data-olx-field="captionE">{{ oluxCms.t('Caption E', oluxFb['Caption E']) }}</span><b>{{ confirmation.service }}</b></div>
+              <div class="confirm-item"><span data-olx-field="captionF">{{ oluxCms.t('Caption F', oluxFb['Caption F']) }}</span><b>{{ confirmation.when }}</b></div>
+              <div v-if="confirmation.duration" class="confirm-item"><span data-olx-field="captionG">{{ oluxCms.t('Caption G', oluxFb['Caption G']) }}</span><b>{{ confirmation.duration }}</b></div>
+              <div v-if="confirmation.total" class="confirm-item"><span data-olx-field="captionH">{{ oluxCms.t('Caption H', oluxFb['Caption H']) }}</span><b>{{ confirmation.total }}</b></div>
             </div>
           </div>
-          <p class="confirm-note">
-            Please keep your reference handy — you'll need it for any changes.
-            To reschedule or cancel, call us at <b><GlobalPhone link /></b> during opening hours.
-          </p>
+          <p data-olx-field="textC" class="confirm-note" v-html="oluxCms.t('Text C', oluxFb['Text C'])"></p>
           <div class="confirm-actions">
-            <button class="btn" type="button" @click="addToCalendar">Add to calendar</button>
-            <button class="btn ghost" type="button" @click="bookAnother">Book another appointment</button>
+            <button data-olx-field="textD" class="btn" type="button" @click="addToCalendar">{{ oluxCms.t('Text D', oluxFb['Text D']) }}</button>
+            <button data-olx-field="textE" class="btn ghost" type="button" @click="bookAnother">{{ oluxCms.t('Text E', oluxFb['Text E']) }}</button>
           </div>
         </div>
 
@@ -471,7 +470,7 @@ function onSubmit(e: Event) {
 
           <!-- Step 1: service -->
           <div v-if="step === 0" class="step-pane">
-            <p class="step-title">Choose a service</p>
+            <p data-olx-field="textF" class="step-title">{{ oluxCms.t('Text F', oluxFb['Text F']) }}</p>
             <div class="service-cards">
               <button v-for="s in services" :key="s.slug" type="button"
                       :class="{ active: service === s.name }" @click="service = s.name">
@@ -487,7 +486,7 @@ function onSubmit(e: Event) {
 
           <!-- Step 2: calendar + times -->
           <div v-else-if="step === 1" class="step-pane">
-            <p class="step-title">Pick a day and a time</p>
+            <p data-olx-field="textG" class="step-title">{{ oluxCms.t('Text G', oluxFb['Text G']) }}</p>
             <div class="datetime">
               <div class="calendar">
                 <div class="cal-head">
@@ -501,15 +500,15 @@ function onSubmit(e: Event) {
                           :class="{ empty: !c.date, open: c.open, active: day === c.date }"
                           :disabled="!c.open" @click="day = c.date">{{ c.num || '' }}</button>
                 </div>
-                <p v-if="daysLoading" class="slot-note">Checking the calendar…</p>
-                <p v-else-if="!days.length" class="slot-note">No open days in the next few weeks — call us instead.</p>
-                <p v-else class="cal-legend"><i /> Available day</p>
+                <p data-olx-field="textH" v-if="daysLoading" class="slot-note">{{ oluxCms.t('Text H', oluxFb['Text H']) }}</p>
+                <p data-olx-field="textI" v-else-if="!days.length" class="slot-note">{{ oluxCms.t('Text I', oluxFb['Text I']) }}</p>
+                <p data-olx-field="textJ" v-else class="cal-legend" v-html="oluxCms.t('Text J', oluxFb['Text J'])"></p>
               </div>
               <div class="times">
                 <p class="times-title">{{ day ? dayLabel(day) : 'Select a day' }}</p>
-                <p v-if="!day" class="slot-note">Free times will appear here once you pick a day.</p>
-                <p v-else-if="slotsLoading" class="slot-note">Checking free times…</p>
-                <p v-else-if="!daySlots.length" class="slot-note">Fully booked that day — pick another.</p>
+                <p data-olx-field="textK" v-if="!day" class="slot-note">{{ oluxCms.t('Text K', oluxFb['Text K']) }}</p>
+                <p data-olx-field="textL" v-else-if="slotsLoading" class="slot-note">{{ oluxCms.t('Text L', oluxFb['Text L']) }}</p>
+                <p data-olx-field="textM" v-else-if="!daySlots.length" class="slot-note">{{ oluxCms.t('Text M', oluxFb['Text M']) }}</p>
                 <div v-else class="slot-chips">
                   <button v-for="s in daySlots" :key="s.iso" type="button"
                           :class="{ active: slot === s.iso }" @click="slot = s.iso">{{ s.label }}</button>
@@ -520,7 +519,7 @@ function onSubmit(e: Event) {
 
           <!-- Step 3: person fields from the CMS form schema -->
           <div v-else-if="step === 2" class="step-pane">
-            <p class="step-title">Your details</p>
+            <p data-olx-field="textN" class="step-title">{{ oluxCms.t('Text N', oluxFb['Text N']) }}</p>
             <div class="grid">
               <div v-for="f in textFields" :key="f.key">
                 <label>{{ f.label }}<i v-if="f.required">*</i></label>
@@ -541,27 +540,27 @@ function onSubmit(e: Event) {
 
           <!-- Step 4: review -->
           <div v-else class="step-pane">
-            <p class="step-title">Review &amp; confirm</p>
+            <p data-olx-field="textO" class="step-title">{{ oluxCms.t('Text O', oluxFb['Text O']) }}</p>
             <div class="review-grid">
-              <div class="review-item"><span>Service</span><b>{{ activeSvc?.name }}</b></div>
-              <div class="review-item"><span>Date &amp; time</span><b>{{ dayLabel(day) }} · {{ pickedSlotLabel }}</b></div>
-              <div v-if="activeSvc?.duration" class="review-item"><span>Duration</span><b>{{ activeSvc.duration }} min</b></div>
-              <div v-if="activeSvc?.price" class="review-item"><span>Price</span><b>{{ activeSvc.price }}</b></div>
+              <div class="review-item"><span data-olx-field="captionI">{{ oluxCms.t('Caption I', oluxFb['Caption I']) }}</span><b>{{ activeSvc?.name }}</b></div>
+              <div class="review-item"><span data-olx-field="captionJ">{{ oluxCms.t('Caption J', oluxFb['Caption J']) }}</span><b>{{ dayLabel(day) }} · {{ pickedSlotLabel }}</b></div>
+              <div v-if="activeSvc?.duration" class="review-item"><span data-olx-field="captionK">{{ oluxCms.t('Caption K', oluxFb['Caption K']) }}</span><b>{{ activeSvc.duration }} min</b></div>
+              <div v-if="activeSvc?.price" class="review-item"><span data-olx-field="captionL">{{ oluxCms.t('Caption L', oluxFb['Caption L']) }}</span><b>{{ activeSvc.price }}</b></div>
               <div v-for="f in formFields.filter(x => x.key !== 'service' && val(x.key))" :key="f.key"
                    class="review-item" :class="{ full: f.type === 'textarea' }">
                 <span>{{ f.label }}</span><b>{{ val(f.key) }}</b>
               </div>
             </div>
-            <p v-if="activeSvc?.requires_payment" class="slot-note">🔒 You'll be taken to secure payment to complete this booking.</p>
+            <p data-olx-field="textP" v-if="activeSvc?.requires_payment" class="slot-note">{{ oluxCms.t('Text P', oluxFb['Text P']) }}</p>
           </div>
 
           <p v-if="stepError" class="err">{{ stepError }}</p>
           <p v-else-if="status === 'error'" class="err">{{ message }}</p>
 
           <div class="wizard-nav">
-            <button v-if="step > 0" class="btn ghost" type="button" @click="back">‹ Back</button>
+            <button data-olx-field="textQ" v-if="step > 0" class="btn ghost" type="button" @click="back">{{ oluxCms.t('Text Q', oluxFb['Text Q']) }}</button>
             <span v-else />
-            <button v-if="step < STEPS.length - 1" class="btn" type="button" :disabled="!canProceed" @click="next">Continue ›</button>
+            <button data-olx-field="textR" v-if="step < STEPS.length - 1" class="btn" type="button" :disabled="!canProceed" @click="next">{{ oluxCms.t('Text R', oluxFb['Text R']) }}</button>
             <button v-else class="btn" type="submit" :disabled="status === 'saving'">
               {{ status === 'saving' ? 'Booking…' : (activeSvc?.requires_payment ? 'Continue to payment' : 'Confirm booking') }}
             </button>

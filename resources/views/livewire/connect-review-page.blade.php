@@ -1,7 +1,7 @@
 <div class="h-[calc(100vh-8rem)] flex flex-col" wire:key="site-preview"
      data-olx-origin="{{ $clientOrigin }}"
      x-data="{
-        device: 'desktop',
+        device: window.innerWidth <= 640 ? 'mobile' : (window.innerWidth <= 1024 ? 'tablet' : 'desktop'),
         init() {
             // Client iframe → CMS: a component was clicked in edit mode.
             // Trust ONLY the configured client site's origin — any other frame
@@ -127,11 +127,13 @@
             @endforeach
         </div>
 
+        @unless($embedded)
         <div class="ml-auto flex items-center gap-2">
             <button wire:click="publish" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.1]">Publish page.json</button>
             <a href="{{ route('site.connect.export', ['siteID' => $site->name]) }}"
                class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.1]">Download export</a>
         </div>
+        @endunless
         @if ($flash)
             <span class="w-full text-xs font-semibold" style="color:var(--primary)">{{ $flash }}</span>
         @endif

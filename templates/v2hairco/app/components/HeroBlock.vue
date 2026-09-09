@@ -1,20 +1,22 @@
 <script setup lang="ts">
+const oluxCms = useOluxContent('hero')
+const oluxFb: Record<string, string> = {"Image":"/assets/images/hero.jpg","Image B":"/assets/images/hero-oval.jpg"}
 import { computed } from 'vue'
 
 const { field, items } = useCms()
 
 // Handcoded fallback — the CMS "Hero Tags" collection overrides these pills.
-const fallbackTags = [
+const fallbackTags = oluxCms.items('Fallback Tag', {"Label":"label"}, [
   { label: 'Salon-grade products' },
   { label: 'Gentle formulas' },
   { label: 'Curl specialists' },
   { label: 'Personal care plans' },
-]
+], {})
 const tags = computed(() => items('heroTags', fallbackTags))
 </script>
 
 <template>
-  <section class="hero" data-olx-key="hero" data-olx-kind="component">
+  <section class="hero" data-olx-key="hero" data-olx-kind="component" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="hero-inner">
 
       <div class="left">
@@ -24,7 +26,7 @@ const tags = computed(() => items('heroTags', fallbackTags))
 
       <div class="portrait">
         <div class="oval">
-          <img src="/assets/images/hero.jpg" alt="Stylist trimming a client's hair" data-olx-field="image">
+          <img :src="oluxCms.t('Image', oluxFb['Image'])" alt="Stylist trimming a client's hair" data-olx-field="image">
           <div class="chip">
             <b data-olx-field="statValue">{{ field('hero', 'statValue', '98%') }}</b>
             <span data-olx-field="statLabel">{{ field('hero', 'statLabel', 'Happy clients') }}</span>
@@ -37,7 +39,7 @@ const tags = computed(() => items('heroTags', fallbackTags))
         <p class="blurb" data-olx-field="lead">{{ field('hero', 'lead', 'Personalised hair care that combines science and beauty — healthier hair with every visit.') }}</p>
         <div class="product-card">
           <p class="card-eyebrow" data-olx-field="caption">{{ field('hero', 'caption', 'Our essentials') }}</p>
-          <img src="/assets/images/hero-oval.jpg" alt="Salon treatment product" data-olx-field="overlayImage">
+          <img :src="oluxCms.t('Image B', oluxFb['Image B'])" alt="Salon treatment product" data-olx-field="overlayImage">
           <p class="card-title" data-olx-field="collectionLabel">{{ field('hero', 'collectionLabel', 'Deep Repair Hair Serum') }}</p>
           <span class="spark" aria-hidden="true">✦</span>
         </div>

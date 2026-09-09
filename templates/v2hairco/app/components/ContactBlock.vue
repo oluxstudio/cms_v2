@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const oluxCms = useOluxContent('contact')
+const oluxFb: Record<string, string> = {"Subheadline":"Send a message","Text":"Loading the form\u2026","Text B":"The contact form is not available right now \u2014 please call or email us instead.","Subheadline B":"Message sent","Text C":"Send another message"}
 const { field } = useCms()
 
 import { ref, computed, onMounted } from 'vue'
@@ -92,7 +94,7 @@ function sendAnother() {
 </script>
 
 <template>
-  <section class="contact">
+  <section class="contact" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div data-olx-key="contactIntro" data-olx-kind="component">
         <p class="eyebrow" data-olx-field="eyebrow">{{ field('contactIntro', 'eyebrow', 'Contact us') }}</p>
@@ -105,16 +107,16 @@ function sendAnother() {
         </div>
       </div>
       <form class="appt-form" @submit.prevent="onSend">
-        <h3>Send a message</h3>
+        <h3 data-olx-field="subheadline">{{ oluxCms.t('Subheadline', oluxFb['Subheadline']) }}</h3>
 
-        <p v-if="loadingForm" class="slot-note">Loading the form…</p>
-        <p v-else-if="formUnavailable" class="err">The contact form is not available right now — please call or email us instead.</p>
+        <p data-olx-field="text" v-if="loadingForm" class="slot-note">{{ oluxCms.t('Text', oluxFb['Text']) }}</p>
+        <p data-olx-field="textB" v-else-if="formUnavailable" class="err">{{ oluxCms.t('Text B', oluxFb['Text B']) }}</p>
 
         <div v-else-if="sent" class="confirm-panel">
           <div class="confirm-head">
             <span class="confirm-badge">✓</span>
             <div>
-              <h4>Message sent</h4>
+              <h4 data-olx-field="subheadlineB">{{ oluxCms.t('Subheadline B', oluxFb['Subheadline B']) }}</h4>
               <p class="slot-note">{{ doneMessage }}</p>
             </div>
           </div>
@@ -123,7 +125,7 @@ function sendAnother() {
             Need us sooner? Call <b><GlobalPhone link /></b> during opening hours.
           </p>
           <div class="confirm-actions">
-            <button class="btn ghost" type="button" @click="sendAnother">Send another message</button>
+            <button data-olx-field="textC" class="btn ghost" type="button" @click="sendAnother">{{ oluxCms.t('Text C', oluxFb['Text C']) }}</button>
           </div>
         </div>
 

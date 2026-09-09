@@ -207,7 +207,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 @foreach($this->curated as $c)
                 <div wire:key="cur-{{ $c['key'] }}" class="rounded-2xl border border-gray-200 dark:border-white/[0.07] bg-white dark:bg-[#1d1e2a] overflow-hidden flex flex-col">
-                    <div class="aspect-[16/10] bg-center bg-cover"
+                    <div class="aspect-[15/16] bg-center bg-cover"
                          style="background-color: {{ $c['accent'] }};{{ $c['thumbnail'] ? 'background-image:url(\''.$c['thumbnail'].'\');' : '' }}"></div>
                     <div class="p-4 flex flex-col flex-1">
                         <div class="flex items-center justify-between">

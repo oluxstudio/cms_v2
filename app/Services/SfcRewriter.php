@@ -47,6 +47,7 @@ class SfcRewriter
         File::ensureDirectoryExists("$appDir/app/plugins");
         File::copy(base_path('stubs/olux/olux-nav.client.ts'), "$appDir/app/plugins/olux-nav.client.ts");
         File::copy(base_path('stubs/olux/olux-design.client.ts'), "$appDir/app/plugins/olux-design.client.ts");
+        File::copy(base_path('stubs/olux/olux-head.client.ts'), "$appDir/app/plugins/olux-head.client.ts");
 
         // CMS pages beyond the ones the template shipped (e.g. About Us created
         // in the CMS) need a route too: a catch-all renders ANY page from its

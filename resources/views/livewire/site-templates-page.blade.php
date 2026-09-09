@@ -50,7 +50,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
             @foreach($this->curated as $c)
             <div class="group rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] overflow-hidden flex flex-col">
-                <div class="aspect-[16/10] bg-cover bg-center" style="background-color: {{ $c['accent'] }};"
+                <div class="aspect-[15/16] bg-cover bg-center" style="background-color: {{ $c['accent'] }};"
                      @if($c['thumbnail']) style="background-image:url('{{ $c['thumbnail'] }}'); background-color: {{ $c['accent'] }};" @endif></div>
                 <div class="p-4 flex flex-col flex-1">
                     <div class="flex items-center justify-between">

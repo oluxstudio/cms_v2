@@ -6,6 +6,8 @@ use App\Livewire\Concerns\WithLayoutMode;
 use App\Livewire\Forms\PageForm;
 use App\Models\Page;
 use App\Models\Site;
+use App\Services\TemplateScaffolder;
+use App\Support\TemplateLayouts;
 use Livewire\Component;
 
 class PageComponent extends Component
@@ -218,10 +220,20 @@ class PageComponent extends Component
         ]);
     }
 
+    /** Starting layout for a NEW page: 'blank' or a template page slug. */
+    public string $layout = 'blank';
+
+    /** Layouts offered by the applied template (empty when none applied). */
+    public function getLayoutsProperty(): array
+    {
+        return TemplateLayouts::for($this->site);
+    }
+
     public function openCreate(): void
     {
         $this->form->reset();
         $this->editingId = 0;
+        $this->layout = 'blank';
         $this->showModal = true;
     }
 
@@ -246,16 +258,39 @@ class PageComponent extends Component
                 'keywords' => $this->form->keywords,
             ]);
         } else {
-            Page::create([
-                'site_id' => $this->site->id,
-                'name' => $this->form->name,
-                'url' => $this->form->url,
-                'keywords' => $this->form->keywords,
-            ]);
+            // applyPages silently skips existing URLs — surface it instead.
+            if (Page::where('site_id', $this->site->id)->where('url', $this->form->url)->exists()) {
+                $this->addError('form.url', 'A page with this URL already exists.');
+
+                return;
+            }
+
+            $layoutDef = $this->layout !== 'blank' ? ($this->layouts[$this->layout]['def'] ?? null) : null;
+            if ($layoutDef) {
+                // Scaffold from the template layout: the chosen page's block
+                // composition with default content. Existing same-name
+                // components are REUSED (one component per name per site).
+                $def = array_merge($layoutDef, [
+                    'name' => $this->form->name,
+                    'url' => $this->form->url,
+                    'keywords' => (string) ($this->form->keywords ?? ''),
+                ]);
+                app(TemplateScaffolder::class)->applyPages($this->site, [$def]);
+                $this->dispatch('toast', level: 'success', title: 'Page created',
+                    message: 'Built from the '.$this->layouts[$this->layout]['name'].' layout — edit it in the Content tab.');
+            } else {
+                Page::create([
+                    'site_id' => $this->site->id,
+                    'name' => $this->form->name,
+                    'url' => $this->form->url,
+                    'keywords' => (string) ($this->form->keywords ?? ''),
+                ]);
+            }
         }
 
         $this->showModal = false;
         $this->form->reset();
+        $this->layout = 'blank';
     }
 
     /** Delete a page — confirmation happens in the shared modal (data-confirm). */

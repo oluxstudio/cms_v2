@@ -167,6 +167,7 @@ class MessagesPage extends Component
     {
         $this->thread = $key;
         unset($this->threadMessages, $this->conversations);
+        $this->dispatch('carousel-go', i: 1); // mobile: slide to the conversation
     }
 
     public function send(): void

@@ -274,8 +274,9 @@ class SfcParser
             return ['fixed' => [], 'itemImagePrefix' => $itemImagePrefix];
         }
 
-        $stack = [];        // [tag, attrs, contentStart, vfor(bool), tokenStart]
+        $stack = [];        // [tag, attrs, contentStart, vfor(bool), skip(bool), tokenStart]
         $vforDepth = 0;
+        $skipDepth = 0;     // data-olx-skip on an ancestor → subtree opt-out
         $ranges = [];       // extracted [start, end] ranges for containment dedup
 
         foreach ($tokens as $t) {
@@ -286,7 +287,7 @@ class SfcParser
             $selfClose = ($t[4][0] ?? '') === '/';
 
             if (! $closing && $tag === 'img') {
-                if ($vforDepth === 0 && ! str_contains($attrs, 'data-olx-skip') && preg_match('/\ssrc="(\/assets\/[^"]+)"/', $attrs, $m)) {
+                if ($vforDepth === 0 && $skipDepth === 0 && ! str_contains($attrs, 'data-olx-skip') && preg_match('/\ssrc="(\/assets\/[^"]+)"/', $attrs, $m)) {
                     $fixed[] = ['tag' => 'img', 'kind' => 'image', 'value' => $m[1], 'start' => $pos, 'end' => $pos + strlen($full)];
                 }
 
@@ -301,7 +302,11 @@ class SfcParser
                 if ($isVfor) {
                     $vforDepth++;
                 }
-                $stack[] = ['tag' => $tag, 'attrs' => $attrs, 'content' => $pos + strlen($full), 'vfor' => $isVfor, 'start' => $pos];
+                $isSkip = str_contains($attrs, 'data-olx-skip');
+                if ($isSkip) {
+                    $skipDepth++;
+                }
+                $stack[] = ['tag' => $tag, 'attrs' => $attrs, 'content' => $pos + strlen($full), 'vfor' => $isVfor, 'skip' => $isSkip, 'start' => $pos];
 
                 continue;
             }
@@ -315,8 +320,13 @@ class SfcParser
                             if ($p['vfor']) {
                                 $vforDepth--;
                             }
+                            if ($p['skip'] ?? false) {
+                                $skipDepth--;
+                            }
                         }
-                        self::collect($el, $tag, substr($template, $el['content'], $pos - $el['content']), $pos, $vforDepth, $fixed, $ranges);
+                        if ($skipDepth === 0) {
+                            self::collect($el, $tag, substr($template, $el['content'], $pos - $el['content']), $pos, $vforDepth, $fixed, $ranges);
+                        }
                         break;
                     }
                 }

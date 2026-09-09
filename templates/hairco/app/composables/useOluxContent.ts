@@ -266,3 +266,22 @@ export const useOluxPageOrder = (pageUrl: string | (() => string), blocks: Recor
     return out
   })
 }
+
+/**
+ * The current page's content-sources config (products/posts filters set in
+ * the CMS page's Sources tab). Reactive; {} until content loads or when the
+ * page has none.
+ */
+export const useOluxPageSources = () => {
+  const { data } = ensureOluxContent()
+  const route = useRoute()
+
+  return computed<Record<string, any>>(() => {
+    const pages = data.value?.pages ?? (data.value?.page ? [data.value.page] : [])
+    const path = route.path.replace(/\/+$/, '') || '/'
+    const page = pages.find((p: any) => ((p.url || '/').replace(/\/+$/, '') || '/') === path)
+      ?? (pages.length === 1 ? pages[0] : null)
+
+    return (page && typeof page.sources === 'object' && page.sources) || {}
+  })
+}

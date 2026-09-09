@@ -1,20 +1,22 @@
 <script setup lang="ts">
+const oluxCms = useOluxContent('about')
+const oluxFb: Record<string, string> = {"Image":"/assets/images/about-1.jpg","Image B":"/assets/images/about-2.jpg"}
 import { computed } from 'vue'
 
 const { field, items } = useCms()
 
 // Handcoded fallback — the CMS "About Points" collection overrides these rows.
-const fallbackPoints = [
+const fallbackPoints = oluxCms.items('Fallback Point', {"Point":"point"}, [
   { point: 'Long-Lasting Hold' },
   { point: 'Effective Ingredients' },
   { point: 'Gentle Formulas' },
   { point: 'Deep Hydration' },
-]
+], {})
 const points = computed(() => items('aboutPoints', fallbackPoints))
 </script>
 
 <template>
-  <section class="about" data-olx-key="about" data-olx-kind="component">
+  <section class="about" data-olx-key="about" data-olx-kind="component" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div>
         <p class="eyebrow" data-olx-field="caption">{{ field('about', 'caption', 'About Hair Co.') }}</p>
@@ -27,8 +29,8 @@ const points = computed(() => items('aboutPoints', fallbackPoints))
         <a class="btn" href="/about" data-olx-key="aboutCta" data-olx-kind="component" data-olx-field="label">{{ field('aboutCta', 'label', 'Learn more') }}</a>
       </div>
       <div class="visual">
-        <img src="/assets/images/about-1.jpg" alt="Stylist working" data-olx-field="image">
-        <img class="secondary" src="/assets/images/about-2.jpg" alt="Finished color result" data-olx-field="imageSecondary">
+        <img :src="oluxCms.t('Image', oluxFb['Image'])" alt="Stylist working" data-olx-field="image">
+        <img class="secondary" :src="oluxCms.t('Image B', oluxFb['Image B'])" alt="Finished color result" data-olx-field="imageSecondary">
       </div>
     </div>
   </section>

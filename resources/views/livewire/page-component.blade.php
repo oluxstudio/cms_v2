@@ -226,6 +226,37 @@
                                   focus:outline-none focus:ring-2 focus:ring-indigo-500/50"/>
                     @error('form.keywords') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
+
+                {{-- Start from a layout (template pages) — new pages only --}}
+                @if(! $editingId && $this->layouts !== [])
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Start from a layout</label>
+                    <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        <label class="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors
+                                      {{ $layout === 'blank' ? 'border-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/[0.08]' : 'border-gray-200 dark:border-white/[0.08] hover:border-gray-300' }}">
+                            <input type="radio" wire:model.live="layout" value="blank" class="mt-0.5">
+                            <span>
+                                <span class="block text-sm font-bold text-gray-900 dark:text-white">Blank page</span>
+                                <span class="block text-xs text-gray-400">Start empty and add sections yourself.</span>
+                            </span>
+                        </label>
+                        @foreach($this->layouts as $slug => $l)
+                        <label class="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors
+                                      {{ $layout === $slug ? 'border-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/[0.08]' : 'border-gray-200 dark:border-white/[0.08] hover:border-gray-300' }}"
+                               wire:key="layout-{{ $slug }}">
+                            <input type="radio" wire:model.live="layout" value="{{ $slug }}" class="mt-0.5">
+                            <span class="min-w-0">
+                                <span class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $l['name'] }} layout</span>
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-500">{{ count($l['blocks']) }} sections</span>
+                                </span>
+                                <span class="block text-xs text-gray-400 truncate">{{ implode(' + ', $l['blocks']) }}</span>
+                            </span>
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
             <div class="flex gap-3 pt-1">
                 <button wire:click="$set('showModal', false)"

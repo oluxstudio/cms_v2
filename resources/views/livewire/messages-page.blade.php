@@ -31,9 +31,10 @@
     </div>
     @endif
 
-    <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4">
+    <x-carousel :labels="['💬 Chats', '📨 Conversation']" class="gap-0 lg:gap-4">
         {{-- Conversations --}}
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-y-auto">
+        <x-carousel.slide class="lg:!w-[280px] pb-20 lg:pb-0">
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-y-auto max-h-full">
             @foreach($this->conversations as $c)
             <button wire:click="openThread('{{ $c['key'] }}')" wire:key="conv-{{ $c['key'] }}"
                     class="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-gray-50 dark:border-white/[0.04] last:border-0 transition-colors
@@ -59,8 +60,11 @@
             @endforeach
         </div>
 
+        </x-carousel.slide>
+
         {{-- Thread --}}
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm flex flex-col min-h-0"
+        <x-carousel.slide class="lg:flex-1 pb-20 lg:pb-0 flex flex-col min-h-0">
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm flex flex-col min-h-0 flex-1"
              wire:poll.5s>
             @php
                 $current = collect($this->conversations)->firstWhere('key', $thread);
@@ -117,5 +121,6 @@
             @error('body')<p class="px-5 pb-2 text-xs text-red-500">{{ $message }}</p>@enderror
             @endif
         </div>
-    </div>
+        </x-carousel.slide>
+    </x-carousel>
 </div>

@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Page;
+use App\Models\Post;
 use App\Models\Site;
 use App\Models\Visit;
 use Livewire\Attributes\Url;
@@ -64,10 +65,13 @@ class PageDetailPage extends Component
         abort_unless($page->site_id === $site->id, 404);
         $this->site = $site;
         $this->page = $page;
-        if (! in_array($this->tab, ['edit', 'meta', 'content'], true)) {
+        if (! in_array($this->tab, ['edit', 'meta', 'content', 'sources'], true)) {
             $this->tab = 'edit';
         }
         $this->fill_();
+        if ($this->tab === 'sources') {
+            $this->fillSources();
+        }
     }
 
     private function fill_(): void
@@ -93,7 +97,119 @@ class PageDetailPage extends Component
 
     public function setTab(string $tab): void
     {
-        $this->tab = in_array($tab, ['edit', 'meta', 'content'], true) ? $tab : 'edit';
+        $this->tab = in_array($tab, ['edit', 'meta', 'content', 'sources'], true) ? $tab : 'edit';
+        if ($this->tab === 'sources') {
+            $this->fillSources();
+        }
+    }
+
+    // ── Content sources: what dynamic content this page shows ──────────
+    public array $srcProducts = ['enabled' => false, 'category' => '', 'tags' => '', 'limit' => 12];
+
+    public array $srcPosts = ['enabled' => false, 'category' => '', 'tag' => '', 'limit' => 3];
+
+    /** collection_id => ['attached' => bool, 'limit' => string] */
+    public array $srcCollections = [];
+
+    public string $collectionSearch = '';
+
+    private function fillSources(): void
+    {
+        $cfg = json_decode((string) $this->page->getAttr('content_sources'), true) ?: [];
+        $p = $cfg['products'] ?? [];
+        $this->srcProducts = [
+            'enabled' => (bool) ($p['enabled'] ?? false),
+            'category' => (string) ($p['category'] ?? ''),
+            'tags' => implode(', ', $p['tags'] ?? []),
+            'limit' => (int) ($p['limit'] ?? 12),
+        ];
+        $o = $cfg['posts'] ?? [];
+        $this->srcPosts = [
+            'enabled' => (bool) ($o['enabled'] ?? false),
+            'category' => (string) ($o['category'] ?? ''),
+            'tag' => (string) ($o['tag'] ?? ''),
+            'limit' => (int) ($o['limit'] ?? 3),
+        ];
+        $attached = $this->page->collections()->get()->keyBy('id');
+        $this->srcCollections = [];
+        foreach ($this->site->collections()->orderBy('name')->get() as $col) {
+            $pivot = $attached[$col->id]->pivot ?? null;
+            $settings = $pivot ? (is_array($pivot->settings) ? $pivot->settings : json_decode((string) $pivot->settings, true)) : null;
+            $this->srcCollections[$col->id] = [
+                'attached' => (bool) $pivot,
+                'limit' => (string) ($settings['limit'] ?? ''),
+            ];
+        }
+    }
+
+    /** Category options for the source dropdowns. */
+    public function getProductCategoriesProperty(): array
+    {
+        return $this->site->products()->whereNotNull('category')->where('category', '!=', '')
+            ->distinct()->orderBy('category')->pluck('category')->all();
+    }
+
+    public function getPostCategoriesProperty(): array
+    {
+        return Post::where('site_id', $this->site->id)
+            ->whereNotNull('category')->where('category', '!=', '')
+            ->distinct()->orderBy('category')->pluck('category')->all();
+    }
+
+    public function getSourceCollectionsProperty()
+    {
+        return $this->site->collections()->withCount('items')
+            ->when($this->collectionSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->collectionSearch.'%'))
+            ->orderBy('name')->get();
+    }
+
+    public function saveSources(): void
+    {
+        abort_unless($this->site->allows(auth()->user(), 'pages.manage'), 403);
+        $this->validate([
+            'srcProducts.category' => ['nullable', 'string', 'max:60'],
+            'srcProducts.tags' => ['nullable', 'string', 'max:200'],
+            'srcProducts.limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'srcPosts.category' => ['nullable', 'string', 'max:60'],
+            'srcPosts.tag' => ['nullable', 'string', 'max:60'],
+            'srcPosts.limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $cfg = [
+            'products' => [
+                'enabled' => (bool) $this->srcProducts['enabled'],
+                'category' => trim((string) $this->srcProducts['category']),
+                'tags' => collect(explode(',', (string) $this->srcProducts['tags']))
+                    ->map(fn ($t) => trim($t))->filter()->unique()->values()->all(),
+                'limit' => (int) ($this->srcProducts['limit'] ?: 12),
+            ],
+            'posts' => [
+                'enabled' => (bool) $this->srcPosts['enabled'],
+                'category' => trim((string) $this->srcPosts['category']),
+                'tag' => trim((string) $this->srcPosts['tag']),
+                'limit' => (int) ($this->srcPosts['limit'] ?: 3),
+            ],
+        ];
+        $this->page->setAttr('content_sources', json_encode($cfg));
+
+        // Collections: reconcile pivots + per-attachment limits.
+        $maxOrder = (int) \DB::table('page_collection')->where('page_id', $this->page->id)->max('order');
+        foreach ($this->srcCollections as $colId => $row) {
+            $exists = $this->page->collections()->where('collections.id', $colId)->exists();
+            if (($row['attached'] ?? false)) {
+                $limit = (int) ($row['limit'] ?? 0);
+                $settings = $limit > 0 ? json_encode(['limit' => min(50, $limit)]) : null;
+                $exists
+                    ? $this->page->collections()->updateExistingPivot($colId, ['settings' => $settings])
+                    : $this->page->collections()->attach($colId, ['order' => ++$maxOrder, 'settings' => $settings]);
+            } elseif ($exists) {
+                $this->page->collections()->detach($colId);
+            }
+        }
+
+        $this->page->refresh();
+        $this->fillSources();
+        $this->successMessage = 'Content sources saved.';
     }
 
     /** Summary tiles for the Content tab's left rail. */

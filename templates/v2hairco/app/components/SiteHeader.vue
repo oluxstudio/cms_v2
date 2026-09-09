@@ -1,19 +1,21 @@
 <script setup lang="ts">
+const oluxCms = useOluxContent('site-header')
+const oluxFb: Record<string, string> = {}
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 // Split navigation: pages on the left, actions on the right, logo centered.
-const leftNav = [
+const leftNav = oluxCms.items('Left Nav', {"Label":"label","Href":"href"}, [
   { label: 'About', href: '/about' },
   { label: 'Services', href: '/services' },
   { label: 'Contact', href: '/contact-us' },
   { label: 'Pricing', href: '/#pricing' },
   { label: 'FAQ', href: '/faq' },
-]
-const rightNav = [
+], {})
+const rightNav = oluxCms.items('Right Nav', {"Label":"label","Href":"href"}, [
   { label: 'Appointment', href: '/appointment' },
   { label: 'Shop', href: '/shop' },
-]
+], {})
 
 // Elevated header once the page scrolls.
 const scrolled = ref(false)
@@ -31,7 +33,7 @@ watch(() => route.path, () => { open.value = false })
 </script>
 
 <template>
-  <header class="site-header" :class="{ scrolled, open }">
+  <header class="site-header" :class="{ scrolled, open }" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value">
     <div class="container">
       <nav class="nav nav-left">
         <NuxtLink v-for="n in leftNav" :key="n.href" :to="n.href">{{ n.label }}</NuxtLink>

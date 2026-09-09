@@ -1,26 +1,28 @@
 <script setup lang="ts">
+const oluxCms = useOluxContent('faq')
+const oluxFb: Record<string, string> = {"Text":"Good to know","Headline":"Frequently Asked Questions","Text B":"Everything about visits, bookings and our products \u2014 and we\u2019re one call away for anything else."}
 import { ref, computed } from 'vue'
 
 const { items } = useCms()
 
 // Handcoded fallback — the CMS "faqs" collection overrides these rows.
-const fallbackFaqs = [
+const fallbackFaqs = oluxCms.items('Fallback Faq', {"Title":"title","Text":"text"}, [
   { title: 'Do I need to book an appointment?', text: 'Walk-ins are welcome when a chair is free, but booking through our appointment page guarantees your slot with your preferred stylist.' },
   { title: 'How early should I arrive?', text: 'Five to ten minutes before your appointment is perfect — it gives us time for a quick consultation before we start.' },
   { title: 'Can I reschedule or cancel?', text: 'Of course. Use the link in your confirmation email, or give us a call at least 24 hours ahead so we can offer the slot to someone else.' },
   { title: 'Do you sell the products you use?', text: 'Yes — everything we use in the salon is available in our shop, with delivery straight to your door.' },
-]
+], {})
 const faqs = computed(() => items('faqs', fallbackFaqs))
 const openIdx = ref(0)
 </script>
 
 <template>
-  <section class="faq">
+  <section class="faq" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head">
-        <p class="eyebrow">Good to know</p>
-        <h2>Frequently Asked Questions</h2>
-        <p class="lead">Everything about visits, bookings and our products — and we’re one call away for anything else.</p>
+        <p data-olx-field="text" class="eyebrow">{{ oluxCms.t('Text', oluxFb['Text']) }}</p>
+        <h2 data-olx-field="headline">{{ oluxCms.t('Headline', oluxFb['Headline']) }}</h2>
+        <p data-olx-field="textB" class="lead">{{ oluxCms.t('Text B', oluxFb['Text B']) }}</p>
       </div>
 
       <div class="list" data-olx-key="faqs" data-olx-kind="collection">

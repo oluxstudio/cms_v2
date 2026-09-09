@@ -1,20 +1,22 @@
 <script setup lang="ts">
+const oluxCms = useOluxContent('services')
+const oluxFb: Record<string, string> = {"Image":"/assets/images/services-circle.jpg"}
 import { computed } from 'vue'
 
 const { field, items } = useCms()
 
 // Handcoded fallback — the CMS "services" collection overrides these rows.
-const fallbackServices = [
+const fallbackServices = oluxCms.items('Fallback Service', {"Icon":"icon","Title":"title","Text":"text"}, [
   { icon: '✂', title: 'Hairstyles', text: 'Signature cuts and styling shaped to your face, texture and daily routine.' },
   { icon: '🎨', title: 'Coloring', text: 'Balayage, gloss and full color with gentle, salon-grade pigments.' },
   { icon: '🌀', title: 'Hair Curly', text: 'Curl definition, perms and care plans that keep every coil bouncy.' },
   { icon: '✨', title: 'Lamination', text: 'Glass-shine lamination that seals, smooths and protects for weeks.' },
-]
+], {})
 const services = computed(() => items('services', fallbackServices))
 </script>
 
 <template>
-  <section class="services">
+  <section class="services" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div>
         <div class="section-head" data-olx-key="servicesIntro" data-olx-kind="component">
@@ -40,7 +42,7 @@ const services = computed(() => items('services', fallbackServices))
           </svg>
           <span class="play">➜</span>
         </a>
-        <img src="/assets/images/services-circle.jpg" alt="Inside the salon">
+        <img data-olx-field="image" :src="oluxCms.t('Image', oluxFb['Image'])" alt="Inside the salon">
       </div>
     </div>
   </section>

@@ -1,20 +1,22 @@
 <script setup lang="ts">
+const oluxCms = useOluxContent('team')
+const oluxFb: Record<string, string> = {}
 import { computed } from 'vue'
 
 const { field, items } = useCms()
 
 // Handcoded fallback — the CMS "team" collection overrides these rows.
-const fallbackMembers = [
+const fallbackMembers = oluxCms.items('Fallback Member', {"Image":"img","Name":"name","Role":"role"}, [
   { img: '/assets/images/team-1.jpg', name: 'Amara Ellis', role: 'Creative Director' },
   { img: '/assets/images/team-2.jpg', name: 'Rosa Delgado', role: 'Color Specialist' },
   { img: '/assets/images/team-3.jpg', name: 'Maya Chen', role: 'Curl Expert' },
   { img: '/assets/images/team-4.jpg', name: 'Jules Baptiste', role: 'Senior Stylist' },
-]
+], {})
 const members = computed(() => items('team', fallbackMembers))
 </script>
 
 <template>
-  <section class="team">
+  <section class="team" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head centered" data-olx-key="teamIntro" data-olx-kind="component">
         <p class="eyebrow" data-olx-field="caption">{{ field('teamIntro', 'caption', 'Meet the stylists') }}</p>

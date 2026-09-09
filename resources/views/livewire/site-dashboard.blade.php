@@ -51,11 +51,11 @@
         </div>
     </div>
 
-    {{-- ── Three panes ── --}}
-    <div class="flex-1 flex flex-col lg:flex-row min-h-0">
+    {{-- ── Three panes: mobile swipe carousel · desktop side-by-side ── --}}
+    <x-carousel :labels="['📊 This week', '🔔 Activity', '⚡ Quick access']" :start="1">
 
         {{-- ════ LEFT RAIL ════ --}}
-        <aside class="w-full max-w-[25rem] mx-auto lg:mx-0 shrink-0 px-5 pb-6 space-y-4
+        <x-carousel.slide class="lg:!max-w-[25rem] px-5 pb-24 lg:pb-6 space-y-4 max-h-full overflow-y-auto
                       lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
 
             {{-- Site selector pill --}}
@@ -144,10 +144,10 @@
                 </a>
             </div>
 
-        </aside>
+        </x-carousel.slide>
 
         {{-- ════ CENTER — Activity Feed ════ --}}
-        <section class="flex-1 min-w-0 px-3 lg:px-5 pb-8 overflow-y-auto no-scrollbar main-body ">
+        <x-carousel.slide class="lg:flex-1 px-3 lg:px-5 pb-24 lg:pb-8 overflow-y-auto no-scrollbar main-body">
             <div class="max-w-[35rem] mx-auto">
 
             <div class="flex items-center justify-between mb-4 pt-1">
@@ -214,11 +214,11 @@
             @endforelse
 
             </div>
-        </section>
+        </x-carousel.slide>
 
         {{-- ════ RIGHT RAIL — Quick access ════ --}}
-        <aside class="w-full lg:w-[270px] xl:w-[290px] shrink-0 flex flex-col px-5 pb-6 gap-3
-                      lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+        <x-carousel.slide class="lg:!w-[270px] xl:!w-[290px] flex flex-col px-5 pb-24 lg:pb-6 gap-3
+                      max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] no-scrollbar">
 
             {{-- Quick links --}}
             <div class="flex items-center justify-between pt-1 shrink-0">
@@ -284,7 +284,7 @@
                 @endunless
             @endforelse
 
-        </aside>
+        </x-carousel.slide>
 
-    </div>
+        </x-carousel>
 </div>
