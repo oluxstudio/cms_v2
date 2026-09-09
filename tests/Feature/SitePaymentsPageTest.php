@@ -11,6 +11,8 @@ function paymentsPageSite(): array
     $owner = User::factory()->create();
     $site = Site::create(['user_id' => $owner->id, 'name' => 'pp-'.uniqid(), 'domain' => 'pp-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
     $site->members()->syncWithoutDetaching([$owner->id => ['role' => 'owner']]);
+    // Payments only appears in the nav once a payment-taking feature is on.
+    $site->enableFeature('store');
 
     return [$owner, $site];
 }
