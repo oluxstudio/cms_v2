@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\PageApiController;
 use App\Http\Controllers\Api\PostApiController;
+use App\Http\Controllers\Api\ProductApiController;
 use App\Http\Controllers\Api\ServiceApiController;
 use App\Http\Controllers\Api\SiteContentController;
 use App\Http\Controllers\Api\SitePublishController;
@@ -150,6 +151,12 @@ Route::get('/sites/{siteName}/booking/{reference}', [BookingApiController::class
 
 // ── Store: products + headless checkout (templates call these) ──────────────
 Route::get('/sites/{siteName}/products', [StoreApiController::class, 'index'])->name('api.store.products');
+// Product management for client tooling / MCP (Bearer · store.manage). The
+// /manage segment keeps these clear of the public /products/{slug} reads.
+Route::get('/sites/{siteName}/products/manage', [ProductApiController::class, 'index'])->middleware('auth.token');
+Route::post('/sites/{siteName}/products/manage', [ProductApiController::class, 'store'])->middleware('auth.token');
+Route::patch('/sites/{siteName}/products/manage/{slug}', [ProductApiController::class, 'update'])->middleware('auth.token');
+Route::delete('/sites/{siteName}/products/manage/{slug}', [ProductApiController::class, 'destroy'])->middleware('auth.token');
 Route::get('/sites/{siteName}/products/{slug}', [StoreApiController::class, 'show'])->name('api.store.product');
 Route::post('/sites/{siteName}/store/checkout', [StoreApiController::class, 'checkout'])->middleware(['throttle:booking-write', 'site.origin'])->name('api.store.checkout');
 Route::post('/sites/{siteName}/store/orders/{order}/confirm', [StoreApiController::class, 'confirmOrder'])->middleware(['throttle:track', 'site.origin'])->name('api.store.confirm');
@@ -309,6 +316,11 @@ Route::prefix('site')->middleware(['auth.token', 'token.site', 'throttle:token-a
 
     // Booking catalogue + availability (bookings.manage) — lets client tooling
     // (cms-seed.mjs) manage services like the rest of the content models.
+    Route::get('/products/manage', [ProductApiController::class, 'index']);
+    Route::post('/products/manage', [ProductApiController::class, 'store']);
+    Route::patch('/products/manage/{slug}', [ProductApiController::class, 'update']);
+    Route::delete('/products/manage/{slug}', [ProductApiController::class, 'destroy']);
+
     Route::get('/services', [ServiceApiController::class, 'index']);
     Route::post('/services', [ServiceApiController::class, 'store']);
     Route::patch('/services/{slug}', [ServiceApiController::class, 'update']);
