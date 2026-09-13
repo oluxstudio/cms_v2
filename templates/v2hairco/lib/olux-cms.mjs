@@ -125,6 +125,17 @@ export function createCms({ url, site, key = '' }) {
       settings: p => ctx('/booking-settings', { method: 'PATCH', body: p }),
     },
 
+    /** Store products. Public reads need no key; manage needs store.manage. */
+    products: {
+      list: () => pub('/products'),
+      get: slug => pub(`/products/${encodeURIComponent(slug)}`),
+      // manage (store.manage):
+      listAll: () => ctx('/products/manage'),
+      create: p => ctx('/products/manage', { method: 'POST', body: p }),
+      update: (slug, p) => ctx(`/products/manage/${encodeURIComponent(slug)}`, { method: 'PATCH', body: p }),
+      remove: slug => ctx(`/products/manage/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
+    },
+
     // ── MANAGE (management key · server-side only) ───────────────────────
 
     components: {

@@ -7,6 +7,9 @@
         $donutColors = [$accent, '#f59e0b', '#10b981', '#ec4899'];
     @endphp
 
+    <x-carousel :labels="['📊 Analytics', '🧾 Invoices']" :start="1" class="lg:flex-col">
+    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+
     {{-- ══ Hero greeting ══ --}}
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
@@ -179,6 +182,9 @@
                     style="background:{{ $accent }}">✨ Generate draft</button>
         </div>
     </div>
+    </x-carousel.slide>
+
+    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {{-- ── New invoices (drafts, not yet sent) ── --}}
         <div class="lg:col-span-2">
@@ -312,6 +318,9 @@
         .ivc .ivc-ghost { transition: opacity .12s; }
         .ivc .ivc-bar:hover .ivc-ghost { opacity: .75; }
     </style>
+
+    </x-carousel.slide>
+    </x-carousel>
 
     {{-- ══════════ CREATE / EDIT — form lightbox ══════════ --}}
     @if($formOpen)

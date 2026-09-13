@@ -10,6 +10,8 @@ class FakeLlmDriver implements LlmDriverInterface
 {
     public array $seenSystemPrompts = [];
 
+    public array $seenMessages = [];
+
     public function __construct(
         public string $answer = 'Here you go.',
         public ?string $callTool = null,
@@ -19,13 +21,14 @@ class FakeLlmDriver implements LlmDriverInterface
     public function chat(string $systemPrompt, array $messages, array $tools, callable $executeTool): LlmResult
     {
         $this->seenSystemPrompts[] = $systemPrompt;
+        $this->seenMessages[] = $messages;
         $calls = 0;
         if ($this->callTool !== null) {
             $executeTool($this->callTool, $this->toolInput);
             $calls = 1;
         }
 
-        return new LlmResult($this->answer, 111, 42, $calls);
+        return new LlmResult($this->answer, 111, 42, $calls, 7, 9);
     }
 
     public function prefersCompactPrompt(): bool

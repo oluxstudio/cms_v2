@@ -24,6 +24,27 @@ class DonateController extends Controller
         $site = $this->site($siteName);
         $config = $site->feature('donations');
 
+        // Prefer a page INSIDE the site's own template (scaffolded on demand,
+        // chrome-wrapped, not in the menu) — the standalone view below is the
+        // fallback for sites without a rendered template shell.
+        if ($site->templatePreviewUrl()) {
+            if (! $site->pages()->where('url', '/donate')->exists()) {
+                try {
+                    app(\App\Services\TemplateScaffolder::class)->applyPages($site, [[
+                        'name' => 'Donate',
+                        'url' => '/donate',
+                        'keywords' => 'donate, support',
+                        'blocks' => [['type' => 'app:'.$site->renderTemplateKey().':donate', 'name' => 'Donate', 'nodes' => []]],
+                    ]]);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+            if ($url = $site->templatePreviewUrl('/donate')) {
+                return redirect($url);
+            }
+        }
+
         $suggested = collect(explode(',', (string) ($config['suggested_amounts'] ?? '5,10,25,50')))
             ->map(fn ($v) => (int) trim($v))
             ->filter()
@@ -70,8 +91,8 @@ class DonateController extends Controller
         try {
             $session = $gateway->createCheckout($site, new CheckoutRequest(
                 lines: [new CheckoutLine('Donation to '.ucwords(str_replace('-', ' ', $site->name)), $cents, $currency)],
-                successUrl: url($site->name.'/donate/success').'?session_id={CHECKOUT_SESSION_ID}',
-                cancelUrl: url($site->name.'/donate'),
+                successUrl: url('preview/'.$site->name.'/donate/success').'?session_id={CHECKOUT_SESSION_ID}',
+                cancelUrl: url('preview/'.$site->name.'/donate'),
                 metadata: ['donation_id' => $donation->id, 'site_id' => $site->id],
                 customerEmail: $data['email'] ?? null,
             ));
@@ -91,6 +112,19 @@ class DonateController extends Controller
     {
         $site = $this->site($siteName);
         $donation = $site->donations()->where('stripe_session_id', $request->query('session_id'))->first();
+
+        // Webhooks don't reach local/dev hosts — confirm with the gateway
+        // directly so the donation never sticks on "pending" after payment.
+        if ($donation && $donation->status === 'pending') {
+            try {
+                if ($this->payments->for($site)->checkoutIsPaid($site, (string) $donation->stripe_session_id)) {
+                    $donation->markPaid();
+                    $donation->refresh();
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
 
         return view('public.donate.success', compact('site', 'donation'));
     }

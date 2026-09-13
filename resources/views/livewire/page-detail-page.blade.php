@@ -10,7 +10,7 @@
         <div class="min-w-0 flex-1">
             <a href="{{ route('pages', ['siteID' => $site->name]) }}" class="text-xs font-semibold text-gray-400 hover:text-indigo-500">← Pages</a>
             <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white truncate leading-tight">{{ $page->name }}</h1>
-            <p class="text-xs text-gray-400 font-mono">{{ $page->url }}</p>
+            <p class="text-xs font-medium text-gray-600 dark:text-gray-300 font-mono">{{ $page->url }}</p>
         </div>
         <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full {{ $page->is_published ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-200 text-gray-600 dark:bg-black/40 dark:text-gray-300' }}">
             {{ $page->is_published ? 'Live' : 'Draft' }}

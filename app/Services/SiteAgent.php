@@ -8,6 +8,8 @@ use App\Models\Site;
 use App\Models\User;
 use App\Modules\ModuleRegistry;
 use App\Services\Ai\SiteKnowledge;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * LLM front-end for "prompting a site".
@@ -116,11 +118,44 @@ class SiteAgent
     ];
 
     /**
+     * Tool results too time-sensitive to serve from the answer cache.
+     */
+    private const UNCACHEABLE_TOOLS = [
+        'get_sales_stats', 'get_booking_stats', 'get_traffic_stats',
+        'get_leads_stats', 'list_recent_orders',
+    ];
+
+    /**
+     * Invalidate the site's cached answers — call whenever site content changes.
+     * A version counter (not tags) so it works on every cache store.
+     */
+    public static function bumpAnswerCache(string|int $siteId): void
+    {
+        if (! Cache::add("ai_answer_ver:{$siteId}", 2)) {
+            Cache::increment("ai_answer_ver:{$siteId}");
+        }
+    }
+
+    private static function answerCacheKey(string|int $siteId, string $prompt): string
+    {
+        $ver = (int) Cache::get("ai_answer_ver:{$siteId}", 1);
+
+        return "ai_answer:{$siteId}:{$ver}:".md5(mb_strtolower(trim((string) preg_replace('/\s+/', ' ', $prompt))));
+    }
+
+    /**
      * @param  array<int,array{role:string,text:string}>  $history  Prior plain-text turns.
      * @return array{ok:bool,text:string,built:bool,tools:array<int,string>}
      */
     public function ask(Site $site, User $user, string $prompt, array $history = []): array
     {
+        // Answer cache — only ever consulted for history-free questions (follow-ups
+        // like "make it blue" depend on context and must never be served stale).
+        $cacheKey = $history === [] ? self::answerCacheKey($site->id, $prompt) : null;
+        if ($cacheKey && is_array($hit = Cache::get($cacheKey))) {
+            return ['ok' => true, 'text' => (string) $hit['text'], 'built' => false, 'page' => null, 'tools' => [], 'cached' => true];
+        }
+
         $system = $this->systemPrompt($site, $user);
         $toolDefs = $this->tools->definitions($site, $user);
 
@@ -134,27 +169,30 @@ class SiteAgent
         };
 
         $messages = [];
-        foreach (array_slice($history, -8) as $turn) {
+        foreach (array_slice($history, -(int) config('services.llm.history_turns', 6)) as $turn) {
             $messages[] = [
                 'role' => $turn['role'] === 'assistant' ? 'assistant' : 'user',
-                'content' => $turn['text'],
+                'content' => Str::limit((string) $turn['text'], 1500),
             ];
         }
-        $messages[] = ['role' => 'user', 'content' => $prompt];
 
         // RAG: pull the most relevant passages of the site's own content into
-        // the prompt, and keep the knowledge base fresh in the background.
+        // the USER message (never the system prompt — that must stay byte-stable
+        // so provider-side prompt caching keeps working), and keep the knowledge
+        // base fresh in the background.
+        $userContent = $prompt;
         try {
             $knowledge = app(SiteKnowledge::class);
             $knowledge->syncIfStale($site);
             if ($chunks = $knowledge->retrieve($site, $prompt)) {
-                $system .= "\n\n---\n\n## This business's own content (retrieved for this question)\n"
+                $userContent = "## Retrieved site content (context for this question)\n"
                     ."Use these passages when answering questions about the business itself:\n\n- "
-                    .implode("\n- ", $chunks);
+                    .implode("\n- ", $chunks)."\n\n---\n\n".$prompt;
             }
         } catch (\Throwable $e) {
             report($e); // knowledge is best-effort — never blocks the assistant
         }
+        $messages[] = ['role' => 'user', 'content' => $userContent];
 
         try {
             $result = $this->driver->chat($system, $messages, $toolDefs, $executeTool);
@@ -172,6 +210,8 @@ class SiteAgent
                 'model' => (string) config('services.'.config('services.llm.driver', 'anthropic').'.model', ''),
                 'input_tokens' => $result->inputTokens,
                 'output_tokens' => $result->outputTokens,
+                'cache_creation_tokens' => $result->cacheCreationTokens,
+                'cache_read_tokens' => $result->cacheReadTokens,
                 'tool_calls' => $result->toolCalls,
                 'created_at' => now(),
             ]);
@@ -180,6 +220,14 @@ class SiteAgent
         }
 
         $built = count(array_diff($executed, self::READ_ONLY_TOOLS)) > 0;
+
+        // Store read-only answers so identical first questions skip the model.
+        // Never cache turns that mutated anything or read time-sensitive data.
+        if ($cacheKey
+            && array_intersect($executed, SiteTools::MUTATING) === []
+            && array_intersect($executed, self::UNCACHEABLE_TOOLS) === []) {
+            Cache::put($cacheKey, ['text' => $text], 3600);
+        }
 
         // When something was built, point the preview at the page most likely just
         // worked on: the most-recently-updated published page.
@@ -296,12 +344,21 @@ class SiteAgent
             $base.'/references/analysis.md',
         ];
 
-        $chunks = [];
-        foreach ($parts as $path) {
-            if (! is_file($path)) {
-                return null;
+        // The ~45KB static instruction set is identical every turn — memoize the
+        // concatenation (byte-identical output keeps the provider prompt cache hot).
+        $joined = Cache::remember('ai_instruction_set:v1', 3600, function () use ($parts): string {
+            $chunks = [];
+            foreach ($parts as $path) {
+                if (! is_file($path)) {
+                    return ''; // sentinel: incomplete set → caller falls back
+                }
+                $chunks[] = trim((string) file_get_contents($path));
             }
-            $chunks[] = trim((string) file_get_contents($path));
+
+            return implode("\n\n---\n\n", $chunks);
+        });
+        if ($joined === '') {
+            return null;
         }
 
         $session = "## This session\nSelected site: \"{$site->name}\" (slug). "
@@ -309,7 +366,8 @@ class SiteAgent
             .'Act only on this site. Use tools to make real changes; confirm in one or two plain sentences.'
             ."\n\n".$this->moduleContext($site);
 
-        return implode("\n\n---\n\n", [...$chunks, $session]);
+        // Stable-first: the big static block leads; per-site session data trails it.
+        return implode("\n\n---\n\n", [$joined, $session]);
     }
 
     private function fallbackPrompt(Site $site, string $role, string $features): string

@@ -130,7 +130,7 @@ class DeepSeekDriver implements LlmDriverInterface
             'model' => $this->model,
             'messages' => $messages,
             'tools' => $tools,
-
+            'max_tokens' => (int) config('services.llm.max_tokens', 1024),
         ]);
 
         $text = '';

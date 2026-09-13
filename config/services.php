@@ -76,6 +76,13 @@ return [
         'driver' => env('LLM_DRIVER', 'anthropic'),
         // Assistant turns allowed per site per hour (abuse/cost guard).
         'per_hour' => (int) env('LLM_PER_HOUR', 30),
+        // Output cap per response — chat answers rarely need more (cloud drivers).
+        'max_tokens' => (int) env('LLM_MAX_TOKENS', 1024),
+        // RAG: how many chunks to inject, and the minimum cosine similarity.
+        'rag_chunks' => (int) env('LLM_RAG_CHUNKS', 4),
+        'rag_min_score' => (float) env('LLM_RAG_MIN_SCORE', 0.35),
+        // Conversation turns re-sent verbatim each ask.
+        'history_turns' => (int) env('LLM_HISTORY_TURNS', 6),
     ],
 
     // DeepSeek cloud API — fast, cheap (~$0.14/1M tokens), strong tool-calling.

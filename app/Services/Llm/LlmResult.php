@@ -10,5 +10,7 @@ final readonly class LlmResult
         public int $inputTokens = 0,
         public int $outputTokens = 0,
         public int $toolCalls = 0,
+        public int $cacheCreationTokens = 0,
+        public int $cacheReadTokens = 0,
     ) {}
 }

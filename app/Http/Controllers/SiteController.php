@@ -221,6 +221,13 @@ class SiteController extends Controller
         return view('estimates', compact('site'));
     }
 
+    public function polls($siteID)
+    {
+        $site = $this->findSiteBySlug($siteID);
+
+        return view('polls', compact('site'));
+    }
+
     public function donations($siteID)
     {
         $site = $this->findSiteBySlug($siteID);

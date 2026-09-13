@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Site;
 use App\Services\Ai\SiteKnowledge;
+use App\Services\SiteAgent;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -19,7 +20,10 @@ class SyncSiteKnowledge implements ShouldQueue
     public function handle(SiteKnowledge $knowledge): void
     {
         if ($site = Site::find($this->siteId)) {
-            $knowledge->sync($site);
+            if ($knowledge->sync($site) > 0) {
+                // Content changed outside the assistant — cached answers are stale.
+                SiteAgent::bumpAnswerCache($site->id);
+            }
         }
     }
 }

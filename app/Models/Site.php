@@ -117,10 +117,12 @@ class Site extends Model
                 $page = trim((string) $pageUrl, '/');
 
                 // Deep-link by PATH — the static shells route by URL path and
-                // ignore a ?page= param. Only when the generated page exists;
-                // CMS-only pages fall back to the shell root.
+                // ignore a ?page= param. Works when the page was prerendered,
+                // or when the SPA fallback can serve it and the CMS knows the
+                // page (template catch-all renders its wireframe client-side).
                 $path = '';
-                if ($page !== '' && is_file(public_path("{$base}/{$page}/index.html"))) {
+                if ($page !== '' && (is_file(public_path("{$base}/{$page}/index.html"))
+                    || (is_file(public_path("{$base}/200.html")) && $this->pages()->where('url', '/'.$page)->exists()))) {
                     $path = '/'.$page;
                 }
 

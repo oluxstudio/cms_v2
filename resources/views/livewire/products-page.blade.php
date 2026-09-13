@@ -1,15 +1,36 @@
-<div class="main-body p-6"
+<div class="h-full lg:overflow-y-auto p-5 sm:p-6"
      x-data="{ toast:'', toastType:'success' }"
      x-init="
         $watch('$wire.successMessage', v => { if(v){ toast=v; toastType='success'; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } });
         $watch('$wire.errorMessage',   v => { if(v){ toast=v; toastType='error';   setTimeout(()=>{ toast=''; $wire.errorMessage='';   }, 5000) } });
      ">
 
+    <x-carousel :labels="['📊 Stats', '🛍️ Products', '📈 Insights']" :start="1">
+
+    {{-- ════ LEFT RAIL: stat tiles ════ --}}
+    <x-carousel.slide class="lg:!w-[280px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+    {{-- Stat tiles — app tile theme --}}
+    @php $allProducts = $site->products()->get(['is_active', 'inventory']); @endphp
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile accent="ink" :value="$allProducts->count()" label="products in the store"
+                :sub="$this->productLimit.' allowed on your plan'" />
+        <x-tile accent="lime" :value="$allProducts->where('is_active', true)->count()" label="active &amp; visible"
+                :sub="($allProducts->count() - $allProducts->where('is_active', true)->count()).' hidden'" />
+        <x-tile accent="lavender" :value="number_format($allProducts->sum(fn ($p) => (int) $p->inventory))" label="units in stock"
+                sub="across all products" />
+        <x-tile accent="cocoa" :value="$allProducts->where('inventory', 0)->count()" label="out of stock"
+                :sub="$allProducts->where('inventory', 0)->count() > 0 ? 'needs restocking' : 'all stocked'" />
+    </div>
+    </x-carousel.slide>
+
+    {{-- ════ MAIN: products, centered column ════ --}}
+    <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+    <div class="max-w-[50rem] mx-auto">
     {{-- Header --}}
-    <div class="flex items-start justify-between mb-5">
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div>
             <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">Store</h1>
-            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">
+            <p class="mt-1 text-sm font-medium text-gray-600 dark:text-gray-300">
                 {{ $this->products->total() }}/{{ $this->productLimit }} products ·
                 <a href="{{ url($site->name.'/store') }}" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline">View public storefront ↗</a>
             </p>
@@ -34,54 +55,18 @@
     </div>
     @endunless
 
-    {{-- Stat tiles — app tile theme --}}
-    @php $allProducts = $site->products()->get(['is_active', 'inventory']); @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-        <x-tile accent="ink" :value="$allProducts->count()" label="products in the store"
-                :sub="$this->productLimit.' allowed on your plan'" />
-        <x-tile accent="lime" :value="$allProducts->where('is_active', true)->count()" label="active &amp; visible"
-                :sub="($allProducts->count() - $allProducts->where('is_active', true)->count()).' hidden'" />
-        <x-tile accent="lavender" :value="number_format($allProducts->sum(fn ($p) => (int) $p->inventory))" label="units in stock"
-                sub="across all products" />
-        <x-tile accent="cocoa" :value="$allProducts->where('inventory', 0)->count()" label="out of stock"
-                :sub="$allProducts->where('inventory', 0)->count() > 0 ? 'needs restocking' : 'all stocked'" />
-    </div>
-
-    {{-- Product insights --}}
-    @php $ins = $this->insights; @endphp
-    @if($ins['best_labels'] !== [] || $ins['popular'] !== [] || $ins['reviewed'] !== [])
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
-            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-1">Best sellers</h2>
-            <p class="text-xs text-gray-400 mb-2">Units sold, last 30 days.</p>
-            <div id="store-best-chart" wire:ignore></div>
-        </div>
-        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
-            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-3">Most popular</h2>
-            <p class="text-xs text-gray-400 mb-2">Storefront views &amp; basket adds, 30 days.</p>
-            @if(count($ins['popular'])) <x-analytics.bar-list :items="$ins['popular']" />
-            @else <p class="text-sm text-gray-400 py-4">No interest data yet.</p> @endif
-        </div>
-        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
-            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-3">Most reviewed</h2>
-            <p class="text-xs text-gray-400 mb-2">Approved reviews with average rating.</p>
-            @if(count($ins['reviewed'])) <x-analytics.bar-list :items="$ins['reviewed']" />
-            @else <p class="text-sm text-gray-400 py-4">No reviews yet.</p> @endif
-        </div>
-    </div>
-    @endif
-
     {{-- Category filter chips --}}
     @if($this->categories !== [])
     <div class="flex flex-wrap gap-1.5 mb-4">
         <button wire:click="filterCategory('')" class="px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors
-                {{ $categoryFilter === '' ? 'bg-indigo-600 text-white border-indigo-600' : 'text-gray-500 border-gray-200 dark:border-white/[0.08]' }}">All</button>
+                {{ $categoryFilter === '' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-[#1d1e2a] shadow-sm text-gray-500 border-gray-200 dark:border-white/[0.08]' }}">All</button>
         @foreach($this->categories as $cat)
             <button wire:click="filterCategory('{{ $cat }}')" class="px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors
-                    {{ $categoryFilter === $cat ? 'bg-indigo-600 text-white border-indigo-600' : 'text-gray-500 border-gray-200 dark:border-white/[0.08]' }}">{{ $cat }}</button>
+                    {{ $categoryFilter === $cat ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-[#1d1e2a] shadow-sm text-gray-500 border-gray-200 dark:border-white/[0.08]' }}">{{ $cat }}</button>
         @endforeach
     </div>
     @endif
+
 
     {{-- Search --}}
     <div class="relative mb-5 max-w-xs">
@@ -258,6 +243,36 @@
             </form>
     </x-lightbox>
     @endif
+    </div>{{-- /centered 50rem column --}}
+    </x-carousel.slide>
+
+    {{-- ════ RIGHT RAIL: product insights ════ --}}
+    <x-carousel.slide class="lg:!w-[340px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+    {{-- Product insights --}}
+    @php $ins = $this->insights; @endphp
+    @if($ins['best_labels'] !== [] || $ins['popular'] !== [] || $ins['reviewed'] !== [])
+    <div class="grid grid-cols-1 gap-4">
+        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
+            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-1">Best sellers</h2>
+            <p class="text-xs text-gray-400 mb-2">Units sold, last 30 days.</p>
+            <div id="store-best-chart" wire:ignore></div>
+        </div>
+        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
+            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-3">Most popular</h2>
+            <p class="text-xs text-gray-400 mb-2">Storefront views &amp; basket adds, 30 days.</p>
+            @if(count($ins['popular'])) <x-analytics.bar-list :items="$ins['popular']" />
+            @else <p class="text-sm text-gray-400 py-4">No interest data yet.</p> @endif
+        </div>
+        <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
+            <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-3">Most reviewed</h2>
+            <p class="text-xs text-gray-400 mb-2">Approved reviews with average rating.</p>
+            @if(count($ins['reviewed'])) <x-analytics.bar-list :items="$ins['reviewed']" />
+            @else <p class="text-sm text-gray-400 py-4">No reviews yet.</p> @endif
+        </div>
+    </div>
+    @endif
+    </x-carousel.slide>
+    </x-carousel>
 
     {{-- Toast --}}
     <div x-show="toast" x-cloak

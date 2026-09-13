@@ -8,13 +8,17 @@ import CtaBlock from '~/components/CtaBlock.vue'
 import SiteFooter from '~/components/SiteFooter.vue'
 import AppointmentBlock from '~/components/AppointmentBlock.vue'
 import ContactBlock from '~/components/ContactBlock.vue'
+import QuoteBlock from '~/components/QuoteBlock.vue'
 import HeroBlock from '~/components/HeroBlock.vue'
 import ServicesBlock from '~/components/ServicesBlock.vue'
 import PricingBlock from '~/components/PricingBlock.vue'
 import ShopBlock from '~/components/ShopBlock.vue'
+import DonateBlock from '~/components/DonateBlock.vue'
+import PollBlock from '~/components/PollBlock.vue'
+import ProductBlock from '~/components/ProductBlock.vue'
 
 const route = useRoute()
-const oluxBlocks: Record<string, any> = { 'site-header': SiteHeader, 'about': AboutBlock, 'stats': StatsBlock, 'team': TeamBlock, 'testimonials': TestimonialsBlock, 'cta': CtaBlock, 'site-footer': SiteFooter, 'appointment': AppointmentBlock, 'contact': ContactBlock, 'hero': HeroBlock, 'services': ServicesBlock, 'pricing': PricingBlock, 'shop': ShopBlock }
+const oluxBlocks: Record<string, any> = { 'site-header': SiteHeader, 'about': AboutBlock, 'stats': StatsBlock, 'team': TeamBlock, 'testimonials': TestimonialsBlock, 'cta': CtaBlock, 'site-footer': SiteFooter, 'appointment': AppointmentBlock, 'contact': ContactBlock, 'quote': QuoteBlock, 'hero': HeroBlock, 'services': ServicesBlock, 'pricing': PricingBlock, 'shop': ShopBlock, 'donate': DonateBlock, 'poll': PollBlock, 'product': ProductBlock }
 // Reactive URL getter — this component is reused across navigations.
 const oluxPage = useOluxPageOrder(() => route.path, oluxBlocks)
 </script>

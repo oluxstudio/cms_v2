@@ -23,6 +23,10 @@ class SiteKnowledge
     /** Queue a re-sync when the site's knowledge is older than an hour. */
     public function syncIfStale(Site $site): void
     {
+        // Check freshness at most hourly — not on every single ask.
+        if (! \Cache::add("kb_sync_check:{$site->id}", 1, 3600)) {
+            return;
+        }
         $latest = AiChunk::where('site_id', $site->id)->max('updated_at');
         if ($latest === null || now()->parse($latest)->lt(now()->subHour())) {
             SyncSiteKnowledge::dispatch($site->id);
@@ -62,8 +66,11 @@ class SiteKnowledge
     }
 
     /** @return list<string> the most relevant chunk texts for the question */
-    public function retrieve(Site $site, string $question, int $k = 6): array
+    public function retrieve(Site $site, string $question, ?int $k = null): array
     {
+        $k ??= (int) config('services.llm.rag_chunks', 4);
+        $minScore = (float) config('services.llm.rag_min_score', 0.35);
+
         $chunks = AiChunk::where('site_id', $site->id)->get(['content', 'embedding']);
         if ($chunks->isEmpty()) {
             return [];
@@ -71,9 +78,11 @@ class SiteKnowledge
 
         $qVector = $this->embedder->embed($question);
         if ($qVector) {
+            // Filter by relevance FIRST, then take the top k of what remains.
             $ranked = $chunks->filter(fn ($c) => is_array($c->embedding))
                 ->map(fn ($c) => ['content' => $c->content, 'score' => Embedder::cosine($qVector, $c->embedding)])
-                ->sortByDesc('score')->take($k)->filter(fn ($r) => $r['score'] > 0.3);
+                ->filter(fn ($r) => $r['score'] > $minScore)
+                ->sortByDesc('score')->take($k);
             if ($ranked->isNotEmpty()) {
                 return $ranked->pluck('content')->values()->all();
             }

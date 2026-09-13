@@ -20,12 +20,12 @@
             </div>
             <div>
                 <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-none">Hi, {{ $firstName }}!</h1>
-                <p class="text-xs text-gray-400 mt-0.5">{{ now()->format('l, F j') }}</p>
+                <p class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">{{ now()->format('l, F j') }}</p>
             </div>
         </div>
 
         <div class="hidden md:flex items-center gap-2">
-            <p class="text-sm font-semibold text-gray-400">{{ $siteTitle }}</p>
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ $siteTitle }}</p>
             <a href="{{ $site->templatePreviewUrl() }}" target="_blank" rel="noopener"
                title="Your site exactly as visitors see it"
                class="text-xs font-semibold text-indigo-400 hover:text-indigo-500 whitespace-nowrap">Live preview ↗</a>
@@ -55,7 +55,7 @@
     <x-carousel :labels="['📊 This week', '🔔 Activity', '⚡ Quick access']" :start="1">
 
         {{-- ════ LEFT RAIL ════ --}}
-        <x-carousel.slide class="lg:!max-w-[25rem] px-5 pb-24 lg:pb-6 space-y-4 max-h-full overflow-y-auto
+        <x-carousel.slide class="lg:!w-[25rem] lg:shrink-0 px-5 pb-24 lg:pb-6 space-y-4 max-h-full overflow-y-auto
                       lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
 
             {{-- Site selector pill --}}
@@ -154,10 +154,9 @@
                 <h2 class="text-base font-extrabold text-gray-900 dark:text-white tracking-tight">Recent Activity</h2>
             </div>
 
-            {{-- Activity cards — grouped by what they relate to --}}
+            {{-- Activity cards — strictly newest-first; consecutive entries of
+                 the same category merge into one expandable timeline tile. --}}
             @php
-                // One group per entity — uploads land in Assets, page edits in
-                // Pages, submissions in Forms, and so on.
                 $activityGroup = fn ($t) => match ($t) {
                     'page' => 'Pages',
                     'media' => 'Assets',
@@ -170,13 +169,21 @@
                     'member' => 'Team',
                     default => 'Other',
                 };
-                $activityGroups = collect($recentActivities)->groupBy(fn ($a) => $activityGroup($a['entity_type'] ?? ''));
-                $groupOrder = collect(['Pages', 'Assets', 'Components', 'Forms', 'Leads', 'Bookings', 'Invoices', 'Tasks', 'Team', 'Other'])
-                    ->filter(fn ($g) => $activityGroups->has($g));
+                // Run-length grouping: keep chronological order, only merging
+                // neighbours that share a category.
+                $activityRuns = [];
+                foreach ($recentActivities as $a) {
+                    $label = $activityGroup($a['entity_type'] ?? '');
+                    if ($activityRuns !== [] && $activityRuns[array_key_last($activityRuns)]['label'] === $label) {
+                        $activityRuns[array_key_last($activityRuns)]['items'][] = $a;
+                    } else {
+                        $activityRuns[] = ['label' => $label, 'items' => [$a]];
+                    }
+                }
             @endphp
 
-            @forelse ($groupOrder as $groupLabel)
-            @php $groupItems = $activityGroups[$groupLabel]; $groupCount = $groupItems->count(); @endphp
+            @forelse ($activityRuns as $run)
+            @php $groupLabel = $run['label']; $groupItems = collect($run['items']); $groupCount = $groupItems->count(); @endphp
             {{-- ONE tile per group: latest entry shown, the rest expand inside. --}}
             <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl shadow-sm border border-gray-100/80 dark:border-white/[0.05] mb-3 overflow-hidden hover:shadow-md transition-shadow"
                  x-data="{ open: false }">

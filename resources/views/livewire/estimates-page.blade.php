@@ -13,13 +13,32 @@
     $currency = strtolower((string) (((array) $site->feature('estimator'))['currency'] ?? 'gbp'));
     $selected = $this->selected;
 @endphp
-<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+<div class="h-full lg:overflow-y-auto p-5 sm:p-6">
 
+    <x-carousel :labels="['📊 Stats', '🧮 Estimates', '🛠 Manage']" :start="1">
+
+    {{-- ════ LEFT RAIL: stat tiles ════ --}}
+    <x-carousel.slide class="lg:!w-[280px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+    {{-- Stat tiles — app tile theme --}}
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile accent="ink" :value="$counts['all'] ?? 0" label="estimate requests" sub="all time" />
+        <x-tile accent="lime" :value="$counts['new'] ?? 0" label="new leads" sub="need a follow-up" />
+        <x-tile accent="lavender" :value="$counts['won'] ?? 0" label="won" :sub="Money::format((int) $wonValue, $currency).' value'" />
+        <x-tile accent="cocoa" :value="$this->estimators->count()" label="estimators"
+                :sub="$this->estimators->sum('fields_count').' fields · '.$this->estimators->sum('calcs_count').' calcs'" />
+    </div>
+    </x-carousel.slide>
+
+    {{-- ════ MAIN: estimators + requests, centered column ════ --}}
+    <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+    <div class="max-w-[50rem] mx-auto">
     {{-- Header --}}
     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Estimates</h1>
-            <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Create named estimators — each with its own fields, calculator-built formulas and customer email.</p>
+            <button wire:click="openEstimatorPage" type="button"
+               class="inline-flex items-center gap-1 mt-0.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Open estimator page ↗</button>
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mt-0.5">Create named estimators — each with its own fields, calculator-built formulas and customer email.</p>
         </div>
         <div class="relative w-full sm:w-auto">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -32,56 +51,8 @@
         <p class="mb-4 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-sm text-rose-600 dark:text-rose-400">{{ $errorMessage }}</p>
     @endif
 
-    {{-- Stat tiles — app tile theme --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <x-tile accent="ink" :value="$counts['all'] ?? 0" label="estimate requests" sub="all time" />
-        <x-tile accent="lime" :value="$counts['new'] ?? 0" label="new leads" sub="need a follow-up" />
-        <x-tile accent="lavender" :value="$counts['won'] ?? 0" label="won" :sub="Money::format((int) $wonValue, $currency).' value'" />
-        <x-tile accent="cocoa" :value="$this->estimators->count()" label="estimators"
-                :sub="$this->estimators->sum('fields_count').' fields · '.$this->estimators->sum('calcs_count').' calcs'" />
-    </div>
 
     @if ($canManage)
-    {{-- ═══ ESTIMATORS ═══ --}}
-    <div class="flex items-center gap-2 mb-3">
-        <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">Estimators</p>
-        <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d9f068;color:#2b3110">{{ $this->estimators->count() }}</span>
-        <div class="flex-1 border-t border-gray-100 dark:border-white/[0.06]"></div>
-    </div>
-
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-4">
-        @foreach ($this->estimators as $est)
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border {{ $selectedId === $est->id ? 'border-indigo-400 dark:border-indigo-500/50 ring-2 ring-indigo-500/20' : 'border-gray-100 dark:border-white/[0.05]' }} shadow-sm p-4">
-            <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                    <p class="text-sm font-bold text-gray-900 dark:text-white truncate">🧮 {{ $est->name }}</p>
-                    <p class="text-[11px] text-gray-400 mt-0.5">{{ $est->fields_count }} {{ Str::plural('field', $est->fields_count) }} · {{ $est->calcs_count }} {{ Str::plural('calc', $est->calcs_count) }} · {{ $est->estimates_count }} {{ Str::plural('lead', $est->estimates_count) }}</p>
-                </div>
-            </div>
-            <div class="flex gap-2 mt-3">
-                <button wire:click="select('{{ $est->id }}')"
-                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold {{ $selectedId === $est->id ? 'bg-indigo-600 text-white' : 'border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600' }} transition-colors">
-                    {{ $selectedId === $est->id ? 'Editing…' : 'Edit' }}
-                </button>
-                <button wire:click="deleteEstimator('{{ $est->id }}')" data-confirm="Delete the {{ $est->name }} estimator? Its fields and calculations go with it (captured leads stay)."
-                        class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
-            </div>
-        </div>
-        @endforeach
-
-        {{-- New estimator: name it first, build inside after --}}
-        <form wire:submit="createEstimator"
-              class="rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/[0.08] p-4 flex flex-col justify-center gap-2 min-h-[104px]">
-            <label class="text-[11px] font-bold text-gray-500 dark:text-gray-400">New estimator — name it first</label>
-            <div class="flex gap-2">
-                <input wire:model="newEstimatorName" type="text" placeholder="e.g. Cleaner" required
-                       class="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
-                <button type="submit" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shrink-0">Create</button>
-            </div>
-            @error('newEstimatorName')<p class="text-[11px] text-rose-500">{{ $message }}</p>@enderror
-        </form>
-    </div>
-
     {{-- ═══ EDITOR for the selected estimator ═══ --}}
     @if ($selected)
     <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-indigo-100 dark:border-indigo-500/20 shadow-sm mb-6 overflow-hidden" wire:key="editor-{{ $selected->id }}">
@@ -321,7 +292,7 @@
                         class="px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize border transition-colors
                             {{ $statusFilter === $st
                                 ? 'border-transparent bg-indigo-600 text-white'
-                                : 'border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-indigo-400' }}">
+                                : 'bg-white dark:bg-[#1d1e2a] shadow-sm border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-indigo-400' }}">
                     {{ $st }} <span class="opacity-60">{{ $counts[$st] ?? 0 }}</span>
                 </button>
             @endforeach
@@ -388,4 +359,87 @@
         </div>
         @endforelse
     </div>
+    </div>{{-- /centered 50rem column --}}
+    </x-carousel.slide>
+
+    {{-- ════ RIGHT RAIL: live visitor preview + how it works ════ --}}
+    <x-carousel.slide class="lg:!w-[340px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+        <div class="space-y-4">
+            @if ($canManage)
+            {{-- 1 · Create: the primary action sits on top --}}
+            <form wire:submit="createEstimator"
+                  class="rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/[0.08] p-4 flex flex-col justify-center gap-2">
+                <label class="text-[11px] font-bold text-gray-500 dark:text-gray-400">New estimator — name it first</label>
+                <div class="flex gap-2">
+                    <input wire:model="newEstimatorName" type="text" placeholder="e.g. Cleaner" required
+                           class="flex-1 min-w-0 px-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                    <button type="submit" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shrink-0">Create</button>
+                </div>
+                @error('newEstimatorName')<p class="text-[11px] text-rose-500">{{ $message }}</p>@enderror
+            </form>
+
+            {{-- 2 · Manage what exists --}}
+            @if ($this->estimators->isNotEmpty())
+            <div class="flex items-center gap-2 pt-1">
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-600 dark:text-gray-300">Your estimators</p>
+                <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d9f068;color:#2b3110">{{ $this->estimators->count() }}</span>
+                <div class="flex-1 border-t border-gray-100 dark:border-white/[0.06]"></div>
+            </div>
+
+            <div class="grid gap-3">
+                @foreach ($this->estimators as $est)
+                <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border {{ $selectedId === $est->id ? 'border-indigo-400 dark:border-indigo-500/50 ring-2 ring-indigo-500/20' : 'border-gray-100 dark:border-white/[0.05]' }} shadow-sm p-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-gray-900 dark:text-white truncate">🧮 {{ $est->name }}</p>
+                            <p class="text-[11px] text-gray-400 mt-0.5">{{ $est->fields_count }} {{ Str::plural('field', $est->fields_count) }} · {{ $est->calcs_count }} {{ Str::plural('calc', $est->calcs_count) }} · {{ $est->estimates_count }} {{ Str::plural('lead', $est->estimates_count) }}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button wire:click="select('{{ $est->id }}')"
+                                class="px-3.5 py-1.5 rounded-xl text-xs font-semibold {{ $selectedId === $est->id ? 'bg-indigo-600 text-white' : 'border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600' }} transition-colors">
+                            {{ $selectedId === $est->id ? 'Editing…' : 'Edit' }}
+                        </button>
+                        <button wire:click="deleteEstimator('{{ $est->id }}')" data-confirm="Delete the {{ $est->name }} estimator? Its fields and calculations go with it (captured leads stay)."
+                                class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @endif
+            @endif
+
+            {{-- ── Step-by-step tutorial ── --}}
+            <div class="rounded-2xl overflow-hidden text-white" style="background:linear-gradient(150deg,#1f2330,#11131c)" x-data="{ step: 0 }">
+                <div class="p-4 pb-3">
+                    <p class="text-sm font-bold">📖 Estimator tutorial</p>
+                    <p class="text-[11px] text-white/60 mt-0.5">From blank to paying customers, in 6 steps. Tap a step to expand it.</p>
+                </div>
+                @foreach([
+                    ['1', 'Create your estimator', 'Type a name in <b>“New estimator”</b> just above — one per service you quote, e.g. <i>Home cleaning</i> or <i>End-of-tenancy</i> — and hit <b>Create</b>. Its editor opens in the middle of the page; reopen it any time with <b>Edit</b> on the card.'],
+                    ['2', 'Ask the right questions', 'In <b>1 · Fields</b> add what visitors must answer:<br>· <b>Number</b> — “How many bedrooms?”<br>· <b>Choice</b> — “How big are the rooms?” with one option per line, each worth a number: <span class="font-mono text-[10px]">Small = 0.8</span>, <span class="font-mono text-[10px]">Average = 1</span>, <span class="font-mono text-[10px]">Large = 1.3</span><br>· <b>Yes/no</b> — “Deep clean?” (yes = 1, no = 0)<br>Tick <b>required</b> on anything you can\'t quote without.'],
+                    ['3', 'Set your own numbers', 'Add <b>Set data</b> (fixed) fields for what only you control — <i>Hourly rate = 18</i>, <i>Base hours = 1.5</i>, <i>Callout fee = 25</i>. Visitors never see them, but your formulas can use them. Raise a rate here once and every future quote follows.'],
+                    ['4', 'Write the formula', 'In <b>2 · Calculations</b>, name a result line and tap your fields like calculator keys — e.g.<br><span class="font-mono text-[10px] block bg-white/10 rounded-lg px-2 py-1.5 mt-1">(base_hours + bedrooms × 0.75 + bathrooms × 0.5) × room_size × hourly_rate</span>Pick a format — <b>money</b>, <b>hours</b> or plain number — and Save. Add one calc per line you want on the quote (a time line AND a cost line works nicely). Typos are caught before saving.'],
+                    ['5', 'Personalise the email', 'In <b>3 · Customer email</b> draft what the visitor receives, using placeholders like <span class="font-mono text-[10px]">{name}</span>, <span class="font-mono text-[10px]">{service}</span>, <span class="font-mono text-[10px]">{cost}</span> and <span class="font-mono text-[10px]">{reference}</span> — they fill in automatically for every quote.'],
+                    ['6', 'Go live & handle leads', 'You\'re done — the quote form is already live on your website\'s <b>Contact page</b> and the standalone page (<b>“Open estimator page ↗”</b> above; open it to test as a visitor). When someone requests a quote you\'re emailed, and the lead lands in the <b>requests list</b> in the middle of this page — work it New → Contacted → Won.'],
+                ] as [$n, $title, $body])
+                <button type="button" @click="step = step === {{ $n }} ? 0 : {{ $n }}"
+                        class="w-full flex items-center gap-2.5 px-4 py-2.5 text-left border-t border-white/[0.07] hover:bg-white/[0.04] transition-colors">
+                    <span class="w-5 h-5 rounded-full grid place-items-center text-[10px] font-extrabold shrink-0"
+                          :class="step === {{ $n }} ? '' : 'bg-white/10'" :style="step === {{ $n }} ? 'background:#d9f068;color:#2b3110' : ''">{{ $n }}</span>
+                    <span class="text-xs font-bold flex-1">{{ $title }}</span>
+                    <svg class="w-3 h-3 opacity-50 transition-transform" :class="step === {{ $n }} ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="step === {{ $n }}" x-collapse x-cloak>
+                    <p class="px-4 pb-3 pl-11 text-[11px] leading-relaxed text-white/75">{!! $body !!}</p>
+                </div>
+                @endforeach
+                <div class="px-4 py-3 border-t border-white/[0.07]">
+                    <p class="text-[10px] text-white/50">Changes go live instantly — the website quote form runs this same engine.</p>
+                </div>
+            </div>
+
+        </div>
+    </x-carousel.slide>
+    </x-carousel>
 </div>

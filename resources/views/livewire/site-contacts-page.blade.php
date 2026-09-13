@@ -12,11 +12,14 @@
 
 <div class="main-body p-6">
 
+    <x-carousel :labels="['📊 Overview', '👥 Contacts']" :start="1" class="lg:flex-col">
+    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+
     {{-- Header --}}
     <div class="flex items-start justify-between mb-5">
         <div>
             <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">Contacts</h1>
-            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">Leads captured from your forms, organised as a pipeline.</p>
+            <p class="mt-1 text-sm font-medium text-gray-600 dark:text-gray-300">Leads captured from your forms, organised as a pipeline.</p>
         </div>
         <a href="{{ url($site->name.'/forms') }}"
            class="flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
@@ -41,6 +44,9 @@
         </button>
     </div>
 
+    </x-carousel.slide>
+
+    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
     @if($view === 'pipeline')
     {{-- Pipeline filter pills + search --}}
     <div class="flex flex-wrap items-center gap-2 mb-5">
@@ -198,6 +204,9 @@
         </div>
     </div>
     @endif {{-- /sources --}}
+
+    </x-carousel.slide>
+    </x-carousel>
 
     {{-- ════════ Detail drawer ════════ --}}
     @if($this->selected)

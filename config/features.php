@@ -116,4 +116,17 @@ return [
         ],
     ],
 
+    'polls' => [
+        'key' => 'polls',
+        'name' => 'Polls',
+        'icon' => 'bar-chart',
+        'tagline' => 'Ask visitors a question, watch votes stream in live.',
+        'description' => 'Quick polls for your website: one question, up to 12 options, one deduplicated vote per visitor. Results update live in the admin.',
+        'needs_payments' => false,
+        'nav' => [
+            ['label' => 'Polls', 'seg' => 'polls'],
+        ],
+        'settings' => [],
+    ],
+
 ];

@@ -155,7 +155,7 @@ select:focus[data-flux-control] {
             color-mix(in srgb, var(--tertiary) 16%, var(--background)) 0%, transparent 55%),
         linear-gradient(180deg,
             var(--background) 0%,
-            color-mix(in srgb, var(--tertiary) 10%, var(--background)) 100%);
+            color-mix(in srgb, var(--tertiary) 10%, var(--tertiary)) 100%);
 }
 
 /* ── Reusable lightbox (components/lightbox.blade.php) ────────────────────
@@ -199,7 +199,7 @@ select:focus[data-flux-control] {
     position: absolute;
     transform: translate(-50%, -50%); /* top/left address the element's CENTER */
     border-radius: 90%;               /* soft-cornered square */
-    opacity: .11;
+    opacity: .21;
     filter: blur(3px);
     transition:
         top 8s cubic-bezier(.45, .05, .35, 1),

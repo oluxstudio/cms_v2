@@ -1,10 +1,33 @@
 <div class="h-full overflow-y-auto p-5 sm:p-6" wire:key="bookings-{{ $site->id }}">
 
+    <x-carousel :labels="['📊 Stats', '📅 Bookings', '🗓 Calendar']" :start="1">
+
+    {{-- ════ LEFT RAIL: stat tiles ════ --}}
+    <x-carousel.slide class="lg:!w-[280px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+    {{-- Stat tiles — app-wide tile format (click opens the matching list) --}}
+    @php $t = $this->tiles; @endphp
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile label="new bookings received today" :value="$t['today']" sub="Today" accent="ink"
+                wire:click="openTile('today')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
+        <x-tile label="upcoming bookings" :value="$t['upcoming']" sub="Next 7 days" accent="lime"
+                wire:click="openTile('upcoming')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
+        <x-tile label="awaiting confirmation" :value="$t['pending']" sub="Pending" accent="cocoa"
+                wire:click="openTile('pending')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
+        <x-tile label="upcoming confirmed bookings" :value="$t['month']" sub="Confirmed" accent="lavender"
+                wire:click="openTile('month')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
+    </div>
+    </x-carousel.slide>
+
+    {{-- ════ MAIN: bookings · services · availability ════ --}}
+    <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+    <div class="max-w-[50rem] mx-auto">
+
+
     {{-- Header --}}
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
             <h1 class="text-lg font-extrabold tracking-tight text-gray-900 dark:text-white">Bookings</h1>
-            <p class="text-xs text-gray-400">One engine, three kinds — appointments (slot), stays (rooms/houses) and trips (transport).</p>
+            <p class="text-xs font-medium text-gray-600 dark:text-gray-300">One engine, three kinds — appointments (slot), stays (rooms/houses) and trips (transport).</p>
         </div>
         <div class="flex items-center gap-2">
             <button type="button" wire:click="startCreate"
@@ -126,8 +149,6 @@
                                       hint="Customer pays only this online; the balance is due at arrival." />
                         @error('depositValue')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                     </div>
-                    <x-field.text label="Full payment under (hours)" model="depositLead" type="number" min="0"
-                                  hint="Short-notice bookings inside this window pay the FULL amount. 0 = deposit always." />
                 @endif
                 <x-field.check model="requiresPayment" text="Require online payment to confirm"
                                :hint="$site->stripeReady() ? null : 'Connect Stripe in Marketplace to collect payments.'" />
@@ -253,28 +274,11 @@
     </div>
     @endif
 
-    {{-- Stat tiles — app-wide tile format (click opens the matching list) --}}
-    @php $t = $this->tiles; @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-        <x-tile label="new bookings received today" :value="$t['today']" sub="Today" accent="ink"
-                wire:click="openTile('today')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
-        <x-tile label="upcoming bookings" :value="$t['upcoming']" sub="Next 7 days" accent="lime"
-                wire:click="openTile('upcoming')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
-        <x-tile label="awaiting confirmation" :value="$t['pending']" sub="Pending" accent="cocoa"
-                wire:click="openTile('pending')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
-        <x-tile label="upcoming confirmed bookings" :value="$t['month']" sub="Confirmed" accent="lavender"
-                wire:click="openTile('month')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
-    </div>
-
-    {{-- Main (stacked sections, left) · Calendar rail (right) --}}
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-
-        {{-- ══════════ LEFT: every section gets its own space ══════════ --}}
-        <div class="xl:col-span-2 min-w-0">
+<div class="min-w-0">
 
             {{-- ── ALL BOOKINGS ── --}}
             <div class="flex items-center gap-2 mb-3">
-                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">All bookings</p>
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-600 dark:text-gray-300">All bookings</p>
                 <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d9f068;color:#2b3110">{{ $this->bookings->total() }}</span>
                 <div class="flex-1 border-t border-gray-100 dark:border-white/[0.06]"></div>
             </div>
@@ -296,7 +300,7 @@
                         @if($bkind === 'stay')
                             {{ $p['check_in'] ?? '?' }} <span class="text-gray-300 dark:text-gray-600">→</span> {{ $p['check_out'] ?? '?' }}
                         @else
-                            {{ $b->starts_at?->format('D, M j, Y') }} <span class="text-gray-300 dark:text-gray-600">·</span> {{ $b->starts_at?->format('g:i A') }}
+                            <span class="hidden sm:inline">{{ $b->starts_at?->format('D, ') }}</span>{{ $b->starts_at?->format('M j') }}<span class="hidden sm:inline">{{ $b->starts_at?->format(', Y') }}</span> <span class="text-gray-300 dark:text-gray-600">·</span> {{ $b->starts_at?->format('g:i A') }}
                         @endif
                     </p>
                     <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -312,7 +316,7 @@
             {{-- ── SERVICES — list only; add/edit opens the right-side panel ── --}}
             @php $activeServices = $this->services->where('is_active', true)->count(); @endphp
             <div class="flex items-center gap-2 mt-8 mb-3">
-                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">Services</p>
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-600 dark:text-gray-300">Services</p>
                 <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d7c3f5;color:#33245c">{{ $this->services->count() }}</span>
                 <div class="flex-1 border-t border-gray-100 dark:border-white/[0.06]"></div>
                 <button type="button" wire:click="newService"
@@ -323,19 +327,19 @@
                     <span class="w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0" style="background:#d7c3f5">⚙</span>
                     <div class="min-w-0">
                         <h2 class="text-sm font-bold">Services</h2>
-                        <p class="text-xs text-gray-400">{{ $activeServices }} active · click ✎ on a service to edit it in the side panel</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $activeServices }} active · click ✎ on a service to edit it in the side panel</p>
                     </div>
                 </div>
                 <div class="p-3 space-y-2">
                     @forelse($this->services as $svc)
                     <div class="flex items-center gap-3 bg-white dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/[0.06] px-3 py-2.5">
-                        <span class="shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded
-                            {{ ['slot' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
-                                'stay' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-                                'trip' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'][$svc->kind] ?? '' }}">{{ $svc->typeIcon() }} {{ $svc->typeLabel() }}</span>
                         <div class="min-w-0 flex-1">
+                            <span class="inline-flex mb-0.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded
+                                {{ ['slot' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
+                                    'stay' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+                                    'trip' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'][$svc->kind] ?? '' }}">{{ $svc->typeIcon() }} {{ $svc->typeLabel() }}</span>
                             <p class="text-sm font-semibold truncate {{ $svc->is_active ? '' : 'text-gray-400 line-through' }}">{{ $svc->name }}</p>
-                            <p class="text-[11px] text-gray-400">
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
                                 @if($svc->kind === 'stay') {{ $svc->capacity }} unit(s) · {{ $svc->formattedPrice() }}/night
                                 @elseif($svc->kind === 'trip') {{ $svc->departures_count }} departure(s) · from {{ $svc->formattedPrice() }}
                                 @else {{ $svc->duration_min }} min · {{ $svc->formattedPrice() }} @endif
@@ -363,7 +367,7 @@
                         <div class="space-y-1.5 mb-3">
                             @forelse($this->siteResources as $r)
                                 <div class="text-xs bg-gray-50 dark:bg-white/[0.04] rounded-lg px-2.5 py-2">
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex flex-wrap items-center gap-2">
                                         <span class="font-semibold {{ $r->is_active ? '' : 'text-gray-400 line-through' }}">{{ $r->name }}</span>
                                         @if($r->capacity > 1)<span class="text-gray-400">cap {{ $r->capacity }}</span>@endif
                                         @if($r->price_cents !== null)<span class="text-gray-400">{{ \App\Support\Money::format((int) $r->price_cents, $site->currency) }}</span>@endif
@@ -386,7 +390,7 @@
                                     </div>
                                 </div>
                             @empty
-                                <p class="text-xs text-gray-400">No shared resources yet.</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">No shared resources yet.</p>
                             @endforelse
                         </div>
             </div>
@@ -404,7 +408,7 @@
                         <span class="w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0" style="background:#d9f068">🕑</span>
                         <div class="min-w-0">
                             <h2 class="text-sm font-bold">Availability</h2>
-                            <p class="text-xs text-gray-400 truncate">{{ $availDaysLabel }} · {{ $availOpen }}–{{ $availClose }}@if(count($dayHours)) · {{ count($dayHours) }} custom {{ Str::plural('day', count($dayHours)) }}@endif</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $availDaysLabel }} · {{ $availOpen }}–{{ $availClose }}@if(count($dayHours)) · {{ count($dayHours) }} custom {{ Str::plural('day', count($dayHours)) }}@endif</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
@@ -436,7 +440,7 @@
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div class="rounded-xl bg-gray-50 dark:bg-white/[0.04] px-3.5 py-3">
                         <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Open days</p>
-                        <p class="text-sm font-semibold mt-0.5">{{ $availServiceId !== '' && trim($asDays) !== '' ? strtoupper(str_replace(',', ' · ', $asDays)) : strtoupper(implode(' · ', $live['days'])) }}</p>
+                        <p class="text-[13px] font-semibold mt-0.5 leading-snug break-words">{{ $availServiceId !== '' && trim($asDays) !== '' ? strtoupper(str_replace(',', ' · ', $asDays)) : strtoupper(implode(' · ', $live['days'])) }}</p>
                     </div>
                     <div class="rounded-xl bg-gray-50 dark:bg-white/[0.04] px-3.5 py-3">
                         <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Hours</p>
@@ -469,9 +473,13 @@
                 @endif
             </div>
         </div>
+    </div>{{-- /centered 50rem column --}}
+    </x-carousel.slide>
 
-
-        {{-- ══════════ RIGHT RAIL: calendar + selected day's bookings below ══════════ --}}
+    {{-- ════ RIGHT RAIL: calendar + selected day ════ --}}
+    <x-carousel.slide class="lg:!w-[340px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+        <div class="space-y-4">
+        {{-- calendar + selected day's bookings below ══════════ --}}
         <div class="space-y-4">
             {{-- Calendar — colored from the SITE THEME accent so it matches the
                  owner's brand and contrasts the white workspace tiles. --}}
@@ -562,8 +570,9 @@
                 </div>
             </div>
         </div>
-    </div>
-
+        </div>
+    </x-carousel.slide>
+    </x-carousel>
 
     {{-- ══════════ SIDE PANELS — every editor opens on the right over a grey overlay ══════════ --}}
     @if($panel === 'service')
@@ -618,6 +627,21 @@
                             @endif
                         @endif
 
+                        {{-- Payment — part of the default settings --}}
+                        @if($this->svcFieldOn('deposit'))
+                        <div class="grid grid-cols-2 gap-3 items-end">
+                            <div><x-field.radio label="Deposit (optional)" model="depositMode" :live="true" name="svc-dep"
+                                            :options="['none' => 'None', 'fixed' => 'Fixed', 'pct' => '%']" /></div>
+                            @if($depositMode !== 'none')
+                                <x-field.text :label="$depositMode === 'pct' ? 'Deposit %' : 'Deposit amount'" model="depositValue" type="number" step="0.01" min="0" />
+                            @endif
+                        </div>
+                        @endif
+                        <x-field.check model="requiresPayment" text="Require payment (Stripe) to confirm"
+                                       :hint="$site->stripeReady() ? null : 'Connect Stripe on the Payments page to collect money.'" />
+                        <x-field.check model="autoConfirm" text="Auto-confirm bookings"
+                                       hint="Successful bookings are confirmed instantly (no manual approval). Paid bookings always confirm once payment completes." />
+
                         {{-- Essentials end here — save is one click away. --}}
                         <div class="flex gap-2 pt-1">
                             <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">{{ $editingId ? 'Update' : 'Add service' }}</button>
@@ -660,24 +684,6 @@
                         </div>
                         </x-panel-group>
 
-                        <x-panel-group label="Payments & deposits" hint="deposits, upfront payment, auto-confirm">
-                        @if($this->svcFieldOn('deposit'))
-                        <div class="grid grid-cols-2 gap-3 items-end">
-                            <div><x-field.radio label="Deposit (optional)" model="depositMode" :live="true" name="svc-dep"
-                                            :options="['none' => 'None', 'fixed' => 'Fixed', 'pct' => '%']" /></div>
-                            @if($depositMode !== 'none')
-                                <x-field.text :label="$depositMode === 'pct' ? 'Deposit %' : 'Deposit amount'" model="depositValue" type="number" step="0.01" min="0" />
-                            @endif
-                        </div>
-                        @if($depositMode !== 'none')
-                            <x-field.text label="Full payment under (hours)" model="depositLead" type="number" min="0"
-                                          hint="Short-notice bookings inside this window pay the FULL amount online. 0 = deposit always." />
-                        @endif
-                        @endif
-                        <x-field.check model="requiresPayment" text="Require payment (Stripe) to confirm" />
-                        <x-field.check model="autoConfirm" text="Auto-confirm bookings"
-                                       hint="Successful bookings are confirmed instantly (no manual approval). Paid bookings always confirm once payment completes." />
-                        </x-panel-group>
 
                         <x-panel-group label="Capacity, buffers & custom hours" hint="parallel bookings, gaps, per-service schedule">
                             @if($kind === 'slot')

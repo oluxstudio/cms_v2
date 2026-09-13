@@ -3,7 +3,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
             <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">Messages</h1>
-            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">
+            <p class="mt-1 text-sm font-medium text-gray-600 dark:text-gray-300">
                 <span class="inline-flex items-center gap-1.5 font-semibold text-indigo-600 dark:text-indigo-400">
                     🏠 {{ $this->site->getAttr('business_name') ?: ucwords(str_replace('-', ' ', $this->site->name)) }}
                 </span>
@@ -21,7 +21,7 @@
         <span class="text-[11px] font-bold uppercase tracking-wide text-gray-400 mr-1">Other inboxes</span>
         @foreach($this->otherInboxes as $inbox)
             <a href="{{ url($inbox['name'].'/messages') }}"
-               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-white dark:bg-[#1d1e2a] shadow-sm border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 {{ $inbox['label'] }}
                 @if($inbox['unread'] > 0)
                     <span class="min-w-[18px] h-[18px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">{{ $inbox['unread'] }}</span>
@@ -31,7 +31,7 @@
     </div>
     @endif
 
-    <x-carousel :labels="['💬 Chats', '📨 Conversation']" class="gap-0 lg:gap-4">
+    <x-carousel :labels="['💬 Chats', '📨 Conversation']">
         {{-- Conversations --}}
         <x-carousel.slide class="lg:!w-[280px] pb-20 lg:pb-0">
         <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-y-auto max-h-full">

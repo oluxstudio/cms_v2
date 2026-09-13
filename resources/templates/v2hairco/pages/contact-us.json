@@ -49,6 +49,33 @@
             ]
         },
         {
+            "type": "app:v2hairco:quote",
+            "name": "Quote",
+            "nodes": [
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Quote requested",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Get another estimate",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline B",
+                    "type": "text",
+                    "value": "Happy with it? Request this quote",
+                    "order": 2,
+                    "description": "text"
+                }
+            ]
+        },
+        {
             "type": "app:v2hairco:stats",
             "name": "Stats",
             "nodes": [

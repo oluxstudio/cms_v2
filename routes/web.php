@@ -147,6 +147,40 @@ Route::middleware('feature:donations')->group(function () {
     Route::post('/preview/{siteName}/donate/checkout', [DonateController::class, 'checkout'])->name('public.donate.checkout');
 });
 
+// Public estimator page — visitors answer the owner's fields, see a live quote
+// and request it (creates an Estimate lead + emails both parties via the API).
+Route::middleware('feature:estimator')->group(function () {
+    Route::get('/preview/{siteName}/estimate', function (string $siteName) {
+        $site = Site::where('name', $siteName)->firstOrFail();
+
+        // Prefer the page INSIDE the site's own template (scaffolded on
+        // demand, chrome-wrapped, not in the menu) — the standalone view
+        // below is only the fallback when no template shell is rendered.
+        if ($site->templatePreviewUrl()) {
+            if (! $site->pages()->where('url', '/estimate')->exists()) {
+                try {
+                    app(\App\Services\TemplateScaffolder::class)->applyPages($site, [[
+                        'name' => 'Estimate',
+                        'url' => '/estimate',
+                        'keywords' => 'estimate, quote',
+                        'blocks' => [['type' => 'app:'.$site->renderTemplateKey().':quote', 'name' => 'Quote', 'nodes' => []]],
+                    ]]);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+            if ($url = $site->templatePreviewUrl('/estimate')) {
+                return redirect($url);
+            }
+        }
+
+        return view('public.estimate', [
+            'site' => $site,
+            'estimators' => $site->estimators()->with(['fields', 'calcs'])->get(),
+        ]);
+    })->name('public.estimate');
+});
+
 // Bookings. Static segments (success) declared before the /{service} param.
 Route::middleware('feature:bookings')->group(function () {
     Route::get('/preview/{siteName}/book', [BookingController::class, 'index'])->name('public.book');
@@ -392,6 +426,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/orders', [SiteController::class, 'orders'])->middleware(['feature:store', 'perm:orders.view'])->name('site.orders');
     Route::get('/{siteID}/bookings', [SiteController::class, 'bookings'])->middleware(['feature:bookings', 'perm:bookings.view'])->name('site.bookings');
     Route::get('/{siteID}/estimates', [SiteController::class, 'estimates'])->middleware(['feature:estimator', 'perm:estimates.view'])->name('site.estimates');
+    Route::get('/{siteID}/polls', [SiteController::class, 'polls'])->middleware(['feature:polls', 'perm:polls.view'])->name('site.polls');
     Route::get('/{siteID}/posts', [SiteController::class, 'posts'])->middleware('perm:posts.view')->name('site.posts');
     Route::get('/{siteID}/donations', [SiteController::class, 'donations'])->middleware(['feature:donations', 'perm:donations.view'])->name('site.donations');
     Route::get('/{siteID}/invoices', [SiteController::class, 'invoices'])->middleware(['feature:invoices', 'perm:invoices.view'])->name('site.invoices');

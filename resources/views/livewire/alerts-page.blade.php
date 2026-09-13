@@ -3,14 +3,15 @@
     $typeLabel = fn ($t) => ucwords(str_replace('_', ' ', $t));
     $s = $this->stats;
 @endphp
-<div class="min-h-full flex flex-col lg:flex-row">
+<div class="min-h-full flex flex-col">
+    <x-carousel :labels="['📊 Overview', '🔔 Alerts']" :start="1">
 
     {{-- ════ LEFT: statistics ════ --}}
-    <aside class="left-bar w-full lg:w-72 shrink-0 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-white/[0.05] p-5 space-y-5
-                  lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:overflow-y-auto no-scrollbar">
+    <x-carousel.slide class="left-bar lg:!w-72 lg:shrink-0 lg:border-r border-gray-100 dark:border-white/[0.05] p-5 pb-24 lg:pb-5 space-y-5
+                  max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:overflow-y-auto no-scrollbar">
         <div>
             <h1 class="text-xl font-extrabold text-gray-900 dark:text-white">Alerts</h1>
-            <p class="text-xs text-gray-400 mt-0.5">{{ $s['total'] }} total · {{ $s['unread'] }} unread</p>
+            <p class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">{{ $s['total'] }} total · {{ $s['unread'] }} unread</p>
         </div>
 
         {{-- summary tiles --}}
@@ -49,17 +50,17 @@
             <div class="flex flex-wrap gap-1.5">
                 @foreach ($s['byLevel'] as $level => $count)
                     <button wire:click="setFilter('level:{{ $level }}')"
-                            class="fx inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border {{ $filter==='level:'.$level ? 'border-gray-900 dark:border-white' : 'border-gray-200 dark:border-white/[0.08]' }}">
+                            class="fx inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-[#1d1e2a] shadow-sm border {{ $filter==='level:'.$level ? 'border-gray-900 dark:border-white' : 'border-gray-200 dark:border-white/[0.08]' }}">
                         <span class="w-2 h-2 rounded-full" style="background:{{ $levelTint[$level] ?? '#3b82f6' }}"></span>
                         {{ ucfirst($level) }} {{ $count }}
                     </button>
                 @endforeach
             </div>
         </div>
-    </aside>
+    </x-carousel.slide>
 
     {{-- ════ MAIN: list ════ --}}
-    <section class="main-body flex-1 min-w-0 p-5">
+    <x-carousel.slide class="main-body lg:flex-1 p-5 pb-24 lg:pb-5 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
         <div class="flex items-center justify-between mb-4">
             <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">
                 {{ $this->alerts->count() }} {{ \Illuminate\Support\Str::plural('alert', $this->alerts->count()) }}
@@ -101,5 +102,6 @@
                 <div class="rounded-2xl border border-gray-100 dark:border-white/[0.05] p-12 text-center text-sm text-gray-400">No alerts in this view.</div>
             @endforelse
         </div>
-    </section>
+    </x-carousel.slide>
+    </x-carousel>
 </div>

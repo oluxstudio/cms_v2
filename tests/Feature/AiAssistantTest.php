@@ -72,12 +72,17 @@ test('ask() injects retrieved knowledge and records a usage row', function () {
     $result = app(SiteAgent::class)->ask($site, $owner, 'tell me about your bond repair mask treatment');
 
     expect($result['ok'])->toBeTrue()->and($result['built'])->toBeFalse()
-        ->and($fake->seenSystemPrompts[0])->toContain('Bond Repair Mask'); // RAG passage injected
+        // RAG rides the USER message; the system prompt stays byte-stable so
+        // provider-side prompt caching keeps working.
+        ->and($fake->seenSystemPrompts[0])->not->toContain('Bond Repair Mask')
+        ->and(end($fake->seenMessages[0])['content'])->toContain('Bond Repair Mask');
 
     $usage = AiUsage::where('site_id', $site->id)->first();
     expect($usage)->not->toBeNull()
         ->and($usage->input_tokens)->toBe(111)
         ->and($usage->output_tokens)->toBe(42)
+        ->and($usage->cache_creation_tokens)->toBe(7)
+        ->and($usage->cache_read_tokens)->toBe(9)
         ->and($usage->user_id)->toBe($owner->id);
 });
 
@@ -105,6 +110,46 @@ test('the assistant rate limit cools a site down after its hourly allowance', fu
 
     $messages = $lw->get('messages');
     expect(end($messages)['text'])->toContain('cooling down');
+});
+
+test('identical history-free questions are served from the answer cache', function () {
+    [$site, $owner] = aiSite();
+    Queue::fake();
+    $fake = new FakeLlmDriver(answer: 'We open at 9am.');
+    app()->instance(LlmDriverInterface::class, $fake);
+
+    $first = app(SiteAgent::class)->ask($site, $owner, 'What are your opening hours?');
+    $second = app(SiteAgent::class)->ask($site, $owner, 'what are   your opening hours?'); // normalised match
+    expect($first)->not->toHaveKey('cached')
+        ->and($second['cached'] ?? false)->toBeTrue()
+        ->and($second['text'])->toBe('We open at 9am.')
+        ->and(count($fake->seenSystemPrompts))->toBe(1); // driver ran once
+
+    // A history-bearing ask must bypass the cache (context-dependent).
+    $third = app(SiteAgent::class)->ask($site, $owner, 'What are your opening hours?', [['role' => 'user', 'text' => 'hello']]);
+    expect($third['cached'] ?? false)->toBeFalse()
+        ->and(count($fake->seenSystemPrompts))->toBe(2);
+});
+
+test('time-sensitive turns are never cached and mutations invalidate cached answers', function () {
+    [$site, $owner] = aiSite();
+    Queue::fake();
+
+    // A stats tool ran → the answer must not be stored.
+    app()->instance(LlmDriverInterface::class, new FakeLlmDriver(answer: 'Sales £0.', callTool: 'get_sales_stats', toolInput: ['period' => '7d']));
+    app(SiteAgent::class)->ask($site, $owner, 'how were sales this week?');
+    $repeat = new FakeLlmDriver(answer: 'Sales £5.', callTool: 'get_sales_stats', toolInput: ['period' => '7d']);
+    app()->instance(LlmDriverInterface::class, $repeat);
+    expect(app(SiteAgent::class)->ask($site, $owner, 'how were sales this week?')['cached'] ?? false)->toBeFalse();
+
+    // A cached answer goes stale once a mutating tool changes site content.
+    $fake = new FakeLlmDriver(answer: 'You have two pages.');
+    app()->instance(LlmDriverInterface::class, $fake);
+    app(SiteAgent::class)->ask($site, $owner, 'how many pages do I have?');
+    app(SiteTools::class)->execute($site, $owner, 'create_task', ['title' => 'Restock towels']); // mutating → bump
+    $after = app(SiteAgent::class)->ask($site, $owner, 'how many pages do I have?');
+    expect($after['cached'] ?? false)->toBeFalse()
+        ->and(count($fake->seenSystemPrompts))->toBe(2); // second ask hit the model again
 });
 
 test('the agent can message the team, create tasks, edit content and link pages', function () {

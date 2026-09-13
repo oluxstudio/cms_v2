@@ -1,11 +1,26 @@
-<div class="main-body p-6">
+<div class="h-full lg:overflow-y-auto p-5 sm:p-6">
     @php $s = $this->stats; @endphp
 
+    <x-carousel :labels="['📊 Stats', '💝 Donations']" :start="1">
+
+    {{-- ════ LEFT RAIL: stat tiles ════ --}}
+    <x-carousel.slide class="lg:!w-[280px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+    {{-- Stats --}}
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile label="Total raised" :value="$s['raisedMajor']" sub="all time" accent="ink" />
+        <x-tile label="Donations" :value="$s['count']" sub="gifts received" accent="lime" />
+        <x-tile label="Average gift" :value="$s['avg']" sub="per donation" accent="lavender" />
+    </div>
+    </x-carousel.slide>
+
+    {{-- ════ MAIN: donations list, centered column ════ --}}
+    <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+    <div class="max-w-[50rem] mx-auto">
     <div class="flex items-start justify-between mb-5">
         <div>
             <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">Donations</h1>
-            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">
-                <a href="{{ url($site->name.'/donate') }}" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline">View public donate page ↗</a>
+            <p class="mt-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+                <a href="{{ url('preview/'.$site->name.'/donate') }}" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline">View public donate page ↗</a>
             </p>
         </div>
     </div>
@@ -16,14 +31,7 @@
     </div>
     @endunless
 
-    {{-- Stats --}}
-    <div class="grid grid-cols-3 gap-4 mb-6">
-        <x-tile label="Total raised" :value="$s['raisedMajor']" sub="all time" accent="ink" />
-        <x-tile label="Donations" :value="$s['count']" sub="gifts received" accent="lime" />
-        <x-tile label="Average gift" :value="$s['avg']" sub="per donation" accent="lavender" />
-    </div>
 
-    {{-- List --}}
     <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-100 dark:border-white/[0.05]">
             <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Recent donations</h2>
@@ -54,4 +62,7 @@
         </div>
         @endforelse
     </div>
+    </div>{{-- /centered 50rem column --}}
+    </x-carousel.slide>
+    </x-carousel>
 </div>

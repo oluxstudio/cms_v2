@@ -83,6 +83,34 @@ class EstimatesPage extends Component
         return $this->site->allows(Auth::user(), 'estimates.manage');
     }
 
+    /**
+     * "Open estimator page": prefer a page INSIDE the site's own template —
+     * scaffolded on demand as /estimate (quote block only, chrome wraps it,
+     * not linked from the menu). Falls back to the standalone page for sites
+     * without a rendered template shell.
+     */
+    public function openEstimatorPage(): void
+    {
+        $url = null;
+        try {
+            if ($this->site->templatePreviewUrl()) {
+                if (! $this->site->pages()->where('url', '/estimate')->exists()) {
+                    app(\App\Services\TemplateScaffolder::class)->applyPages($this->site, [[
+                        'name' => 'Estimate',
+                        'url' => '/estimate',
+                        'keywords' => 'estimate, quote',
+                        'blocks' => [['type' => 'app:'.$this->site->renderTemplateKey().':quote', 'name' => 'Quote', 'nodes' => []]],
+                    ]]);
+                }
+                $url = $this->site->templatePreviewUrl('/estimate');
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $this->redirect($url ?: url('preview/'.$this->site->name.'/estimate'));
+    }
+
     // ═══ Estimators ═══
 
     public function getEstimatorsProperty()

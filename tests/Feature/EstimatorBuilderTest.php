@@ -9,6 +9,7 @@ use App\Models\Estimate;
 use App\Models\Role;
 use App\Models\Site;
 use App\Models\SiteActivityLog;
+use App\Models\SiteFeature;
 use App\Models\User;
 use App\Services\Estimator\Formula;
 use Illuminate\Support\Facades\Mail;
@@ -126,4 +127,28 @@ test('members without estimates.manage cannot edit estimators', function () {
 
     Livewire::actingAs($member)->test(EstimatesPage::class, ['site' => $site])
         ->set('newEstimatorName', 'Nope')->call('createEstimator')->assertStatus(403);
+});
+
+test('the public estimator page renders the visitor demo', function () {
+    [$owner, $site] = estimatorSite();
+    $page = Livewire::actingAs($owner)->test(EstimatesPage::class, ['site' => $site]);
+    $page->set('newEstimatorName', 'Cleaner')->call('createEstimator');
+    $page->call('openField', 0)->set('fLabel', 'Area to clean')->set('fType', 'number')->call('saveField');
+
+    // Template-first contract: with a rendered template shell the route
+    // scaffolds /estimate on the site and redirects into the template;
+    // without one it serves the standalone visitor page.
+    $res = $this->get("/preview/{$site->name}/estimate");
+    if ($res->getStatusCode() === 302) {
+        expect(urldecode((string) $res->headers->get('Location')))->toContain('/estimate')
+            ->and($site->pages()->where('url', '/estimate')->exists())->toBeTrue();
+    } else {
+        $res->assertOk()->assertSee('Get an instant estimate')->assertSee('Cleaner')->assertSee('Area to clean');
+    }
+
+    // Feature-gated: sites without the estimator module get a 404.
+    [, $plain] = estimatorSite();
+    SiteFeature::where('site_id', $plain->id)->delete();
+    Cache::forget("site_features:{$plain->id}");
+    $this->get("/preview/{$plain->name}/estimate")->assertNotFound();
 });

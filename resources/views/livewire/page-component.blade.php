@@ -71,10 +71,6 @@
                                    class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors" title="Preview page">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 </a>
-                                <a href="{{ url($site->name.'/pages/'.$page->id.'/builder') }}" x-on:click.stop
-                                   class="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors" title="Page Builder">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
-                                </a>
                                 <div class="ml-auto flex items-center gap-1">
                                     <button wire:click.stop="openPicker('{{ $page->id }}')"
                                             class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Components ({{ $page->components()->count() }})">
@@ -135,12 +131,6 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                             </svg>
                                         </a>
-                                        <a href="{{ url($site->name.'/pages/'.$page->id.'/builder') }}" x-on:click.stop
-                                           class="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors" title="Page Builder">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
-                                            </svg>
-                                        </a>
                                         <button wire:click.stop="openPicker('{{ $page->id }}')"
                                                 class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors" title="Components ({{ $page->components()->count() }})">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -181,10 +171,11 @@
 
     {{-- ── Create / Edit Modal ── --}}
     @if($showModal)
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="fixed inset-0 z-50 flex justify-end" x-data x-on:keydown.escape.window="$wire.set('showModal', false)">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showModal', false)"></div>
-        <div class="relative bg-white dark:bg-[#1e1f2b] rounded-2xl shadow-2xl w-full max-w-lg
-                    border border-gray-200 dark:border-white/[0.08] p-6 space-y-5">
+        <div class="relative h-full w-full max-w-lg bg-white dark:bg-[#1e1f2b] border-l border-gray-200 dark:border-white/[0.08]
+                    shadow-2xl overflow-y-auto p-6 space-y-5"
+             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0">
             <div class="flex items-center justify-between">
                 <h2 class="text-lg font-bold text-gray-900 dark:text-white">
                     {{ $editingId ? 'Edit Page' : 'New Page' }}
@@ -277,9 +268,10 @@
 
     {{-- ═══ COMPONENT PICKER — attach components to a page, filter by tag ═══ --}}
     @if ($pickerPageId !== null && $this->pickerPage)
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="fixed inset-0 z-50 flex justify-end" x-data x-on:keydown.escape.window="$wire.closePicker()">
         <div class="absolute inset-0 bg-black/40" wire:click="closePicker"></div>
-        <div class="relative bg-white dark:bg-[#1d1e2a] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6">
+        <div class="relative h-full w-full max-w-xl bg-white dark:bg-[#1d1e2a] border-l border-gray-100 dark:border-white/[0.06] shadow-2xl overflow-y-auto p-6"
+             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0">
             <div class="flex items-start justify-between gap-3 mb-1">
                 <div>
                     <h2 class="text-base font-bold text-gray-900 dark:text-white">Components on “{{ $this->pickerPage->name }}”</h2>
@@ -311,25 +303,51 @@
             <div class="space-y-2">
                 @forelse ($this->pickerComponents as $comp)
                 @php $attached = $this->pickerPage->components()->where('components.id', $comp->id)->exists(); @endphp
-                <label class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer transition-colors
-                              {{ $attached ? 'border-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10' : 'border-gray-100 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.03] hover:border-indigo-300' }}">
-                    <input type="checkbox" @checked($attached) wire:click="toggleComponent('{{ $comp->id }}')"
-                           class="w-4 h-4 rounded border-gray-300 text-indigo-600 shrink-0">
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">🧩 {{ $comp->name }}</p>
-                        <p class="text-[11px] text-gray-400 truncate">
-                            {{ $comp->nodes->count() }} {{ Str::plural('node', $comp->nodes->count()) }}
-                            @if ($comp->description) · {{ Str::limit($comp->description, 60) }} @endif
-                        </p>
-                    </div>
-                    @if ($comp->tags)
-                    <div class="hidden sm:flex flex-wrap gap-1 justify-end max-w-[40%]">
-                        @foreach (array_slice($comp->tags, 0, 3) as $tag)
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-300 shrink-0">#{{ $tag }}</span>
+                <div x-data="{ peek: false }"
+                     class="rounded-xl border transition-colors
+                            {{ $attached ? 'border-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10' : 'border-gray-100 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.03] hover:border-indigo-300' }}">
+                    <label class="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer">
+                        <input type="checkbox" @checked($attached) wire:click="toggleComponent('{{ $comp->id }}')"
+                               class="w-4 h-4 rounded border-gray-300 text-indigo-600 shrink-0">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">🧩 {{ $comp->name }}</p>
+                            <p class="text-[11px] text-gray-400 truncate">
+                                {{ $comp->nodes->count() }} {{ Str::plural('node', $comp->nodes->count()) }}
+                                @if ($comp->description) · {{ Str::limit($comp->description, 60) }} @endif
+                            </p>
+                        </div>
+                        @if ($comp->tags)
+                        <div class="hidden sm:flex flex-wrap gap-1 justify-end max-w-[35%]">
+                            @foreach (array_slice($comp->tags, 0, 3) as $tag)
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-300 shrink-0">#{{ $tag }}</span>
+                            @endforeach
+                        </div>
+                        @endif
+                        @if ($comp->nodes->isNotEmpty())
+                        <button type="button" x-on:click.prevent.stop="peek = ! peek"
+                                class="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                                :aria-expanded="peek" title="View this component's content">
+                            👁 <span x-text="peek ? 'Hide' : 'View'"></span>
+                        </button>
+                        @endif
+                    </label>
+
+                    {{-- Content peek: every field with its current value --}}
+                    @if ($comp->nodes->isNotEmpty())
+                    <div x-show="peek" x-collapse x-cloak
+                         class="px-3.5 pb-3 pt-1 border-t border-gray-100 dark:border-white/[0.06] space-y-1">
+                        @foreach ($comp->nodes->sortBy('order')->take(20) as $node)
+                        <div class="flex items-baseline gap-2 text-[11px]">
+                            <span class="shrink-0 font-semibold text-gray-500 dark:text-gray-400">{{ $node->label ?: '(unlabelled)' }}</span>
+                            <span class="min-w-0 truncate text-gray-700 dark:text-gray-200">{{ Str::limit((string) $node->value, 90) ?: '—' }}</span>
+                        </div>
                         @endforeach
+                        @if ($comp->nodes->count() > 20)
+                            <p class="text-[10px] text-gray-400">…and {{ $comp->nodes->count() - 20 }} more — edit it in the Content tab.</p>
+                        @endif
                     </div>
                     @endif
-                </label>
+                </div>
                 @empty
                 <div class="py-10 text-center">
                     <p class="text-sm text-gray-400">No components match{{ $pickerTag !== '' ? ' the #'.$pickerTag.' tag' : '' }}.</p>

@@ -2,14 +2,24 @@
     $stats = $this->stats;
     $canManage = $site->canManageTeam(auth()->user());
 @endphp
-<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+<x-page-layout title="Posts" subtitle="Write, publish and see which posts your visitors love.">
 
-    {{-- Header --}}
+    {{-- ── LEFT: insight tiles ── --}}
+    <x-slot:stats>
+    {{-- Insight tiles --}}
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile label="Posts written" :value="number_format($stats['total'])" :sub="$stats['published'].' published'" accent="ink" />
+        <x-tile label="Drafts" :value="number_format($stats['total'] - $stats['published'])" sub="awaiting publish" accent="cocoa" />
+        <x-tile label="Total visits" :value="number_format($stats['views'])" sub="across all posts" accent="lime" />
+        <x-tile label="Engagement" :value="number_format($stats['engagement'])" sub="likes + comments" accent="lavender" />
+    </div>
+    </x-slot:stats>
+
+    {{-- ── MAIN: centered content ── --}}
+    <div>
+
+    {{-- Actions: search + create --}}
     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Posts</h1>
-            <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Write, publish and see which posts your visitors love.</p>
-        </div>
         <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             <div class="relative w-full sm:w-auto">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -24,14 +34,6 @@
             </button>
             @endif
         </div>
-    </div>
-
-    {{-- Insight tiles --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <x-tile label="Posts written" :value="number_format($stats['total'])" :sub="$stats['published'].' published'" accent="ink" />
-        <x-tile label="Drafts" :value="number_format($stats['total'] - $stats['published'])" sub="awaiting publish" accent="cocoa" />
-        <x-tile label="Total visits" :value="number_format($stats['views'])" sub="across all posts" accent="lime" />
-        <x-tile label="Engagement" :value="number_format($stats['engagement'])" sub="likes + comments" accent="lavender" />
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
@@ -185,8 +187,8 @@
         </div>
     </div>
     @endif
-</div>
-
+    </div>
+</x-page-layout>
 @assets
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>

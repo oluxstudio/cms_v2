@@ -12,6 +12,9 @@
 @endphp
 <div class="main-body p-5 lg:p-6 min-h-full bg-[#f3f2fb] dark:bg-transparent">
 
+    <x-carousel :labels="['📊 Overview', '✅ Tasks']" :start="1" class="lg:flex-col">
+    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+
     {{-- ── Header: title · tabs · actions ── --}}
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">Tasks
@@ -31,6 +34,19 @@
         </div>
     </div>
 
+    {{-- Overview tiles (mobile slide 1; also shown above the board on desktop) --}}
+    <div class="grid grid-cols-2 gap-3 mb-4 lg:hidden">
+        @foreach ($tabs as $key => $label)
+            <button wire:click="$set('filter', '{{ $key }}')"
+                    class="rounded-2xl bg-white dark:bg-[#1d1e2a] border {{ $filter === $key ? 'border-indigo-400 ring-2 ring-indigo-500/20' : 'border-gray-100 dark:border-white/[0.05]' }} shadow-sm p-4 text-left">
+                <p class="text-2xl font-extrabold tracking-tight {{ $key === 'overdue' && $c[$key] ? 'text-rose-600' : 'text-gray-900 dark:text-white' }}">{{ $c[$key] }}</p>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">{{ $label }}</p>
+            </button>
+        @endforeach
+    </div>
+    </x-carousel.slide>
+
+    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
     <div class="flex items-center gap-1 overflow-x-auto no-scrollbar border-b border-gray-100 dark:border-white/[0.06] mb-5">
         @foreach ($tabs as $key => $label)
             <button wire:click="$set('filter', '{{ $key }}')"
@@ -158,6 +174,8 @@
             <div class="sm:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-gray-200 dark:border-white/[0.08] p-12 text-center text-sm text-gray-400">No tasks in this view.</div>
         @endforelse
     </div>
+    </x-carousel.slide>
+    </x-carousel>
 
     {{-- ── Detail drawer ── --}}
     @if ($task = $this->openTask)

@@ -168,7 +168,7 @@ class SiteTools
      * @return array{ok:bool,message:string}
      */
     /** Tools that change state — only these are recorded as performed tasks. */
-    private const MUTATING = [
+    public const MUTATING = [
         'create_page', 'publish_page',
         'create_form', 'add_form_field',
         'create_product', 'toggle_feature',
@@ -219,6 +219,7 @@ class SiteTools
 
         // Persist every performed mutating task (drives the toast + the activity feed).
         if (in_array($name, self::MUTATING, true)) {
+            SiteAgent::bumpAnswerCache($site->id); // content changed → stale cached answers
             app(TaskLogger::class)->record(
                 site: $site,
                 actor: $user,

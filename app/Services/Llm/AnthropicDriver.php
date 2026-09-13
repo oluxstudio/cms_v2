@@ -41,11 +41,13 @@ class AnthropicDriver implements LlmDriverInterface
         $toolsCalledAll = [];
         $inTokens = 0;
         $outTokens = 0;
+        $cacheCreate = 0;
+        $cacheRead = 0;
 
         for ($i = 0; $i < 12; $i++) {
             $response = $this->client->messages->create(
                 model: $this->model,
-                maxTokens: 8096,
+                maxTokens: (int) config('services.llm.max_tokens', 1024),
                 system: $system,
                 tools: $tools,
                 thinking: ['type' => 'disabled'],
@@ -54,6 +56,8 @@ class AnthropicDriver implements LlmDriverInterface
 
             $inTokens += (int) ($response->usage?->inputTokens ?? 0);
             $outTokens += (int) ($response->usage?->outputTokens ?? 0);
+            $cacheCreate += (int) ($response->usage?->cacheCreationInputTokens ?? 0);
+            $cacheRead += (int) ($response->usage?->cacheReadInputTokens ?? 0);
 
             // Collect text + execute any tool calls in this response.
             $toolResults = [];
@@ -97,7 +101,7 @@ class AnthropicDriver implements LlmDriverInterface
             $finalText = '';
         }
 
-        return new LlmResult(trim($finalText) ?: 'Done.', $inTokens, $outTokens, count($toolsCalledAll));
+        return new LlmResult(trim($finalText) ?: 'Done.', $inTokens, $outTokens, count($toolsCalledAll), $cacheCreate, $cacheRead);
     }
 
     public function prefersCompactPrompt(): bool

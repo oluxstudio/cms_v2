@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\PageApiController;
+use App\Http\Controllers\Api\PollApiController;
 use App\Http\Controllers\Api\PostApiController;
 use App\Http\Controllers\Api\ProductApiController;
 use App\Http\Controllers\Api\ServiceApiController;
@@ -136,6 +137,14 @@ Route::post('/sites/{siteName}/estimator/request', [EstimatorController::class, 
 // ── Client-site lead APIs ────────────────────────────────────────────────────
 // Get a quote (same engine as /estimator — friendlier path for client sites).
 Route::post('/sites/{siteName}/quote', [EstimatorController::class, 'estimate'])->name('api.quote');
+
+// Polls module — open polls + one-vote-per-visitor voting (feature-gated in controller).
+Route::get('/sites/{siteName}/polls', [PollApiController::class, 'index'])->name('api.polls');
+Route::post('/sites/{siteName}/polls/{slug}/vote', [PollApiController::class, 'vote'])->middleware('throttle:60,1')->name('api.polls.vote');
+
+// Donations — JSON front door so CLIENT SITES can host the donate form.
+Route::get('/sites/{siteName}/donate/config', [\App\Http\Controllers\Api\DonationApiController::class, 'config'])->name('api.donate.config');
+Route::post('/sites/{siteName}/donate/checkout', [\App\Http\Controllers\Api\DonationApiController::class, 'checkout'])->middleware(['throttle:booking-write', 'site.origin'])->name('api.donate.checkout');
 // Submit a quote request (saves the lead + emails + dashboard notification).
 Route::post('/sites/{siteName}/quote/request', [EstimatorController::class, 'store'])->middleware(['throttle:leads', 'site.origin', 'honeypot'])->name('api.quote.request');
 // Submit plain interest ("I'm interested") — Contact + notification + owner email.

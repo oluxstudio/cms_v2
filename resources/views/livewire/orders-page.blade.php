@@ -18,25 +18,16 @@
     $donutColors = [$accent, '#f59e0b', '#10b981', '#ec4899', '#38bdf8'];
 @endphp
 
-<div class="main-body p-5 sm:p-6"
+<div class="h-full lg:overflow-y-auto p-5 sm:p-6"
      x-init="$watch('$wire.successMessage', v => { if(v){ toast=v; toastErr=false; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } });
              $watch('$wire.errorMessage',   v => { if(v){ toast=v; toastErr=true;  setTimeout(()=>{ toast=''; $wire.errorMessage='';   }, 5000) } })"
      x-data="{ toast:'', toastErr:false }">
 
-    {{-- ══ Greeting ══ --}}
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-            <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                Hello, {{ ucfirst(explode(' ', trim($site->user?->name ?? 'there'))[0]) }}! 👋</h1>
-            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">This is what's happening in your store this month.</p>
-        </div>
-        <span class="text-xs font-semibold px-3 py-2 rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300">
-            {{ now()->format('F Y') }} ▾</span>
-    </div>
+    <x-carousel :labels="['📊 Stats', '📦 Orders', '📈 Charts']" :start="1">
 
-    {{-- ══ Row 2: stat tiles + revenue bars ══ --}}
-    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 mb-4">
-        <div class="xl:col-span-2 grid grid-cols-2 gap-4">
+    {{-- ════ LEFT RAIL: stat tiles ════ --}}
+    <x-carousel.slide class="lg:!w-[280px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+        <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
             <x-tile accent="ink" :value="$ins['monthRevenue']" label="Total revenue this month"
                     :sub="$delta($ins['revDelta']) ?? 'this month'" />
             <x-tile accent="lime" :value="$ins['monthOrders']" label="Orders this month"
@@ -45,35 +36,7 @@
                     :sub="$delta($ins['custDelta']) ?? 'this month'" />
             <x-tile accent="cocoa" :value="$ins['aov']" label="Avg order value" sub="per paid order · all time" />
         </div>
-
-        {{-- Revenue bars (last 8 days) --}}
-        <div class="xl:col-span-3 bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5 shadow-sm">
-            <div class="flex items-baseline justify-between mb-3">
-                <h2 class="text-sm font-bold text-gray-900 dark:text-white">Revenue</h2>
-                <span class="text-[11px] text-gray-400">last 8 days</span>
-            </div>
-            @php
-                $dMax = max(1, collect($ins['daily'])->max('cents'));
-                $maxIdx = collect($ins['daily'])->search(fn ($d) => $d['cents'] === $dMax);
-            @endphp
-            <div class="flex items-end gap-2.5 h-40">
-                @foreach($ins['daily'] as $i => $bar)
-                    @php $h = $bar['cents'] > 0 ? max(8, (int) round($bar['cents'] / $dMax * 100)) : 4; @endphp
-                    <div class="flex-1 flex flex-col items-center gap-1.5 group relative h-full justify-end">
-                        <span class="absolute -top-1 left-1/2 -translate-x-1/2 text-[9px] font-bold whitespace-nowrap px-1.5 py-0.5 rounded-md
-                                {{ $i === $maxIdx && $bar['cents'] > 0 ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'opacity-0 group-hover:opacity-100 text-gray-500 transition-opacity' }}">
-                            {{ \App\Support\Money::format($bar['cents'], $ins['currency']) }}</span>
-                        <div class="w-full rounded-lg transition-all group-hover:opacity-80"
-                             style="height:{{ $h }}%; background:{{ $bar['cents'] > 0 ? 'var(--primary)' : 'rgba(148,163,184,.25)' }}"></div>
-                        <span class="text-[9px] text-gray-400 whitespace-nowrap">{{ $bar['label'] }}</span>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </div>
-
-    {{-- ══ Row 3: big numbers + category donut ══ --}}
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-2 lg:grid-cols-1 gap-3 mt-3">
         <x-tile accent="sky" :value="$counts['all'] ?? 0" label="orders all time"
                 :sub="$ins['awaiting'] > 0 ? $ins['awaiting'].' awaiting confirmation' : 'all orders handled — nice'">
             <span class="w-8 h-8 rounded-full grid place-items-center text-sm" style="background:#bfdcf7">✓</span>
@@ -82,39 +45,23 @@
                 :sub="$ins['waitingPeople'] > 0 ? $ins['waitingPeople'].' waiting for a response' : 'nobody is waiting on you'">
             <span class="w-8 h-8 rounded-full grid place-items-center text-sm" style="background:#d7c3f5">👤</span>
         </x-tile>
-        {{-- Sales by Category donut --}}
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5 shadow-sm">
-            <div class="flex items-baseline justify-between mb-2">
-                <h2 class="text-sm font-bold text-gray-900 dark:text-white">Sales by Category</h2>
-                <span class="text-[11px] text-gray-400">by revenue</span>
-            </div>
-            @if(count($ins['categories']))
-                <div class="flex items-center gap-4">
-                    @php $R = 34; $C = 2 * M_PI * $R; $off = 0; @endphp
-                    <svg viewBox="0 0 90 90" class="w-24 h-24 shrink-0 -rotate-90">
-                        @foreach($ins['categories'] as $i => $c)
-                            @php $len = $C * $c['share'] / 100; @endphp
-                            <circle cx="45" cy="45" r="{{ $R }}" fill="none" style="stroke:{{ $donutColors[$i % 5] }}"
-                                    stroke-width="13" stroke-dasharray="{{ max(0.1, $len - 1.5) }} {{ $C }}"
-                                    stroke-dashoffset="{{ -$off }}" stroke-linecap="butt"/>
-                            @php $off += $len; @endphp
-                        @endforeach
-                    </svg>
-                    <div class="min-w-0 flex-1 space-y-1.5">
-                        @foreach($ins['categories'] as $i => $c)
-                            <div class="flex items-center gap-2 text-[11px]">
-                                <span class="shrink-0 w-2.5 h-2.5 rounded-full" style="background:{{ $donutColors[$i % 5] }}"></span>
-                                <span class="truncate text-gray-600 dark:text-gray-300 font-medium">{{ $c['name'] }}</span>
-                                <span class="ml-auto shrink-0 font-bold text-gray-800 dark:text-gray-100 tabular-nums">{{ $c['share'] }}%</span>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @else
-                <p class="py-8 text-center text-xs text-gray-400">No paid sales yet.</p>
-            @endif
         </div>
+    </x-carousel.slide>
+
+    {{-- ════ MAIN: order list, centered column ════ --}}
+    <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+    <div class="max-w-[50rem] mx-auto">
+    {{-- ══ Greeting ══ --}}
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                Hello, {{ ucfirst(explode(' ', trim($site->user?->name ?? 'there'))[0]) }}! 👋</h1>
+            <p class="mt-1 text-sm font-medium text-gray-600 dark:text-gray-300">This is what's happening in your store this month.</p>
+        </div>
+        <span class="text-xs font-semibold px-3 py-2 rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300">
+            {{ now()->format('F Y') }} ▾</span>
     </div>
+
 
     {{-- ══ Row 4: Order list ══ --}}
     <h2 class="text-lg font-extrabold tracking-tight text-gray-900 dark:text-white mb-3">Order list</h2>
@@ -209,6 +156,71 @@
             </table>
         </div>
     </div>
+    </div>{{-- /centered 50rem column --}}
+    </x-carousel.slide>
+
+    {{-- ════ RIGHT RAIL: revenue + categories ════ --}}
+    <x-carousel.slide class="lg:!w-[340px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+        <div class="space-y-4">
+        {{-- Revenue bars (last 8 days) --}}
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5 shadow-sm">
+            <div class="flex items-baseline justify-between mb-3">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-white">Revenue</h2>
+                <span class="text-[11px] text-gray-400">last 8 days</span>
+            </div>
+            @php
+                $dMax = max(1, collect($ins['daily'])->max('cents'));
+                $maxIdx = collect($ins['daily'])->search(fn ($d) => $d['cents'] === $dMax);
+            @endphp
+            <div class="flex items-end gap-2.5 h-40">
+                @foreach($ins['daily'] as $i => $bar)
+                    @php $h = $bar['cents'] > 0 ? max(8, (int) round($bar['cents'] / $dMax * 100)) : 4; @endphp
+                    <div class="flex-1 flex flex-col items-center gap-1.5 group relative h-full justify-end">
+                        <span class="absolute -top-1 left-1/2 -translate-x-1/2 text-[9px] font-bold whitespace-nowrap px-1.5 py-0.5 rounded-md
+                                {{ $i === $maxIdx && $bar['cents'] > 0 ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'opacity-0 group-hover:opacity-100 text-gray-500 transition-opacity' }}">
+                            {{ \App\Support\Money::format($bar['cents'], $ins['currency']) }}</span>
+                        <div class="w-full rounded-lg transition-all group-hover:opacity-80"
+                             style="height:{{ $h }}%; background:{{ $bar['cents'] > 0 ? 'var(--primary)' : 'rgba(148,163,184,.25)' }}"></div>
+                        <span class="text-[9px] text-gray-400 whitespace-nowrap">{{ $bar['label'] }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        {{-- Sales by Category donut --}}
+        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5 shadow-sm">
+            <div class="flex items-baseline justify-between mb-2">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-white">Sales by Category</h2>
+                <span class="text-[11px] text-gray-400">by revenue</span>
+            </div>
+            @if(count($ins['categories']))
+                <div class="flex items-center gap-4">
+                    @php $R = 34; $C = 2 * M_PI * $R; $off = 0; @endphp
+                    <svg viewBox="0 0 90 90" class="w-24 h-24 shrink-0 -rotate-90">
+                        @foreach($ins['categories'] as $i => $c)
+                            @php $len = $C * $c['share'] / 100; @endphp
+                            <circle cx="45" cy="45" r="{{ $R }}" fill="none" style="stroke:{{ $donutColors[$i % 5] }}"
+                                    stroke-width="13" stroke-dasharray="{{ max(0.1, $len - 1.5) }} {{ $C }}"
+                                    stroke-dashoffset="{{ -$off }}" stroke-linecap="butt"/>
+                            @php $off += $len; @endphp
+                        @endforeach
+                    </svg>
+                    <div class="min-w-0 flex-1 space-y-1.5">
+                        @foreach($ins['categories'] as $i => $c)
+                            <div class="flex items-center gap-2 text-[11px]">
+                                <span class="shrink-0 w-2.5 h-2.5 rounded-full" style="background:{{ $donutColors[$i % 5] }}"></span>
+                                <span class="truncate text-gray-600 dark:text-gray-300 font-medium">{{ $c['name'] }}</span>
+                                <span class="ml-auto shrink-0 font-bold text-gray-800 dark:text-gray-100 tabular-nums">{{ $c['share'] }}%</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @else
+                <p class="py-8 text-center text-xs text-gray-400">No paid sales yet.</p>
+            @endif
+        </div>
+        </div>
+    </x-carousel.slide>
+    </x-carousel>
 
     {{-- ════════ Order detail drawer ════════ --}}
     @if($this->selected)

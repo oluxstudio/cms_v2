@@ -53,7 +53,7 @@ class SfcRewriter
         // in the CMS) need a route too: a catch-all renders ANY page from its
         // wireframe using the template's own block components.
         File::ensureDirectoryExists("$appDir/app/pages");
-        File::put("$appDir/app/pages/[...slug].vue", $this->catchAllPage($manifest));
+        File::put("$appDir/app/pages/[...slug].vue", $this->catchAllPage($manifest, $appDir));
     }
 
     /**
@@ -62,7 +62,7 @@ class SfcRewriter
      * Unknown URLs with no CMS page render nothing (the block map is empty for
      * them), which reads as an empty page rather than a hard 404.
      */
-    private function catchAllPage(array $manifest): string
+    private function catchAllPage(array $manifest, string $appDir): string
     {
         $imports = '';
         $mapEntries = [];
@@ -76,6 +76,20 @@ class SfcRewriter
                 $imports .= "import {$block['component']} from '~/components/{$block['component']}.vue'\n";
                 $mapEntries[] = var_export($block['blockKey'], true).': '.$block['component'];
             }
+        }
+
+        // Blocks that live in the template but sit on NO shipped page (e.g. a
+        // Donate block only used by CMS-scaffolded pages) still need a route:
+        // include every *Block.vue component, keyed by its kebab-cased name.
+        foreach (File::glob("$appDir/app/components/*Block.vue") as $file) {
+            $component = basename($file, '.vue');
+            $blockKey = \Illuminate\Support\Str::kebab(preg_replace('/Block$/', '', $component));
+            if ($blockKey === '' || isset($seen[$blockKey])) {
+                continue;
+            }
+            $seen[$blockKey] = true;
+            $imports .= "import {$component} from '~/components/{$component}.vue'\n";
+            $mapEntries[] = var_export($blockKey, true).': '.$component;
         }
 
         $script = "\n".$imports

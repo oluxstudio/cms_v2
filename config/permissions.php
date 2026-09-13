@@ -34,6 +34,8 @@ return [
             'messages.view' => 'View team messages',
             'messages.send' => 'Send team messages',
             'contacts.manage' => 'Edit contacts & lifecycle',
+            'polls.view' => 'View polls & results',
+            'polls.manage' => 'Create & edit polls',
         ],
         'Commerce' => [
             'store.view' => 'View products',
@@ -74,6 +76,7 @@ return [
         'bookings' => 'bookings.view',
         'invoices' => 'invoices.view',
         'estimates' => 'estimates.view',
+        'polls' => 'polls.view',
         'donations' => 'donations.view',
         'analytics' => 'analytics.view',
         'alerts' => 'analytics.view',
