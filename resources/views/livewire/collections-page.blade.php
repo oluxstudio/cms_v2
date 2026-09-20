@@ -66,6 +66,10 @@
                                 <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Created {{ $collection->created_at->format('M d, Y') }}</p>
                             </div>
                             <div class="flex items-center justify-end gap-1 px-3 py-2.5 border-t border-gray-50 dark:border-white/[0.04]">
+                                <button wire:click="toggleInsights('{{ $collection->id }}')"
+                                        class="p-1.5 rounded-lg {{ $insightsId === $collection->id ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-400' }} hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Engagement insights">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                </button>
                                 <button wire:click="viewEntries('{{ $collection->id }}')" class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors" title="View entries">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                                 </button>
@@ -147,6 +151,33 @@
         @endif
     </div>
 
+    {{-- ── Engagement insights: which media gets the most attention ── --}}
+    @if($insightsId && ($ins = $this->mediaInsights))
+    <div class="mt-4 bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm p-5">
+        <div class="flex items-center justify-between mb-1">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-white">📈 {{ $ins['name'] }} — engagement, last 30 days</h2>
+            <button wire:click="toggleInsights('{{ $insightsId }}')" class="text-xs font-semibold text-gray-400 hover:text-gray-600">✕ Close</button>
+        </div>
+        @if($ins['views'] === 0 && $ins['plays'] === 0)
+            <p class="text-sm text-gray-400 py-6 text-center">No visitor activity yet — views and plays appear here as people open and play this collection's media on your website.</p>
+        @else
+        <p class="text-xs text-gray-400 mb-4">{{ number_format($ins['views']) }} views · {{ number_format($ins['plays']) }} plays · {{ $ins['rate'] }}% of viewers pressed play</p>
+        <div class="grid sm:grid-cols-2 gap-6">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-500 dark:text-gray-400 mb-2">Most viewed</p>
+                @if(count($ins['top_viewed'])) <x-analytics.bar-list :items="$ins['top_viewed']" />
+                @else <p class="text-sm text-gray-400 py-3">No views yet.</p> @endif
+            </div>
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-500 dark:text-gray-400 mb-2">Most played</p>
+                @if(count($ins['top_played'])) <x-analytics.bar-list :items="$ins['top_played']" />
+                @else <p class="text-sm text-gray-400 py-3">No plays yet.</p> @endif
+            </div>
+        </div>
+        @endif
+    </div>
+    @endif
+
     {{-- ── Create / Edit Modal ── --}}
     @if($showModal)
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -189,6 +220,8 @@
                                        hint="Off (recommended): new submissions are held as pending until you approve them here." />
                     @endif
                 </div>
+
+                @include('partials.visibility-fields', ['visSet' => $visFrom || $visUntil || $visDays !== [] || $visTimeFrom || $visRequiresContent || $visPromo])
 
                 {{-- Attach the collection to pages --}}
                 <div>
@@ -294,22 +327,42 @@
                 <p class="text-xs font-bold uppercase tracking-[.12em] text-gray-400 mb-3">{{ $editingItemId ? 'Edit entry' : 'New entry' }}</p>
                 <div class="grid sm:grid-cols-2 gap-3">
                     @foreach(($viewing->fields ?? []) as $f)
-                    @php $key = $f['key']; $ftype = $f['type'] ?? 'text'; @endphp
-                    <div class="{{ $ftype === 'textarea' ? 'sm:col-span-2' : '' }}">
-                        <label class="block text-[11px] font-bold text-gray-500 mb-1">{{ $f['label'] ?? $key }}</label>
-                        @if($ftype === 'textarea')
+                    @php $key = $f['key']; $ftype = $f['type'] ?? 'text'; $isJson = in_array($key, $itemJsonKeys ?? [], true); @endphp
+                    <div class="{{ ($ftype === 'textarea' || $isJson) ? 'sm:col-span-2' : '' }}">
+                        <label class="block text-[11px] font-bold text-gray-500 mb-1">{{ $f['label'] ?? $key }}@if($isJson) <span class="font-normal text-gray-400">· list (JSON)</span>@endif</label>
+                        @if($isJson)
+                            <textarea wire:model="itemForm.{{ $key }}" rows="4" spellcheck="false" class="w-full px-3 py-2 text-xs font-mono rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-y"></textarea>
+                            @error('itemForm.'.$key)<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                        @elseif($ftype === 'textarea')
                             <textarea wire:model="itemForm.{{ $key }}" rows="2" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-none"></textarea>
                         @elseif($ftype === 'select' && !empty($f['options']))
                             <select wire:model="itemForm.{{ $key }}" class="w-full px-3 py-2 pr-7 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
                                 <option value="">—</option>
                                 @foreach($f['options'] as $opt)<option value="{{ $opt }}">{{ $opt }}</option>@endforeach
                             </select>
+                        @elseif($ftype === 'url')
+                            {{-- photo/url picker: type a path, or pick from the site's assets --}}
+                            <div class="flex items-center gap-2">
+                                <input wire:model.live.debounce.500ms="itemForm.{{ $key }}" type="text" list="media-url-options"
+                                       placeholder="Pick from Assets, or type a path"
+                                       class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
+                                <button type="button" @click="$dispatch('open-media-picker', { context: { scope: 'collection-item', key: '{{ $key }}' } })"
+                                        class="shrink-0 px-2.5 py-2 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1]"
+                                        title="Choose from the asset library">Assets</button>
+                                @if(!empty($itemForm[$key]))
+                                    <img src="{{ $itemForm[$key] }}" alt="" class="w-9 h-9 rounded-lg object-cover border border-gray-200 dark:border-white/[0.08] shrink-0"
+                                         onerror="this.style.display='none'" onload="this.style.display=''">
+                                @endif
+                            </div>
                         @else
-                            <input wire:model="itemForm.{{ $key }}" type="{{ in_array($ftype, ['number','url','date','email']) ? $ftype : 'text' }}" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
+                            <input wire:model="itemForm.{{ $key }}" type="{{ in_array($ftype, ['number','date','email']) ? $ftype : 'text' }}" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
                         @endif
                     </div>
                     @endforeach
                 </div>
+                <datalist id="media-url-options">
+                    @foreach($this->mediaUrlOptions as $m)<option value="{{ $m['url'] }}">{{ $m['name'] }}</option>@endforeach
+                </datalist>
                 <div class="flex gap-2 mt-3">
                     <button wire:click="saveItem" class="px-4 py-2 rounded-lg text-xs font-semibold text-white" style="background:var(--primary)">Save entry</button>
                     <button wire:click="cancelItem" class="px-4 py-2 rounded-lg text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300">Cancel</button>
@@ -335,7 +388,17 @@
                             @foreach($entries as $item)
                                 <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
                                     @foreach($cols as $f)
-                                        <td class="px-3 py-2 text-gray-700 dark:text-gray-200 align-top max-w-[200px] truncate">{{ data_get($item->data, $f['key']) ?: '—' }}</td>
+                                        @php $v = data_get($item->data, $f['key']); @endphp
+                                        <td class="px-3 py-2 text-gray-700 dark:text-gray-200 align-top max-w-[200px] truncate">
+                                            @if(is_array($v))
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
+                                                      title="{{ json_encode($v, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}">
+                                                    {{ count($v) }} {{ Str::plural('item', count($v)) }}
+                                                </span>
+                                            @else
+                                                {{ ($v === null || $v === '') ? '—' : $v }}
+                                            @endif
+                                        </td>
                                     @endforeach
                                     <td class="px-3 py-2 text-right whitespace-nowrap">
                                         <button wire:click="openItem('{{ $item->id }}')"
@@ -359,4 +422,7 @@
 
     {{-- ── Delete Modal ── --}}
 
+
+    {{-- Asset library dialog for the item editor's photo fields --}}
+    <livewire:media-picker :site-id="$site->id" />
 </div>

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Push a local template project into the CMS: rsync the source into staging,
+# then run the full intake pipeline (lint gate → publish → fonts/assets →
+# preview build → refresh applied sites).
+#
+#   ./sync-template graceway              full deploy (~2-3 min, rebuilds shell)
+#   ./sync-template graceway --no-build   content-only update (fast)
+#   ./sync-template graceway --force      deploy despite lint errors
+set -euo pipefail
+KEY="${1:?usage: ./sync-template <key> [extra template:deploy flags]}"; shift || true
+SRC="$HOME/development/olux-studio/templates/$KEY"
+[ -d "$SRC" ] || { echo "✗ no such template source: $SRC"; exit 1; }
+
+rsync -a --delete \
+  --exclude node_modules --exclude .nuxt --exclude .output --exclude .git \
+  --exclude '.env*' --exclude .mcp.json --exclude scripts --exclude dist \
+  --exclude pack --exclude '*Zone.Identifier' \
+  "$SRC/" "$HOME/development/olux-studio/backend/storage/app/import-$KEY/"
+
+docker exec -u sail backend-cms-app-1 php artisan template:deploy "$KEY" \
+  --from="/var/www/html/storage/app/import-$KEY" "$@"

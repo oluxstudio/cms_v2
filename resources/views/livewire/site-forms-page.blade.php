@@ -8,13 +8,16 @@
      LIST MODE
 ════════════════════════════════════════════════════════════ --}}
 @if ($mode === 'list')
-<x-page-layout title="Forms" subtitle="Collect submissions from your visitors.">
+<x-carousel :labels="['📊 Stats', '📋 Forms', '📥 Responses']" :start="1">
+
+    {{-- ════ LEFT RAIL: summary tiles ════ --}}
+    <x-carousel.slide class="lg:!w-[280px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
     @php
         $fActive = $forms->where('is_active', true)->count();
         $fResponses = $forms->sum('responses_count');
         $fUnread = $forms->sum('unread_count');
     @endphp
-    <x-slot:stats>
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
         <x-stat-tile label="Forms" :value="$forms->count()" color="#6366f1"
             icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         <x-stat-tile label="Active" :value="$fActive" :sub="$forms->count().' total'" color="#10b981"
@@ -24,7 +27,12 @@
             icon="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         <x-stat-tile label="New responses" :value="$fUnread" :sub="$fUnread ? 'awaiting review' : 'all read'" color="#ef4444"
             icon="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </x-slot:stats>
+    </div>
+    </x-carousel.slide>
+
+    {{-- ════ MAIN: forms, centered column ════ --}}
+    <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+    <div class="max-w-[50rem] mx-auto space-y-6">
 
     <div class="flex items-center justify-between">
         <div>
@@ -68,8 +76,7 @@
         </div>
 
     @else
-        {{-- Form cards (unread-first) + a site-wide recent-responses rail --}}
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_330px] gap-5 items-start">
+        {{-- Form cards (unread-first) --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             @foreach ($forms as $form)
                 <div class="relative flex flex-col bg-white dark:bg-[#1d1e2a]
@@ -185,6 +192,12 @@
             @endforeach
         </div>
 
+    @endif
+    </div>
+    </x-carousel.slide>
+
+    {{-- ════ RIGHT RAIL: recent responses ════ --}}
+    <x-carousel.slide class="lg:!w-[340px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
         {{-- ── Recent responses (site-wide, newest first) ── --}}
         <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-gray-100 dark:border-white/[0.06] flex items-center justify-between">
@@ -220,9 +233,8 @@
                 <p class="px-4 py-10 text-center text-xs text-gray-400">No responses yet — they'll appear here the moment a visitor submits a form or books.</p>
             @endforelse
         </div>
-        </div> {{-- /cards + rail grid --}}
-    @endif
-</x-page-layout>
+    </x-carousel.slide>
+    </x-carousel>
 @endif {{-- /list --}}
 
 

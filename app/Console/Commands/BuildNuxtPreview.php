@@ -177,6 +177,11 @@ class BuildNuxtPreview extends Command
             return; // served at root — absolute paths already resolve
         }
         $prefix = rtrim($base, '/');
+        // Every asset-ish top-level dir the build ships gets rebased — not just
+        // /assets/ (fonts, videos, audio, media… are referenced root-absolute too).
+        $assetDirs = collect(File::directories($dest))->map(fn ($d) => basename($d))
+            ->intersect(['assets', 'fonts', 'videos', 'video', 'audio', 'media', 'images', 'img', 'files', 'downloads'])
+            ->values()->all() ?: ['assets'];
         $rewritten = 0;
         foreach (File::allFiles($dest) as $file) {
             if (! in_array($file->getExtension(), ['html', 'js', 'mjs', 'css', 'json'], true)) {
@@ -186,20 +191,23 @@ class BuildNuxtPreview extends Command
             // Nuxt ≥3.8 wraps static asset srcs in a base-aware helper —
             // `x(`/assets/…`)` — which prepends NUXT_APP_BASE_URL at runtime.
             // Rewriting those too would double the prefix, so shield them.
-            $sentinel = "\x00OLX_BASE_AWARE\x00";
-            $src = str_replace('(`/assets/', $sentinel, $src);
-            $new = str_replace(
-                ['"/assets/', "'/assets/", '`/assets/', 'url(/assets/', '(/assets/'],
-                ['"'.$prefix.'/assets/', "'".$prefix.'/assets/', '`'.$prefix.'/assets/', 'url('.$prefix.'/assets/', '('.$prefix.'/assets/'],
-                $src
-            );
-            $new = str_replace($sentinel, '(`/assets/', $new);
+            $new = $src;
+            foreach ($assetDirs as $d) {
+                $sentinel = "\x00OLX_BASE_AWARE\x00";
+                $new = str_replace('(`/'.$d.'/', $sentinel, $new);
+                $new = str_replace(
+                    ['"/'.$d.'/', "'/".$d.'/', '`/'.$d.'/', 'url(/'.$d.'/', '(/'.$d.'/'],
+                    ['"'.$prefix.'/'.$d.'/', "'".$prefix.'/'.$d.'/', '`'.$prefix.'/'.$d.'/', 'url('.$prefix.'/'.$d.'/', '('.$prefix.'/'.$d.'/'],
+                    $new
+                );
+                $new = str_replace($sentinel, '(`/'.$d.'/', $new);
+            }
             if ($new !== $src) {
                 File::put($file->getPathname(), $new);
                 $rewritten++;
             }
         }
-        $this->info("  · Asset paths rebased to {$prefix}/assets/ in {$rewritten} file(s)");
+        $this->info('  · Asset paths rebased ('.implode(', ', $assetDirs).') in '.$rewritten.' file(s)');
     }
 
     /** Run a process, streaming output; returns true on success. */

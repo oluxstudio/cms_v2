@@ -1,0 +1,76 @@
+{
+    "name": "Store",
+    "url": "/store",
+    "layout": "default",
+    "keywords": "store",
+    "attributes": {
+        "title": "Store \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:books",
+            "name": "Books",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:book-store",
+            "name": "Book Store",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "No products match this filter yet.",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "\u2190 Previous",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text C",
+                    "type": "text",
+                    "value": "Next \u2192",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Text D",
+                    "type": "text",
+                    "value": "Checkout \u2192",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Text E",
+                    "type": "text",
+                    "value": "Order",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Your basket",
+                    "order": 5,
+                    "description": "text"
+                },
+                {
+                    "label": "Text F",
+                    "type": "text",
+                    "value": "Secure card payment. You'll get an email receipt.",
+                    "order": 6,
+                    "description": "text"
+                }
+            ]
+        }
+    ]
+}

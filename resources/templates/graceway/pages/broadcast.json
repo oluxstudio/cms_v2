@@ -1,0 +1,31 @@
+{
+    "name": "Broadcast",
+    "url": "/broadcast",
+    "layout": "default",
+    "keywords": "broadcast",
+    "attributes": {
+        "title": "Live Broadcast \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:broadcast-channels",
+            "name": "Broadcast Channels",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:sermons",
+            "name": "Sermons",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:times",
+            "name": "Times",
+            "nodes": []
+        }
+    ]
+}

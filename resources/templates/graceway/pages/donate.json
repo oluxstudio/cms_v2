@@ -1,0 +1,26 @@
+{
+    "name": "Donate",
+    "url": "/donate",
+    "layout": "default",
+    "keywords": "donate",
+    "attributes": {
+        "title": "Give \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:donate-giving",
+            "name": "Donate Giving",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:times",
+            "name": "Times",
+            "nodes": []
+        }
+    ]
+}

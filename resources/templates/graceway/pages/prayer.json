@@ -1,0 +1,34 @@
+{
+    "name": "Prayer",
+    "url": "/prayer",
+    "layout": "default",
+    "keywords": "prayer",
+    "attributes": {
+        "title": "Prayer \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:prayer",
+            "name": "Prayer",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Send Another",
+                    "order": 0,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:donate-cta",
+            "name": "Donate Cta",
+            "nodes": []
+        }
+    ]
+}

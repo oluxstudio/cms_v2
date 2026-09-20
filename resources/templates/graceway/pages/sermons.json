@@ -1,0 +1,76 @@
+{
+    "name": "Sermons",
+    "url": "/sermons",
+    "layout": "default",
+    "keywords": "sermons",
+    "attributes": {
+        "title": "Sermons \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:sermons-archive",
+            "name": "Sermons Archive",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Browse by series",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "\u2715 Clear",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "No sermons match this filter \u2014 try widening it or <button type=\"button\" @click=\"clearFilters\">clear all filters</button>.",
+                    "order": 2,
+                    "description": "html"
+                },
+                {
+                    "label": "Text C",
+                    "type": "text",
+                    "value": "No sermons yet \u2014 check back after Sunday!",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Recent messages",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline B",
+                    "type": "text",
+                    "value": "Series",
+                    "order": 5,
+                    "description": "text"
+                },
+                {
+                    "label": "Subheadline C",
+                    "type": "text",
+                    "value": "Speakers",
+                    "order": 6,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:donate-cta",
+            "name": "Donate Cta",
+            "nodes": []
+        }
+    ]
+}

@@ -1,0 +1,21 @@
+{
+    "name": "Cookie Policy",
+    "url": "/cookie-policy",
+    "layout": "default",
+    "keywords": "cookie policy",
+    "attributes": {
+        "title": "Cookie Policy \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:legal-doc",
+            "name": "Legal Doc",
+            "nodes": []
+        }
+    ]
+}

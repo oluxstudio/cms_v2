@@ -35,6 +35,18 @@ class SubmissionPublisher
         $appDir = base_path("templates/{$submission->key}");
         $this->copyApp($submission->stagingPath(), $appDir);
 
+        // Fonts ship WITH the template: Google-CDN links become self-hosted
+        // woff2 + @font-face under public/assets/fonts (failure-safe: any
+        // download problem keeps the CDN links and only logs a warning).
+        try {
+            $fonts = app(\App\Services\FontLocalizer::class)->localize($appDir);
+            foreach ($fonts['warnings'] as $w) {
+                \Log::warning("[template:{$submission->key}] fonts: {$w}");
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         // Persist the manifest inside the published app — AppBlock resolves block
         // metadata from here. Written explicitly: the copy skips dot-folders.
         File::ensureDirectoryExists("$appDir/.olux");
@@ -106,10 +118,22 @@ class SubmissionPublisher
             }
         }
 
-        // 4. Assets: the copy carries at least as many files as staging (minus builds).
-        $count = fn (string $dir) => File::isDirectory("$dir/public/assets") ? count(File::allFiles("$dir/public/assets")) : 0;
-        if ($count($appDir) < $count($submission->stagingPath())) {
-            $missing[] = 'assets (copy has fewer files than the web app)';
+        // 4. Assets: EVERYTHING under public/ (images, fonts, videos, audio…)
+        // must survive the copy — compare recursive file count AND bytes.
+        $stat = function (string $dir): array {
+            if (! File::isDirectory("$dir/public")) {
+                return [0, 0];
+            }
+            $files = File::allFiles("$dir/public");
+
+            return [count($files), array_sum(array_map(fn ($f) => $f->getSize(), $files))];
+        };
+        [$copyCount, $copyBytes] = $stat($appDir);
+        [$srcCount, $srcBytes] = $stat($submission->stagingPath());
+        if ($copyCount < $srcCount) {
+            $missing[] = "public assets ({$copyCount} of {$srcCount} files copied)";
+        } elseif ($copyBytes < $srcBytes) {
+            $missing[] = 'public assets (copied files are smaller than the web app — truncated copy?)';
         }
 
         // 5. Theme & variables: token bridge + manifest + runtime composable.
@@ -252,7 +276,7 @@ class SubmissionPublisher
         $carried = [];
         if (File::exists("$dir/template.json")) {
             $prev = json_decode((string) File::get("$dir/template.json"), true) ?: [];
-            $carried = array_filter(array_intersect_key($prev, array_flip(['forms', 'booking', 'collections'])));
+            $carried = array_filter(array_intersect_key($prev, array_flip(['forms', 'booking', 'collections', 'products'])));
         }
 
         File::deleteDirectory($dir);
@@ -307,6 +331,19 @@ class SubmissionPublisher
             ->reject(fn ($v, $k) => str_starts_with($k, 'color-') || str_starts_with($k, 'font-'))
             ->all();
         File::put("$dir/tokens/variables.json", json_encode($variables ?: new \stdClass, JSON_PRETTY_PRINT));
+
+        // Data-source collections and authored forms: curated entries win by
+        // name; extracted ones (@olux-collection markers, <form> markup) fill
+        // in the rest.
+        foreach (['collections', 'forms'] as $k) {
+            $merged = collect((array) ($carried[$k] ?? []))
+                ->concat((array) ($manifest[$k] ?? []))
+                ->unique(fn ($c) => strtolower((string) ($c['name'] ?? '')))
+                ->values()->all();
+            if ($merged !== []) {
+                $carried[$k] = $merged;
+            }
+        }
 
         $blockTotal = array_sum(array_map(fn ($p) => count($p['blocks']), $manifest['pages']));
         File::put("$dir/template.json", json_encode($carried + [

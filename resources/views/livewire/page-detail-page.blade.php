@@ -1,6 +1,6 @@
 {{-- Full-screen canvas, dashboard idiom: left rail | centered main content --}}
 <div class="min-h-full flex flex-col app-bg"
-     x-data="{ toast:'' }"
+     x-data="{ toast:'', tabsOpen: false }"
      x-init="$watch('$wire.successMessage', v => { if(v){ toast=v; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } })">
 
     <x-bg-ambient />
@@ -19,6 +19,15 @@
             <a href="{{ $preview }}" target="_blank"
                class="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] text-xs font-semibold text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 bg-white/60 dark:bg-white/[0.04]">↗ View page</a>
         @endif
+        {{-- Tab toggle: the section tabs stay tucked away until asked for --}}
+        <button type="button" @click="tabsOpen = ! tabsOpen" :aria-expanded="tabsOpen" aria-label="Show page sections"
+                class="p-2 rounded-xl border transition-colors"
+                :class="tabsOpen ? 'text-white border-transparent' : 'border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 bg-white/60 dark:bg-white/[0.04]'"
+                :style="tabsOpen ? 'background:var(--primary)' : ''">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h12M3 17h6"/>
+            </svg>
+        </button>
     </div>
 
     {{-- ── Panes: mobile swipe carousel · desktop side-by-side ── --}}
@@ -55,8 +64,8 @@
         {{-- ════ MAIN CONTENT ════ --}}
         <x-carousel.slide class="lg:flex-1 px-5 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
             <div class="{{ $tab === 'content' ? '' : 'max-w-3xl mx-auto' }}">
-    {{-- Tabs --}}
-    <div class="flex gap-1.5 mb-5">
+    {{-- Tabs — revealed by the header toggle next to "View page" --}}
+    <div x-show="tabsOpen" x-collapse x-cloak class="flex flex-wrap gap-1.5 mb-5">
         @foreach(['edit' => '✏️ Edit', 'meta' => '🏷 Page attributes & meta tags', 'sources' => '🧩 Sources', 'content' => '📝 Content'] as $key => $label)
             <button wire:click="setTab('{{ $key }}')"
                     class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors

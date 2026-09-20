@@ -1,0 +1,21 @@
+{
+    "name": "Privacy Policy",
+    "url": "/privacy-policy",
+    "layout": "default",
+    "keywords": "privacy policy",
+    "attributes": {
+        "title": "Privacy Policy \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:legal-doc",
+            "name": "Legal Doc",
+            "nodes": []
+        }
+    ]
+}

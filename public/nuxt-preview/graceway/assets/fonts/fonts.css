@@ -1,0 +1,97 @@
+/* Graceway fonts — self-hosted (SIL OFL via Google Fonts), no CDN needed. */
+
+@font-face {
+  font-family: 'Abel';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/abel-normal-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Afacad';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/afacad-italic-400-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Afacad';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/afacad-normal-400-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Aladin';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/aladin-normal-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Baumans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/baumans-normal-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Bellota';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/bellota-italic-300.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Bellota';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/bellota-italic-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Bellota';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/bellota-italic-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Bellota';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/bellota-normal-300.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Bellota';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/bellota-normal-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Bellota';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/bellota-normal-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Text Me One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/nuxt-preview/graceway/assets/fonts/text-me-one-normal-400.woff2') format('woff2');
+}

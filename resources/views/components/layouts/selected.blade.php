@@ -355,7 +355,7 @@
         </aside>
 
         {{-- Below 4xl there is no inline assistant bar — this FAB opens it. --}}
-        <button type="button" x-show="!$store.rail.open" x-cloak @click="$store.rail.openChat()"
+        <button type="button" id="bk-chat-fab" x-show="!$store.rail.open" x-cloak @click="$store.rail.openChat()"
                 class="4xl:hidden fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full text-white shadow-lg flex items-center justify-center"
                 style="background:var(--primary)" title="Ask Polux">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

@@ -50,6 +50,29 @@
             </div>
         @endforeach
     </div>
+    @if (!empty($edit['collection']))
+        {{-- Data source backing this component — entries edit in the collection panel --}}
+        <div class="mt-4 rounded-xl border border-gray-100 dark:border-white/[0.06] p-2.5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">📦 Data source — {{ $edit['collection']['name'] }} ({{ $edit['collection']['count'] }})</p>
+                <button wire:click="select('collection', '{{ $edit['collection']['id'] }}')"
+                        class="text-xs font-semibold" style="color:var(--primary)">Manage →</button>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5">
+                @foreach ($edit['collection']['items'] as $ci)
+                    <button wire:click="select('collection', '{{ $edit['collection']['id'] }}')"
+                            class="group rounded-lg border border-gray-100 dark:border-white/[0.06] p-1.5 text-left hover:border-indigo-300 dark:hover:border-indigo-500/40 transition-colors"
+                            title="Edit in {{ $edit['collection']['name'] }}">
+                        @if ($ci['img'])
+                            <img src="{{ $ci['img'] }}" alt="" class="w-full aspect-square rounded-md object-cover mb-1" onerror="this.style.display='none'">
+                        @endif
+                        <span class="block text-[10px] font-semibold text-gray-600 dark:text-gray-300 truncate">{{ $ci['label'] }}</span>
+                    </button>
+                @endforeach
+            </div>
+            <p class="mt-1.5 text-[10px] text-gray-400">These entries feed this section — add, remove or edit them via Manage.</p>
+        </div>
+    @endif
     <button wire:click="saveComponent" class="olx-save">Save component</button>
 
 @elseif ($t === 'collection')

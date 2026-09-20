@@ -1,0 +1,44 @@
+{
+    "name": "About",
+    "url": "/about",
+    "layout": "default",
+    "keywords": "about",
+    "attributes": {
+        "title": "About Us \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:about",
+            "name": "About",
+            "nodes": [
+                {
+                    "label": "Subheadline",
+                    "type": "text",
+                    "value": "Our Ministries",
+                    "order": 0,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:times",
+            "name": "Times",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:pastors",
+            "name": "Pastors",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:donate-cta",
+            "name": "Donate Cta",
+            "nodes": []
+        }
+    ]
+}

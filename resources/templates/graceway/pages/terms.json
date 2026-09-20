@@ -1,0 +1,21 @@
+{
+    "name": "Terms",
+    "url": "/terms",
+    "layout": "default",
+    "keywords": "terms",
+    "attributes": {
+        "title": "Terms & Conditions \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:legal-doc",
+            "name": "Legal Doc",
+            "nodes": []
+        }
+    ]
+}

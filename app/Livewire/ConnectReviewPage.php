@@ -299,8 +299,10 @@ class ConnectReviewPage extends LivewireComponent
         $this->selectedId = $id;
         $this->mode = 'edit';
         $this->loadEdit();
-        // Bring the editor into view (drawer/panel may be scrolled or below).
+        // Bring the editor into view (drawer/panel may be scrolled or below);
+        // on the mobile carousel this slides across to the Edit pane.
         $this->dispatch('olx-editor-focus', target: 'top');
+        $this->dispatch('carousel-go', i: 2);
     }
 
     public function edit(): void
@@ -323,10 +325,21 @@ class ConnectReviewPage extends LivewireComponent
             'post' => $this->savePost(),
             default => null,
         };
+        // Saved → the mobile carousel returns to the preview to show the result.
+        if (($this->edit['type'] ?? null) !== null) {
+            $this->dispatch('carousel-go', i: 1);
+        }
+    }
+
+    /** Closing the editor also returns the mobile carousel to the preview. */
+    public function backToPreview(): void
+    {
+        $this->dispatch('carousel-go', i: 1);
     }
 
     public function deselect(): void
     {
+        $this->dispatch('carousel-go', i: 1);
         $this->selectedKind = $this->selectedId = null;
         $this->edit = [];
         $this->mode = 'view';
@@ -353,6 +366,24 @@ class ConnectReviewPage extends LivewireComponent
         if ($c) {
             $this->edit = ['type' => 'component', 'id' => $c->id, 'name' => $c->name, 'removedNodes' => [],
                 'nodes' => $c->nodes->map(fn (Node $n) => ['id' => $n->id, 'label' => $n->label, 'type' => $n->type, 'value' => (string) $n->value])->all()];
+
+            // Data-source grid: a component fed by a collection (Pastors →
+            // Leadership) shows that collection's entries in the panel.
+            if ($c->collection_id && ($col = Collection::withCount('items')->where('site_id', $this->site->id)->find($c->collection_id))) {
+                $this->edit['collection'] = [
+                    'id' => $col->id, 'name' => $col->name, 'count' => $col->items_count,
+                    'items' => $col->items()->limit(12)->get()->map(function ($i) {
+                        $d = (array) ($i->data ?? []);
+                        $img = (string) ($d['img'] ?? $d['image'] ?? $d['photo'] ?? '');
+
+                        return [
+                            'id' => $i->id,
+                            'label' => (string) ($d['name'] ?? $d['title'] ?? array_values(array_filter($d, 'is_string'))[0] ?? '…'),
+                            'img' => $img !== '' ? \App\Models\Media::resolveRef($this->site->id, '@media/'.basename($img)) : '',
+                        ];
+                    })->all(),
+                ];
+            }
         }
     }
 

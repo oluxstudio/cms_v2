@@ -1,0 +1,69 @@
+export interface OutreachProgramme {
+  slug: string
+  name: string
+  short: string
+  full: string
+  serves: string
+  schedule: string
+  location: string
+  accessHelp: string
+  volunteer: string
+  requirements?: string
+  needs: string[]
+  coordinator: string
+  coordinatorSlug?: string
+  img: string
+  partners: string[]
+}
+
+// Single source of truth for outreach programmes.
+const programmes: OutreachProgramme[] = [
+  {
+    slug: 'food-pantry', name: 'Food Pantry', short: 'Weekly groceries for families going through a hard stretch.',
+    full: 'Every Saturday our hall becomes a small market — shelves of tinned goods, fresh bread, fruit and toiletries, offered with dignity and a cup of tea. No forms at the door, no questions that don\'t need asking.',
+    serves: 'Anyone in Blackburn facing food insecurity — families, pensioners, students, anyone.',
+    schedule: 'Every Saturday, 9:00 – 11:30 AM', location: 'Church Hall, CAC Blackburn',
+    accessHelp: 'Just turn up — no referral or proof needed. If Saturday is impossible, call the office and we\'ll arrange a parcel pickup.',
+    volunteer: 'Shelf stocking (Fri evening), welcome desk and tea table (Sat morning), drivers for collections.',
+    needs: ['Tinned vegetables & fish', 'Rice and pasta', 'Toiletries & nappies', 'Strong carrier bags'],
+    coordinator: 'Peter Adeyemi', coordinatorSlug: 'peter-adeyemi', img: '/assets/images/event-1.jpg',
+    partners: ['Blackburn Foodbank Network', 'Local grocers'],
+  },
+  {
+    slug: 'elderly-visits', name: 'Elderly Visits', short: 'Friendship and practical help for isolated older neighbours.',
+    full: 'A team of visitors who show up weekly with conversation, small errands and the odd game of dominoes. For many of the people we visit, ours is the only knock on the door all week.',
+    serves: 'Housebound and isolated older people in the parish — church members and neighbours alike.',
+    schedule: 'Weekly visits, arranged around each person', location: 'In homes across Blackburn',
+    accessHelp: 'Know someone who\'d welcome a visitor? Call the office or fill in the contact form — with their permission — and we\'ll arrange an introduction.',
+    volunteer: 'Visitors (1 hour a week, same person each time), phone-call befrienders, lift-givers for Sunday services.',
+    requirements: 'Visitors are DBS-checked and trained — we walk you through it, it\'s straightforward.',
+    needs: ['More visitors — especially weekday afternoons', 'Drivers with patience and a warm car'],
+    coordinator: 'Esther Mwangi', coordinatorSlug: 'esther-mwangi', img: '/assets/images/welcome.jpg',
+    partners: ['Age UK Blackburn'],
+  },
+  {
+    slug: 'street-outreach', name: 'Street Outreach', short: 'Hot drinks, warm clothes and unhurried conversation on Friday nights.',
+    full: 'Two teams walk the town centre on Friday nights with flasks, sandwiches, socks and time. The food opens the door; the conversation is the ministry.',
+    serves: 'People sleeping rough or vulnerably housed in Blackburn town centre.',
+    schedule: 'Friday nights, 9:00 – 11:00 PM', location: 'Town centre — teams leave from the church',
+    accessHelp: 'If you\'re on the street and need help now, come to the church office any weekday morning — no appointment. We can also connect you to housing services.',
+    volunteer: 'Team walkers (pairs, twice a month), sandwich makers (Friday afternoons), kit sorters.',
+    requirements: 'Walkers join an experienced pair for their first month.',
+    needs: ['Men\'s socks and gloves', 'Sleeping bags in good condition', 'Flask-sized coffee donations'],
+    coordinator: 'Samuel Reyes', coordinatorSlug: 'samuel-reyes', img: '/assets/images/event-3.jpg',
+    partners: ['Shelter', 'Blackburn Night Shelter'],
+  },
+  {
+    slug: 'missions-abroad', name: 'Missions Abroad', short: 'Long-term partnerships with churches in Nigeria and Kenya.',
+    full: 'We support two partner congregations with school fees, a clean-water project and an annual visit — a partnership of equals that has run for over a decade, not a photo opportunity.',
+    serves: 'Partner communities in Ogun State, Nigeria and Kisumu, Kenya.',
+    schedule: 'Year-round support · team trip each summer', location: 'Nigeria & Kenya',
+    accessHelp: 'This programme supports our partners abroad — for local help, see the Food Pantry or Street Outreach.',
+    volunteer: 'Summer trip team (apply by March), prayer partners, fundraising crew for the spring campaign.',
+    needs: ['Monthly giving partners for school fees', 'Skills for the summer team: building, teaching, medicine'],
+    coordinator: 'Rev. Daniel Okafor', coordinatorSlug: 'daniel-okafor', img: '/assets/images/circle-1.jpg',
+    partners: ['CAC Ogun State', 'Kisumu Community Church'],
+  },
+]
+
+export const useOutreach = () => programmes

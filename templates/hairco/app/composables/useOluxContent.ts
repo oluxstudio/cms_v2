@@ -152,7 +152,10 @@ export const useOluxContent = (blockKey: string) => {
           }
         }
         if (!found) break
-        rows.push(row)
+        // Overlay onto the authored row at the same index: structural keys
+        // the extractor doesn't capture (children, match, icons…) survive,
+        // while every CMS-edited field wins.
+        rows.push({ ...(fallback[i - 1] ?? {}), ...row })
       }
       return rows.length ? rows : fallback
     })
@@ -193,7 +196,47 @@ export const useOluxContent = (blockKey: string) => {
     if (!page) return false
     const block = (page.wireframe ?? []).find((b: BlockT) => typeof b.type === 'string' && b.type.endsWith(`:${blockKey}`))
     if (!block) return true
-    return block.settings?.hidden === true
+    if (block.settings?.hidden === true) return true
+    return !visibilityPasses((block as any).visibility)
+  }
+
+  /**
+   * Scheduled visibility (date range / days / daily time window / content /
+   * ?promo campaign links) evaluated in the VISITOR's timezone. The connect
+   * editor is exempt so owners always see what they're editing.
+   */
+  const visibilityPasses = (vis: any): boolean => {
+    const rules = vis?.rules
+    if (!rules || typeof window === 'undefined') return true
+    if ((window as any).oluxEditActive === true) return true
+    const q = new URLSearchParams(window.location.search)
+    if (q.has('editor')) return true
+
+    const now = new Date()
+    if (rules.from && now < new Date(rules.from)) return false
+    if (rules.until && now > new Date(rules.until)) return false
+    if (Array.isArray(rules.days) && rules.days.length) {
+      const iso = now.getDay() === 0 ? 7 : now.getDay()
+      if (!rules.days.map(Number).includes(iso)) return false
+    }
+    if (rules.time_from && rules.time_until) {
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const t = pad(now.getHours()) + ':' + pad(now.getMinutes())
+      const inWindow = rules.time_from <= rules.time_until
+        ? (t >= rules.time_from && t <= rules.time_until)
+        : (t >= rules.time_from || t <= rules.time_until) // overnight window
+      if (!inWindow) return false
+    }
+    if (rules.requires_content && vis.visible_now === false) return false
+    if (rules.promo) {
+      let seen = q.get('promo')
+      try {
+        if (seen) sessionStorage.setItem('olux_promo', seen)
+        else seen = sessionStorage.getItem('olux_promo')
+      } catch (_) {}
+      if (seen !== String(rules.promo)) return false
+    }
+    return true
   }
 
   /**

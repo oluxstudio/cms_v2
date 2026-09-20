@@ -206,8 +206,10 @@ test('applying a template imports its images as default site media and relinks t
     $installer = app(TemplateInstaller::class);
     $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
 
-    $media = Media::where('site_id', $site->id)->pluck('name');
-    expect($media)->toContain('hero.svg')
+    // Media rows get human labels now ("hero.svg" → "Hero", folder-prefixed
+    // outside the standard asset dirs); the stored file keeps its real name.
+    $media = Media::where('site_id', $site->id)->get();
+    expect($media->firstWhere(fn ($m) => str_contains(strtolower((string) $m->url), 'hero')))->not->toBeNull()
         ->and($media->count())->toBeGreaterThan(3);
 
     $hero = $site->contentComponents()->where('name', 'Hero')->first()->nodes()->where('type', 'image')->first();

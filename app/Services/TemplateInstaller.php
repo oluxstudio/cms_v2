@@ -122,6 +122,7 @@ class TemplateInstaller
                 'forms' => $m['forms'] ?? [],
                 'booking' => $m['booking'] ?? [],
                 'collections' => $m['collections'] ?? [],
+                'products' => $m['products'] ?? [],
                 'version' => (string) ($m['version'] ?? '1.0.0'),
                 'author' => (string) ($m['author'] ?? 'Curated'),
             ],
@@ -198,6 +199,16 @@ class TemplateInstaller
             $layout = ($layouts['default'] ?? (reset($layouts) ?: []))['blocks'] ?? [];
         }
         $layout = $layout ?: (array) ($row->payload['layout'] ?? []);
+        // Catalog/marketplace rows resolve to version contracts, not
+        // TemplatePackage — fall back to the published package's layout so
+        // their sites still get the header/footer chrome.
+        if ($layout === [] && $appKey !== TemplateAppRegistry::BLANK) {
+            $dir = resource_path('templates/'.$appKey);
+            if (is_dir($dir)) {
+                $layouts = (new TemplatePackage($dir))->layouts();
+                $layout = ($layouts['default'] ?? (reset($layouts) ?: []))['blocks'] ?? [];
+            }
+        }
         if ($layout !== []) {
             $this->scaffolder->applyChrome($site, $layout);
         }
@@ -218,6 +229,15 @@ class TemplateInstaller
         //     can add/remove items on) — seeded with the template's rows.
         $manifest = TemplateAppRegistry::find($appKey)['manifest'] ?? [];
         $this->applyCollections($site, (array) ($manifest['collections'] ?? $row->payload['collections'] ?? []));
+
+        // 3a1b. Wire components to the collection that feeds them (static scan
+        //       of the published app) — the connect editor then shows the
+        //       data-source grid whenever such a component is selected.
+        $this->linkComponentCollections($site, $appKey);
+
+        // 3a2. Products the template declares — the store page works out of
+        //      the box; owner edits/pricing survive re-applies (slug match).
+        $this->applyProducts($site, (array) ($manifest['products'] ?? $row->payload['products'] ?? []));
 
         // 3b. Booking: seed the template's services + availability so the
         //     template's appointment flow is bookable out of the box.
@@ -299,17 +319,113 @@ class TemplateInstaller
     }
 
     /** @param  list<array{name:string,title?:string,fields?:array}>  $forms */
+    /**
+     * Component → collection linkage, derived from the published sources:
+     * a component reads items('slug') directly or through a composable
+     * accessor (useMembers → items('leadership')). Sets collection_id on the
+     * site's matching components so editors can jump to the data source.
+     */
+    private function linkComponentCollections(Site $site, string $appKey): void
+    {
+        $appDir = base_path("templates/{$appKey}/app");
+        if (! is_dir($appDir)) {
+            return;
+        }
+
+        // Accessor name → collection slug: each exported use* accessor maps to
+        // the FIRST items('slug') inside its own export segment, so a file
+        // exporting several accessors (useSermons + useSermonSeries) or a
+        // multi-source helper never smears one slug across everything.
+        $byAccessor = [];
+        foreach (glob("$appDir/composables/*.{ts,js}", GLOB_BRACE) ?: [] as $file) {
+            $code = (string) file_get_contents($file);
+            $parts = preg_split('#export (?:const|function) (use\w+)#', $code, -1, PREG_SPLIT_DELIM_CAPTURE);
+            for ($i = 1; $i < count($parts) - 1; $i += 2) {
+                if (preg_match_all("#items\(['\"]([\w-]+)['\"]#", $parts[$i + 1], $m) && count(array_unique($m[1])) === 1) {
+                    $byAccessor[$parts[$i]] = $m[1][0];
+                }
+            }
+        }
+
+        // Component file → slug (direct items() call wins over accessors).
+        $links = [];
+        foreach (glob("$appDir/components/*.vue") ?: [] as $file) {
+            $code = (string) file_get_contents($file);
+            $slug = null;
+            if (preg_match("#items\(['\"]([\w-]+)['\"]#", $code, $m)) {
+                $slug = $m[1];
+            } else {
+                // Several accessors may appear (useSermons + useSermonSeries):
+                // the one used EARLIEST is the component's primary source.
+                $best = PHP_INT_MAX;
+                foreach ($byAccessor as $fn => $s) {
+                    $pos = strpos($code, $fn.'(');
+                    if ($pos !== false && $pos < $best) {
+                        [$best, $slug] = [$pos, $s];
+                    }
+                }
+            }
+            if ($slug) {
+                $name = Str::headline(preg_replace('#Block$#', '', basename($file, '.vue')));
+                $links[$name] = $slug;
+            }
+        }
+        if ($links === []) {
+            return;
+        }
+
+        $collections = $site->collections()->get()->keyBy(fn ($c) => Str::slug($c->slug ?: $c->name));
+        foreach ($links as $name => $slug) {
+            $col = $collections->get(Str::slug($slug));
+            if ($col) {
+                $site->contentComponents()->where('name', $name)
+                    ->whereNull('collection_id')->update(['collection_id' => $col->id]);
+            }
+        }
+    }
+
+    private function applyProducts(Site $site, array $products): void
+    {
+        foreach ($products as $i => $p) {
+            if (empty($p['name'])) {
+                continue;
+            }
+            $site->products()->firstOrCreate(['slug' => $p['slug'] ?? \Illuminate\Support\Str::slug($p['name'])], [
+                'name' => (string) $p['name'],
+                'description' => (string) ($p['description'] ?? ''),
+                'category' => (string) ($p['category'] ?? ''),
+                'tags' => (array) ($p['tags'] ?? []),
+                'price_cents' => (int) ($p['price_cents'] ?? 0),
+                'currency' => (string) ($p['currency'] ?? 'gbp'),
+                'image' => (string) ($p['image'] ?? ''),
+                'inventory' => $p['inventory'] ?? null,
+                'is_active' => true,
+                'sort' => $i,
+            ]);
+        }
+    }
+
     private function applyForms(Site $site, array $forms): void
     {
         foreach ($forms as $form) {
             if (empty($form['name'])) {
                 continue;
             }
-            $site->forms()->firstOrCreate(['name' => $form['name']], [
+            $existing = $site->forms()->firstOrCreate(['name' => $form['name']], [
                 'title' => (string) ($form['title'] ?? ucfirst($form['name'])),
                 'fields' => (array) ($form['fields'] ?? []),
                 'is_active' => true,
             ]);
+
+            // Template gained fields since this form was created → merge them
+            // in ADDITIVELY (owner-edited fields and order are never touched).
+            $have = collect((array) $existing->fields)->pluck('key')->filter()->all();
+            $missing = collect((array) ($form['fields'] ?? []))
+                ->filter(fn ($fl) => ! empty($fl['key']) && ! in_array($fl['key'], $have, true))
+                ->values()->all();
+            if ($missing !== [] && ! $existing->wasRecentlyCreated) {
+                $existing->update(['fields' => array_merge((array) $existing->fields, $missing)]);
+            }
         }
     }
 
@@ -322,7 +438,9 @@ class TemplateInstaller
      */
     private function importAssets(Site $site, string $appKey): void
     {
-        foreach ([public_path("nuxt-preview/{$appKey}/assets"), base_path("templates/{$appKey}/public/assets")] as $dir) {
+        // The published template app is the source of truth (a preview build
+        // can lag it and misses fonts/videos outside its rebased dirs).
+        foreach ([base_path("templates/{$appKey}/public"), public_path("nuxt-preview/{$appKey}")] as $dir) {
             if (is_dir($dir)) {
                 break;
             }
@@ -332,11 +450,15 @@ class TemplateInstaller
             return;
         }
 
-        // Every image the template ships, wherever it keeps it — recursive.
+        // Every asset the template ships, wherever it keeps it — recursive
+        // across the whole public tree (AssetImporter gates types/sizes).
         $importer = app(AssetImporter::class);
         $refs = []; // basename → @media ref
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
         foreach ($it as $file) {
+            if (str_contains($file->getPathname(), '/_nuxt/') || str_contains($file->getPathname(), '/_payload')) {
+                continue; // build artefacts, not authored assets
+            }
             if ($file->isFile() && ($ref = $importer->importLocal($site, $file->getPathname()))) {
                 $refs[strtolower($file->getFilename())] = $ref;
             }

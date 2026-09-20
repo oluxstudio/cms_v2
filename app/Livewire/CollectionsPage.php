@@ -11,6 +11,8 @@ use Livewire\Component;
 
 class CollectionsPage extends Component
 {
+    use \App\Livewire\Concerns\WithVisibilityFields;
+
     use WithLayoutMode;
 
     public Site $site;
@@ -20,6 +22,56 @@ class CollectionsPage extends Component
     public bool $showModal = false;
 
     public ?string $editingId = null;
+
+    /** Collection whose engagement insights panel is open (null = closed). */
+    public ?string $insightsId = null;
+
+    public function toggleInsights(string $id): void
+    {
+        $this->insightsId = $this->insightsId === $id ? null : $id;
+    }
+
+    /** Per-item views/plays for the open collection, last 30 days. */
+    public function getMediaInsightsProperty(): ?array
+    {
+        if (! $this->insightsId) {
+            return null;
+        }
+        $collection = CollectionModel::where('site_id', $this->site->id)->find($this->insightsId);
+        if (! $collection) {
+            return null;
+        }
+
+        $rows = \App\Models\CollectionItemEvent::where('collection_id', $collection->id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->selectRaw('collection_item_id, event, COUNT(*) as n')
+            ->groupBy('collection_item_id', 'event')->get();
+
+        $titles = $collection->items()->get()->mapWithKeys(fn ($i) => [
+            $i->id => (string) ($i->data['title'] ?? $i->data['name'] ?? 'Item '.substr($i->id, -5)),
+        ]);
+
+        $per = [];
+        foreach ($rows as $r) {
+            $key = $r->collection_item_id;
+            $per[$key] ??= ['label' => $titles[$key] ?? 'Deleted item', 'view' => 0, 'play' => 0];
+            $per[$key][$r->event] = (int) $r->n;
+        }
+        $views = (int) array_sum(array_column($per, 'view'));
+        $plays = (int) array_sum(array_column($per, 'play'));
+
+        return [
+            'name' => $collection->name,
+            'views' => $views,
+            'plays' => $plays,
+            'rate' => $views > 0 ? (int) round($plays / $views * 100) : 0,
+            // x-analytics.bar-list shape: [label => count], sorted desc.
+            'top_viewed' => collect($per)->sortByDesc('view')->take(7)
+                ->mapWithKeys(fn ($p, $id) => [$p['label'] ?: substr($id, -5) => $p['view']])->all(),
+            'top_played' => collect($per)->sortByDesc('play')->take(7)
+                ->mapWithKeys(fn ($p, $id) => [$p['label'] ?: substr($id, -5) => $p['play']])->all(),
+        ];
+    }
 
     public ?string $viewingId = null;
 
@@ -44,6 +96,12 @@ class CollectionsPage extends Component
     {
         $this->site = $site;
         $this->initLayout('collections', 'list');
+
+        // Deep link (?open={id}) — e.g. a component's "Manage data source →".
+        if (($id = (string) request()->query('open')) !== ''
+            && CollectionModel::where('site_id', $site->id)->whereKey($id)->exists()) {
+            $this->viewingId = $id;
+        }
     }
 
     public function render()
@@ -96,7 +154,7 @@ class CollectionsPage extends Component
 
     public function closeEntries(): void
     {
-        $this->reset(['viewingId', 'editingItemId', 'itemForm', 'memberSearch']);
+        $this->reset(['viewingId', 'editingItemId', 'itemForm', 'itemJsonKeys', 'memberSearch']);
     }
 
     public function deleteItem(string $itemId): void
@@ -104,6 +162,7 @@ class CollectionsPage extends Component
         CollectionItem::where('id', $itemId)
             ->whereHas('collection', fn ($q) => $q->where('site_id', $this->site->id))
             ->delete();
+        $this->bustRenderCache($this->site);
     }
 
     // ── Entry (collection item) editing ──────────────────────────────────
@@ -112,43 +171,101 @@ class CollectionsPage extends Component
 
     public array $itemForm = [];             // field key => value
 
+    /** Fields holding arrays/objects (multi-dimensional data) — edited as JSON. */
+    public array $itemJsonKeys = [];
+
     /** Open the entry editor — blank for a new entry, prefilled for an existing one. */
     public function openItem(?string $itemId = null): void
     {
         $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->viewingId);
         $keys = collect($collection->fields ?? [])->pluck('key')->all();
 
-        if ($itemId) {
-            $item = $collection->items()->findOrFail($itemId);
-            $this->itemForm = collect($keys)->mapWithKeys(fn ($k) => [$k => (string) data_get($item->data, $k, '')])->all();
-        } else {
-            $this->itemForm = collect($keys)->mapWithKeys(fn ($k) => [$k => ''])->all();
-        }
+        $item = $itemId ? $collection->items()->findOrFail($itemId) : null;
+
+        // A field is JSON-edited when its schema says so, or when any stored
+        // entry holds an array under it (schemas often say "text" for arrays).
+        $declared = collect($collection->fields ?? [])
+            ->filter(fn ($f) => in_array($f['type'] ?? '', ['json', 'list', 'array'], true))
+            ->pluck('key')->all();
+        $samples = $item ? collect([$item]) : $collection->items()->latest()->limit(20)->get();
+        $this->itemJsonKeys = collect($keys)->filter(fn ($k) => in_array($k, $declared, true)
+            || $samples->contains(fn ($i) => is_array(data_get($i->data, $k))))->values()->all();
+
+        $this->itemForm = collect($keys)->mapWithKeys(function ($k) use ($item) {
+            $v = $item ? data_get($item->data, $k, '') : '';
+            if (in_array($k, $this->itemJsonKeys, true)) {
+                $v = is_array($v) ? $v : ($v === '' || $v === null ? [] : [$v]);
+
+                return [$k => json_encode($v, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)];
+            }
+
+            return [$k => is_array($v) ? json_encode($v, JSON_UNESCAPED_SLASHES) : (string) $v];
+        })->all();
         $this->editingItemId = $itemId ?? '';
+    }
+
+    /** Asset-library options for url-type fields (photo pickers). */
+    public function getMediaUrlOptionsProperty(): array
+    {
+        return \App\Models\Media::where('site_id', $this->site->id)
+            ->where('file_type', 'image')->latest()->limit(200)
+            ->get()->map(fn ($m) => ['url' => $m->url, 'name' => $m->name])->all();
+    }
+
+    /** Asset picked in the media dialog → drop its URL into the item field. */
+    #[\Livewire\Attributes\On('media-picked')]
+    public function onMediaPicked(array $context, string $mediaRef, string $url): void
+    {
+        if (($context['scope'] ?? '') === 'collection-item' && isset($context['key'])) {
+            $this->itemForm[$context['key']] = $url;
+        }
     }
 
     public function cancelItem(): void
     {
-        $this->reset(['editingItemId', 'itemForm']);
+        $this->reset(['editingItemId', 'itemForm', 'itemJsonKeys']);
     }
 
     public function saveItem(): void
     {
         $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->viewingId);
         $keys = collect($collection->fields ?? [])->pluck('key')->all();
-        $data = collect($this->itemForm)->only($keys)->map(fn ($v) => is_string($v) ? trim($v) : $v)->all();
+
+        // JSON fields decode back to arrays/objects; invalid JSON blocks the save.
+        foreach ($this->itemJsonKeys as $k) {
+            $raw = trim((string) ($this->itemForm[$k] ?? ''));
+            json_decode($raw === '' ? '[]' : $raw, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->addError("itemForm.{$k}", 'Invalid JSON: '.json_last_error_msg());
+
+                return;
+            }
+        }
+
+        $data = collect($this->itemForm)->only($keys)->map(function ($v, $k) {
+            if (in_array($k, $this->itemJsonKeys, true)) {
+                $raw = trim((string) $v);
+
+                return json_decode($raw === '' ? '[]' : $raw, true);
+            }
+
+            return is_string($v) ? trim($v) : $v;
+        })->all();
 
         if ($this->editingItemId) {
             $collection->items()->findOrFail($this->editingItemId)->update(['data' => $data]);
         } else {
             $collection->items()->create(['site_id' => $this->site->id, 'data' => $data, 'status' => 'published']);
         }
-        $this->reset(['editingItemId', 'itemForm']);
+        $this->reset(['editingItemId', 'itemForm', 'itemJsonKeys']);
+        $this->bustRenderCache($this->site);
+        $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Entry saved — the site shows it on the next load.');
     }
 
     public function openCreate(): void
     {
         $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish', 'pageIds']);
+        $this->resetVisibilityFields();
         $this->type = 'list';
         $this->showModal = true;
     }
@@ -163,6 +280,7 @@ class CollectionsPage extends Component
         $this->allowSubmit = (bool) $collection->allow_submit;
         $this->autoPublish = (bool) $collection->auto_publish;
         $this->pageIds = $collection->pages()->pluck('pages.id')->map(fn ($v) => (string) $v)->all();
+        $this->hydrateVisibilityFields($collection->visibility);
         $this->showModal = true;
     }
 
@@ -173,11 +291,13 @@ class CollectionsPage extends Component
             'type' => 'required|in:list,grid,table',
             'description' => 'nullable|max:500',
         ]);
+        $visibility = $this->assembleVisibility();
 
         if ($this->editingId) {
             $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->editingId);
             $collection->update([
                 'name' => $this->name,
+                'visibility' => $visibility,
                 'type' => $this->type,
                 'description' => $this->description,
                 'allow_submit' => $this->allowSubmit,
@@ -187,6 +307,7 @@ class CollectionsPage extends Component
             $collection = CollectionModel::create([
                 'site_id' => $this->site->id,
                 'name' => $this->name,
+                'visibility' => $visibility,
                 'type' => $this->type,
                 'description' => $this->description,
                 'allow_submit' => $this->allowSubmit,
@@ -195,9 +316,11 @@ class CollectionsPage extends Component
         }
 
         $this->syncPages($collection);
+        $this->bustRenderCache($this->site);
 
         $this->showModal = false;
         $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish', 'pageIds']);
+        $this->resetVisibilityFields();
     }
 
     /** Attach the collection to the selected pages (order preserved/appended). */

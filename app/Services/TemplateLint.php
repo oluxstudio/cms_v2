@@ -128,6 +128,11 @@ class TemplateLint
             }
         }
 
+        // ── Source fidelity: what the rewrite would silently drop ──
+        if ($appDir && File::isDirectory("$appDir/app/pages")) {
+            $f = array_merge($f, $this->sourceFindings($appDir));
+        }
+
         // Blocks shared across pages (header/footer) repeat per page — report once.
         $f = collect($f)->unique(fn ($x) => $x['level'].$x['area'].$x['message'])->values()->all();
 
@@ -137,6 +142,124 @@ class TemplateLint
         $score = max(0, 100 - $errors * 25 - $warnings * 8);
 
         return ['score' => $score, 'findings' => $f];
+    }
+
+    /**
+     * Source-aware fidelity checks over app/pages/*.vue — the failure modes
+     * graceway hit by hand: slot children and inline page markup are DROPPED
+     * by the wireframe rewrite, literal content props never reach the CMS,
+     * root-absolute asset dirs must exist under public/ for the preview
+     * rebase, and Google-CDN fonts get self-hosted at publish.
+     *
+     * @return array<int,array{level:string,area:string,message:string}>
+     */
+    private function sourceFindings(string $appDir): array
+    {
+        $f = [];
+        $propAllow = ['class', 'id', 'to', 'href', 'src', 'alt', 'type', 'style', 'key', 'name', 'target', 'rel', 'width', 'height', 'loading', 'variant'];
+
+        foreach (File::allFiles("$appDir/app/pages") as $pageFile) {
+            $file = $pageFile->getPathname();
+            $page = ltrim(str_replace('\\', '/', \Illuminate\Support\Str::after($file, '/app/pages/')), '/');
+            if ($pageFile->getExtension() !== 'vue' || str_contains($page, '[')) {
+                continue; // dynamic routes are not extracted (same rule as TemplateExtractor)
+            }
+            if (! preg_match('#<template>(.*)</template>#s', File::get($file), $tm)) {
+                continue;
+            }
+            if (str_contains($tm[1], '<component :is') || str_contains($tm[1], 'oluxBlocks')) {
+                continue; // already rewritten into a wireframe loop — not authored source
+            }
+            $tpl = preg_replace('#<!--.*?-->#s', '', $tm[1]);
+
+            // 1. Slot content: <Component>…children…</Component> — dropped by the rewrite.
+            if (preg_match_all('#<([A-Z][A-Za-z0-9]*)(\s[^>]*)?(?<!/)>(.*?)</\1>#s', $tpl, $slots, PREG_SET_ORDER)) {
+                foreach ($slots as $s) {
+                    if (trim($s[3]) !== '') {
+                        $f[] = $this->finding('error', 'Fidelity', "{$page}: <{$s[1]}> receives slot content — the CMS rewrite discards it. Move the content inside the component and author pages as flat block lists.");
+                    }
+                }
+            }
+
+            // 2. Inline page markup between blocks (beyond one root wrapper) — also dropped.
+            $stripped = preg_replace('#<([A-Z][A-Za-z0-9]*)(\s[^>]*)?(?<!/)>.*?</\1>#s', '', $tpl);
+            $stripped = preg_replace('#<[A-Z][A-Za-z0-9]*(\s[^>]*)?/?>#s', '', (string) $stripped);
+            $stripped = preg_replace('#^<(div|main|section)([^>]*)>#', '', trim((string) $stripped), 1); // one root wrapper allowed
+            $stripped = preg_replace('#</(div|main|section)>$#', '', trim((string) $stripped), 1);
+            if (preg_match('#<(section|div|h[1-6]|p|ul|ol|img|form|article|figure)\b#', (string) $stripped, $tag)) {
+                $f[] = $this->finding('error', 'Fidelity', "{$page}: inline <{$tag[1]}> markup between block components — the CMS rewrite drops it. Wrap it in its own *Block.vue component.");
+            }
+
+            // 3. Literal content props — survive hardcoded, never CMS-editable.
+            $literal = 0;
+            if (preg_match_all('#<[A-Z][A-Za-z0-9]*\s([^>]+?)/?>#s', $tpl, $tags)) {
+                foreach ($tags[1] as $attrs) {
+                    if (preg_match_all('#(?<=\s)([a-z][a-z0-9-]*)="([^"]{3,})"#', ' '.$attrs, $props, PREG_SET_ORDER)) {
+                        foreach ($props as $pr) {
+                            $n = $pr[1];
+                            if (! in_array($n, $propAllow, true) && ! str_starts_with($n, 'data-') && ! str_starts_with($n, 'aria-') && ! str_starts_with($n, 'v-')) {
+                                $literal++;
+                            }
+                        }
+                    }
+                }
+            }
+            if ($literal > 0) {
+                $f[] = $this->finding('warning', 'Fidelity', "{$page}: {$literal} literal content prop(s) on components — prop-passed copy isn't CMS-editable; move it inside the component with data-olx-field markers.");
+            }
+        }
+
+        // 4. Root-absolute asset dirs: preview-rebased only when they exist under public/.
+        $dirRefs = [];
+        $scan = array_merge(
+            File::glob("$appDir/app/{pages,components,layouts,composables}/*.{vue,ts,js}", GLOB_BRACE) ?: [],
+            File::glob("$appDir/public/assets/stylesheets/*.css") ?: []
+        );
+        foreach ($scan as $file) {
+            if (preg_match_all('#["\'(]/(fonts|videos|video|audio|media|img|images|files|downloads)/#', File::get($file), $m)) {
+                foreach ($m[1] as $d) {
+                    $dirRefs[$d] = true;
+                }
+            }
+        }
+        foreach (array_keys($dirRefs) as $d) {
+            $f[] = File::isDirectory("$appDir/public/{$d}")
+                ? $this->finding('info', 'Assets', "/{$d}/ refs found — the preview build rebases this directory automatically.")
+                : $this->finding('error', 'Assets', "/{$d}/ paths referenced but public/{$d} doesn't exist — they 404 in previews. Ship the files under public/{$d} (or public/assets).");
+        }
+
+        // 5. Google-CDN fonts — handled automatically at publish.
+        foreach (['nuxt.config.ts', 'nuxt.config.js'] as $cfg) {
+            if (File::exists("$appDir/$cfg") && str_contains(File::get("$appDir/$cfg"), 'fonts.googleapis.com/css2')) {
+                $f[] = $this->finding('info', 'Fonts', 'Google-CDN fonts detected — they will be self-hosted into public/assets/fonts at publish.');
+                break;
+            }
+        }
+
+        // 6. Data-source heuristics: uniform object arrays shaped like
+        //    profiles or media galleries — advisory; mark to make editable.
+        foreach (File::glob("$appDir/app/{components,composables}/*.{vue,ts,js}", GLOB_BRACE) ?: [] as $file) {
+            $code = File::get($file);
+            if (str_contains($code, '@olux-collection')) {
+                continue; // already marked — the extractor handles it
+            }
+            if (! preg_match_all('#=\s*\[\s*\{(.*?)\}\s*,\s*\{#s', $code, $arr)) {
+                continue;
+            }
+            foreach ($arr[1] as $row) {
+                preg_match_all('#(?<=[{,\n])\s*([a-zA-Z_]\w*)\s*:#', '{'.$row, $km);
+                $keys = $km[1] ?? [];
+                $isProfile = in_array('name', $keys, true) && array_intersect(['role', 'title', 'bio', 'img'], $keys) !== [];
+                $isMedia = array_intersect(['type', 'src', 'img'], $keys) !== [] && in_array('title', $keys, true);
+                if (count($keys) >= 2 && ($isProfile || $isMedia)) {
+                    $kind = $isProfile ? 'profiles' : 'media-gallery';
+                    $f[] = $this->finding('info', 'Data sources', basename($file).": array looks like a {$kind} data source — add a /** @olux-collection Name */ docblock to turn it into an editable CMS collection.");
+                    break; // one advisory per file
+                }
+            }
+        }
+
+        return $f;
     }
 
     private function finding(string $level, string $area, string $message): array

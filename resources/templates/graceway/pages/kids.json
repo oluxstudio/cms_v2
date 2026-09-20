@@ -1,0 +1,34 @@
+{
+    "name": "Kids",
+    "url": "/kids",
+    "layout": "default",
+    "keywords": "kids",
+    "attributes": {
+        "title": "Kids \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:ministry-detail",
+            "name": "Ministry Detail",
+            "nodes": [
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "About this ministry",
+                    "order": 0,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:donate-cta",
+            "name": "Donate Cta",
+            "nodes": []
+        }
+    ]
+}

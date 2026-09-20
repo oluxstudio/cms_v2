@@ -57,6 +57,17 @@ class TemplateExtractor
 
         [$manifest['fonts'], $manifest['behaviours']] = $this->headMeta($root);
 
+        // Marked data-source arrays (@olux-collection / data-olx-source)
+        // become editable CMS collections seeded on every applied site.
+        if ($collections = app(\App\Services\CollectionSourceExtractor::class)->fromSources($root)) {
+            $manifest['collections'] = $collections;
+        }
+
+        // Authored <form> markup becomes real, submittable CMS forms.
+        if ($forms = app(\App\Services\FormSourceExtractor::class)->fromSources($root)) {
+            $manifest['forms'] = $forms;
+        }
+
         // Recurse so nested pages (app/pages/shop/index.vue) are extracted too;
         // dynamic pages ([slug].vue) render from the API, not CMS content.
         foreach (File::allFiles("$root/app/pages") as $pageFile) {

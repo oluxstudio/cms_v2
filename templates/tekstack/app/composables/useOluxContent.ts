@@ -143,7 +143,10 @@ export const useOluxContent = (blockKey: string) => {
           }
         }
         if (!found) break
-        rows.push(row)
+        // Overlay onto the authored row at the same index: structural keys
+        // the extractor doesn't capture (children, match, icons…) survive,
+        // while every CMS-edited field wins.
+        rows.push({ ...(fallback[i - 1] ?? {}), ...row })
       }
       return rows.length ? rows : fallback
     })

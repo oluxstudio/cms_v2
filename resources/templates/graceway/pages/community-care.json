@@ -1,0 +1,26 @@
+{
+    "name": "Community Care",
+    "url": "/community-care",
+    "layout": "default",
+    "keywords": "community care",
+    "attributes": {
+        "title": "Community Care & Outreach \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:community-care-overview",
+            "name": "Community Care Overview",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:donate-cta",
+            "name": "Donate Cta",
+            "nodes": []
+        }
+    ]
+}

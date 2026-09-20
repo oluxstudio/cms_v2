@@ -7,6 +7,7 @@ export default defineNuxtPlugin(() => {
   if (typeof window === 'undefined') return
   const editMode = /[?&]olx-edit=1(&|$)/.test(window.location.search) && window.parent !== window
   if (!editMode) return
+  ;(window as any).oluxEditActive = true // scheduled-visibility rules stand down while editing
 
   const style = document.createElement('style')
   style.textContent = `

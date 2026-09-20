@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 400" width="480" height="400">
+  <rect width="480" height="400" rx="14" fill="#f0f7f3"/>
+  <circle cx="120" cy="150" r="34" fill="#1e9e63"/>
+  <circle cx="240" cy="130" r="40" fill="#10395c"/>
+  <circle cx="360" cy="150" r="34" fill="#2f7fbf"/>
+  <path d="M70 300 q50 -80 100 0 z" fill="#1e9e63" opacity=".85"/>
+  <path d="M180 310 q60 -100 120 0 z" fill="#10395c" opacity=".9"/>
+  <path d="M310 300 q50 -80 100 0 z" fill="#2f7fbf" opacity=".85"/>
+  <text x="240" y="360" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="#10395c">Together in faith</text>
+</svg>

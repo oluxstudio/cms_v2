@@ -15,11 +15,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Component extends Model
 {
+    use \App\Models\Concerns\HasVisibilityRules;
     use HasUlids;
 
-    protected $fillable = ['site_id', 'site_template_id', 'collection_id', 'collection_order', 'name', 'author', 'created_by', 'source', 'description', 'tags'];
+    protected $fillable = ['site_id', 'site_template_id', 'collection_id', 'collection_order', 'name', 'author', 'created_by', 'source', 'description', 'tags', 'visibility'];
 
-    protected $casts = ['tags' => 'array'];
+    protected $casts = ['tags' => 'array', 'visibility' => 'array'];
 
     /** The user who created this component (null for legacy/system rows). */
     public function creator(): BelongsTo
@@ -70,6 +71,7 @@ class Component extends Model
         $out = [
             'id' => $this->id,
             'name' => $this->name,
+            'visibility' => $this->visibilityPayload(),
             'description' => $this->description,
             'collection_id' => $this->collection_id,
             'tags' => array_values($this->tags ?? []),

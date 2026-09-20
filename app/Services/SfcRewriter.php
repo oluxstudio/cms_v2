@@ -44,6 +44,15 @@ class SfcRewriter
 
         File::ensureDirectoryExists("$appDir/app/composables");
         File::copy(base_path('stubs/olux/useOluxContent.ts'), "$appDir/app/composables/useOluxContent.ts");
+        if (! File::exists("$appDir/app/composables/useCmsForm.ts")) {
+            // Form bridge: FormData → POST /api/sites/{site}/form/{name}
+            File::copy(base_path('stubs/olux/useCmsForm.ts'), "$appDir/app/composables/useCmsForm.ts");
+        }
+        if (! File::exists("$appDir/app/composables/useCms.ts")) {
+            // Data-source layer: CMS collection rows for marked arrays
+            // (profiles, media galleries) with id/_cid for beacons.
+            File::copy(base_path('stubs/olux/useCms.ts'), "$appDir/app/composables/useCms.ts");
+        }
         File::ensureDirectoryExists("$appDir/app/plugins");
         File::copy(base_path('stubs/olux/olux-nav.client.ts'), "$appDir/app/plugins/olux-nav.client.ts");
         File::copy(base_path('stubs/olux/olux-design.client.ts'), "$appDir/app/plugins/olux-design.client.ts");

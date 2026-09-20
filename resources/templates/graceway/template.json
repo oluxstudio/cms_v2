@@ -1,0 +1,1648 @@
+{
+    "collections": [
+        {
+            "name": "Site Profile",
+            "description": "Church identity & contact details \u2014 a single entry that feeds the header, footer, contact page and every place the address, phone or hours appear.",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Full Name",
+                    "type": "text"
+                },
+                {
+                    "key": "shortName",
+                    "label": "Short Name",
+                    "type": "text"
+                },
+                {
+                    "key": "logoLead",
+                    "label": "Logo Lead",
+                    "type": "text"
+                },
+                {
+                    "key": "logoBold",
+                    "label": "Logo Bold",
+                    "type": "text"
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "email"
+                },
+                {
+                    "key": "phone",
+                    "label": "Phone",
+                    "type": "text"
+                },
+                {
+                    "key": "phoneHref",
+                    "label": "Phone Link (tel:)",
+                    "type": "text"
+                },
+                {
+                    "key": "address",
+                    "label": "Address",
+                    "type": "text"
+                },
+                {
+                    "key": "city",
+                    "label": "City",
+                    "type": "text"
+                },
+                {
+                    "key": "postalCode",
+                    "label": "Postal Code",
+                    "type": "text"
+                },
+                {
+                    "key": "country",
+                    "label": "Country",
+                    "type": "text"
+                },
+                {
+                    "key": "officeHours",
+                    "label": "Office Hours",
+                    "type": "json"
+                },
+                {
+                    "key": "copyright",
+                    "label": "Copyright Line",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "name": "Christ Apostolic Church, Blackburn",
+                    "shortName": "CAC Blackburn",
+                    "logoLead": "CAC",
+                    "logoBold": "Blackburn",
+                    "email": "hello@cacblackburn.org",
+                    "phone": "+1 705 55 50 000",
+                    "phoneHref": "tel:+17055550000",
+                    "address": "85 Johnston Street",
+                    "city": "Blackburn",
+                    "postalCode": "BB2 1HY",
+                    "country": "United Kingdom",
+                    "officeHours": [
+                        {
+                            "days": "Mon \u2013 Fri",
+                            "hours": "9:00 AM \u2013 4:00 PM"
+                        }
+                    ],
+                    "copyright": "\u00a9 2026 Christ Apostolic Church, Blackburn. All rights reserved."
+                }
+            ]
+        },
+        {
+            "name": "Media",
+            "description": "Worship & youth gallery \u2014 every row is a photo, video or audio item on the website. Views and plays are tracked per item (Collections \u2192 \ud83d\udcc8).",
+            "fields": [
+                {
+                    "key": "title",
+                    "label": "Title",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "type",
+                    "label": "Type",
+                    "type": "select",
+                    "options": [
+                        "image",
+                        "video",
+                        "audio"
+                    ]
+                },
+                {
+                    "key": "cat",
+                    "label": "Category",
+                    "type": "text"
+                },
+                {
+                    "key": "date",
+                    "label": "Date",
+                    "type": "date"
+                },
+                {
+                    "key": "img",
+                    "label": "Image / poster URL",
+                    "type": "url"
+                },
+                {
+                    "key": "src",
+                    "label": "Video/audio source URL",
+                    "type": "url"
+                },
+                {
+                    "key": "ministry",
+                    "label": "Ministry",
+                    "type": "select",
+                    "options": [
+                        "worship",
+                        "youth"
+                    ]
+                }
+            ],
+            "items": [
+                {
+                    "type": "video",
+                    "img": "/assets/images/event-2.jpg",
+                    "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                    "title": "Sunday worship recap",
+                    "cat": "Sunday Service",
+                    "date": "2026-09-07",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-3.jpg",
+                    "title": "Hands raised",
+                    "cat": "Sunday Service",
+                    "date": "2026-09-07",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "audio",
+                    "src": "https://www.w3schools.com/html/horse.mp3",
+                    "title": "Choir set (live)",
+                    "cat": "Choir",
+                    "date": "2026-08-31",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-5.jpg",
+                    "title": "Youth choir joins",
+                    "cat": "Choir",
+                    "date": "2026-08-31",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "video",
+                    "img": "/assets/images/event-3.jpg",
+                    "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                    "title": "Worship night \u2014 candlelight",
+                    "cat": "Worship Night",
+                    "date": "2026-08-22",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-9.jpg",
+                    "title": "Band in flow",
+                    "cat": "Band",
+                    "date": "2026-08-17",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/circle-1.jpg",
+                    "title": "Leading from the pulpit",
+                    "cat": "Sunday Service",
+                    "date": "2026-08-10",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "audio",
+                    "src": "https://www.w3schools.com/html/horse.mp3",
+                    "title": "Hymn medley",
+                    "cat": "Choir",
+                    "date": "2026-08-03",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-10.jpg",
+                    "title": "Prayer after worship",
+                    "cat": "Sunday Service",
+                    "date": "2026-07-27",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "video",
+                    "img": "/assets/images/gallery-3.jpg",
+                    "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                    "title": "First-Friday worship night",
+                    "cat": "Worship Night",
+                    "date": "2026-07-04",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/pastor-2.jpg",
+                    "title": "Grace leading praise",
+                    "cat": "Band",
+                    "date": "2026-06-29",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/circle-2.jpg",
+                    "title": "A quiet moment",
+                    "cat": "Worship Night",
+                    "date": "2026-06-06",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "audio",
+                    "src": "https://www.w3schools.com/html/horse.mp3",
+                    "title": "Way Maker (congregation)",
+                    "cat": "Sunday Service",
+                    "date": "2026-05-31",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/event-2.jpg",
+                    "title": "Full sanctuary",
+                    "cat": "Sunday Service",
+                    "date": "2026-05-24",
+                    "ministry": "worship"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-1.jpg",
+                    "title": "Friday games",
+                    "cat": "Youth Night",
+                    "date": "2026-09-04",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "video",
+                    "img": "/assets/images/gallery-3.jpg",
+                    "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                    "title": "Worship night recap",
+                    "cat": "Worship",
+                    "date": "2026-09-01",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-2.jpg",
+                    "title": "Word together",
+                    "cat": "Bible Study",
+                    "date": "2026-08-28",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "audio",
+                    "src": "https://www.w3schools.com/html/horse.mp3",
+                    "title": "Testimony: Amara",
+                    "cat": "Youth Night",
+                    "date": "2026-08-25",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-4.jpg",
+                    "title": "Small group",
+                    "cat": "Bible Study",
+                    "date": "2026-08-21",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-5.jpg",
+                    "title": "Youth choir",
+                    "cat": "Worship",
+                    "date": "2026-08-16",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "video",
+                    "img": "/assets/images/gallery-7.jpg",
+                    "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                    "title": "Camp highlights",
+                    "cat": "Events",
+                    "date": "2026-08-15",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-6.jpg",
+                    "title": "Open Bibles",
+                    "cat": "Bible Study",
+                    "date": "2026-08-14",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "audio",
+                    "src": "https://www.w3schools.com/html/horse.mp3",
+                    "title": "Youth worship set (live)",
+                    "cat": "Worship",
+                    "date": "2026-08-10",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-8.jpg",
+                    "title": "Study notes",
+                    "cat": "Bible Study",
+                    "date": "2026-07-31",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-9.jpg",
+                    "title": "Worship set",
+                    "cat": "Worship",
+                    "date": "2026-07-26",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "video",
+                    "img": "/assets/images/gallery-11.jpg",
+                    "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                    "title": "Serve day diary",
+                    "cat": "Events",
+                    "date": "2026-07-22",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-10.jpg",
+                    "title": "Prayer circle",
+                    "cat": "Worship",
+                    "date": "2026-07-19",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/gallery-12.jpg",
+                    "title": "Deep dive",
+                    "cat": "Bible Study",
+                    "date": "2026-07-03",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "audio",
+                    "src": "https://www.w3schools.com/html/horse.mp3",
+                    "title": "Q&A night: identity",
+                    "cat": "Bible Study",
+                    "date": "2026-06-30",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/circle-1.jpg",
+                    "title": "At the pulpit",
+                    "cat": "Worship",
+                    "date": "2026-06-28",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/circle-2.jpg",
+                    "title": "In prayer",
+                    "cat": "Worship",
+                    "date": "2026-06-21",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/circle-3.jpg",
+                    "title": "Youth smiles",
+                    "cat": "Youth Night",
+                    "date": "2026-06-12",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "video",
+                    "img": "/assets/images/event-2.jpg",
+                    "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                    "title": "On stage",
+                    "cat": "Events",
+                    "date": "2026-06-08",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/event-1.jpg",
+                    "title": "Picnic day",
+                    "cat": "Events",
+                    "date": "2026-06-06",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/event-3.jpg",
+                    "title": "Candlelight",
+                    "cat": "Events",
+                    "date": "2026-05-24",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/welcome.jpg",
+                    "title": "All together",
+                    "cat": "Events",
+                    "date": "2026-05-17",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "audio",
+                    "src": "https://www.w3schools.com/html/horse.mp3",
+                    "title": "Camp stories",
+                    "cat": "Events",
+                    "date": "2026-05-12",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/bible-study.jpg",
+                    "title": "Group study",
+                    "cat": "Bible Study",
+                    "date": "2026-05-08",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/pastor-3.jpg",
+                    "title": "Youth pastor",
+                    "cat": "Youth Night",
+                    "date": "2026-04-24",
+                    "ministry": "youth"
+                },
+                {
+                    "type": "image",
+                    "img": "/assets/images/pastor-2.jpg",
+                    "title": "Leading praise",
+                    "cat": "Worship",
+                    "date": "2026-04-17",
+                    "ministry": "youth"
+                }
+            ]
+        },
+        {
+            "name": "Songs",
+            "description": "What we're singing \u2014 the worship sidebar's set list.",
+            "fields": [
+                {
+                    "key": "title",
+                    "label": "Title",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "artist",
+                    "label": "Artist",
+                    "type": "text"
+                },
+                {
+                    "key": "url",
+                    "label": "Listen link",
+                    "type": "url"
+                }
+            ],
+            "items": [
+                {
+                    "title": "Goodness of God",
+                    "artist": "Bethel Music",
+                    "url": "https://www.youtube.com/results?search_query=goodness+of+god"
+                },
+                {
+                    "title": "Way Maker",
+                    "artist": "Sinach",
+                    "url": "https://www.youtube.com/results?search_query=way+maker+sinach"
+                },
+                {
+                    "title": "Great Is Thy Faithfulness",
+                    "artist": "Hymn \u00b7 arr. CAC Choir",
+                    "url": "https://www.youtube.com/results?search_query=great+is+thy+faithfulness"
+                },
+                {
+                    "title": "Firm Foundation (He Won't)",
+                    "artist": "Cody Carnes",
+                    "url": "https://www.youtube.com/results?search_query=firm+foundation+cody+carnes"
+                },
+                {
+                    "title": "Igwe",
+                    "artist": "Midnight Crew",
+                    "url": "https://www.youtube.com/results?search_query=igwe+midnight+crew"
+                },
+                {
+                    "title": "Build My Life",
+                    "artist": "Housefires",
+                    "url": "https://www.youtube.com/results?search_query=build+my+life"
+                }
+            ]
+        },
+        {
+            "name": "Ministries",
+            "description": "Data source extracted from MinistryList.vue \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "icon",
+                    "label": "Icon",
+                    "type": "text"
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text"
+                },
+                {
+                    "key": "text",
+                    "label": "Text",
+                    "type": "text"
+                },
+                {
+                    "key": "leader",
+                    "label": "Leader",
+                    "type": "text"
+                },
+                {
+                    "key": "meets",
+                    "label": "Meets",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "icon": "\ud83d\ude4c",
+                    "name": "Worship & Music",
+                    "text": "Our worship teams lead the congregation every Sunday with choir, band and production. Whether you sing, play an instrument or love the tech booth, there is a seat for you.",
+                    "leader": "Grace Lindqvist",
+                    "meets": "Rehearsals \u2014 Thursdays 7:00 PM"
+                },
+                {
+                    "icon": "\ud83d\udc76",
+                    "name": "Children's Ministry",
+                    "text": "A safe, joyful environment where kids from nursery to grade 6 discover faith through stories, songs and play while parents worship.",
+                    "leader": "Naomi Carter",
+                    "meets": "Sundays during both services"
+                },
+                {
+                    "icon": "\ud83d\udd25",
+                    "name": "Youth Ministry",
+                    "text": "Teens gather for games, honest conversation and Bible study. A place to ask big questions and build friendships that last.",
+                    "leader": "Samuel Reyes",
+                    "meets": "Fridays 6:30 PM \u2014 Youth Hall"
+                },
+                {
+                    "icon": "\ud83e\udd1d",
+                    "name": "Outreach & Missions",
+                    "text": "From the neighbourhood food pantry to mission trips abroad, we serve practical needs and share hope beyond our walls.",
+                    "leader": "Rev. Daniel Okafor",
+                    "meets": "Food pantry \u2014 Saturdays 9:00 AM"
+                },
+                {
+                    "icon": "\ud83c\udfe0",
+                    "name": "Small Groups",
+                    "text": "Midweek home groups across the city \u2014 share a meal, study scripture and do life together in a circle small enough to know your name.",
+                    "leader": "Ruth & Peter Alonso",
+                    "meets": "Weeknights \u2014 various homes"
+                },
+                {
+                    "icon": "\ud83d\udc92",
+                    "name": "Prayer Ministry",
+                    "text": "Intercessors who pray for the church, the city and every request left in our prayer box. Join the early morning watch or pray from home.",
+                    "leader": "Esther Mwangi",
+                    "meets": "Wednesdays 6:00 AM \u2014 Chapel"
+                }
+            ]
+        },
+        {
+            "name": "Events",
+            "description": "Data source extracted from EventsGrid.vue \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "id",
+                    "label": "Id",
+                    "type": "text"
+                },
+                {
+                    "key": "date",
+                    "label": "Date",
+                    "type": "date"
+                },
+                {
+                    "key": "img",
+                    "label": "Img",
+                    "type": "url"
+                },
+                {
+                    "key": "title",
+                    "label": "Title",
+                    "type": "text"
+                },
+                {
+                    "key": "text",
+                    "label": "Text",
+                    "type": "text"
+                },
+                {
+                    "key": "tags",
+                    "label": "Tags",
+                    "type": "text"
+                },
+                {
+                    "key": "price",
+                    "label": "Price",
+                    "type": "select",
+                    "options": [
+                        "0",
+                        "10",
+                        "5"
+                    ]
+                },
+                {
+                    "key": "seatsLeft",
+                    "label": "Seats Left",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "id": "picnic",
+                    "date": "2026-09-21T12:00:00",
+                    "img": "/assets/images/event-1.jpg",
+                    "title": "Community Picnic in Riverside Park",
+                    "text": "Bring a dish and a friend \u2014 games, music and food for the whole neighbourhood. Sep 21, 12:00 PM.",
+                    "tags": [
+                        "Community",
+                        "Family",
+                        "Food"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 120
+                },
+                {
+                    "id": "fooddrive",
+                    "date": "2026-10-04T09:00:00",
+                    "img": "/assets/images/event-2.jpg",
+                    "title": "Harvest Food Drive",
+                    "text": "Help us collect and sort donations for local families. Volunteers of all ages welcome. Oct 4, 9:00 AM.",
+                    "tags": [
+                        "Outreach",
+                        "Volunteer"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 40
+                },
+                {
+                    "id": "worshipnight",
+                    "date": "2026-10-18T19:00:00",
+                    "img": "/assets/images/event-3.jpg",
+                    "title": "Worship Night",
+                    "text": "An evening of music, prayer and candlelight in the main sanctuary. Oct 18, 7:00 PM.",
+                    "tags": [
+                        "Worship",
+                        "Prayer",
+                        "Music"
+                    ],
+                    "price": 10,
+                    "seatsLeft": 85
+                },
+                {
+                    "id": "newcomers",
+                    "date": "2026-11-01T12:30:00",
+                    "img": "/assets/images/circle-1.jpg",
+                    "title": "Newcomers' Lunch",
+                    "text": "New to CAC Blackburn? Join the pastors for lunch and hear the story of our church. Nov 1, 12:30 PM.",
+                    "tags": [
+                        "Welcome",
+                        "Food"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 24
+                },
+                {
+                    "id": "choir",
+                    "date": "2026-09-22T19:00:00",
+                    "img": "/assets/images/circle-2.jpg",
+                    "title": "Christmas Choir Rehearsals",
+                    "text": "All voices welcome as we prepare carols for the Christmas Eve service. Tuesdays, 7:00 PM.",
+                    "tags": [
+                        "Music",
+                        "Christmas"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 30
+                },
+                {
+                    "id": "youthgames",
+                    "date": "2026-11-14T18:30:00",
+                    "img": "/assets/images/circle-3.jpg",
+                    "title": "Youth Games Night",
+                    "text": "Pizza, tournaments and big questions for teens in the Youth Hall. Nov 14, 6:30 PM.",
+                    "tags": [
+                        "Youth",
+                        "Games"
+                    ],
+                    "price": 5,
+                    "seatsLeft": 46
+                }
+            ]
+        },
+        {
+            "name": "Leadership",
+            "description": "Data source extracted from useMembers.ts \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "slug",
+                    "label": "Slug",
+                    "type": "text"
+                },
+                {
+                    "key": "img",
+                    "label": "Img",
+                    "type": "url"
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text"
+                },
+                {
+                    "key": "role",
+                    "label": "Role",
+                    "type": "text"
+                },
+                {
+                    "key": "bio",
+                    "label": "Bio",
+                    "type": "text"
+                },
+                {
+                    "key": "verse",
+                    "label": "Verse",
+                    "type": "text"
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "text"
+                },
+                {
+                    "key": "fact",
+                    "label": "Fact",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "slug": "daniel-okafor",
+                    "img": "/assets/images/pastor-1.jpg",
+                    "name": "Rev. Daniel Okafor",
+                    "role": "Senior Pastor",
+                    "bio": "Pastor Daniel has led CAC Blackburn for over fifteen years. A gifted teacher with a shepherd's heart, he is passionate about seeing every believer rooted in scripture and serving the city. He is married to Adaeze and they have three children.",
+                    "verse": "\"Let all that you do be done in love.\" \u2014 1 Corinthians 16:14",
+                    "email": "daniel@cacblackburn.org",
+                    "fact": "Preaches better after two coffees. Scientifically proven."
+                },
+                {
+                    "slug": "grace-lindqvist",
+                    "img": "/assets/images/pastor-2.jpg",
+                    "name": "Grace Lindqvist",
+                    "role": "Worship & Music Director",
+                    "bio": "Grace directs our choirs, bands and production teams. She believes worship is for every voice \u2014 trained or not \u2014 and has built a music ministry where all skill levels find a place to serve.",
+                    "verse": "\"Sing to the Lord a new song.\" \u2014 Psalm 96:1",
+                    "email": "grace@cacblackburn.org",
+                    "fact": "Can harmonize with a fire alarm."
+                },
+                {
+                    "slug": "samuel-reyes",
+                    "img": "/assets/images/pastor-3.jpg",
+                    "name": "Samuel Reyes",
+                    "role": "Youth & Outreach Pastor",
+                    "bio": "Samuel leads our teens and our neighbourhood outreach. From Friday youth nights to Saturday food drives, he lives the belief that faith gets real when it crosses the street.",
+                    "verse": "\"Let no one despise you for your youth.\" \u2014 1 Timothy 4:12",
+                    "email": "samuel@cacblackburn.org",
+                    "fact": "Undefeated at table tennis. Allegedly."
+                },
+                {
+                    "slug": "esther-mwangi",
+                    "img": "/assets/images/pastor-4.jpg",
+                    "name": "Esther Mwangi",
+                    "role": "Prayer Ministry Lead",
+                    "bio": "Esther leads the intercessors who pray for our church, our city and every request left in the prayer box. She hosts the Wednesday early morning watch in the chapel.",
+                    "verse": "\"Pray without ceasing.\" \u2014 1 Thessalonians 5:17",
+                    "email": "esther@cacblackburn.org",
+                    "fact": "Up praying before your alarm has even thought about it."
+                },
+                {
+                    "slug": "ruth-alonso",
+                    "img": "/assets/images/pastor-5.jpg",
+                    "name": "Ruth Alonso",
+                    "role": "Children's Ministry Director",
+                    "bio": "Ruth oversees everything from the nursery to grade six \u2014 a safe, joyful world where kids discover faith through stories, songs and play while their parents worship.",
+                    "verse": "\"Let the little children come to me.\" \u2014 Matthew 19:14",
+                    "email": "ruth@cacblackburn.org",
+                    "fact": "Brings the good snacks. Every time."
+                },
+                {
+                    "slug": "peter-adeyemi",
+                    "img": "/assets/images/pastor-6.jpg",
+                    "name": "Peter Adeyemi",
+                    "role": "Missions & Community Pastor",
+                    "bio": "Peter coordinates our mission partnerships abroad and our community projects at home, from the food pantry to shelter support. He is happiest with his sleeves rolled up.",
+                    "verse": "\"Go into all the world.\" \u2014 Mark 16:15",
+                    "email": "peter@cacblackburn.org",
+                    "fact": "Owns more hi-vis vests than shirts."
+                }
+            ]
+        },
+        {
+            "name": "Sermon Series",
+            "description": "Data source extracted from useSermons.ts \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "slug",
+                    "label": "Slug",
+                    "type": "text"
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text"
+                },
+                {
+                    "key": "description",
+                    "label": "Description",
+                    "type": "text"
+                },
+                {
+                    "key": "cover",
+                    "label": "Cover",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "slug": "rooted",
+                    "name": "Rooted",
+                    "description": "A four-week journey into what it takes to grow a faith that holds \u2014 planted, watered, pruned and fruitful.",
+                    "cover": "/assets/images/gallery-6.jpg"
+                },
+                {
+                    "slug": "grace-in-the-psalms",
+                    "name": "Grace in the Psalms",
+                    "description": "Honest songs for honest people \u2014 finding every human emotion, and God in all of them, in the Psalms.",
+                    "cover": "/assets/images/gallery-10.jpg"
+                }
+            ]
+        },
+        {
+            "name": "Sermons",
+            "description": "Data source extracted from useSermons.ts \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "slug",
+                    "label": "Slug",
+                    "type": "text"
+                },
+                {
+                    "key": "title",
+                    "label": "Title",
+                    "type": "text"
+                },
+                {
+                    "key": "speaker",
+                    "label": "Speaker",
+                    "type": "select",
+                    "options": [
+                        "Rev. Daniel Okafor",
+                        "Grace Lindqvist",
+                        "Samuel Reyes",
+                        "Esther Mwangi"
+                    ]
+                },
+                {
+                    "key": "date",
+                    "label": "Date",
+                    "type": "date"
+                },
+                {
+                    "key": "seriesSlug",
+                    "label": "Series Slug",
+                    "type": "text"
+                },
+                {
+                    "key": "scripture",
+                    "label": "Scripture",
+                    "type": "text"
+                },
+                {
+                    "key": "featured",
+                    "label": "Featured",
+                    "type": "text"
+                },
+                {
+                    "key": "summary",
+                    "label": "Summary",
+                    "type": "text"
+                },
+                {
+                    "key": "thumbnail",
+                    "label": "Thumbnail",
+                    "type": "text"
+                },
+                {
+                    "key": "videoId",
+                    "label": "Video Id",
+                    "type": "text"
+                },
+                {
+                    "key": "audioUrl",
+                    "label": "Audio Url",
+                    "type": "text"
+                },
+                {
+                    "key": "body",
+                    "label": "Body",
+                    "type": "text"
+                },
+                {
+                    "key": "attachments",
+                    "label": "Attachments",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "slug": "fruit-that-lasts",
+                    "title": "Fruit That Lasts",
+                    "speaker": "Rev. Daniel Okafor",
+                    "date": "2026-09-13",
+                    "seriesSlug": "rooted",
+                    "scripture": "John 15:1\u201317",
+                    "featured": true,
+                    "summary": "Fruitfulness is not produced, it is grown \u2014 by staying connected to the vine.",
+                    "thumbnail": "/assets/images/event-2.jpg",
+                    "videoId": "dQw4w9WgXcQ",
+                    "audioUrl": null,
+                    "body": [
+                        "Roots grow in the dark, unseen \u2014 and so does character. Jesus' last extended metaphor before the cross is a vineyard, and in it he gives us the whole architecture of the Christian life: null vine, branches, a gardener, and fruit.",
+                        "Notice what the branch is never asked to do: null The branch has one job \u2014 remain. Every verb of effort in this passage belongs to the gardener. Our culture tells us to produce; Jesus invites us to abide, and promises the producing will follow.",
+                        "So the question this week is not \"what are you achieving?\" but \"where are you attached?\" Fruit that lasts grows from connection that lasts."
+                    ],
+                    "attachments": [
+                        {
+                            "name": "Printable notes (PDF)",
+                            "size": "240 KB",
+                            "url": "#"
+                        },
+                        {
+                            "name": "Small group questions (PDF)",
+                            "size": "180 KB",
+                            "url": "#"
+                        }
+                    ]
+                },
+                {
+                    "slug": "dry-seasons",
+                    "title": "Dry Seasons",
+                    "speaker": "Rev. Daniel Okafor",
+                    "date": "2026-09-06",
+                    "seriesSlug": "rooted",
+                    "scripture": "Psalm 1:1\u20136; Jeremiah 17:7\u20138",
+                    "summary": "The tree survives drought by where it is planted, not how it feels.",
+                    "thumbnail": "/assets/images/gallery-9.jpg",
+                    "videoId": "dQw4w9WgXcQ"
+                },
+                {
+                    "slug": "planted-in-community",
+                    "title": "Planted in Community",
+                    "speaker": "Grace Lindqvist",
+                    "date": "2026-08-30",
+                    "seriesSlug": "rooted",
+                    "scripture": "Acts 2:42\u201347",
+                    "summary": "Nobody grows alone \u2014 the first church devoted themselves to four things, all of them together.",
+                    "thumbnail": "/assets/images/welcome.jpg",
+                    "audioUrl": null
+                },
+                {
+                    "slug": "good-soil",
+                    "title": "Good Soil",
+                    "speaker": "Samuel Reyes",
+                    "date": "2026-08-23",
+                    "seriesSlug": "rooted",
+                    "scripture": "Mark 4:1\u201320",
+                    "summary": "The sower's seed never changes \u2014 the soil does. A written reflection on receptive hearts.",
+                    "thumbnail": "/assets/images/gallery-6.jpg",
+                    "body": [
+                        "Four soils, one seed. The parable of the sower is really a parable of soils \u2014 the seed is constant, generous, almost recklessly scattered. What varies is the ground it lands on.",
+                        "The path is the hardened heart: null bounces. The rocks are the shallow heart: null without depth. The thorns are the crowded heart \u2014 and Jesus names the thorns precisely: null, wealth, and wanting. Not evil things. Just choking things.",
+                        "Good soil, it turns out, is not perfect soil. It is broken-up, weeded, attended-to soil. Which is hopeful news: null can be worked."
+                    ],
+                    "attachments": [
+                        {
+                            "name": "Reading plan \u2014 Mark (PDF)",
+                            "size": "95 KB",
+                            "url": "#"
+                        }
+                    ]
+                },
+                {
+                    "slug": "the-lord-is-my-shepherd",
+                    "title": "The Lord Is My Shepherd",
+                    "speaker": "Rev. Daniel Okafor",
+                    "date": "2026-08-16",
+                    "seriesSlug": "grace-in-the-psalms",
+                    "scripture": "Psalm 23",
+                    "summary": "The world's most familiar psalm, read slowly enough to be unfamiliar again.",
+                    "thumbnail": "/assets/images/gallery-10.jpg",
+                    "videoId": "dQw4w9WgXcQ",
+                    "body": [
+                        "We know this psalm so well we no longer hear it. Read slowly, it is startling: null LORD \u2014 the maker of galaxies \u2014 is *my* shepherd. Not humanity's in general. Mine.",
+                        "And the psalm's geography is honest: null pastures, yes, but also the darkest valley. The shepherd does not route around the valley. He walks through it, ahead of the sheep."
+                    ]
+                },
+                {
+                    "slug": "songs-in-the-night",
+                    "title": "Songs in the Night",
+                    "speaker": "Esther Mwangi",
+                    "date": "2026-08-09",
+                    "seriesSlug": "grace-in-the-psalms",
+                    "scripture": "Psalm 42",
+                    "summary": "What to do when your soul is downcast and God feels far \u2014 the psalmist's surprising answer: null singing.",
+                    "thumbnail": "/assets/images/circle-2.jpg",
+                    "audioUrl": null,
+                    "body": [
+                        "Psalm 42 gives us permission we didn't know we needed: null interrogate our own souls. \"Why, my soul, are you downcast?\" The psalmist talks to himself instead of merely listening to himself.",
+                        "And then the strangest line: \"at night his song is with me.\" Faith sometimes means singing from memory in the dark \u2014 trusting at midnight what you knew at noon."
+                    ]
+                },
+                {
+                    "slug": "the-god-who-lifts",
+                    "title": "The God Who Lifts",
+                    "speaker": "Grace Lindqvist",
+                    "date": "2026-08-02",
+                    "seriesSlug": "grace-in-the-psalms",
+                    "scripture": "Psalm 3; Psalm 121",
+                    "summary": "A worship-led message on the God who is a shield around us, our glory, and the lifter of our heads.",
+                    "thumbnail": "/assets/images/event-3.jpg",
+                    "videoId": "dQw4w9WgXcQ",
+                    "audioUrl": null
+                },
+                {
+                    "slug": "one-fold-one-shepherd",
+                    "title": "One Fold, One Shepherd",
+                    "speaker": "Rev. Daniel Okafor",
+                    "date": "2026-07-26",
+                    "scripture": "John 10:11\u201318",
+                    "summary": "Our church motto, John 10:16 \u2014 what it means to belong to the Shepherd's one flock in a divided city.",
+                    "thumbnail": "/assets/images/circle-1.jpg",
+                    "videoId": "dQw4w9WgXcQ"
+                }
+            ]
+        },
+        {
+            "name": "Services",
+            "description": "Data source extracted from useSiteContent.ts \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "label",
+                    "label": "Label",
+                    "type": "text"
+                },
+                {
+                    "key": "day",
+                    "label": "Day",
+                    "type": "select",
+                    "options": [
+                        "Sunday",
+                        "Wednesday",
+                        "Friday"
+                    ]
+                },
+                {
+                    "key": "time",
+                    "label": "Time",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "label": "Sunday Worship",
+                    "day": "Sunday",
+                    "time": "10:00 AM"
+                },
+                {
+                    "label": "Wednesday Prayer",
+                    "day": "Wednesday",
+                    "time": "7:00 PM"
+                },
+                {
+                    "label": "Bible Study",
+                    "day": "Friday",
+                    "time": "9:00 PM"
+                },
+                {
+                    "label": "Youth Gathering",
+                    "day": "Friday",
+                    "time": "6:30 PM"
+                }
+            ]
+        },
+        {
+            "name": "Socials",
+            "description": "Data source extracted from useSiteContent.ts \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "key",
+                    "label": "Key",
+                    "type": "text"
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text"
+                },
+                {
+                    "key": "href",
+                    "label": "Href",
+                    "type": "url"
+                },
+                {
+                    "key": "color",
+                    "label": "Color",
+                    "type": "select",
+                    "options": [
+                        "#ff0000",
+                        "#1877f2",
+                        "#8a3ab9",
+                        "#14181d",
+                        "#f26522",
+                        "#9146ff"
+                    ]
+                },
+                {
+                    "key": "available",
+                    "label": "Available",
+                    "type": "select",
+                    "options": [
+                        "",
+                        "1"
+                    ]
+                },
+                {
+                    "key": "tag",
+                    "label": "Tag",
+                    "type": "text"
+                },
+                {
+                    "key": "icon",
+                    "label": "Icon",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "key": "youtube",
+                    "name": "YouTube",
+                    "href": "https://youtube.com/@cacblackburn",
+                    "color": "#ff0000",
+                    "available": false,
+                    "tag": "",
+                    "icon": "M23 7.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C16.6 3.6 12 3.6 12 3.6s-4.6 0-7.8.3c-.4.1-1.4.1-2.3 1-.7.7-.9 2.3-.9 2.3S.8 9.1.8 11v1.8c0 1.9.2 3.8.2 3.8s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.6.3 7.6.3s4.6 0 7.8-.4c.4-.1 1.4-.1 2.3-1 .7-.7.9-2.3.9-2.3s.2-1.9.2-3.8V11c0-1.9-.2-3.8-.2-3.8zM9.9 15.1V8.4l6.2 3.4-6.2 3.3z"
+                },
+                {
+                    "key": "facebook",
+                    "name": "Facebook",
+                    "href": "https://facebook.com/cacblackburn",
+                    "color": "#1877f2",
+                    "available": true,
+                    "tag": "",
+                    "icon": "M13.5 22v-9h3l.5-3.5h-3.5V7.2c0-1 .3-1.7 1.8-1.7H17V2.2c-.3 0-1.4-.2-2.6-.2-2.6 0-4.4 1.6-4.4 4.5v3H7V13h3v9h3.5z"
+                },
+                {
+                    "key": "instagram",
+                    "name": "Instagram",
+                    "href": "https://instagram.com/cacblackburn",
+                    "color": "#8a3ab9",
+                    "available": false,
+                    "icon": "M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.9.2 2.5.5.6.2 1.1.5 1.6 1 .5.5.8 1 1 1.6.2.6.4 1.3.5 2.5.1 1.2.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.9-.5 2.5-.2.6-.5 1.1-1 1.6-.5.5-1 .8-1.6 1-.6.2-1.3.4-2.5.5-1.2.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.9-.2-2.5-.5-.6-.2-1.1-.5-1.6-1-.5-.5-.8-1-1-1.6-.2-.6-.4-1.3-.5-2.5-.1-1.2-.1-1.6-.1-4.8s0-3.6.1-4.8c.1-1.2.2-1.9.5-2.5.2-.6.5-1.1 1-1.6.5-.5 1-.8 1.6-1 .6-.2 1.3-.4 2.5-.5 1.2-.1 1.6-.1 4.8-.1zm0 2c-3.1 0-3.5 0-4.7.1-1.1.1-1.7.2-2.1.4-.5.2-.9.4-1.2.8-.4.4-.6.7-.8 1.2-.2.4-.3 1-.4 2.1-.1 1.2-.1 1.6-.1 4.7s0 3.5.1 4.7c.1 1.1.2 1.7.4 2.1.2.5.4.9.8 1.2.4.4.7.6 1.2.8.4.2 1 .3 2.1.4 1.2.1 1.6.1 4.7.1s3.5 0 4.7-.1c1.1-.1 1.7-.2 2.1-.4.5-.2.9-.4 1.2-.8.4-.4.6-.7.8-1.2.2-.4.3-1 .4-2.1.1-1.2.1-1.6.1-4.7s0-3.5-.1-4.7c-.1-1.1-.2-1.7-.4-2.1-.2-.5-.4-.9-.8-1.2-.4-.4-.7-.6-1.2-.8-.4-.2-1-.3-2.1-.4-1.2-.1-1.6-.1-4.7-.1zm0 3.4a5.4 5.4 0 1 1 0 10.8 5.4 5.4 0 0 1 0-10.8zm0 2a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8zm5.6-3.5a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"
+                },
+                {
+                    "key": "tiktok",
+                    "name": "TikTok",
+                    "href": "https://tiktok.com/@cacblackburn",
+                    "color": "#14181d",
+                    "available": false,
+                    "tag": "",
+                    "icon": "M16.6 2h3.1c.2 1.8 1.2 3.5 2.8 4.4.5.3 1 .5 1.5.6v3.3c-1.6-.1-3.1-.6-4.4-1.5v6.8c0 1.5-.4 3-1.3 4.2a7.2 7.2 0 0 1-8.9 2.4 7.2 7.2 0 0 1-3.9-8 7.2 7.2 0 0 1 7.5-5.6v3.4a3.8 3.8 0 0 0-4.2 2.6 3.8 3.8 0 0 0 5.5 4.4c1-.6 1.6-1.7 1.6-2.9V2z"
+                },
+                {
+                    "key": "x",
+                    "name": "X (Twitter)",
+                    "href": "https://x.com/cacblackburn",
+                    "color": "#14181d",
+                    "available": false,
+                    "icon": "M18.2 2.3h3.3l-7.3 8.3L22.8 22h-6.7l-5.3-6.9L4.8 22H1.5l7.8-8.9L1.1 2.3H8l4.8 6.3 5.4-6.3zm-1.2 17.7h1.8L7 4.2H5l12 15.8z"
+                },
+                {
+                    "key": "rss",
+                    "name": "RSS",
+                    "href": "/broadcast",
+                    "color": "#f26522",
+                    "available": false,
+                    "icon": "M4 4.4v3.2c6.8 0 12.4 5.6 12.4 12.4h3.2C19.6 11.4 12.6 4.4 4 4.4zm0 6.4v3.2a5.6 5.6 0 0 1 5.6 5.6h3.2c0-4.9-3.9-8.8-8.8-8.8zM6.2 15.6a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z"
+                },
+                {
+                    "key": "twitch",
+                    "name": "Twitch",
+                    "href": "https://twitch.tv/cacblackburn",
+                    "color": "#9146ff",
+                    "available": false,
+                    "icon": "M4.3 3 3 6.4v13.7h4.7V22h2.6l2.5-1.9h3.8L21 15.6V3H4.3zm15 11.7-2.9 2.9h-4.6l-2.5 1.9v-1.9H5.4V4.7h13.9v10zM16.6 7.7v5h-1.7v-5h1.7zm-4.6 0v5h-1.7v-5H12z"
+                }
+            ]
+        }
+    ],
+    "forms": [
+        {
+            "name": "events-grid",
+            "title": "Event Reservations",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "email",
+                    "required": true
+                },
+                {
+                    "key": "phone",
+                    "label": "Phone",
+                    "type": "tel",
+                    "required": false
+                },
+                {
+                    "key": "seats",
+                    "label": "Seats",
+                    "type": "number",
+                    "required": false
+                },
+                {
+                    "key": "price",
+                    "label": "Price",
+                    "type": "text",
+                    "required": false
+                },
+                {
+                    "key": "event",
+                    "label": "Event",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "event_date",
+                    "label": "Event Date",
+                    "type": "date",
+                    "required": false
+                },
+                {
+                    "key": "device",
+                    "label": "Device & Browser",
+                    "type": "textarea",
+                    "required": false
+                },
+                {
+                    "key": "page",
+                    "label": "Page",
+                    "type": "text",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "youth-events",
+            "title": "Youth Event RSVPs",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "First Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "age",
+                    "label": "Age",
+                    "type": "number",
+                    "required": true
+                },
+                {
+                    "key": "phone",
+                    "label": "Phone / WhatsApp",
+                    "type": "tel",
+                    "required": true
+                },
+                {
+                    "key": "spots_left",
+                    "label": "Spots Left When Booked",
+                    "type": "number",
+                    "required": false
+                },
+                {
+                    "key": "event",
+                    "label": "Event",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "event_date",
+                    "label": "Event Date",
+                    "type": "date",
+                    "required": false
+                },
+                {
+                    "key": "device",
+                    "label": "Device & Browser",
+                    "type": "textarea",
+                    "required": false
+                },
+                {
+                    "key": "page",
+                    "label": "Page",
+                    "type": "text",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "contact",
+            "title": "Contact",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email Address",
+                    "type": "email",
+                    "required": true
+                },
+                {
+                    "key": "phone",
+                    "label": "Phone Number",
+                    "type": "tel",
+                    "required": false
+                },
+                {
+                    "key": "topic",
+                    "label": "Topic",
+                    "type": "select",
+                    "required": true
+                },
+                {
+                    "key": "message",
+                    "label": "Message",
+                    "type": "textarea",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "join-church",
+            "title": "Join Church",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email Address",
+                    "type": "email",
+                    "required": true
+                },
+                {
+                    "key": "phone",
+                    "label": "Phone (Optional)",
+                    "type": "tel",
+                    "required": false
+                },
+                {
+                    "key": "interest",
+                    "label": "Interest",
+                    "type": "select",
+                    "required": false
+                },
+                {
+                    "key": "message",
+                    "label": "Anything You'd Like Us To Know? (Optiona",
+                    "type": "textarea",
+                    "required": false
+                },
+                {
+                    "key": "visit",
+                    "label": "Visit",
+                    "type": "checkbox",
+                    "required": false
+                },
+                {
+                    "key": "lunch",
+                    "label": "Lunch",
+                    "type": "checkbox",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "newsletter-join",
+            "title": "Newsletter Join",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "You@Example.com",
+                    "type": "email",
+                    "required": true
+                },
+                {
+                    "key": "phone",
+                    "label": "+1 ...",
+                    "type": "tel",
+                    "required": false
+                },
+                {
+                    "key": "visit",
+                    "label": "Visit",
+                    "type": "checkbox",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "prayer",
+            "title": "Prayer",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": false
+                },
+                {
+                    "key": "email",
+                    "label": "Email (Optional \u2014 For A Reply)",
+                    "type": "email",
+                    "required": false
+                },
+                {
+                    "key": "request",
+                    "label": "Your Prayer Request",
+                    "type": "textarea",
+                    "required": true
+                },
+                {
+                    "key": "private",
+                    "label": "Private",
+                    "type": "checkbox",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "donate-giving",
+            "title": "Donate Giving",
+            "fields": [
+                {
+                    "key": "custom",
+                    "label": "Other \u00a3",
+                    "type": "number",
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": false
+                },
+                {
+                    "key": "email",
+                    "label": "Email For Your Receipt (Optional)",
+                    "type": "email",
+                    "required": false
+                },
+                {
+                    "key": "message",
+                    "label": "A Note Or A Prayer Request (Optional)",
+                    "type": "textarea",
+                    "required": false
+                }
+            ]
+        }
+    ],
+    "products": [
+        {
+            "name": "Rooted: 30 Days in John 15",
+            "slug": "rooted-30-days",
+            "category": "Devotionals",
+            "description": "A month-long devotional walking through the vine and the branches \u2014 one short reading, one question and one prayer a day.",
+            "price_cents": 999,
+            "currency": "gbp",
+            "image": "/assets/images/gallery-2.jpg",
+            "tags": [
+                "devotional",
+                "john"
+            ]
+        },
+        {
+            "name": "The Whole Armour: A Study Guide",
+            "slug": "whole-armour-study-guide",
+            "category": "Study Guides",
+            "description": "A six-week small-group companion to Ephesians 6 with discussion questions, leader notes and memory verses.",
+            "price_cents": 749,
+            "currency": "gbp",
+            "image": "/assets/images/gallery-4.jpg",
+            "tags": [
+                "study",
+                "small groups"
+            ]
+        },
+        {
+            "name": "Morning Watch: Daily Prayers",
+            "slug": "morning-watch-daily-prayers",
+            "category": "Prayer",
+            "description": "A pocket collection of morning prayers for the home, the commute and the quiet hour \u2014 used by our Wednesday watch.",
+            "price_cents": 699,
+            "currency": "gbp",
+            "image": "/assets/images/gallery-6.jpg",
+            "tags": [
+                "prayer"
+            ]
+        },
+        {
+            "name": "Faith for the City",
+            "slug": "faith-for-the-city",
+            "category": "Books",
+            "description": "Stories of outreach from our own streets \u2014 the pantry, the shelter and the neighbours who became family.",
+            "price_cents": 1199,
+            "currency": "gbp",
+            "image": "/assets/images/gallery-8.jpg",
+            "tags": [
+                "outreach",
+                "stories"
+            ]
+        },
+        {
+            "name": "Kids of the King: Family Devotional",
+            "slug": "kids-of-the-king",
+            "category": "Family",
+            "description": "Fifty-two playful family devotions \u2014 a story, a giggle and a big question for every week of the year.",
+            "price_cents": 849,
+            "currency": "gbp",
+            "image": "/assets/images/gallery-11.jpg",
+            "tags": [
+                "family",
+                "kids"
+            ]
+        }
+    ],
+    "key": "graceway",
+    "name": "Graceway",
+    "description": "Marketplace template \u2014 replicates the Graceway app exactly, with editable content.",
+    "category": "Marketplace",
+    "accentColor": "#ff2d6c",
+    "author": "Olux Marketplace",
+    "version": "1.0.0",
+    "createdAt": "2026-09-19",
+    "tags": [
+        "App"
+    ],
+    "features": [
+        "19 page(s) \u00b7 109 content blocks",
+        "Pixel-exact replica of the original app",
+        "Content, order and visibility editable in Configure"
+    ],
+    "renderer": "graceway",
+    "pages": [
+        "about",
+        "bible-study",
+        "broadcast",
+        "community-care",
+        "contact",
+        "cookie-policy",
+        "donate",
+        "events",
+        "home",
+        "kids",
+        "ministries",
+        "newsletter",
+        "prayer",
+        "privacy-policy",
+        "sermons",
+        "store",
+        "terms",
+        "worship",
+        "youth"
+    ]
+}

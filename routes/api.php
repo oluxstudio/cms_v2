@@ -184,6 +184,7 @@ Route::get('/sites/{siteName}/pages/{id}', [PageApiController::class, 'show'])->
 // ── Collections (public collections + their published items) ────────────────
 Route::get('/sites/{siteName}/collections', [CollectionApiController::class, 'index'])->name('api.collections.index');
 Route::get('/sites/{siteName}/collections/{id}', [CollectionApiController::class, 'show'])->name('api.collections.show');
+Route::post('/sites/{siteName}/collections/{id}/items/{itemId}/event', [CollectionApiController::class, 'event'])->middleware(['throttle:track', 'site.origin'])->name('api.collections.event');
 
 // ── Forms directory (active forms + schemas; single-form schema/submit above)
 Route::get('/sites/{siteName}/forms', [FormApiController::class, 'index'])->name('api.forms.index');

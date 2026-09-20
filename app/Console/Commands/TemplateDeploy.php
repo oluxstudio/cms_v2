@@ -23,7 +23,8 @@ class TemplateDeploy extends Command
     protected $signature = 'template:deploy {key : Template key}
         {--from= : Source dir, zip or git URL (default: the submission\'s repo, else skip refresh)}
         {--no-build : Skip rebuilding the renderer shell}
-        {--no-sites : Skip refreshing sites that use the template}';
+        {--no-sites : Skip refreshing sites that use the template}
+        {--force : Deploy despite fidelity lint errors or layout-parity failures}';
 
     protected $description = 'Update a template everywhere: import/republish, rebuild its shell, refresh applied sites';
 
@@ -59,10 +60,36 @@ class TemplateDeploy extends Command
 
         // Curated manifest blocks must survive republishes.
         $after = is_file($manifestPath) ? (array) json_decode((string) file_get_contents($manifestPath), true) : [];
-        foreach (['forms', 'booking', 'collections'] as $k) {
+        foreach (['forms', 'booking', 'collections', 'products'] as $k) {
             if (! empty($before[$k]) && empty($after[$k])) {
                 $this->warn("⚠ manifest key '{$k}' disappeared from template.json — re-add it before sites re-apply.");
             }
+        }
+
+        // 2b. Fidelity lint over the PUBLISHED sources — errors block the
+        // deploy (--force overrides) so slot/inline/asset regressions can't
+        // ship silently on redeploys.
+        $extraction = base_path("templates/{$key}/.olux/extraction.json");
+        $manifest = is_file($extraction)
+            ? (array) json_decode((string) file_get_contents($extraction), true)
+            : (is_file($manifestPath) ? (array) json_decode((string) file_get_contents($manifestPath), true) : []);
+        if ($manifest !== []) {
+            $lint = app(\App\Services\TemplateLint::class)->analyze($manifest, base_path("templates/{$key}"));
+            foreach ($lint['findings'] as $finding) {
+                $line = "[{$finding['area']}] {$finding['message']}";
+                match ($finding['level']) {
+                    'error' => $this->error('   ✗ '.$line),
+                    'warning' => $this->warn('   ⚠ '.$line),
+                    default => $this->line('   · '.$line),
+                };
+            }
+            $lintErrors = collect($lint['findings'])->where('level', 'error')->count();
+            if ($lintErrors > 0 && ! $this->option('force')) {
+                $this->error("✗ Fidelity lint: {$lintErrors} error(s), score {$lint['score']}/100 — fix the sources or re-run with --force.");
+
+                return self::FAILURE;
+            }
+            $this->info("✓ Fidelity lint: score {$lint['score']}/100".($lintErrors > 0 ? ' (errors overridden by --force)' : ''));
         }
 
         // 2. Rebuild the renderer shell (what previews + live sites serve).
@@ -80,6 +107,13 @@ class TemplateDeploy extends Command
                 return self::FAILURE;
             }
             $this->info('✓ Shell rebuilt');
+        }
+
+        // 4b. Layout parity: published block order must match the authored pages.
+        if (Artisan::call('template:verify', ['key' => $key], $this->output) !== self::SUCCESS && ! $this->option('force')) {
+            $this->error('✗ Layout parity failed — the CMS would render pages in a different order than authored (override with --force).');
+
+            return self::FAILURE;
         }
 
         // 3. Refresh every site running this template (idempotent installs).

@@ -16,13 +16,21 @@
      x-data="{ pane: {{ (int) $start }},
                slideX(i) { const el = this.$refs.panes.children[i]; return el ? el.offsetLeft : 0 },
                go(i) { this.pane = i; this.$refs.panes.scrollTo({ left: this.slideX(i), behavior: 'smooth' }) },
+               _raf: null,
                sync() {
-                   const x = this.$refs.panes.scrollLeft; let best = 0, dist = Infinity;
-                   for (let i = 0; i < {{ (int) max($count, 1) }}; i++) {
-                       const d = Math.abs(this.slideX(i) - x);
-                       if (d < dist) { dist = d; best = i }
-                   }
-                   if (best !== this.pane) this.pane = best;
+                   // rAF-throttled: raw scroll fires dozens of times a frame and
+                   // each offsetLeft read forces layout — batching keeps swipes
+                   // smooth even with heavy slides (iframes, big lists).
+                   if (this._raf || window.innerWidth >= 1024) return;
+                   this._raf = requestAnimationFrame(() => {
+                       this._raf = null;
+                       const x = this.$refs.panes.scrollLeft; let best = 0, dist = Infinity;
+                       for (let i = 0; i < {{ (int) max($count, 1) }}; i++) {
+                           const d = Math.abs(this.slideX(i) - x);
+                           if (d < dist) { dist = d; best = i }
+                       }
+                       if (best !== this.pane) this.pane = best;
+                   });
                } }"
      x-ref="panes"
      @if((int) $start > 0)

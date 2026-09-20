@@ -1,0 +1,95 @@
+{
+    "name": "Events",
+    "url": "/events",
+    "layout": "default",
+    "keywords": "events",
+    "attributes": {
+        "title": "Events \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:events-grid",
+            "name": "Events Grid",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Upcoming events",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Life together, beyond Sunday",
+                    "order": 1,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption",
+                    "type": "text",
+                    "value": "Seats",
+                    "order": 2,
+                    "description": "text"
+                },
+                {
+                    "label": "Caption B",
+                    "type": "text",
+                    "value": "Total",
+                    "order": 3,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "We only use your details for this event. Never shared.",
+                    "order": 4,
+                    "description": "text"
+                },
+                {
+                    "label": "Text C",
+                    "type": "text",
+                    "value": "Payment",
+                    "order": 5,
+                    "description": "text"
+                },
+                {
+                    "label": "Text D",
+                    "type": "text",
+                    "value": "\u2190 Back",
+                    "order": 6,
+                    "description": "text"
+                },
+                {
+                    "label": "Text E",
+                    "type": "text",
+                    "value": "\ud83d\udd12 Payments are processed securely. You'll receive a receipt by email.",
+                    "order": 7,
+                    "description": "text"
+                },
+                {
+                    "label": "Text F",
+                    "type": "text",
+                    "value": "Done",
+                    "order": 8,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:sermons",
+            "name": "Sermons",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:donate-cta",
+            "name": "Donate Cta",
+            "nodes": []
+        }
+    ]
+}

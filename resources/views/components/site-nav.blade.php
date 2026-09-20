@@ -19,7 +19,7 @@
     ];
 
     // Only the USABLE day-to-day pages appear in the menu. Builder internals
-    // and developer surfaces (Blocks, Components, Collections, My Designs,
+    // and developer surfaces (Blocks, My Designs,
     // API docs/keys) stay routable for direct access but are not offered here.
     $topLevel = [
         $link('dashboard', 'Dashboard'),
@@ -29,6 +29,8 @@
         'Content' => [
             $link('pages', 'Pages'),
             $link('posts', 'Posts'),
+            $link('components', 'Components'),
+            $link('collections', 'Collections'),
             $link('media', 'Assets'),
             $link('connect', 'Preview'),
         ],

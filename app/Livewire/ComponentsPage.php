@@ -17,6 +17,8 @@ use Livewire\Component as LivewireComponent;
  */
 class ComponentsPage extends LivewireComponent
 {
+    use \App\Livewire\Concerns\WithVisibilityFields;
+
     use WithLayoutMode;
 
     public Site $site;
@@ -124,8 +126,10 @@ class ComponentsPage extends LivewireComponent
             ])->values()->all();
             $this->pageIds = $c->pages->pluck('id')->map(fn ($v) => (string) $v)->all();
             $this->collectionId = (string) ($c->collection_id ?? '');
+            $this->hydrateVisibilityFields($c->visibility);
         } else {
             $this->reset(['cName', 'cDescription', 'cTags', 'pageIds', 'collectionId']);
+            $this->resetVisibilityFields();
             $this->nodes = [['label' => '', 'type' => 'text', 'value' => '', 'description' => '']];
         }
     }
@@ -133,6 +137,7 @@ class ComponentsPage extends LivewireComponent
     public function close(): void
     {
         $this->reset(['editingId', 'cName', 'cDescription', 'cTags', 'nodes', 'pageIds', 'collectionId']);
+        $this->resetVisibilityFields();
     }
 
     /** Parse the comma-separated tags box → clean unique array. */
@@ -191,6 +196,8 @@ class ComponentsPage extends LivewireComponent
             }
         }
 
+        $visibility = $this->assembleVisibility();
+
         // Validate the chosen collection belongs to this site (else clear it).
         $collectionId = $this->collectionId !== '' && $this->site->collections()->whereKey($this->collectionId)->exists()
             ? $this->collectionId : null;
@@ -199,6 +206,7 @@ class ComponentsPage extends LivewireComponent
             $component = $this->site->contentComponents()->findOrFail($this->editingId);
             $component->update([
                 'name' => trim($this->cName),
+                'visibility' => $visibility,
                 'description' => trim($this->cDescription) ?: null,
                 'tags' => $this->parsedTags() ?: null,
                 'collection_id' => $collectionId,
@@ -207,6 +215,7 @@ class ComponentsPage extends LivewireComponent
             $component = Component::create([
                 'site_id' => $this->site->id,
                 'name' => trim($this->cName),
+                'visibility' => $visibility,
                 'author' => Auth::user()?->name ?? 'Admin',
                 'created_by' => Auth::id(),
                 'source' => 'app',
@@ -244,6 +253,8 @@ class ComponentsPage extends LivewireComponent
             $attach[$pageId] = ['order' => $order];
         }
         $component->pages()->sync($attach);
+
+        $this->bustRenderCache($this->site);
 
         $this->dispatch('toast', level: 'success', title: 'Component saved',
             message: $component->name.' has '.$rows->count().' '.Str::plural('node', $rows->count()).'.');

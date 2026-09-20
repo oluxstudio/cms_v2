@@ -1,0 +1,26 @@
+{
+    "name": "Newsletter",
+    "url": "/newsletter",
+    "layout": "default",
+    "keywords": "newsletter",
+    "attributes": {
+        "title": "Join the Church \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:join-church",
+            "name": "Join Church",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:times",
+            "name": "Times",
+            "nodes": []
+        }
+    ]
+}

@@ -87,7 +87,10 @@ class SiteContentController extends Controller
             'name' => $site->name,
             'domain' => $site->domain,
             'description' => $site->description,
-            'theme' => $site->themeValues(),
+            // RAW theme — only the keys the owner (or template apply) actually
+            // set. Merging platform defaults here forced e.g. font 'Inter'
+            // onto templates with a different body font.
+            'theme' => is_array($site->theme) ? $site->theme : [],
             // EVERY site attribute (EAV) — templates read their config here.
             'attributes' => $site->attrMap(),
         ];
@@ -148,6 +151,7 @@ class SiteContentController extends Controller
             'type' => "app:{$key}:".Str::slug($c->name),
             'name' => $c->name,
             'settings' => $c->pivot?->settings ? json_decode((string) $c->pivot->settings, true) : null,
+            'visibility' => $c->visibilityPayload(),
             'nodes' => $c->nodes->map(fn ($n) => [
                 'label' => $n->label,
                 'type' => $n->type,

@@ -31,3 +31,6 @@ yarn-error.log
 /.zed
 /mcp/node_modules
 /mcp/dist
+
+# Preview-build backups (nuxt:preview-build keeps one .old copy)
+public/nuxt-preview/*.old-*

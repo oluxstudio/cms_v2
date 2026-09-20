@@ -61,6 +61,7 @@ class ComponentApiController extends Controller
             'source' => 'api',
             'description' => $data['description'] ?? null,
             'tags' => $data['tags'] ?? null,
+            'visibility' => $data['visibility'] ?? null,
         ]);
         $this->syncNodes($component, $data['nodes'] ?? []);
         $this->syncPages($site, $component, $data['page_ids'] ?? null);
@@ -84,6 +85,9 @@ class ComponentApiController extends Controller
         }
         if (array_key_exists('tags', $data)) {
             $attrs['tags'] = $data['tags'];
+        }
+        if (array_key_exists('visibility', $data)) {
+            $attrs['visibility'] = $data['visibility'] ?: null;
         }
         if ($attrs !== []) {
             $component->update($attrs);
@@ -114,6 +118,15 @@ class ComponentApiController extends Controller
             'description' => ['nullable', 'string', 'max:500'],
             'tags' => ['sometimes', 'nullable', 'array', 'max:12'],
             'tags.*' => ['string', 'max:40'],
+            'visibility' => ['sometimes', 'nullable', 'array'],
+            'visibility.from' => ['nullable', 'date'],
+            'visibility.until' => ['nullable', 'date', 'after_or_equal:visibility.from'],
+            'visibility.days' => ['nullable', 'array'],
+            'visibility.days.*' => ['integer', 'between:1,7'],
+            'visibility.time_from' => ['nullable', 'date_format:H:i', 'required_with:visibility.time_until'],
+            'visibility.time_until' => ['nullable', 'date_format:H:i', 'required_with:visibility.time_from'],
+            'visibility.requires_content' => ['nullable', 'boolean'],
+            'visibility.promo' => ['nullable', 'string', 'alpha_dash', 'max:64'],
             'nodes' => ['sometimes', 'array'],
             'nodes.*.label' => ['required_with:nodes', 'string', 'max:120'],
             'nodes.*.type' => ['required_with:nodes', 'in:'.implode(',', Node::TYPES)],

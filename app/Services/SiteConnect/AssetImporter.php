@@ -125,12 +125,23 @@ class AssetImporter
      */
     public function importLocal(Site $site, string $absolutePath, ?string $name = null): ?string
     {
-        if (! is_file($absolutePath) || filesize($absolutePath) > self::MAX_BYTES) {
+        if (! is_file($absolutePath)) {
             return null;
         }
         $name ??= basename($absolutePath);
         $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-        if (! in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif', 'ico'], true)) {
+        // Every template asset type enters the media library — images, and
+        // (with their own generous caps) fonts, video, audio and documents.
+        $caps = [
+            'png' => self::MAX_BYTES, 'jpg' => self::MAX_BYTES, 'jpeg' => self::MAX_BYTES,
+            'gif' => self::MAX_BYTES, 'webp' => self::MAX_BYTES, 'svg' => self::MAX_BYTES,
+            'avif' => self::MAX_BYTES, 'ico' => self::MAX_BYTES,
+            'woff' => 2 * 1024 * 1024, 'woff2' => 2 * 1024 * 1024, 'ttf' => 4 * 1024 * 1024, 'otf' => 4 * 1024 * 1024,
+            'mp4' => 200 * 1024 * 1024, 'webm' => 200 * 1024 * 1024, 'ogv' => 200 * 1024 * 1024,
+            'mp3' => 40 * 1024 * 1024, 'wav' => 80 * 1024 * 1024, 'm4a' => 40 * 1024 * 1024, 'ogg' => 40 * 1024 * 1024,
+            'pdf' => 25 * 1024 * 1024,
+        ];
+        if (! isset($caps[$ext]) || filesize($absolutePath) > $caps[$ext]) {
             return null;
         }
 
@@ -164,6 +175,16 @@ class AssetImporter
             return $existing->ref();
         }
 
-        return Media::create($attrs + ['site_id' => $site->id, 'name' => $name, 'alt_text' => null])->ref();
+        // Correct label: "pastor-2.jpg" → "Pastor 2"; the parent folder gives
+        // context ("Gallery · Pastor 2") so the Assets page groups sensibly.
+        // The stored FILE keeps its real name (in the url), so @media/<file>
+        // refs still resolve via basename matching.
+        $label = Str::headline(pathinfo($name, PATHINFO_FILENAME));
+        $folder = basename(dirname($absolutePath));
+        if ($folder !== '' && ! in_array(strtolower($folder), ['assets', 'images', 'public', '.'], true)) {
+            $label = Str::headline($folder).' · '.$label;
+        }
+
+        return Media::create($attrs + ['site_id' => $site->id, 'name' => $label, 'alt_text' => $label])->ref();
     }
 }

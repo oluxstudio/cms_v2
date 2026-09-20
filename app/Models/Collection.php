@@ -14,12 +14,13 @@ use Illuminate\Support\Str;
 
 class Collection extends Model
 {
-    use HasFactory;
+    use \App\Models\Concerns\HasVisibilityRules, HasFactory;
     use HasFieldSchema;
     use HasUlids;
 
     protected $fillable = [
         'site_id', 'name', 'slug', 'type', 'description', 'fields', 'is_public', 'allow_submit', 'auto_publish',
+        'visibility',
     ];
 
     protected $casts = [
@@ -27,6 +28,7 @@ class Collection extends Model
         'is_public' => 'boolean',
         'allow_submit' => 'boolean',
         'auto_publish' => 'boolean',
+        'visibility' => 'array',
     ];
 
     protected function slug(): Attribute
@@ -84,6 +86,7 @@ class Collection extends Model
             'description' => $this->description,
             'fields' => $this->fields ?? [],
             'is_public' => (bool) $this->is_public,
+            'visibility' => $this->visibilityPayload(),
             'allow_submit' => (bool) $this->allow_submit,
             // The components grouped by this collection (each with nodes + node_tree).
             'components' => $this->components()->with('nodes')->get()

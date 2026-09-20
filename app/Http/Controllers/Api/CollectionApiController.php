@@ -54,6 +54,38 @@ class CollectionApiController extends Controller
         return response()->json(['collection' => $this->record($collection)]);
     }
 
+    /**
+     * Visitor engagement beacon (media views/plays). Mirrors the product
+     * event endpoint: 204 always, silent no-op on any miss.
+     */
+    public function event(string $siteName, string $id, string $itemId, Request $request)
+    {
+        $site = \App\Models\Site::where('name', $siteName)->firstOrFail();
+        $data = $request->validate([
+            'event' => ['required', 'in:'.implode(',', \App\Models\CollectionItemEvent::EVENTS)],
+            'session' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $item = \App\Models\CollectionItem::where('site_id', $site->id)
+            ->whereKey($itemId)
+            ->where('collection_id', $id)
+            ->where('status', 'published')
+            ->whereHas('collection', fn ($q) => $q->where('is_public', true))
+            ->first();
+        if ($item) {
+            \App\Models\CollectionItemEvent::create([
+                'site_id' => $site->id,
+                'collection_id' => $item->collection_id,
+                'collection_item_id' => $item->id,
+                'event' => $data['event'],
+                'session_hash' => $data['session'] ?? null,
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->noContent();
+    }
+
     private function validated(Request $request, bool $creating): array
     {
         return $request->validate([
@@ -63,6 +95,15 @@ class CollectionApiController extends Controller
             'fields' => ['sometimes', 'array', 'max:60'],
             'is_public' => ['sometimes', 'boolean'],
             'allow_submit' => ['sometimes', 'boolean'],
+            'visibility' => ['sometimes', 'nullable', 'array'],
+            'visibility.from' => ['nullable', 'date'],
+            'visibility.until' => ['nullable', 'date', 'after_or_equal:visibility.from'],
+            'visibility.days' => ['nullable', 'array'],
+            'visibility.days.*' => ['integer', 'between:1,7'],
+            'visibility.time_from' => ['nullable', 'date_format:H:i', 'required_with:visibility.time_until'],
+            'visibility.time_until' => ['nullable', 'date_format:H:i', 'required_with:visibility.time_from'],
+            'visibility.requires_content' => ['nullable', 'boolean'],
+            'visibility.promo' => ['nullable', 'string', 'alpha_dash', 'max:64'],
         ]);
     }
 
@@ -79,6 +120,7 @@ class CollectionApiController extends Controller
             'fields' => $data['fields'] ?? [],
             'is_public' => $data['is_public'] ?? true,
             'allow_submit' => $data['allow_submit'] ?? false,
+            'visibility' => $data['visibility'] ?? null,
         ]);
 
         return response()->json(['ok' => true, 'collection' => $this->record($collection->load('items'), everything: true)], 201);

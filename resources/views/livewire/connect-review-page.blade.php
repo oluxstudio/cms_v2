@@ -75,6 +75,11 @@
         .dark .olx-in { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
         .olx-save { margin-top:.75rem; width:100%; padding:.5rem; border-radius:12px; font-weight:700;
                     font-size:13px; color:#fff; background:var(--primary); }
+        /* The panel's sticky footer owns Save — hide the editors' inline ones */
+        #olx-inspector .olx-save { display:none; }
+        /* The editor panel owns the bottom-right corner while open — the chat
+           FAB would float over the Save bar, so hide it for the session. */
+        body:has(#olx-inspector) #bk-chat-fab { display:none; }
         .olx-card { border:1px solid rgba(0,0,0,.08); border-radius:9px; padding:.5rem; font-size:12px; }
         .dark .olx-card { border-color:rgba(255,255,255,.08); }
         /* Inspector row lit up while its field is hovered in the preview */
@@ -86,8 +91,8 @@
                               100% { background: transparent; box-shadow: none; } }
     </style>
 
-    {{-- Toolbar --}}
-    <div class="flex items-center gap-3 mb-3 flex-wrap">
+    {{-- Toolbar — hidden on mobile when embedded in the page Content tab --}}
+    <div class="{{ $embedded ? 'hidden lg:flex' : 'flex' }} items-center gap-3 mb-3 flex-wrap">
         <h1 class="text-lg font-extrabold text-gray-900 dark:text-white">Edit mode</h1>
         @if ($livePreviewUrl)
             <a href="{{ $livePreviewUrl }}" target="_blank" rel="noopener"
@@ -176,10 +181,9 @@
             No preview available yet. Apply a design from <a href="{{ url($site->name.'/designs') }}" class="font-semibold text-indigo-500 hover:underline">My Designs</a> and your site shows here with live content — or, for an externally hosted client site, enter its URL above (it must embed <code>connect.js</code>) to preview and click-to-edit it.
         </div>
     @else
-        {{-- Inspector only opens once a component is selected; otherwise the
-             preview takes the full width. --}}
+        @if ($embedded)
+        {{-- Embedded (page-detail Content tab): compact two-pane layout --}}
         <div class="flex-1 grid {{ $selectedKind ? 'lg:grid-cols-[1fr_360px]' : '' }} gap-4 min-h-0">
-
             {{-- Live client site (edit mode); width follows the device toggle --}}
             <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden"
                  :class="device === 'desktop' ? 'bg-white' : 'bg-gray-100 dark:bg-black/30'">
@@ -190,93 +194,80 @@
                 </div>
             </div>
 
-            {{-- Inspector --}}
             @if ($selectedKind)
-            <div id="olx-inspector" class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] p-4 overflow-y-auto">
-                @if (! $edit)
-                    <p class="text-sm text-gray-400">Hover the preview — components outline in orange. Click one to edit it here.</p>
-                @else
-                    <div class="flex items-center justify-between">
-                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ $selectedKind }}</p>
-                        <div class="flex items-center gap-1">
-                            <button wire:click="viewOnly" class="text-[11px] font-semibold px-2 py-1 rounded-lg {{ $mode === 'view' ? 'text-white' : 'text-gray-500' }}" @if($mode==='view') style="background:var(--primary)" @endif>View</button>
-                            <button wire:click="edit" class="text-[11px] font-semibold px-2 py-1 rounded-lg {{ $mode === 'edit' ? 'text-white' : 'text-gray-500' }}" @if($mode==='edit') style="background:var(--primary)" @endif>Edit</button>
-                            @if ($mode === 'edit')
-                                <button wire:click="save" title="Save {{ $edit['type'] ?? 'content' }}"
-                                        class="ml-0.5 p-1.5 rounded-lg text-white hover:opacity-90" style="background:var(--primary)">
-                                    <svg wire:loading.remove wire:target="save" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                                    <svg wire:loading wire:target="save" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 3a9 9 0 019 9"/></svg>
-                                </button>
-                            @endif
-                            <button wire:click="deselect" title="Close panel"
-                                    class="text-sm leading-none text-gray-400 hover:text-rose-600 ml-1 px-1">✕</button>
-                        </div>
-                    </div>
-                    <p class="mt-1 text-sm font-extrabold text-gray-900 dark:text-white">{{ $edit['name'] ?? $edit['title'] ?? '' }}</p>
-
-                    @if ($mode === 'edit')
-                        @include('livewire.partials.connect-editor')
-
-                        {{-- ── History: revert to one of the recent snapshots ── --}}
-                        @if ($versions->isNotEmpty())
-                            <p class="mt-5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">History</p>
-                            <div class="mt-1.5 space-y-1.5">
-                                @foreach ($versions as $v)
-                                    <div class="flex items-center gap-2 olx-card">
-                                        <span class="min-w-0 flex-1">
-                                            <span class="block font-semibold text-gray-700 dark:text-gray-200 truncate">{{ $v->label ?: 'Snapshot' }}</span>
-                                            <span class="block text-[10px] text-gray-400">{{ $v->created_at->diffForHumans() }}{{ $v->created_by ? ' · '.$v->created_by : '' }}</span>
-                                        </span>
-                                        <button wire:click="revertTo('{{ $v->id }}')"
-                                                data-confirm="Revert to this version? The current content will be saved to history first."
-                                                class="shrink-0 text-[11px] font-semibold px-2 py-1 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-white/[0.06]">
-                                            Revert
-                                        </button>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
-                    @else
-                        @php $t = $edit['type']; @endphp
-                        @if ($t === 'component')
-                            <div class="mt-3 space-y-2">
-                                @foreach ($edit['nodes'] as $node)
-                                    <div data-node-field="{{ \Illuminate\Support\Str::camel(\Illuminate\Support\Str::slug($node['label'])) }}" class="rounded-lg p-1 -m-1">
-                                        <p class="text-[11px] text-gray-400">{{ $node['label'] }}</p>
-                                        @if ($node['type'] === 'image' && $node['value'])
-                                            <img src="{{ \App\Models\Media::resolveRef($site->id, $node['value']) }}" alt="" class="max-h-28 rounded-lg">
-                                        @else
-                                            <p class="text-sm text-gray-800 dark:text-gray-200">{{ $node['value'] ?: '—' }}</p>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                        @elseif ($t === 'collection')
-                            <p class="mt-3 text-[11px] text-gray-400">{{ count($edit['items']) }} item(s)</p>
-                            <div class="mt-2 space-y-2">
-                                @foreach ($edit['items'] as $item)
-                                    <div class="olx-card">
-                                        @foreach ($item['data'] as $k => $v)
-                                            <div><span class="text-gray-400">{{ $k }}:</span> {{ \Illuminate\Support\Str::limit((string) $v, 60) }}</div>
-                                        @endforeach
-                                    </div>
-                                @endforeach
-                            </div>
-                        @elseif ($t === 'form')
-                            <p class="mt-3 text-[11px] text-gray-400">Endpoint: {{ $edit['endpoint'] ?: 'CMS (form responses)' }}</p>
-                            <ul class="mt-2 text-sm text-gray-800 dark:text-gray-200 space-y-1">
-                                @foreach ($edit['fields'] as $field)
-                                    <li>{{ $field['label'] ?? $field['key'] ?? '' }} <span class="text-gray-400">({{ $field['type'] ?? 'text' }})</span></li>
-                                @endforeach
-                            </ul>
-                        @elseif ($t === 'post')
-                            <p class="mt-3 text-sm text-gray-500">{{ $edit['excerpt'] ?: '—' }}</p>
-                        @endif
-                    @endif
-                @endif
+            {{-- Mobile: bottom sheet UNDER the site header (top-16) so the menu
+                 and nav stay reachable; z-[45] paints it OVER the floating pane
+                 switcher + assistant bubble (z-40) but under header menus (z-50);
+                 desktop: normal side column. --}}
+            <div id="olx-inspector"
+                 x-data x-init="if (window.innerWidth < 1024) requestAnimationFrame(() => $el.classList.remove('translate-y-full'))"
+                 class="translate-y-full lg:translate-y-0 transition-transform duration-300
+                        fixed inset-x-0 bottom-0 top-16 z-[45] w-full shadow-2xl rounded-t-2xl
+                        lg:static lg:w-auto lg:shadow-none lg:z-auto lg:rounded-2xl
+                        border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] overflow-hidden flex flex-col">
+                {{-- Sheet header: drag hint + always-visible close --}}
+                <div class="lg:hidden shrink-0 flex items-center justify-between px-4 pt-2.5 pb-2 border-b border-gray-100 dark:border-white/[0.06]">
+                    <span class="w-8"></span>
+                    <span class="w-10 h-1.5 rounded-full bg-gray-200 dark:bg-white/15"></span>
+                    <button wire:click="deselect" aria-label="Close editor"
+                            class="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-white/[0.08] hover:text-rose-600">✕</button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-4">
+                    @include('livewire.partials.connect-inspector')
+                </div>
             </div>
             @endif
         </div>
+        @else
+        {{-- Edit mode is a 3-slide layout: pages | live preview | editor.
+             Mobile swipes between the slides; desktop shows all three. --}}
+        <x-carousel :labels="['📄 Pages', '🖥 Preview', '✏️ Edit']" :start="1">
+
+        {{-- ════ LEFT: pages ════ --}}
+        <x-carousel.slide class="lg:!w-[220px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+            <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] p-2">
+                <p class="px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">Pages</p>
+                @foreach ($pages as $page)
+                    <button wire:click="$set('previewPath', '{{ $page->url }}')"
+                            class="w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors
+                                   {{ $previewPath === $page->url
+                                       ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]' }}"
+                            @if($previewPath === $page->url) style="background:var(--primary)" @endif>
+                        {{ $page->name }}
+                        <span class="block font-mono text-[10px] {{ $previewPath === $page->url ? 'text-white/70' : 'text-gray-400' }}">{{ $page->url }}</span>
+                    </button>
+                @endforeach
+            </div>
+        </x-carousel.slide>
+
+        {{-- ════ MIDDLE: live preview ════ --}}
+        <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+            <div class="h-[70vh] lg:h-[calc(100vh-13rem)] flex flex-col">
+            {{-- Live client site (edit mode); width follows the device toggle --}}
+            <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden"
+                 :class="device === 'desktop' ? 'bg-white' : 'bg-gray-100 dark:bg-black/30'">
+                <div class="h-full mx-auto bg-white transition-all duration-300 overflow-hidden"
+                     :style="device === 'mobile' ? 'max-width:390px' : device === 'tablet' ? 'max-width:768px' : 'max-width:100%'"
+                     :class="device !== 'desktop' && 'shadow-lg'">
+                    <iframe id="olx-frame" src="{{ $embedUrl }}" class="w-full h-full" style="border:0"></iframe>
+                </div>
+            </div>
+            </div>
+        </x-carousel.slide>
+
+        {{-- ════ RIGHT: content editor ════ --}}
+        <x-carousel.slide class="lg:!w-[380px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
+            <div id="olx-inspector" class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] p-4">
+                @if (! $selectedKind)
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">✏️ Edit content</p>
+                    <p class="mt-2 text-sm text-gray-400">Click any section in the preview — it outlines in orange and its content opens here to edit.</p>
+                @else
+                    @include('livewire.partials.connect-inspector')
+                @endif
+            </div>
+        </x-carousel.slide>
+        </x-carousel>
+        @endif
     @endif
 
     {{-- Asset library modal — opened by the "Assets" button on image fields;

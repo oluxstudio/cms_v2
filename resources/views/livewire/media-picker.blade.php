@@ -79,7 +79,9 @@
             {{-- Footer: pagination + hint --}}
             <div class="shrink-0 px-4 py-3 border-t border-gray-100 dark:border-white/[0.06] flex items-center gap-3">
                 <p class="text-[10px] text-gray-400">Tip: you can also type <code class="font-mono text-[10px] bg-gray-100 dark:bg-white/[0.06] px-1 py-0.5 rounded">@media/filename</code> directly in any field.</p>
-                <div class="ml-auto text-xs">{{ $items->links('pagination::simple-tailwind') }}</div>
+                <div class="ml-auto text-xs">{{-- Livewire paginator view — wire:click page switches; the plain Laravel
+     view rendered real <a href="?pickerPage=…"> links that navigated (404). --}}
+{{ $items->links('livewire::simple-tailwind') }}</div>
             </div>
         </div>
     </div>
