@@ -69,10 +69,14 @@ class TemplateDeploy extends Command
         // 2b. Fidelity lint over the PUBLISHED sources — errors block the
         // deploy (--force overrides) so slot/inline/asset regressions can't
         // ship silently on redeploys.
+        // The fidelity lint needs the EXTRACTION manifest (theme tokens, per-
+        // block nodes); the curated package manifest would false-error, so a
+        // published app without one skips the gate with a warning.
         $extraction = base_path("templates/{$key}/.olux/extraction.json");
-        $manifest = is_file($extraction)
-            ? (array) json_decode((string) file_get_contents($extraction), true)
-            : (is_file($manifestPath) ? (array) json_decode((string) file_get_contents($manifestPath), true) : []);
+        $manifest = is_file($extraction) ? (array) json_decode((string) file_get_contents($extraction), true) : [];
+        if ($manifest === []) {
+            $this->warn('⚠ No extraction manifest — fidelity lint skipped.');
+        }
         if ($manifest !== []) {
             $lint = app(\App\Services\TemplateLint::class)->analyze($manifest, base_path("templates/{$key}"));
             foreach ($lint['findings'] as $finding) {
