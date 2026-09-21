@@ -208,6 +208,24 @@ class BuildNuxtPreview extends Command
             }
         }
         $this->info('  · Asset paths rebased ('.implode(', ', $assetDirs).') in '.$rewritten.' file(s)');
+
+        // Cache-bust the hand-authored stylesheets: they keep a stable URL
+        // across deploys and are served without Cache-Control, so browsers
+        // hold stale copies (new colour classes "missing" in production).
+        $stamp = 'v'.time();
+        $stamped = 0;
+        foreach (File::allFiles($dest) as $file) {
+            if (! in_array($file->getExtension(), ['html', 'js', 'mjs', 'json'], true)) {
+                continue;
+            }
+            $code = File::get($file->getPathname());
+            $new = preg_replace('#(/assets/(?:stylesheets|fonts)/[\w.-]+\.css)(?!\?)#', '$1?'.$stamp, $code);
+            if ($new !== null && $new !== $code) {
+                File::put($file->getPathname(), $new);
+                $stamped++;
+            }
+        }
+        $this->info("  · Stylesheet links cache-busted ({$stamp}) in {$stamped} file(s)");
     }
 
     /** Run a process, streaming output; returns true on success. */
