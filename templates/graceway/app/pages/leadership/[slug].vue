@@ -11,6 +11,15 @@ if (!member) {
 
 useHead({ title: `${member.name} — CAC Blackburn` })
 const firstName = member!.name.split(' ').pop()
+
+// this member's own accounts (0..n), icon/color resolved from the global
+// socials data source by key; unknown keys fall back to a generic link glyph
+const { socials: socialDefs } = useSiteContent()
+const LINK_ICON = 'M10.6 13.4a1 1 0 0 1 0-1.4l2.8-2.8a3 3 0 0 1 4.2 4.2l-2.1 2.1a1 1 0 1 1-1.4-1.4l2.1-2.1a1 1 0 1 0-1.4-1.4l-2.8 2.8a1 1 0 0 1-1.4 0zm2.8-2.8a1 1 0 0 1 0 1.4l-2.8 2.8a3 3 0 0 1-4.2-4.2l2.1-2.1a1 1 0 1 1 1.4 1.4l-2.1 2.1a1 1 0 1 0 1.4 1.4l2.8-2.8a1 1 0 0 1 1.4 0z'
+const memberSocials = (member!.socials ?? []).map(s => {
+  const def = socialDefs.find(d => d.key === s.key)
+  return { ...s, name: def?.name ?? s.key, icon: def?.icon ?? LINK_ICON, color: def?.color }
+})
 </script>
 
 <template>
@@ -28,10 +37,11 @@ const firstName = member!.name.split(' ').pop()
     <section class="profile-hero profile-tri-sec">
       <div class="container profile-tri">
         <div class="profile-hero-copy">
-          <div class="profile-socials">
-            <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 7.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C16.6 3.6 12 3.6 12 3.6s-4.6 0-7.8.3c-.4.1-1.4.1-2.3 1-.7.7-.9 2.3-.9 2.3S.8 9.1.8 11v1.8c0 1.9.2 3.8.2 3.8s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.6.3 7.6.3s4.6 0 7.8-.4c.4-.1 1.4-.1 2.3-1 .7-.7.9-2.3.9-2.3s.2-1.9.2-3.8V11c0-1.9-.2-3.8-.2-3.8zM9.9 15.1V8.4l6.2 3.4-6.2 3.3z"/></svg></a>
-            <a href="#" aria-label="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.2 2.3h3.3l-7.3 8.3L22.8 22h-6.7l-5.3-6.9L4.8 22H1.5l7.8-8.9L1.1 2.3H8l4.8 6.3 5.4-6.3zm-1.2 17.7h1.8L7 4.2H5l12 15.8z"/></svg></a>
-            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 22v-9h3l.5-3.5h-3.5V7.2c0-1 .3-1.7 1.8-1.7H17V2.2c-.3 0-1.4-.2-2.6-.2-2.6 0-4.4 1.6-4.4 4.5v3H7V13h3v9h3.5z"/></svg></a>
+          <div v-if="memberSocials.length" class="profile-socials">
+            <a
+              v-for="s in memberSocials" :key="s.key + s.href" :href="s.href"
+              target="_blank" rel="noopener" :aria-label="s.name" :title="s.name"
+            ><svg viewBox="0 0 24 24" fill="currentColor"><path :d="s.icon"/></svg></a>
           </div>
           <h1>Hi, I'm <span class="hl">{{ firstName }}</span></h1>
           <p class="profile-role">{{ member.role }}</p>

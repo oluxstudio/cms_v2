@@ -1,13 +1,11 @@
 <script setup lang="ts">
-const oluxCms = useOluxContent('worship')
-const oluxFb: Record<string, string> = {}
 // All copy/images come from the central data source (useSiteContent).
 const { worship } = useSiteContent()
 const lines = contentLines
 </script>
 
 <template>
-  <section id="worship" class="worship showcase" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
+  <section id="worship" class="worship showcase">
     <div class="container">
       <div class="showcase-copy">
         <h2 class="mega">

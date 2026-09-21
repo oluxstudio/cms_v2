@@ -1,9 +1,9 @@
 {
     "key": "graceway",
     "name": "Graceway",
-    "extracted_at": "2026-09-19T23:13:50+00:00",
+    "extracted_at": "2026-09-21T00:53:02+00:00",
     "theme": {
-        "color-primary": "#ff2d6c",
+        "color-primary": "#ec0470",
         "color-secondary": "#14181d",
         "color-tertiary": "#0c010b",
         "color-accent": "#1e9e63",
@@ -24,7 +24,7 @@
     "behaviours": [],
     "assets": {
         "count": 52,
-        "bytes": 2582006,
+        "bytes": 2583381,
         "images": [
             "/assets/images/avatar1.svg",
             "/assets/images/avatar2.svg",
@@ -2516,6 +2516,334 @@
             ]
         },
         {
+            "name": "Event Archive",
+            "title": "Event Archive \u2014 CAC Blackburn",
+            "url": "/event-archive",
+            "file": "app/pages/event-archive/index.vue",
+            "layout": {
+                "header": null,
+                "footer": "SiteFooter"
+            },
+            "blocks": [
+                {
+                    "component": "SiteHeader",
+                    "blockKey": "site-header",
+                    "name": "Site Header",
+                    "nodes": [
+                        {
+                            "label": "Phone",
+                            "type": "text",
+                            "value": "+1 705 55 50 000",
+                            "kind": "text",
+                            "order": 0
+                        },
+                        {
+                            "label": "Phone Link",
+                            "type": "url",
+                            "value": "tel:+17055550000",
+                            "kind": "attr:href",
+                            "order": 1
+                        },
+                        {
+                            "label": "Caption",
+                            "type": "text",
+                            "value": "121 Wallstreet street, NY York, USA",
+                            "kind": "text",
+                            "order": 2
+                        },
+                        {
+                            "label": "Image",
+                            "type": "image",
+                            "value": "/assets/images/logo.png",
+                            "kind": "attr:src",
+                            "order": 3
+                        },
+                        {
+                            "label": "Menu Link 1 Label",
+                            "type": "text",
+                            "value": "Home",
+                            "kind": "item:label",
+                            "order": 4
+                        },
+                        {
+                            "label": "Menu Link 1 To",
+                            "type": "text",
+                            "value": "/",
+                            "kind": "item:to",
+                            "order": 5
+                        },
+                        {
+                            "label": "Menu Link 2 Label",
+                            "type": "text",
+                            "value": "About Us",
+                            "kind": "item:label",
+                            "order": 6
+                        },
+                        {
+                            "label": "Menu Link 2 To",
+                            "type": "text",
+                            "value": "/about",
+                            "kind": "item:to",
+                            "order": 7
+                        },
+                        {
+                            "label": "Menu Link 3 Label",
+                            "type": "text",
+                            "value": "Ministries",
+                            "kind": "item:label",
+                            "order": 8
+                        },
+                        {
+                            "label": "Menu Link 3 To",
+                            "type": "text",
+                            "value": "/ministries",
+                            "kind": "item:to",
+                            "order": 9
+                        },
+                        {
+                            "label": "Menu Link 4 Label",
+                            "type": "text",
+                            "value": "Events",
+                            "kind": "item:label",
+                            "order": 10
+                        },
+                        {
+                            "label": "Menu Link 4 To",
+                            "type": "text",
+                            "value": "/events",
+                            "kind": "item:to",
+                            "order": 11
+                        },
+                        {
+                            "label": "Menu Link 5 Label",
+                            "type": "text",
+                            "value": "Sermons",
+                            "kind": "item:label",
+                            "order": 12
+                        },
+                        {
+                            "label": "Menu Link 5 To",
+                            "type": "text",
+                            "value": "/sermons",
+                            "kind": "item:to",
+                            "order": 13
+                        },
+                        {
+                            "label": "Menu Link 6 Label",
+                            "type": "text",
+                            "value": "Store",
+                            "kind": "item:label",
+                            "order": 14
+                        },
+                        {
+                            "label": "Menu Link 6 To",
+                            "type": "text",
+                            "value": "/store",
+                            "kind": "item:to",
+                            "order": 15
+                        },
+                        {
+                            "label": "Menu Link 7 Label",
+                            "type": "text",
+                            "value": "Contact Us",
+                            "kind": "item:label",
+                            "order": 16
+                        },
+                        {
+                            "label": "Menu Link 7 To",
+                            "type": "text",
+                            "value": "/contact",
+                            "kind": "item:to",
+                            "order": 17
+                        }
+                    ],
+                    "items": [
+                        {
+                            "var": "menuLinks",
+                            "prefix": "Menu Link",
+                            "scalar": false,
+                            "fields": [
+                                {
+                                    "key": "label",
+                                    "label": "Label"
+                                },
+                                {
+                                    "key": "to",
+                                    "label": "To"
+                                }
+                            ],
+                            "imagePrefix": null,
+                            "count": 7,
+                            "values": [
+                                {
+                                    "label": "Home",
+                                    "to": "/"
+                                },
+                                {
+                                    "label": "About Us",
+                                    "to": "/about"
+                                },
+                                {
+                                    "label": "Ministries",
+                                    "to": "/ministries"
+                                },
+                                {
+                                    "label": "Events",
+                                    "to": "/events"
+                                },
+                                {
+                                    "label": "Sermons",
+                                    "to": "/sermons"
+                                },
+                                {
+                                    "label": "Store",
+                                    "to": "/store"
+                                },
+                                {
+                                    "label": "Contact Us",
+                                    "to": "/contact"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "component": "PageHeroContent",
+                    "blockKey": "page-hero-content",
+                    "name": "Page Hero Content",
+                    "nodes": [],
+                    "items": null
+                },
+                {
+                    "component": "EventsArchive",
+                    "blockKey": "events-archive",
+                    "name": "Events Archive",
+                    "nodes": [],
+                    "items": null
+                },
+                {
+                    "component": "DonateCta",
+                    "blockKey": "donate-cta",
+                    "name": "Donate Cta",
+                    "nodes": [],
+                    "items": null
+                },
+                {
+                    "component": "SiteFooter",
+                    "blockKey": "site-footer",
+                    "name": "Site Footer",
+                    "nodes": [
+                        {
+                            "label": "Subheadline",
+                            "type": "text",
+                            "value": "Explore",
+                            "kind": "text",
+                            "order": 0
+                        },
+                        {
+                            "label": "CTA Label",
+                            "type": "text",
+                            "value": "About Us",
+                            "kind": "text",
+                            "order": 1
+                        },
+                        {
+                            "label": "CTA Link",
+                            "type": "url",
+                            "value": "/about",
+                            "kind": "attr:href",
+                            "order": 2
+                        },
+                        {
+                            "label": "CTA B Label",
+                            "type": "text",
+                            "value": "Ministries",
+                            "kind": "text",
+                            "order": 3
+                        },
+                        {
+                            "label": "CTA B Link",
+                            "type": "url",
+                            "value": "/ministries",
+                            "kind": "attr:href",
+                            "order": 4
+                        },
+                        {
+                            "label": "CTA C Label",
+                            "type": "text",
+                            "value": "Sermons",
+                            "kind": "text",
+                            "order": 5
+                        },
+                        {
+                            "label": "CTA C Link",
+                            "type": "url",
+                            "value": "/sermons",
+                            "kind": "attr:href",
+                            "order": 6
+                        },
+                        {
+                            "label": "CTA D Label",
+                            "type": "text",
+                            "value": "Events",
+                            "kind": "text",
+                            "order": 7
+                        },
+                        {
+                            "label": "CTA D Link",
+                            "type": "url",
+                            "value": "/events",
+                            "kind": "attr:href",
+                            "order": 8
+                        },
+                        {
+                            "label": "CTA E Label",
+                            "type": "text",
+                            "value": "Give",
+                            "kind": "text",
+                            "order": 9
+                        },
+                        {
+                            "label": "CTA E Link",
+                            "type": "url",
+                            "value": "/donate",
+                            "kind": "attr:href",
+                            "order": 10
+                        },
+                        {
+                            "label": "CTA F Label",
+                            "type": "text",
+                            "value": "Contact",
+                            "kind": "text",
+                            "order": 11
+                        },
+                        {
+                            "label": "CTA F Link",
+                            "type": "url",
+                            "value": "/contact",
+                            "kind": "attr:href",
+                            "order": 12
+                        },
+                        {
+                            "label": "Subheadline B",
+                            "type": "text",
+                            "value": "Service Times",
+                            "kind": "text",
+                            "order": 13
+                        },
+                        {
+                            "label": "Subheadline C",
+                            "type": "text",
+                            "value": "Visit Us",
+                            "kind": "text",
+                            "order": 14
+                        }
+                    ],
+                    "items": null
+                }
+            ]
+        },
+        {
             "name": "Events",
             "title": "Events \u2014 CAC Blackburn",
             "url": "/events",
@@ -3128,395 +3456,9 @@
                     "items": null
                 },
                 {
-                    "component": "MinistriesDirections",
-                    "blockKey": "ministries-directions",
-                    "name": "Ministries Directions",
-                    "nodes": [
-                        {
-                            "label": "Text",
-                            "type": "text",
-                            "value": "At CAC Blackburn we offer many pathways to grow and serve \u2014 from worship and study to caring for our neighbours across the city.",
-                            "kind": "text",
-                            "order": 0
-                        },
-                        {
-                            "label": "Headline",
-                            "type": "text",
-                            "value": "Directions<br>of ministry",
-                            "kind": "html",
-                            "order": 1
-                        },
-                        {
-                            "label": "Direction 1 To",
-                            "type": "text",
-                            "value": "/community-care",
-                            "kind": "item:to",
-                            "order": 2
-                        },
-                        {
-                            "label": "Direction 1 Color",
-                            "type": "text",
-                            "value": "d-green",
-                            "kind": "item:color",
-                            "order": 3
-                        },
-                        {
-                            "label": "Direction 1 Image",
-                            "type": "image",
-                            "value": "/assets/images/event-1.jpg",
-                            "kind": "item:img",
-                            "order": 4
-                        },
-                        {
-                            "label": "Direction 1 Tag",
-                            "type": "text",
-                            "value": "Open to all",
-                            "kind": "item:tag",
-                            "order": 5
-                        },
-                        {
-                            "label": "Direction 1 Title",
-                            "type": "text",
-                            "value": "Community Care",
-                            "kind": "item:title",
-                            "order": 6
-                        },
-                        {
-                            "label": "Direction 1 Meta",
-                            "type": "text",
-                            "value": "Serving every Saturday",
-                            "kind": "item:meta",
-                            "order": 7
-                        },
-                        {
-                            "label": "Direction 2 To",
-                            "type": "text",
-                            "value": "/bible-study",
-                            "kind": "item:to",
-                            "order": 8
-                        },
-                        {
-                            "label": "Direction 2 Color",
-                            "type": "text",
-                            "value": "d-orange",
-                            "kind": "item:color",
-                            "order": 9
-                        },
-                        {
-                            "label": "Direction 2 Image",
-                            "type": "image",
-                            "value": "/assets/images/circle-2.jpg",
-                            "kind": "item:img",
-                            "order": 10
-                        },
-                        {
-                            "label": "Direction 2 Tag",
-                            "type": "text",
-                            "value": "Beginner friendly",
-                            "kind": "item:tag",
-                            "order": 11
-                        },
-                        {
-                            "label": "Direction 2 Title",
-                            "type": "text",
-                            "value": "Bible Study",
-                            "kind": "item:title",
-                            "order": 12
-                        },
-                        {
-                            "label": "Direction 2 Meta",
-                            "type": "text",
-                            "value": "Midweek home groups",
-                            "kind": "item:meta",
-                            "order": 13
-                        },
-                        {
-                            "label": "Direction 3 To",
-                            "type": "text",
-                            "value": "/worship",
-                            "kind": "item:to",
-                            "order": 14
-                        },
-                        {
-                            "label": "Direction 3 Color",
-                            "type": "text",
-                            "value": "d-blue",
-                            "kind": "item:color",
-                            "order": 15
-                        },
-                        {
-                            "label": "Direction 3 Image",
-                            "type": "image",
-                            "value": "/assets/images/event-2.jpg",
-                            "kind": "item:img",
-                            "order": 16
-                        },
-                        {
-                            "label": "Direction 3 Tag",
-                            "type": "text",
-                            "value": "Open to all",
-                            "kind": "item:tag",
-                            "order": 17
-                        },
-                        {
-                            "label": "Direction 3 Title",
-                            "type": "text",
-                            "value": "Worship & Music",
-                            "kind": "item:title",
-                            "order": 18
-                        },
-                        {
-                            "label": "Direction 3 Meta",
-                            "type": "text",
-                            "value": "Rehearsals every Thursday",
-                            "kind": "item:meta",
-                            "order": 19
-                        },
-                        {
-                            "label": "Direction 4 To",
-                            "type": "text",
-                            "value": "/youth",
-                            "kind": "item:to",
-                            "order": 20
-                        },
-                        {
-                            "label": "Direction 4 Color",
-                            "type": "text",
-                            "value": "d-green",
-                            "kind": "item:color",
-                            "order": 21
-                        },
-                        {
-                            "label": "Direction 4 Image",
-                            "type": "image",
-                            "value": "/assets/images/circle-3.jpg",
-                            "kind": "item:img",
-                            "order": 22
-                        },
-                        {
-                            "label": "Direction 4 Tag",
-                            "type": "text",
-                            "value": "Teens 13\u201319",
-                            "kind": "item:tag",
-                            "order": 23
-                        },
-                        {
-                            "label": "Direction 4 Title",
-                            "type": "text",
-                            "value": "Youth Ministry",
-                            "kind": "item:title",
-                            "order": 24
-                        },
-                        {
-                            "label": "Direction 4 Meta",
-                            "type": "text",
-                            "value": "Fridays in the Youth Hall",
-                            "kind": "item:meta",
-                            "order": 25
-                        },
-                        {
-                            "label": "Direction 5 To",
-                            "type": "text",
-                            "value": "/kids",
-                            "kind": "item:to",
-                            "order": 26
-                        },
-                        {
-                            "label": "Direction 5 Color",
-                            "type": "text",
-                            "value": "d-orange",
-                            "kind": "item:color",
-                            "order": 27
-                        },
-                        {
-                            "label": "Direction 5 Image",
-                            "type": "image",
-                            "value": "/assets/images/event-3.jpg",
-                            "kind": "item:img",
-                            "order": 28
-                        },
-                        {
-                            "label": "Direction 5 Tag",
-                            "type": "text",
-                            "value": "Families",
-                            "kind": "item:tag",
-                            "order": 29
-                        },
-                        {
-                            "label": "Direction 5 Title",
-                            "type": "text",
-                            "value": "Kids Church",
-                            "kind": "item:title",
-                            "order": 30
-                        },
-                        {
-                            "label": "Direction 5 Meta",
-                            "type": "text",
-                            "value": "Both Sunday services",
-                            "kind": "item:meta",
-                            "order": 31
-                        },
-                        {
-                            "label": "Direction 6 To",
-                            "type": "text",
-                            "value": "/prayer",
-                            "kind": "item:to",
-                            "order": 32
-                        },
-                        {
-                            "label": "Direction 6 Color",
-                            "type": "text",
-                            "value": "d-blue",
-                            "kind": "item:color",
-                            "order": 33
-                        },
-                        {
-                            "label": "Direction 6 Image",
-                            "type": "image",
-                            "value": "/assets/images/bible-study.jpg",
-                            "kind": "item:img",
-                            "order": 34
-                        },
-                        {
-                            "label": "Direction 6 Tag",
-                            "type": "text",
-                            "value": "Early birds",
-                            "kind": "item:tag",
-                            "order": 35
-                        },
-                        {
-                            "label": "Direction 6 Title",
-                            "type": "text",
-                            "value": "Prayer Watch",
-                            "kind": "item:title",
-                            "order": 36
-                        },
-                        {
-                            "label": "Direction 6 Meta",
-                            "type": "text",
-                            "value": "Wednesdays 6:00 AM",
-                            "kind": "item:meta",
-                            "order": 37
-                        }
-                    ],
-                    "items": [
-                        {
-                            "var": "directions",
-                            "prefix": "Direction",
-                            "scalar": false,
-                            "fields": [
-                                {
-                                    "key": "to",
-                                    "label": "To"
-                                },
-                                {
-                                    "key": "color",
-                                    "label": "Color"
-                                },
-                                {
-                                    "key": "img",
-                                    "label": "Image"
-                                },
-                                {
-                                    "key": "tag",
-                                    "label": "Tag"
-                                },
-                                {
-                                    "key": "title",
-                                    "label": "Title"
-                                },
-                                {
-                                    "key": "meta",
-                                    "label": "Meta"
-                                }
-                            ],
-                            "imagePrefix": null,
-                            "count": 6,
-                            "values": [
-                                {
-                                    "to": "/community-care",
-                                    "color": "d-green",
-                                    "img": "/assets/images/event-1.jpg",
-                                    "tag": "Open to all",
-                                    "title": "Community Care",
-                                    "meta": "Serving every Saturday"
-                                },
-                                {
-                                    "to": "/bible-study",
-                                    "color": "d-orange",
-                                    "img": "/assets/images/circle-2.jpg",
-                                    "tag": "Beginner friendly",
-                                    "title": "Bible Study",
-                                    "meta": "Midweek home groups"
-                                },
-                                {
-                                    "to": "/worship",
-                                    "color": "d-blue",
-                                    "img": "/assets/images/event-2.jpg",
-                                    "tag": "Open to all",
-                                    "title": "Worship & Music",
-                                    "meta": "Rehearsals every Thursday"
-                                },
-                                {
-                                    "to": "/youth",
-                                    "color": "d-green",
-                                    "img": "/assets/images/circle-3.jpg",
-                                    "tag": "Teens 13\u201319",
-                                    "title": "Youth Ministry",
-                                    "meta": "Fridays in the Youth Hall"
-                                },
-                                {
-                                    "to": "/kids",
-                                    "color": "d-orange",
-                                    "img": "/assets/images/event-3.jpg",
-                                    "tag": "Families",
-                                    "title": "Kids Church",
-                                    "meta": "Both Sunday services"
-                                },
-                                {
-                                    "to": "/prayer",
-                                    "color": "d-blue",
-                                    "img": "/assets/images/bible-study.jpg",
-                                    "tag": "Early birds",
-                                    "title": "Prayer Watch",
-                                    "meta": "Wednesdays 6:00 AM"
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
                     "component": "MinistriesBlock",
                     "blockKey": "ministries",
                     "name": "Ministries",
-                    "nodes": [],
-                    "items": null
-                },
-                {
-                    "component": "WorshipBlock",
-                    "blockKey": "worship",
-                    "name": "Worship",
-                    "nodes": [],
-                    "items": null
-                },
-                {
-                    "component": "BibleStudyBlock",
-                    "blockKey": "bible-study",
-                    "name": "Bible Study",
-                    "nodes": [],
-                    "items": null
-                },
-                {
-                    "component": "YouthBlock",
-                    "blockKey": "youth",
-                    "name": "Youth",
-                    "nodes": [],
-                    "items": null
-                },
-                {
-                    "component": "BooksBlock",
-                    "blockKey": "books",
-                    "name": "Books",
                     "nodes": [],
                     "items": null
                 },
@@ -3554,7 +3496,11 @@
                     "blockKey": "pastors",
                     "name": "Pastors",
                     "nodes": [],
-                    "items": null
+                    "items": null,
+                    "props": {
+                        "limit": 3,
+                        "showViewAll": true
+                    }
                 },
                 {
                     "component": "DonateCta",
@@ -3890,6 +3836,334 @@
                             "order": 0
                         }
                     ],
+                    "items": null
+                },
+                {
+                    "component": "DonateCta",
+                    "blockKey": "donate-cta",
+                    "name": "Donate Cta",
+                    "nodes": [],
+                    "items": null
+                },
+                {
+                    "component": "SiteFooter",
+                    "blockKey": "site-footer",
+                    "name": "Site Footer",
+                    "nodes": [
+                        {
+                            "label": "Subheadline",
+                            "type": "text",
+                            "value": "Explore",
+                            "kind": "text",
+                            "order": 0
+                        },
+                        {
+                            "label": "CTA Label",
+                            "type": "text",
+                            "value": "About Us",
+                            "kind": "text",
+                            "order": 1
+                        },
+                        {
+                            "label": "CTA Link",
+                            "type": "url",
+                            "value": "/about",
+                            "kind": "attr:href",
+                            "order": 2
+                        },
+                        {
+                            "label": "CTA B Label",
+                            "type": "text",
+                            "value": "Ministries",
+                            "kind": "text",
+                            "order": 3
+                        },
+                        {
+                            "label": "CTA B Link",
+                            "type": "url",
+                            "value": "/ministries",
+                            "kind": "attr:href",
+                            "order": 4
+                        },
+                        {
+                            "label": "CTA C Label",
+                            "type": "text",
+                            "value": "Sermons",
+                            "kind": "text",
+                            "order": 5
+                        },
+                        {
+                            "label": "CTA C Link",
+                            "type": "url",
+                            "value": "/sermons",
+                            "kind": "attr:href",
+                            "order": 6
+                        },
+                        {
+                            "label": "CTA D Label",
+                            "type": "text",
+                            "value": "Events",
+                            "kind": "text",
+                            "order": 7
+                        },
+                        {
+                            "label": "CTA D Link",
+                            "type": "url",
+                            "value": "/events",
+                            "kind": "attr:href",
+                            "order": 8
+                        },
+                        {
+                            "label": "CTA E Label",
+                            "type": "text",
+                            "value": "Give",
+                            "kind": "text",
+                            "order": 9
+                        },
+                        {
+                            "label": "CTA E Link",
+                            "type": "url",
+                            "value": "/donate",
+                            "kind": "attr:href",
+                            "order": 10
+                        },
+                        {
+                            "label": "CTA F Label",
+                            "type": "text",
+                            "value": "Contact",
+                            "kind": "text",
+                            "order": 11
+                        },
+                        {
+                            "label": "CTA F Link",
+                            "type": "url",
+                            "value": "/contact",
+                            "kind": "attr:href",
+                            "order": 12
+                        },
+                        {
+                            "label": "Subheadline B",
+                            "type": "text",
+                            "value": "Service Times",
+                            "kind": "text",
+                            "order": 13
+                        },
+                        {
+                            "label": "Subheadline C",
+                            "type": "text",
+                            "value": "Visit Us",
+                            "kind": "text",
+                            "order": 14
+                        }
+                    ],
+                    "items": null
+                }
+            ]
+        },
+        {
+            "name": "Media Ministry",
+            "title": "Media & Broadcast \u2014 CAC Blackburn",
+            "url": "/media-ministry",
+            "file": "app/pages/media-ministry.vue",
+            "layout": {
+                "header": null,
+                "footer": "SiteFooter"
+            },
+            "blocks": [
+                {
+                    "component": "SiteHeader",
+                    "blockKey": "site-header",
+                    "name": "Site Header",
+                    "nodes": [
+                        {
+                            "label": "Phone",
+                            "type": "text",
+                            "value": "+1 705 55 50 000",
+                            "kind": "text",
+                            "order": 0
+                        },
+                        {
+                            "label": "Phone Link",
+                            "type": "url",
+                            "value": "tel:+17055550000",
+                            "kind": "attr:href",
+                            "order": 1
+                        },
+                        {
+                            "label": "Caption",
+                            "type": "text",
+                            "value": "121 Wallstreet street, NY York, USA",
+                            "kind": "text",
+                            "order": 2
+                        },
+                        {
+                            "label": "Image",
+                            "type": "image",
+                            "value": "/assets/images/logo.png",
+                            "kind": "attr:src",
+                            "order": 3
+                        },
+                        {
+                            "label": "Menu Link 1 Label",
+                            "type": "text",
+                            "value": "Home",
+                            "kind": "item:label",
+                            "order": 4
+                        },
+                        {
+                            "label": "Menu Link 1 To",
+                            "type": "text",
+                            "value": "/",
+                            "kind": "item:to",
+                            "order": 5
+                        },
+                        {
+                            "label": "Menu Link 2 Label",
+                            "type": "text",
+                            "value": "About Us",
+                            "kind": "item:label",
+                            "order": 6
+                        },
+                        {
+                            "label": "Menu Link 2 To",
+                            "type": "text",
+                            "value": "/about",
+                            "kind": "item:to",
+                            "order": 7
+                        },
+                        {
+                            "label": "Menu Link 3 Label",
+                            "type": "text",
+                            "value": "Ministries",
+                            "kind": "item:label",
+                            "order": 8
+                        },
+                        {
+                            "label": "Menu Link 3 To",
+                            "type": "text",
+                            "value": "/ministries",
+                            "kind": "item:to",
+                            "order": 9
+                        },
+                        {
+                            "label": "Menu Link 4 Label",
+                            "type": "text",
+                            "value": "Events",
+                            "kind": "item:label",
+                            "order": 10
+                        },
+                        {
+                            "label": "Menu Link 4 To",
+                            "type": "text",
+                            "value": "/events",
+                            "kind": "item:to",
+                            "order": 11
+                        },
+                        {
+                            "label": "Menu Link 5 Label",
+                            "type": "text",
+                            "value": "Sermons",
+                            "kind": "item:label",
+                            "order": 12
+                        },
+                        {
+                            "label": "Menu Link 5 To",
+                            "type": "text",
+                            "value": "/sermons",
+                            "kind": "item:to",
+                            "order": 13
+                        },
+                        {
+                            "label": "Menu Link 6 Label",
+                            "type": "text",
+                            "value": "Store",
+                            "kind": "item:label",
+                            "order": 14
+                        },
+                        {
+                            "label": "Menu Link 6 To",
+                            "type": "text",
+                            "value": "/store",
+                            "kind": "item:to",
+                            "order": 15
+                        },
+                        {
+                            "label": "Menu Link 7 Label",
+                            "type": "text",
+                            "value": "Contact Us",
+                            "kind": "item:label",
+                            "order": 16
+                        },
+                        {
+                            "label": "Menu Link 7 To",
+                            "type": "text",
+                            "value": "/contact",
+                            "kind": "item:to",
+                            "order": 17
+                        }
+                    ],
+                    "items": [
+                        {
+                            "var": "menuLinks",
+                            "prefix": "Menu Link",
+                            "scalar": false,
+                            "fields": [
+                                {
+                                    "key": "label",
+                                    "label": "Label"
+                                },
+                                {
+                                    "key": "to",
+                                    "label": "To"
+                                }
+                            ],
+                            "imagePrefix": null,
+                            "count": 7,
+                            "values": [
+                                {
+                                    "label": "Home",
+                                    "to": "/"
+                                },
+                                {
+                                    "label": "About Us",
+                                    "to": "/about"
+                                },
+                                {
+                                    "label": "Ministries",
+                                    "to": "/ministries"
+                                },
+                                {
+                                    "label": "Events",
+                                    "to": "/events"
+                                },
+                                {
+                                    "label": "Sermons",
+                                    "to": "/sermons"
+                                },
+                                {
+                                    "label": "Store",
+                                    "to": "/store"
+                                },
+                                {
+                                    "label": "Contact Us",
+                                    "to": "/contact"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "component": "PageHeroContent",
+                    "blockKey": "page-hero-content",
+                    "name": "Page Hero Content",
+                    "nodes": [],
+                    "items": null
+                },
+                {
+                    "component": "MediaMinistryBlock",
+                    "blockKey": "media-ministry",
+                    "name": "Media Ministry",
+                    "nodes": [],
                     "items": null
                 },
                 {
@@ -7187,6 +7461,11 @@
                     "key": "fact",
                     "label": "Fact",
                     "type": "text"
+                },
+                {
+                    "key": "socials",
+                    "label": "Socials",
+                    "type": "text"
                 }
             ],
             "items": [
@@ -7198,7 +7477,25 @@
                     "bio": "Pastor Daniel has led CAC Blackburn for over fifteen years. A gifted teacher with a shepherd's heart, he is passionate about seeing every believer rooted in scripture and serving the city. He is married to Adaeze and they have three children.",
                     "verse": "\"Let all that you do be done in love.\" \u2014 1 Corinthians 16:14",
                     "email": "daniel@cacblackburn.org",
-                    "fact": "Preaches better after two coffees. Scientifically proven."
+                    "fact": "Preaches better after two coffees. Scientifically proven.",
+                    "socials": [
+                        {
+                            "key": "youtube",
+                            "href": "https://youtube.com/@pastordaniel"
+                        },
+                        {
+                            "key": "facebook",
+                            "href": "https://facebook.com/pastordanielokafor"
+                        },
+                        {
+                            "key": "instagram",
+                            "href": "https://instagram.com/pastordaniel"
+                        },
+                        {
+                            "key": "x",
+                            "href": "https://x.com/pastordaniel"
+                        }
+                    ]
                 },
                 {
                     "slug": "grace-lindqvist",
@@ -7208,7 +7505,17 @@
                     "bio": "Grace directs our choirs, bands and production teams. She believes worship is for every voice \u2014 trained or not \u2014 and has built a music ministry where all skill levels find a place to serve.",
                     "verse": "\"Sing to the Lord a new song.\" \u2014 Psalm 96:1",
                     "email": "grace@cacblackburn.org",
-                    "fact": "Can harmonize with a fire alarm."
+                    "fact": "Can harmonize with a fire alarm.",
+                    "socials": [
+                        {
+                            "key": "youtube",
+                            "href": "https://youtube.com/@graceworship"
+                        },
+                        {
+                            "key": "instagram",
+                            "href": "https://instagram.com/graceworship"
+                        }
+                    ]
                 },
                 {
                     "slug": "samuel-reyes",
@@ -7218,7 +7525,13 @@
                     "bio": "Samuel leads our teens and our neighbourhood outreach. From Friday youth nights to Saturday food drives, he lives the belief that faith gets real when it crosses the street.",
                     "verse": "\"Let no one despise you for your youth.\" \u2014 1 Timothy 4:12",
                     "email": "samuel@cacblackburn.org",
-                    "fact": "Undefeated at table tennis. Allegedly."
+                    "fact": "Undefeated at table tennis. Allegedly.",
+                    "socials": [
+                        {
+                            "key": "tiktok",
+                            "href": "https://tiktok.com/@pastorsam"
+                        }
+                    ]
                 },
                 {
                     "slug": "esther-mwangi",
@@ -7248,7 +7561,21 @@
                     "bio": "Peter coordinates our mission partnerships abroad and our community projects at home, from the food pantry to shelter support. He is happiest with his sleeves rolled up.",
                     "verse": "\"Go into all the world.\" \u2014 Mark 16:15",
                     "email": "peter@cacblackburn.org",
-                    "fact": "Owns more hi-vis vests than shirts."
+                    "fact": "Owns more hi-vis vests than shirts.",
+                    "socials": [
+                        {
+                            "key": "facebook",
+                            "href": "https://facebook.com/peteradeyemi"
+                        },
+                        {
+                            "key": "instagram",
+                            "href": "https://instagram.com/peteronmission"
+                        },
+                        {
+                            "key": "x",
+                            "href": "https://x.com/peteronmission"
+                        }
+                    ]
                 }
             ]
         },
@@ -7571,9 +7898,9 @@
                     "options": [
                         "#ff0000",
                         "#1877f2",
-                        "#8a3ab9",
                         "#14181d",
-                        "#f26522",
+                        "#8a3ab9",
+                        "#2d8cff",
                         "#9146ff"
                     ]
                 },
@@ -7617,21 +7944,21 @@
                     "icon": "M13.5 22v-9h3l.5-3.5h-3.5V7.2c0-1 .3-1.7 1.8-1.7H17V2.2c-.3 0-1.4-.2-2.6-.2-2.6 0-4.4 1.6-4.4 4.5v3H7V13h3v9h3.5z"
                 },
                 {
+                    "key": "tiktok",
+                    "name": "TikTok",
+                    "href": "https://tiktok.com/@cacblackburn",
+                    "color": "#14181d",
+                    "available": true,
+                    "tag": "",
+                    "icon": "M16.6 2h3.1c.2 1.8 1.2 3.5 2.8 4.4.5.3 1 .5 1.5.6v3.3c-1.6-.1-3.1-.6-4.4-1.5v6.8c0 1.5-.4 3-1.3 4.2a7.2 7.2 0 0 1-8.9 2.4 7.2 7.2 0 0 1-3.9-8 7.2 7.2 0 0 1 7.5-5.6v3.4a3.8 3.8 0 0 0-4.2 2.6 3.8 3.8 0 0 0 5.5 4.4c1-.6 1.6-1.7 1.6-2.9V2z"
+                },
+                {
                     "key": "instagram",
                     "name": "Instagram",
                     "href": "https://instagram.com/cacblackburn",
                     "color": "#8a3ab9",
                     "available": false,
                     "icon": "M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.9.2 2.5.5.6.2 1.1.5 1.6 1 .5.5.8 1 1 1.6.2.6.4 1.3.5 2.5.1 1.2.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.9-.5 2.5-.2.6-.5 1.1-1 1.6-.5.5-1 .8-1.6 1-.6.2-1.3.4-2.5.5-1.2.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.9-.2-2.5-.5-.6-.2-1.1-.5-1.6-1-.5-.5-.8-1-1-1.6-.2-.6-.4-1.3-.5-2.5-.1-1.2-.1-1.6-.1-4.8s0-3.6.1-4.8c.1-1.2.2-1.9.5-2.5.2-.6.5-1.1 1-1.6.5-.5 1-.8 1.6-1 .6-.2 1.3-.4 2.5-.5 1.2-.1 1.6-.1 4.8-.1zm0 2c-3.1 0-3.5 0-4.7.1-1.1.1-1.7.2-2.1.4-.5.2-.9.4-1.2.8-.4.4-.6.7-.8 1.2-.2.4-.3 1-.4 2.1-.1 1.2-.1 1.6-.1 4.7s0 3.5.1 4.7c.1 1.1.2 1.7.4 2.1.2.5.4.9.8 1.2.4.4.7.6 1.2.8.4.2 1 .3 2.1.4 1.2.1 1.6.1 4.7.1s3.5 0 4.7-.1c1.1-.1 1.7-.2 2.1-.4.5-.2.9-.4 1.2-.8.4-.4.6-.7.8-1.2.2-.4.3-1 .4-2.1.1-1.2.1-1.6.1-4.7s0-3.5-.1-4.7c-.1-1.1-.2-1.7-.4-2.1-.2-.5-.4-.9-.8-1.2-.4-.4-.7-.6-1.2-.8-.4-.2-1-.3-2.1-.4-1.2-.1-1.6-.1-4.7-.1zm0 3.4a5.4 5.4 0 1 1 0 10.8 5.4 5.4 0 0 1 0-10.8zm0 2a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8zm5.6-3.5a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z"
-                },
-                {
-                    "key": "tiktok",
-                    "name": "TikTok",
-                    "href": "https://tiktok.com/@cacblackburn",
-                    "color": "#14181d",
-                    "available": false,
-                    "tag": "",
-                    "icon": "M16.6 2h3.1c.2 1.8 1.2 3.5 2.8 4.4.5.3 1 .5 1.5.6v3.3c-1.6-.1-3.1-.6-4.4-1.5v6.8c0 1.5-.4 3-1.3 4.2a7.2 7.2 0 0 1-8.9 2.4 7.2 7.2 0 0 1-3.9-8 7.2 7.2 0 0 1 7.5-5.6v3.4a3.8 3.8 0 0 0-4.2 2.6 3.8 3.8 0 0 0 5.5 4.4c1-.6 1.6-1.7 1.6-2.9V2z"
                 },
                 {
                     "key": "x",
@@ -7642,12 +7969,12 @@
                     "icon": "M18.2 2.3h3.3l-7.3 8.3L22.8 22h-6.7l-5.3-6.9L4.8 22H1.5l7.8-8.9L1.1 2.3H8l4.8 6.3 5.4-6.3zm-1.2 17.7h1.8L7 4.2H5l12 15.8z"
                 },
                 {
-                    "key": "rss",
-                    "name": "RSS",
-                    "href": "/broadcast",
-                    "color": "#f26522",
-                    "available": false,
-                    "icon": "M4 4.4v3.2c6.8 0 12.4 5.6 12.4 12.4h3.2C19.6 11.4 12.6 4.4 4 4.4zm0 6.4v3.2a5.6 5.6 0 0 1 5.6 5.6h3.2c0-4.9-3.9-8.8-8.8-8.8zM6.2 15.6a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z"
+                    "key": "zoom",
+                    "name": "Zoom",
+                    "href": "https://zoom.us/j/cacblackburn",
+                    "color": "#2d8cff",
+                    "available": true,
+                    "icon": "M4.5 6A2.5 2.5 0 0 0 2 8.5v7A2.5 2.5 0 0 0 4.5 18h9a2.5 2.5 0 0 0 2.5-2.5v-7A2.5 2.5 0 0 0 13.5 6h-9zm13.5 4.2v3.6l3.3 2.4c.5.4 1.2 0 1.2-.6V8.4c0-.6-.7-1-1.2-.6L18 10.2z"
                 },
                 {
                     "key": "twitch",
@@ -7709,12 +8036,243 @@
                     "type": "text"
                 },
                 {
+                    "key": "location",
+                    "label": "Location",
+                    "type": "text"
+                },
+                {
+                    "key": "speakers",
+                    "label": "Speakers",
+                    "type": "text"
+                },
+                {
+                    "key": "media",
+                    "label": "Media",
+                    "type": "text"
+                },
+                {
                     "key": "featured",
                     "label": "Featured",
                     "type": "text"
                 }
             ],
             "items": [
+                {
+                    "id": "summer-picnic-25",
+                    "date": "2026-08-16T12:00:00",
+                    "img": "/assets/images/gallery-1.jpg",
+                    "title": "Summer Picnic & Sports Day",
+                    "text": "Games, grills and three-legged races \u2014 the whole church family in Riverside Park.",
+                    "tags": [
+                        "Community",
+                        "Family"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 0,
+                    "location": "Riverside Park, Blackburn",
+                    "speakers": [
+                        "Rev. Daniel Okafor"
+                    ],
+                    "media": [
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-1.jpg",
+                            "title": "The whole family in the park"
+                        },
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-6.jpg",
+                            "title": "Three-legged race finals"
+                        },
+                        {
+                            "type": "video",
+                            "img": "/assets/images/event-1.jpg",
+                            "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                            "title": "Picnic day highlights"
+                        },
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-12.jpg",
+                            "title": "Shared lunch"
+                        }
+                    ]
+                },
+                {
+                    "id": "worship-night-jun",
+                    "date": "2026-06-27T19:00:00",
+                    "img": "/assets/images/gallery-5.jpg",
+                    "title": "Midsummer Worship Night",
+                    "text": "An evening of music and candlelight with the full choir and band.",
+                    "tags": [
+                        "Worship",
+                        "Music"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 0,
+                    "location": "Main Sanctuary",
+                    "speakers": [
+                        "Grace Lindqvist",
+                        "Choir & Band"
+                    ],
+                    "media": [
+                        {
+                            "type": "video",
+                            "img": "/assets/images/gallery-5.jpg",
+                            "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                            "title": "Worship night \u2014 full set"
+                        },
+                        {
+                            "type": "audio",
+                            "src": "https://www.w3schools.com/html/horse.mp3",
+                            "title": "Choir set (live recording)"
+                        },
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-7.jpg",
+                            "title": "Candlelight moment"
+                        }
+                    ]
+                },
+                {
+                    "id": "vbs-25",
+                    "date": "2026-07-21T09:00:00",
+                    "img": "/assets/images/gallery-3.jpg",
+                    "title": "Kids Holiday Bible Club",
+                    "text": "A full week of stories, crafts and songs for nursery to grade six.",
+                    "tags": [
+                        "Kids",
+                        "Family"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 0,
+                    "location": "Kids Wing",
+                    "speakers": [
+                        "Ruth Alonso"
+                    ],
+                    "media": [
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-3.jpg",
+                            "title": "Craft corner"
+                        },
+                        {
+                            "type": "image",
+                            "img": "/assets/images/circle-3.jpg",
+                            "title": "Story time"
+                        },
+                        {
+                            "type": "video",
+                            "img": "/assets/images/gallery-11.jpg",
+                            "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                            "title": "Bible club recap"
+                        }
+                    ]
+                },
+                {
+                    "id": "anniversary-34",
+                    "date": "2026-05-10T10:00:00",
+                    "img": "/assets/images/gallery-2.jpg",
+                    "title": "34th Church Anniversary",
+                    "text": "Thirty-four years of worship, friendship and service \u2014 celebrated with a combined service and shared lunch.",
+                    "tags": [
+                        "Celebration"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 0,
+                    "location": "Main Sanctuary & Hall",
+                    "speakers": [
+                        "Rev. Daniel Okafor",
+                        "Peter Adeyemi"
+                    ],
+                    "media": [
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-2.jpg",
+                            "title": "Combined anniversary service"
+                        },
+                        {
+                            "type": "video",
+                            "img": "/assets/images/gallery-8.jpg",
+                            "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                            "title": "34 years \u2014 the story so far"
+                        },
+                        {
+                            "type": "audio",
+                            "src": "https://www.w3schools.com/html/horse.mp3",
+                            "title": "Anniversary message (audio)"
+                        },
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-9.jpg",
+                            "title": "Shared lunch in the hall"
+                        }
+                    ]
+                },
+                {
+                    "id": "easter-26",
+                    "date": "2026-04-05T09:00:00",
+                    "img": "/assets/images/gallery-8.jpg",
+                    "title": "Easter Sunday Celebration",
+                    "text": "Resurrection morning \u2014 two packed services, baptisms and brunch.",
+                    "tags": [
+                        "Worship",
+                        "Celebration"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 0,
+                    "location": "Main Sanctuary",
+                    "speakers": [
+                        "Rev. Daniel Okafor",
+                        "Esther Mwangi"
+                    ],
+                    "media": [
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-8.jpg",
+                            "title": "Resurrection morning"
+                        },
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-10.jpg",
+                            "title": "Baptisms"
+                        },
+                        {
+                            "type": "video",
+                            "img": "/assets/images/event-3.jpg",
+                            "src": "https://www.w3schools.com/html/mov_bbb.mp4",
+                            "title": "Easter service highlights"
+                        }
+                    ]
+                },
+                {
+                    "id": "food-drive-spring",
+                    "date": "2026-03-14T09:00:00",
+                    "img": "/assets/images/gallery-4.jpg",
+                    "title": "Spring Food Drive",
+                    "text": "Two tonnes of donations collected, sorted and delivered across Blackburn.",
+                    "tags": [
+                        "Outreach",
+                        "Volunteer"
+                    ],
+                    "price": 0,
+                    "seatsLeft": 0,
+                    "location": "Church Hall & Pantry",
+                    "speakers": [
+                        "Peter Adeyemi"
+                    ],
+                    "media": [
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-4.jpg",
+                            "title": "Sorting donations"
+                        },
+                        {
+                            "type": "image",
+                            "img": "/assets/images/gallery-6.jpg",
+                            "title": "Delivery crew"
+                        }
+                    ]
+                },
                 {
                     "id": "picnic",
                     "date": "2026-09-21T12:00:00",

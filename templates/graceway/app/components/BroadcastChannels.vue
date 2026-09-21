@@ -7,7 +7,8 @@ const oluxFb: Record<string, string> = {}
 const { socials, broadcastChannels } = useSiteContent()
 const channels = broadcastChannels.channels.map((c) => {
   const social = socials.find(s => s.key === c.key)
-  return { ...c, name: social?.name ?? c.key, profile: social?.href ?? c.watch, icon: social?.icon ?? '' }
+  // `available` in the socials data source is the single switch for active/live
+  return { ...c, live: social?.available ?? c.live, name: social?.name ?? c.key, profile: social?.href ?? c.watch, icon: social?.icon ?? '' }
 })
 </script>
 

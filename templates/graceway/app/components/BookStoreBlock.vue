@@ -248,9 +248,11 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
       <Transition name="lb-fade">
         <div v-if="checkoutOpen" class="lightbox rsvp-lightbox" @click.self="close">
           <div class="rsvp-modal store-modal">
-            <button class="lb-close" type="button" aria-label="Close" @click="close">✕</button>
-            <p data-olx-field="textE" class="eyebrow">{{ oluxCms.t('Text E', oluxFb['Text E']) }}</p>
-            <h3 data-olx-field="subheadline">{{ oluxCms.t('Subheadline', oluxFb['Subheadline']) }}</h3>
+            <div class="rsvp-head">
+              <button class="lb-close" type="button" aria-label="Close" @click="close">✕</button>
+              <p data-olx-field="textE" class="eyebrow">{{ oluxCms.t('Text E', oluxFb['Text E']) }}</p>
+              <h3 data-olx-field="subheadline">{{ oluxCms.t('Subheadline', oluxFb['Subheadline']) }}</h3>
+            </div>
             <form class="rsvp-form" @submit.prevent="buy">
               <div class="cart-lines">
                 <div v-for="l in cart" :key="l.book.slug" class="cart-line">
@@ -367,7 +369,17 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
 
 /* checkout modal */
 .cart-lines { background: #f8f5f0; border-radius: 14px; padding: .9rem; display: grid; gap: .7rem; }
-.cart-line { display: flex; align-items: center; gap: .7rem; }
+.cart-line { display: grid; grid-template-columns: 64px 1fr auto;
+  grid-template-areas: 'thumb info total' 'thumb stepper remove';
+  column-gap: .8rem; row-gap: .5rem; align-items: center;
+  padding-bottom: .7rem; border-bottom: 1px solid #eee8dd; }
+.cart-line:last-of-type { padding-bottom: 0; border-bottom: 0; }
+.cart-line > * { min-width: 0; }
+.cart-thumb { grid-area: thumb; align-self: start; }
+.cart-info { grid-area: info; }
+.cart-stepper { grid-area: stepper; justify-self: start; }
+.cart-line-total { grid-area: total; align-self: start; }
+.store-remove { grid-area: remove; justify-self: end; }
 .cart-thumb { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex: none;
   box-shadow: 0 6px 14px rgba(20, 24, 29, .12); }
 

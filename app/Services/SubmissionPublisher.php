@@ -332,12 +332,18 @@ class SubmissionPublisher
             ->all();
         File::put("$dir/tokens/variables.json", json_encode($variables ?: new \stdClass, JSON_PRETTY_PRINT));
 
-        // Data-source collections and authored forms: curated entries win by
-        // name; extracted ones (@olux-collection markers, <form> markup) fill
-        // in the rest.
+        // Data-source collections and authored forms. Hand-curated entries win
+        // by name, but entries the PIPELINE extracted on a previous publish
+        // (tagged by their generated description) must follow the sources —
+        // the author editing the array in the original updates them here.
+        $wasExtracted = fn ($c) => str_contains((string) ($c['description'] ?? ''), 'Data source extracted from')
+            || str_contains((string) ($c['description'] ?? ''), 'components read it live');
         foreach (['collections', 'forms'] as $k) {
-            $merged = collect((array) ($carried[$k] ?? []))
-                ->concat((array) ($manifest[$k] ?? []))
+            $fresh = collect((array) ($manifest[$k] ?? []));
+            $kept = collect((array) ($carried[$k] ?? []))
+                ->reject(fn ($c) => $wasExtracted($c)
+                    && $fresh->contains(fn ($f) => strtolower((string) ($f['name'] ?? '')) === strtolower((string) ($c['name'] ?? ''))));
+            $merged = $kept->concat($fresh)
                 ->unique(fn ($c) => strtolower((string) ($c['name'] ?? '')))
                 ->values()->all();
             if ($merged !== []) {

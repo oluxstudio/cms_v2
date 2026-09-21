@@ -42,6 +42,19 @@ async function loadContent(): Promise<any | null> {
  * Shared content states + one-time fetch trigger. Block composables and the
  * olux-design plugin both read the same reactive payload.
  */
+// The site's Assets-page favicon replaces the template's baked icon.
+const applyFavicon = (d: any) => {
+  try {
+    const href = d?.site?.favicon
+    if (!href) return
+    document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(l => l.remove())
+    const link = document.createElement('link')
+    link.rel = 'icon'
+    link.href = href
+    document.head.appendChild(link)
+  } catch { /* leave the baked favicon */ }
+}
+
 const cacheKey = () => {
   const site = new URLSearchParams(window.location.search).get('site') || 'baked'
   return `olux-content-cache:${site}`
@@ -63,11 +76,13 @@ export const ensureOluxContent = () => {
       if (cached) {
         data.value = JSON.parse(cached)
         loaded.value = true
+        applyFavicon(data.value)
       }
     } catch { /* private mode etc. — fall through to the fetch gate */ }
     loadContent().then((d) => {
       if (d) {
         data.value = d
+        applyFavicon(d)
         try { localStorage.setItem(cacheKey(), JSON.stringify(d)) } catch {}
       }
       loaded.value = true

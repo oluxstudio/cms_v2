@@ -93,6 +93,11 @@ class SiteContentController extends Controller
             'theme' => is_array($site->theme) ? $site->theme : [],
             // EVERY site attribute (EAV) — templates read their config here.
             'attributes' => $site->attrMap(),
+            // Favicon from the site's Assets library (owner-replaceable) —
+            // templates swap their baked icon for this at runtime.
+            'favicon' => ($fav = $site->media()
+                ->where(fn ($q) => $q->where('name', 'like', '%favicon%')->orWhere('url', 'like', '%favicon%'))
+                ->first()) ? url($fav->url) : null,
         ];
     }
 

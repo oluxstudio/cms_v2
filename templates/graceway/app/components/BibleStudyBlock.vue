@@ -1,13 +1,11 @@
 <script setup lang="ts">
-const oluxCms = useOluxContent('bible-study')
-const oluxFb: Record<string, string> = {}
 const groups = useStudyGroups()
 // section copy, chips and image come from the global data source
 const { bibleStudy } = useSiteContent()
 </script>
 
 <template>
-  <section id="bible-study" class="bible-study study" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
+  <section id="bible-study" class="bible-study study">
     <div class="container">
       <div class="study-top">
 

@@ -2,7 +2,7 @@
    Design language: teal page frame, floating white canvas, bold Manrope titles,
    warm orange accents, dotted-map texture, circular imagery. */
 :root {
-  --color-primary: #ff2d6c;     /* bright pink — buttons, highlights */
+  --color-primary: #ec0470;     /* bright pink — buttons, highlights */
   --color-secondary: #14181d;   /* near-black — titles, dark pills */
   --color-tertiary: #0c010b;   /* near-black — titles, dark pills */
   --color-accent: #1e9e63;      /* green — highlighted cards */
@@ -55,6 +55,7 @@ a { color: inherit; text-decoration: none; }
 .canvas { background: var(--color-bg); min-height: 100vh; overflow: clip visible; } /* clip x-overflow only — overflow:hidden here would break the sticky header */
 
 .container { max-width: var(--section-max-width); margin: 0 auto; padding: 0 24px; }
+.container2 { max-width: var(--container-width); margin: 0 auto; padding: 0 24px; }
 /* Content sections run at the narrower --container-width; header, hero and footer keep --section-max-width */
 .times .container, .welcome .container, .directions .container, .ministries .container,
 .worship .container, .bible-study .container, .broadcast .container, .sermons .container,
@@ -695,6 +696,7 @@ box-shadow: 0 0 10px -5px;
 .m-pink { background-color: #d060ae; }
 .m-blue { background-color: #5069d8; }
 .m-purple { background-color: #8a5bc7; }
+.m-teal { background-color: #2ba98f; }
 .mcard-top { display: flex; align-items: flex-start; justify-content: space-between; }
 .mcard-tag { font-size: .8rem; font-weight: 600; opacity: .95; }
 .mcard-badge { width: 46px; height: 46px; background: #fff; display: grid; place-items: center; font-size: 1.3rem;
@@ -756,7 +758,7 @@ box-shadow: 0 0 10px -5px;
 @media (max-width: 880px) { .dcard { flex: 0 0 86%; } }
 
 /* ── Generic sections reused by inner pages/blocks ── */
-.section-head { max-width: 620px; margin-bottom: 2.4rem; }
+.section-head { max-width: 620px; margin-bottom: 2.4rem; margin: 0 auto 3rem; text-align: center; }
 .section-head.center { margin-left: auto; margin-right: auto; text-align: center; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; }
 @media (max-width: 880px) { .grid-3 { grid-template-columns: 1fr; } }
@@ -929,7 +931,7 @@ label { font-size: .85rem; font-weight: 700; color: var(--color-secondary); disp
 
 /* Header wordmark: CAC + branch line */
 .logo-text { display: flex; flex-direction: column; line-height: 1.15; }
-.logo-text small { font-family: var(--font-default); font-weight: 600; font-size: .62rem; letter-spacing: .06em; color: #55606b; }
+.logo-text small { font-family: var(--font-default); font-weight: 600; font-size: .862rem; letter-spacing: .06em; color: #55606b; }
 
 /* ── Youth gallery: masonry photos, filter tabs, pagination ── */
 .gallery-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.8rem; }
@@ -1116,9 +1118,27 @@ label { font-size: .85rem; font-weight: 700; color: var(--color-secondary); disp
 /* RSVP lightbox form */
 .rsvp-lightbox { grid-template-columns: 1fr; }
 .rsvp-modal { position: relative; background: #fff; border-radius: 22px; padding: 2.4rem 2.2rem; width: min(480px, 92vw);
+  /* min-width:0 stops the grid item growing past the viewport when a form row's
+     intrinsic width is wide; tall forms scroll inside the modal instead of clipping */
+  min-width: 0; max-width: 92vw; max-height: 92svh; overflow-y: auto; overflow-x: hidden;
   margin: 0 auto; box-shadow: 0 30px 70px rgba(0, 0, 0, .35); }
+.rsvp-form input, .rsvp-form select, .rsvp-form textarea { min-width: 0; max-width: 100%; }
+@media (max-width: 600px) {
+  .rsvp-modal { padding: 1.8rem 1.2rem; }
+  .rsvp-modal .rsvp-form .row { grid-template-columns: 1fr; }
+}
 .rsvp-modal h3 { font-size: 1.35rem; margin-bottom: 1.2rem; }
-.rsvp-modal .lb-close { top: 1rem; right: 1rem; background: #eceef1; color: var(--color-secondary); width: 38px; height: 38px; }
+/* sticky modal header — stays pinned while the form scrolls beneath it */
+.rsvp-head { position: sticky; top: -2.4rem; z-index: 3; background: #fff;
+  margin: -2.4rem -2.2rem 0; padding: 2.4rem 2.2rem .9rem; border-radius: 22px 22px 0 0; }
+.rsvp-head h3 { margin-bottom: 0 !important; }
+@media (max-width: 600px) {
+  .rsvp-head { top: -1.8rem; margin: -1.8rem -1.2rem 0; padding: 1.8rem 1.2rem .8rem; }
+}
+
+.rsvp-modal .lb-close { top: 1rem; right: 1rem; background: var(--color-primary); color: #fff; width: 38px; height: 38px;
+  box-shadow: 0 6px 16px rgba(255, 45, 108, .35); }
+.rsvp-modal .lb-close:hover { background: var(--color-secondary); }
 .rsvp-countdown { display: flex !important; flex-wrap: wrap; gap: .7rem; margin: .4rem 0 1.4rem; }
 .rsvp-countdown span { display: grid !important; justify-items: center; min-width: 64px; padding: .6rem .7rem; border-radius: 14px;
   background: var(--color-primary); color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
@@ -1452,6 +1472,9 @@ a.ys-leader:hover .ys-leader-go { transform: translateX(3px); color: var(--color
 .dropdown a { display: block; padding: .5rem .9rem; border-radius: 9px; font-size: .92rem; font-weight: 600;
   color: var(--color-default) !important; white-space: nowrap; }
 .dropdown a:hover { background: #fdeef3; color: var(--color-primary) !important; }
+/* the submenu entry for the page you are on */
+.dropdown a.active { background: var(--color-primary); color: #fff !important; }
+.mm-sub a.active { color: var(--color-primary) !important; font-weight: 800; }
 
 /* mobile submenu accordion */
 .mm-row { display: flex; align-items: center; }
@@ -1497,7 +1520,7 @@ a.ys-leader:hover .ys-leader-go { transform: translateX(3px); color: var(--color
 .ct-thanks { display: grid; gap: 1rem; justify-items: start; }
 
 .ct-map-sec { padding-top: 0; }
-.ct-map-sec .section-head h2 { max-width: 22ch; margin-left: auto; margin-right: auto; }
+.ct-map-sec .section-head h2 { max-width: 22ch; margin: auto; margin-right: auto; }
 .ct-map { border-radius: 20px; overflow: hidden; box-shadow: 0 16px 36px rgba(20, 24, 29, .1); }
 .ct-map iframe { width: 100%; height: 420px; border: 0; display: block; }
 

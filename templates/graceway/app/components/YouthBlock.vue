@@ -1,12 +1,10 @@
 <script setup lang="ts">
-const oluxCms = useOluxContent('youth')
-const oluxFb: Record<string, string> = {}
 // copy and photo tiles come from the global data source
 const { youth } = useSiteContent()
 </script>
 
 <template>
-  <section id="youth" class="broadcast container" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
+  <section id="youth" class="broadcast container">
     <!-- 7 photo tiles floating over mosaic squares, left & right -->
     <div class="broadcast-side left" aria-hidden="true">
       <span v-for="(img, i) in youth.tiles.left" :key="img" class="tile photo" :class="`t${i + 1}`"><img :src="img" alt=""></span>

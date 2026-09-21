@@ -18,7 +18,7 @@ export const oluxThemeMap: Record<string, string[]> = {
 }
 export const oluxThemeDefaults: Record<string, string> = {
     "base_size": "16px",
-    "accent": "#ff2d6c",
+    "accent": "#ec0470",
     "text": "#3d4650",
     "navy": "#14181d",
     "font": "Text Me One"

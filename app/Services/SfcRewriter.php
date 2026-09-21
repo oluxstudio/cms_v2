@@ -129,9 +129,13 @@ class SfcRewriter
 
         $imports = '';
         $mapEntries = [];
+        $propEntries = [];
         foreach ($pageDef['blocks'] as $block) {
             $imports .= "import {$block['component']} from '~/components/{$block['component']}.vue'\n";
             $mapEntries[] = var_export($block['blockKey'], true).': '.$block['component'];
+            if (! empty($block['props'])) {
+                $propEntries[] = var_export($block['blockKey'], true).': '.json_encode($block['props'], JSON_UNESCAPED_SLASHES);
+            }
         }
 
         // Preserve the original script (useHead etc.), append imports + the map.
@@ -140,11 +144,13 @@ class SfcRewriter
             ."\n".($script !== '' ? $script."\n" : '')
             ."\n// Blocks render in the CMS-configured order (original order as fallback).\n"
             .'const oluxBlocks: Record<string, any> = { '.implode(', ', $mapEntries)." }\n"
-            .'const oluxPage = useOluxPageOrder('.var_export($pageDef['url'], true).", oluxBlocks)\n";
+            .'const oluxPage = useOluxPageOrder('.var_export($pageDef['url'], true).", oluxBlocks)\n"
+            .'// Page-level literal props (e.g. :limit="3" show-view-all) survive the rewrite.'."\n"
+            .'const oluxProps: Record<string, any> = { '.implode(', ', $propEntries)." }\n";
 
         $template = "\n  <div>\n"
             ."    <div id=\"preloader\"></div>\n"
-            ."    <component :is=\"b.comp\" v-for=\"(b, i) in oluxPage\" :key=\"`\${b.key}-\${i}`\" :data-olx-key=\"b.key\" data-olx-kind=\"component\" />\n"
+            ."    <component :is=\"b.comp\" v-for=\"(b, i) in oluxPage\" :key=\"`\${b.key}-\${i}`\" v-bind=\"oluxProps[b.key] || {}\" :data-olx-key=\"b.key\" data-olx-kind=\"component\" />\n"
             ."  </div>\n";
 
         return "<script setup lang=\"ts\">{$script}</script>\n\n<template>{$template}</template>\n";

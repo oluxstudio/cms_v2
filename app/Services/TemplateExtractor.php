@@ -109,7 +109,8 @@ class TemplateExtractor
             'blocks' => [],
         ];
 
-        foreach (SfcParser::pageComponents($sections['template'] ?? '') as $component) {
+        foreach (SfcParser::pageComponentTags($sections['template'] ?? '') as $tag) {
+            $component = $tag['name'];
             $compFile = "$root/app/components/{$component}.vue";
             if (! File::exists($compFile)) {
                 continue; // not a local component (e.g. NuxtLink)
@@ -121,10 +122,47 @@ class TemplateExtractor
             } elseif (preg_match('/Footer$/', $component)) {
                 $page['layout']['footer'] = $component;
             }
-            $page['blocks'][] = $this->block($component, File::get($compFile));
+            $block = $this->block($component, File::get($compFile));
+            if ($props = $this->literalProps($tag['attrs'])) {
+                $block['props'] = $props;
+            }
+            $page['blocks'][] = $block;
         }
 
         return $page;
+    }
+
+    /**
+     * Literal props from a page tag's attributes — statics, bare flags and
+     * JSON-decodable binds (:limit="3"). Dynamic expressions are skipped,
+     * and class, style, v-model-style directives and data attributes never
+     * count as props.
+     *
+     * @return array<string,mixed>
+     */
+    private function literalProps(string $attrs): array
+    {
+        $props = [];
+        preg_match_all('/(?<=^|\s)(:?)([\w-]+)(?:="([^"]*)")?/', $attrs, $m, PREG_SET_ORDER);
+        foreach ($m as $t) {
+            [$bound, $name, $value] = [$t[1], $t[2], $t[3] ?? null];
+            $camel = Str::camel($name);
+            if (preg_match('/^(class|style|id|key|ref|v-|data-|aria-)/', $name)) {
+                continue;
+            }
+            if ($bound === ':') {
+                $decoded = json_decode($value ?? '', true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $props[$camel] = $decoded;
+                }
+            } elseif (($value ?? '') === '') {
+                $props[$camel] = true; // bare flag, e.g. show-view-all
+            } else {
+                $props[$camel] = $value;
+            }
+        }
+
+        return $props;
     }
 
     /** Extract one block component into blockKey + nodes (+ repeatable items). */

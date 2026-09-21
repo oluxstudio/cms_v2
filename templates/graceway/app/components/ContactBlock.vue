@@ -10,7 +10,7 @@ const sendForm = async (e: Event) => {
 }
 
 // social platforms come from the global data source (RSS is broadcast-only)
-const socials = useSiteContent().socials.filter(s => s.key !== 'rss')
+const socials = useSiteContent().socials.filter(s => s.key !== 'zoom')
 
 // contact details & authored copy come from the global data source
 const { profile, contact } = useSiteContent()

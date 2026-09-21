@@ -4,6 +4,34 @@
 export type HeroCopy = { eyebrow: string; title: string; text: string; crumbs: { label: string; to?: string }[] }
 
 export const useHeroCopy = (): Record<string, HeroCopy> => ({
+  "/event-archive": {
+    "eyebrow": "Events",
+    "title": "Event Archive",
+    "text": "A look back at the services, celebrations and outreach we shared.",
+    "crumbs": [
+      {
+        "label": "Events",
+        "to": "/events"
+      },
+      {
+        "label": "Archive"
+      }
+    ]
+  },
+  "/media-ministry": {
+    "eyebrow": "Ministries",
+    "title": "Media & Broadcast",
+    "text": "Cameras, sound and livestreams \u2014 carrying every service to those worshipping from home.",
+    "crumbs": [
+      {
+        "label": "Ministries",
+        "to": "/ministries"
+      },
+      {
+        "label": "Media & Broadcast"
+      }
+    ]
+  },
   "/privacy-policy": {
     "eyebrow": "Legal",
     "title": "Privacy Policy",
@@ -138,7 +166,7 @@ export const useHeroCopy = (): Record<string, HeroCopy> => ({
   },
   "/prayer": {
     "eyebrow": "Ministries",
-    "title": "\ud83d\udd6f Prayer Ministry",
+    "title": "Prayer Ministry",
     "text": "Intercessors praying for the church, the city and every request received \u2014 join the Wednesday 6 AM watch or pray from home.",
     "crumbs": [
       {

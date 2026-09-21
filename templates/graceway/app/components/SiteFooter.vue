@@ -4,7 +4,7 @@ const oluxFb: Record<string, string> = {"Subheadline":"Explore","CTA Label":"Abo
 // identity, contact details, service times and socials come from the global data source
 const { profile, services, socials } = useSiteContent()
 const sundayTimes = services.filter(s => s.day === 'Sunday').map(s => s.time.replace(':00 ', ' ')).join(' and ')
-const followable = socials.filter(s => s.available && s.key !== 'rss')
+const followable = socials.filter(s => s.available && s.key !== 'zoom')
 </script>
 
 <template>

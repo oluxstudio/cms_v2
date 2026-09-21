@@ -1,0 +1,26 @@
+{
+    "name": "Event Archive",
+    "url": "/event-archive",
+    "layout": "default",
+    "keywords": "event archive",
+    "attributes": {
+        "title": "Event Archive \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:events-archive",
+            "name": "Events Archive",
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:donate-cta",
+            "name": "Donate Cta",
+            "nodes": []
+        }
+    ]
+}

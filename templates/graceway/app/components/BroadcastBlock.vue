@@ -4,16 +4,28 @@ const oluxFb: Record<string, string> = {}
 // section copy, stats and the social platforms come from the global data source
 const { broadcast, socials } = useSiteContent()
 
-// band layout: 3 columns of pills, each slot mapped to a platform by key
-const BAND: { key: string; cls: string }[][] = [
-  [{ key: 'youtube', cls: 'half-top' }, { key: 'instagram', cls: '' }],
-  [{ key: 'facebook', cls: 'tall' }, { key: 'tiktok', cls: 'half-bottom' }],
-  [{ key: 'x', cls: 'half-top' }, { key: 'twitch', cls: '' }, { key: 'rss', cls: 'half-bottom' }],
-]
-const band = BAND.map(col => col.flatMap(slot => {
-  const p = socials.find(s => s.key === slot.key)
-  return p ? [{ ...p, cls: slot.cls }] : []
-}))
+// Band is generated from the socials data source: every entry gets a pill,
+// in array order, spread over 3 columns; shape classes (half-top / tall /
+// half-bottom) come from the pill's position so the collage look survives
+// any number of platforms.
+const COLS = 3
+// balanced split, extras go to the LAST columns (7 → 2/2/3, like the design)
+const base = Math.floor(socials.length / COLS)
+const extra = socials.length % COLS
+const sizes = Array.from({ length: COLS }, (_, c) => base + (c >= COLS - extra ? 1 : 0))
+let cursor = 0
+const band = sizes.map(n => socials.slice(cursor, cursor += n))
+  .filter(col => col.length)
+  .map((col, c, all) => col.map((p, i) => {
+    let cls = ''
+    if (c === 1 && all.length > 2) cls = i === 0 ? 'tall' : (i === col.length - 1 ? 'half-bottom' : '')
+    else {
+      if (i === 0) cls = 'half-top'
+      // first column: equal halves — no short filler pill
+      if (i === col.length - 1 && col.length > 1 && c !== 0) cls = 'half-bottom'
+    }
+    return { ...p, cls }
+  }))
 </script>
 
 <template>

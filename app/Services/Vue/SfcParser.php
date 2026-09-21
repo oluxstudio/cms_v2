@@ -46,9 +46,27 @@ class SfcParser
      */
     public static function pageComponents(string $template): array
     {
+        // Commented-out markup is the author's way of REMOVING a block —
+        // <!-- <FooBlock /> --> must not extract as if it were live.
+        $template = preg_replace('/<!--.*?-->/s', '', $template) ?? $template;
         preg_match_all('/<([A-Z][A-Za-z0-9]*)\b[^>]*\/?>/', $template, $m);
 
         return $m[1];
+    }
+
+    /**
+     * Ordered component tags WITH their literal attributes — used to carry
+     * page-level props (:limit="3", show-view-all) through the rewrite.
+     * Comment-stripped like pageComponents().
+     *
+     * @return array<int,array{name:string,attrs:string}>
+     */
+    public static function pageComponentTags(string $template): array
+    {
+        $template = preg_replace('/<!--.*?-->/s', '', $template) ?? $template;
+        preg_match_all('/<([A-Z][A-Za-z0-9]*)\b([^>]*?)\/?>/', $template, $m, PREG_SET_ORDER);
+
+        return array_map(fn ($t) => ['name' => $t[1], 'attrs' => trim($t[2])], $m);
     }
 
     /** The page title from a useHead({ title: '…' }) call, if present. */

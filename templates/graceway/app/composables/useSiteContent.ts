@@ -45,6 +45,21 @@ export type ChurchEvent = {
   seatsLeft: number
   /** primed/featured — the first flagged event renders as the big featured card */
   featured?: boolean
+  /** where the event happens/happened — shown on cards and in the archive */
+  location?: string
+  /** who spoke/led — shown in the archive */
+  speakers?: string[]
+  /** photos/recordings from the event — the archive detail page gallery */
+  media?: EventMedia[]
+}
+
+export type EventMedia = {
+  type: 'image' | 'video' | 'audio'
+  /** poster/thumbnail (images use it as the full asset when src is absent) */
+  img?: string
+  /** playable source for video/audio */
+  src?: string
+  title: string
 }
 
 export type SocialMedia = {
@@ -65,7 +80,8 @@ export type HeroPill = {
   key: string
   label: string
   desc: string
-  section: string
+  /** page the pill opens */
+  to: string
   img: string
   tint: string
 }
@@ -174,6 +190,10 @@ export type MinistryCard = {
   tag: string
   icon: string
   title: string
+  /** friendlier alias shown in compact spots like the About sidebar */
+  altName?: string
+  /** the ministry's page — also drives the header's Ministries submenu */
+  to?: string
   text: string
   members: string
   meets: string
@@ -353,6 +373,43 @@ export type SermonsArchiveContent = {
   takeAway: { title: string; text: string; links: LinkItem[] }
 }
 
+export type MediaMinistryContent = {
+  intro: {
+    chip: string
+    title: string
+    paragraphs: string[]
+    img: Photo
+    chips: { icon: string; label: string; value: string }[]
+    facts: { label: string; value: string }[]
+  }
+  rolesEyebrow: string
+  rolesTitle: string
+  roles: { icon: string; title: string; text: string }[]
+  gallery: { img: string; title: string }[]
+  join: {
+    chip: string
+    title: string
+    sub: string
+    rolePlaceholder: string
+    fine: string
+    thanks: string
+  }
+  sidebar: {
+    watchTitle: string
+    watchLinks: { icon: string; label: string; to: string }[]
+    liveTitle: string
+    liveNote: string
+    latestTitle: string
+  }
+}
+
+export type EventsArchiveContent = {
+  eyebrow: string
+  title: string
+  text: string
+  empty: string
+}
+
 export type SiteContent = {
   profile: Profile
   services: Service[]
@@ -366,6 +423,7 @@ export type SiteContent = {
   books: BooksContent
   sermonsHead: SectionHead & { cta: LinkItem }
   eventsHead: SectionHead
+  eventsArchive: EventsArchiveContent
   broadcast: BroadcastContent
   pastorsHead: SectionHead & { cta: LinkItem }
   donate: DonateContent
@@ -423,21 +481,42 @@ const services: Service[] = [
 const socials: SocialMedia[] = [
   { key: 'youtube', name: 'YouTube', href: 'https://youtube.com/@cacblackburn', color: '#ff0000', available: false, tag: '', icon: 'M23 7.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C16.6 3.6 12 3.6 12 3.6s-4.6 0-7.8.3c-.4.1-1.4.1-2.3 1-.7.7-.9 2.3-.9 2.3S.8 9.1.8 11v1.8c0 1.9.2 3.8.2 3.8s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.6.3 7.6.3s4.6 0 7.8-.4c.4-.1 1.4-.1 2.3-1 .7-.7.9-2.3.9-2.3s.2-1.9.2-3.8V11c0-1.9-.2-3.8-.2-3.8zM9.9 15.1V8.4l6.2 3.4-6.2 3.3z' },
   { key: 'facebook', name: 'Facebook', href: 'https://facebook.com/cacblackburn', color: '#1877f2', available: true, tag: '', icon: 'M13.5 22v-9h3l.5-3.5h-3.5V7.2c0-1 .3-1.7 1.8-1.7H17V2.2c-.3 0-1.4-.2-2.6-.2-2.6 0-4.4 1.6-4.4 4.5v3H7V13h3v9h3.5z' },
+  { key: 'tiktok', name: 'TikTok', href: 'https://tiktok.com/@cacblackburn', color: '#14181d', available: true, tag: '', icon: 'M16.6 2h3.1c.2 1.8 1.2 3.5 2.8 4.4.5.3 1 .5 1.5.6v3.3c-1.6-.1-3.1-.6-4.4-1.5v6.8c0 1.5-.4 3-1.3 4.2a7.2 7.2 0 0 1-8.9 2.4 7.2 7.2 0 0 1-3.9-8 7.2 7.2 0 0 1 7.5-5.6v3.4a3.8 3.8 0 0 0-4.2 2.6 3.8 3.8 0 0 0 5.5 4.4c1-.6 1.6-1.7 1.6-2.9V2z' },
   { key: 'instagram', name: 'Instagram', href: 'https://instagram.com/cacblackburn', color: '#8a3ab9', available: false, icon: 'M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.9.2 2.5.5.6.2 1.1.5 1.6 1 .5.5.8 1 1 1.6.2.6.4 1.3.5 2.5.1 1.2.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.9-.5 2.5-.2.6-.5 1.1-1 1.6-.5.5-1 .8-1.6 1-.6.2-1.3.4-2.5.5-1.2.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.9-.2-2.5-.5-.6-.2-1.1-.5-1.6-1-.5-.5-.8-1-1-1.6-.2-.6-.4-1.3-.5-2.5-.1-1.2-.1-1.6-.1-4.8s0-3.6.1-4.8c.1-1.2.2-1.9.5-2.5.2-.6.5-1.1 1-1.6.5-.5 1-.8 1.6-1 .6-.2 1.3-.4 2.5-.5 1.2-.1 1.6-.1 4.8-.1zm0 2c-3.1 0-3.5 0-4.7.1-1.1.1-1.7.2-2.1.4-.5.2-.9.4-1.2.8-.4.4-.6.7-.8 1.2-.2.4-.3 1-.4 2.1-.1 1.2-.1 1.6-.1 4.7s0 3.5.1 4.7c.1 1.1.2 1.7.4 2.1.2.5.4.9.8 1.2.4.4.7.6 1.2.8.4.2 1 .3 2.1.4 1.2.1 1.6.1 4.7.1s3.5 0 4.7-.1c1.1-.1 1.7-.2 2.1-.4.5-.2.9-.4 1.2-.8.4-.4.6-.7.8-1.2.2-.4.3-1 .4-2.1.1-1.2.1-1.6.1-4.7s0-3.5-.1-4.7c-.1-1.1-.2-1.7-.4-2.1-.2-.5-.4-.9-.8-1.2-.4-.4-.7-.6-1.2-.8-.4-.2-1-.3-2.1-.4-1.2-.1-1.6-.1-4.7-.1zm0 3.4a5.4 5.4 0 1 1 0 10.8 5.4 5.4 0 0 1 0-10.8zm0 2a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8zm5.6-3.5a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z' },
-  { key: 'tiktok', name: 'TikTok', href: 'https://tiktok.com/@cacblackburn', color: '#14181d', available: false, tag: '', icon: 'M16.6 2h3.1c.2 1.8 1.2 3.5 2.8 4.4.5.3 1 .5 1.5.6v3.3c-1.6-.1-3.1-.6-4.4-1.5v6.8c0 1.5-.4 3-1.3 4.2a7.2 7.2 0 0 1-8.9 2.4 7.2 7.2 0 0 1-3.9-8 7.2 7.2 0 0 1 7.5-5.6v3.4a3.8 3.8 0 0 0-4.2 2.6 3.8 3.8 0 0 0 5.5 4.4c1-.6 1.6-1.7 1.6-2.9V2z' },
   { key: 'x', name: 'X (Twitter)', href: 'https://x.com/cacblackburn', color: '#14181d', available: false, icon: 'M18.2 2.3h3.3l-7.3 8.3L22.8 22h-6.7l-5.3-6.9L4.8 22H1.5l7.8-8.9L1.1 2.3H8l4.8 6.3 5.4-6.3zm-1.2 17.7h1.8L7 4.2H5l12 15.8z' },
-  { key: 'rss', name: 'RSS', href: '/broadcast', color: '#f26522', available: false, icon: 'M4 4.4v3.2c6.8 0 12.4 5.6 12.4 12.4h3.2C19.6 11.4 12.6 4.4 4 4.4zm0 6.4v3.2a5.6 5.6 0 0 1 5.6 5.6h3.2c0-4.9-3.9-8.8-8.8-8.8zM6.2 15.6a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z' },
+  { key: 'zoom', name: 'Zoom', href: 'https://zoom.us/j/cacblackburn', color: '#2d8cff', available: true, icon: 'M4.5 6A2.5 2.5 0 0 0 2 8.5v7A2.5 2.5 0 0 0 4.5 18h9a2.5 2.5 0 0 0 2.5-2.5v-7A2.5 2.5 0 0 0 13.5 6h-9zm13.5 4.2v3.6l3.3 2.4c.5.4 1.2 0 1.2-.6V8.4c0-.6-.7-1-1.2-.6L18 10.2z' },
   { key: 'twitch', name: 'Twitch', href: 'https://twitch.tv/cacblackburn', color: '#9146ff', available: false, icon: 'M4.3 3 3 6.4v13.7h4.7V22h2.6l2.5-1.9h3.8L21 15.6V3H4.3zm15 11.7-2.9 2.9h-4.6l-2.5 1.9v-1.9H5.4V4.7h13.9v10zM16.6 7.7v5h-1.7v-5h1.7zm-4.6 0v5h-1.7v-5H12z' },
 ]
 
 /** @olux-collection Events */
 const events: ChurchEvent[] = [
+  // ── past events (the archive) ──
+  { id: 'summer-picnic-25', date: '2026-08-16T12:00:00', img: '/assets/images/gallery-1.jpg', title: 'Summer Picnic & Sports Day', text: 'Games, grills and three-legged races — the whole church family in Riverside Park.', tags: ['Community', 'Family'], price: 0, seatsLeft: 0, location: 'Riverside Park, Blackburn', speakers: ['Rev. Daniel Okafor'], media: [ { type: 'image', img: '/assets/images/gallery-1.jpg', title: 'The whole family in the park' }, { type: 'image', img: '/assets/images/gallery-6.jpg', title: 'Three-legged race finals' }, { type: 'video', img: '/assets/images/event-1.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Picnic day highlights' }, { type: 'image', img: '/assets/images/gallery-12.jpg', title: 'Shared lunch' } ] },
+  { id: 'worship-night-jun', date: '2026-06-27T19:00:00', img: '/assets/images/gallery-5.jpg', title: 'Midsummer Worship Night', text: 'An evening of music and candlelight with the full choir and band.', tags: ['Worship', 'Music'], price: 0, seatsLeft: 0, location: 'Main Sanctuary', speakers: ['Grace Lindqvist', 'Choir & Band'], media: [ { type: 'video', img: '/assets/images/gallery-5.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Worship night — full set' }, { type: 'audio', src: 'https://www.w3schools.com/html/horse.mp3', title: 'Choir set (live recording)' }, { type: 'image', img: '/assets/images/gallery-7.jpg', title: 'Candlelight moment' } ] },
+  { id: 'vbs-25', date: '2026-07-21T09:00:00', img: '/assets/images/gallery-3.jpg', title: 'Kids Holiday Bible Club', text: 'A full week of stories, crafts and songs for nursery to grade six.', tags: ['Kids', 'Family'], price: 0, seatsLeft: 0, location: 'Kids Wing', speakers: ['Ruth Alonso'], media: [ { type: 'image', img: '/assets/images/gallery-3.jpg', title: 'Craft corner' }, { type: 'image', img: '/assets/images/circle-3.jpg', title: 'Story time' }, { type: 'video', img: '/assets/images/gallery-11.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Bible club recap' } ] },
+  { id: 'anniversary-34', date: '2026-05-10T10:00:00', img: '/assets/images/gallery-2.jpg', title: '34th Church Anniversary', text: 'Thirty-four years of worship, friendship and service — celebrated with a combined service and shared lunch.', tags: ['Celebration'], price: 0, seatsLeft: 0, location: 'Main Sanctuary & Hall', speakers: ['Rev. Daniel Okafor', 'Peter Adeyemi'], media: [ { type: 'image', img: '/assets/images/gallery-2.jpg', title: 'Combined anniversary service' }, { type: 'video', img: '/assets/images/gallery-8.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: '34 years — the story so far' }, { type: 'audio', src: 'https://www.w3schools.com/html/horse.mp3', title: 'Anniversary message (audio)' }, { type: 'image', img: '/assets/images/gallery-9.jpg', title: 'Shared lunch in the hall' } ] },
+  { id: 'easter-26', date: '2026-04-05T09:00:00', img: '/assets/images/gallery-8.jpg', title: 'Easter Sunday Celebration', text: 'Resurrection morning — two packed services, baptisms and brunch.', tags: ['Worship', 'Celebration'], price: 0, seatsLeft: 0, location: 'Main Sanctuary', speakers: ['Rev. Daniel Okafor', 'Esther Mwangi'], media: [ { type: 'image', img: '/assets/images/gallery-8.jpg', title: 'Resurrection morning' }, { type: 'image', img: '/assets/images/gallery-10.jpg', title: 'Baptisms' }, { type: 'video', img: '/assets/images/event-3.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Easter service highlights' } ] },
+  { id: 'food-drive-spring', date: '2026-03-14T09:00:00', img: '/assets/images/gallery-4.jpg', title: 'Spring Food Drive', text: 'Two tonnes of donations collected, sorted and delivered across Blackburn.', tags: ['Outreach', 'Volunteer'], price: 0, seatsLeft: 0, location: 'Church Hall & Pantry', speakers: ['Peter Adeyemi'], media: [ { type: 'image', img: '/assets/images/gallery-4.jpg', title: 'Sorting donations' }, { type: 'image', img: '/assets/images/gallery-6.jpg', title: 'Delivery crew' } ] },
+  // ── upcoming events ──
   { id: 'picnic', date: '2026-09-21T12:00:00', img: '/assets/images/event-1.jpg', title: 'Community Picnic in Riverside Park', text: 'Bring a dish and a friend — games, music and food for the whole neighbourhood. Sep 21, 12:00 PM.', tags: ['Community', 'Family', 'Food'], price: 0, seatsLeft: 120, featured: true },
   { id: 'fooddrive', date: '2026-10-04T09:00:00', img: '/assets/images/event-2.jpg', title: 'Harvest Food Drive', text: 'Help us collect and sort donations for local families. Volunteers of all ages welcome. Oct 4, 9:00 AM.', tags: ['Outreach', 'Volunteer'], price: 0, seatsLeft: 40 },
   { id: 'worshipnight', date: '2026-10-18T19:00:00', img: '/assets/images/event-3.jpg', title: 'Worship Night', text: 'An evening of music, prayer and candlelight in the main sanctuary. Oct 18, 7:00 PM.', tags: ['Worship', 'Prayer', 'Music'], price: 10, seatsLeft: 85 },
   { id: 'newcomers', date: '2026-11-01T12:30:00', img: '/assets/images/circle-1.jpg', title: 'Newcomers\' Lunch', text: 'New to CAC Blackburn? Join the pastors for lunch and hear the story of our church. Nov 1, 12:30 PM.', tags: ['Welcome', 'Food'], price: 0, seatsLeft: 24 },
   { id: 'choir', date: '2026-09-22T19:00:00', img: '/assets/images/circle-2.jpg', title: 'Christmas Choir Rehearsals', text: 'All voices welcome as we prepare carols for the Christmas Eve service. Tuesdays, 7:00 PM.', tags: ['Music', 'Christmas'], price: 0, seatsLeft: 30 },
   { id: 'youthgames', date: '2026-11-14T18:30:00', img: '/assets/images/circle-3.jpg', title: 'Youth Games Night', text: 'Pizza, tournaments and big questions for teens in the Youth Hall. Nov 14, 6:30 PM.', tags: ['Youth', 'Games'], price: 5, seatsLeft: 46 },
+]
+
+// ministries — `title` is the official name everywhere; `altName` is the
+// friendlier alias compact spots (About sidebar) display instead
+const ministriesBento: MinistryCard[] = [
+//   { size: 'small', color: 'm-red', tag: 'Worship', icon: '🙏', title: 'Sunday Worship', altName: 'Worship Service', text: 'Gather every Sunday for heartfelt music, honest teaching and open arms.', members: '400+', meets: 'Sundays' },
+
+  { size: 'small', color: 'm-purple', tag: 'Music', icon: '🎵', title: 'Choir & Band', to: '/worship', altName: 'Worship Ministry', text: 'Choir, band and tech teams bringing every service to life — all levels welcome.', members: '60+', meets: 'Thursdays' },
+  { size: 'small', color: 'm-red', tag: 'Next Gen', icon: '🧒', title: 'Kids & Youth', to: '/youth', altName: 'Young Ones', text: 'Safe, joyful programs where children and teens grow, question and belong.', members: '120+', meets: 'Sun & Fri' },
+  { size: 'big', color: 'm-orange', tag: 'Outreach', icon: '🤝', title: 'Community Care', to: '/community-care', altName: 'Care & Outreach', text: 'Food drives, shelter support and neighbourhood projects that serve our city — practical love, every single week.', members: '80+', meets: 'Saturdays' },
+  { size: 'big', color: 'm-pink', tag: 'Discipleship', icon: '📖', title: 'Bible Study', to: '/bible-study', altName: 'Scripture Study', text: 'Midweek small groups in homes across the city — study the Word, share a meal, and belong to a circle that knows your name.', members: '150+', meets: 'Weeknights' },
+  { size: 'small', color: 'm-blue', tag: 'Prayer', icon: '🕯', title: 'Prayer Watch', to: '/prayer', altName: 'Prayer Ministry', text: 'Intercessors praying for the church, the city and every request received.', members: '40+', meets: 'Wed 6 AM' },
+  { size: 'small', color: 'm-teal', tag: 'Media', icon: '🎥', title: 'Media & Broadcast', to: '/media-ministry', altName: 'Media Team', text: 'Cameras, sound and livestreams — carrying every service to those worshipping from home.', members: '25+', meets: 'Sundays' },
 ]
 
 const shortTime = (t: string) => t.replace(':00 ', ' ')
@@ -450,10 +529,14 @@ export const useSiteContent = (): SiteContent => {
   const { items } = useCms()
   const cmsServices = (items('services', []) as any[]).filter(s => s.label && s.time)
   const mergedServices: Service[] = cmsServices.length ? cmsServices.map(s => ({ day: '', ...s })) : services
-  const cmsSocials = (items('socials', []) as any[]).filter(s => s.key)
-  const mergedSocials: SocialMedia[] = cmsSocials.length
-    ? cmsSocials.map(s => ({ ...socials.find(a => a.key === s.key), ...s, available: asBool(s.available) } as SocialMedia))
-    : socials
+  // AUTHORED-FIRST (for now): the array above is the source of truth for the
+  // social pills — order, presence and flags. To hand control back to the CMS
+  // "Socials" collection, swap mergedSocials for the commented overlay below.
+  const mergedSocials: SocialMedia[] = socials
+  // const cmsSocials = (items('socials', []) as any[]).filter(s => s.key)
+  // const mergedSocials: SocialMedia[] = cmsSocials.length
+  //   ? cmsSocials.map(s => ({ ...socials.find(a => a.key === s.key), ...s, available: asBool(s.available) } as SocialMedia))
+  //   : socials
   const profileRow = (items('siteProfile', []) as any[])[0]
   const mergedProfile: Profile = profileRow
     ? {
@@ -463,6 +546,14 @@ export const useSiteContent = (): SiteContent => {
         officeHours: Array.isArray(profileRow.officeHours) ? profileRow.officeHours : profile.officeHours,
       }
     : profile
+
+  // derived from the (merged) socials so platform mentions never drift apart
+  const listNames = (names: string[]) => names.length <= 1 ? (names[0] ?? '')
+    : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1]
+  const livePlatforms = mergedSocials.filter(s => s.available)
+  const soonPlatforms = mergedSocials.filter(s => !s.available && s.tag === 'SOON')
+  const liveNames = listNames(livePlatforms.map(s => s.name))
+  const soonClause = soonPlatforms.length ? ` — and soon on ${listNames(soonPlatforms.map(s => s.name))}` : ''
 
   // derived from the (merged) service globals so time mentions never drift apart
   const sundayServices = mergedServices.filter(s => s.day === 'Sunday')
@@ -485,12 +576,12 @@ export const useSiteContent = (): SiteContent => {
       { label: 'Join the Church', to: '/newsletter' },
     ],
     pills: [
-      { key: 'store', label: 'Store', desc: 'Books, music and church merchandise — every purchase supports our outreach.', section: 'store', img: '/assets/images/circle-1.jpg', tint: 'tint-yellow' },
-      { key: 'events', label: 'Events', desc: 'Picnics, food drives, worship nights — life together beyond Sunday.', section: 'events', img: '/assets/images/event-1.jpg', tint: 'tint-red' },
-      { key: 'bible', label: 'Bible Study', desc: 'Midweek studies and small groups digging deeper into the Word.', section: 'bible-study', img: '/assets/images/circle-2.jpg', tint: 'tint-gold' },
-      { key: 'sermons', label: 'Sermons & Blog', desc: 'Catch up on recent messages and read reflections from our pastors.', section: 'sermons', img: '/assets/images/event-2.jpg', tint: 'tint-blue' },
-      { key: 'youth', label: 'Youth Ministry', desc: 'A place for teens to ask big questions and build real friendships.', section: 'youth', img: '/assets/images/circle-3.jpg', tint: 'tint-teal' },
-      { key: 'worship', label: 'Worship', desc: `Join us Sundays at ${sundayTimesLong} for music, prayer and teaching.`, section: 'worship', img: '/assets/images/event-3.jpg', tint: 'tint-green' },
+      { key: 'store', label: 'Store', desc: 'Books, music and church merchandise — every purchase supports our outreach.', to: '/store', img: '/assets/images/circle-1.jpg', tint: 'tint-yellow' },
+      { key: 'events', label: 'Events', desc: 'Picnics, food drives, worship nights — life together beyond Sunday.', to: '/events', img: '/assets/images/event-1.jpg', tint: 'tint-red' },
+      { key: 'bible', label: 'Bible Study', desc: 'Midweek studies and small groups digging deeper into the Word.', to: '/bible-study', img: '/assets/images/circle-2.jpg', tint: 'tint-gold' },
+      { key: 'sermons', label: 'Sermons & Blog', desc: 'Catch up on recent messages and read reflections from our pastors.', to: '/sermons', img: '/assets/images/event-2.jpg', tint: 'tint-blue' },
+      { key: 'youth', label: 'Youth Ministry', desc: 'A place for teens to ask big questions and build real friendships.', to: '/youth', img: '/assets/images/circle-3.jpg', tint: 'tint-teal' },
+      { key: 'worship', label: 'Worship', desc: `Join us Sundays at ${sundayTimesLong} for music, prayer and teaching.`, to: '/worship', img: '/assets/images/event-3.jpg', tint: 'tint-green' },
     ],
   },
   welcome: {
@@ -561,6 +652,12 @@ export const useSiteContent = (): SiteContent => {
     text: 'Video, audio and written reflections from our preachers — catch up wherever you are.',
     cta: { label: 'View All Sermons', to: '/sermons' },
   },
+  eventsArchive: {
+    eyebrow: 'Looking back',
+    title: 'Event archive',
+    text: 'Moments we shared — services, celebrations and outreach from seasons past.',
+    empty: 'No past events yet — check back after our next gathering.',
+  },
   eventsHead: {
     eyebrow: 'Upcoming events',
     title: 'Life together, beyond Sunday',
@@ -569,9 +666,9 @@ export const useSiteContent = (): SiteContent => {
   broadcast: {
     eyebrow: 'Live broadcast',
     title: 'Worship with us,\nwherever you are',
-    sub: "Can't make it in person? Every Sunday service is broadcast live on YouTube and Facebook — and soon on TikTok. Join thousands worshipping from home.",
+    sub: `Can't make it in person? Every Sunday service is broadcast live on ${liveNames || 'our channels'}${soonClause}. Join thousands worshipping from home.`,
     stats: [
-      { value: '2', label: 'platforms live' },
+      { value: String(livePlatforms.length), label: `platform${livePlatforms.length === 1 ? '' : 's'} live` },
       { value: '200+', label: 'sermons online' },
       { value: '52', label: 'live streams a year' },
     ],
@@ -586,6 +683,62 @@ export const useSiteContent = (): SiteContent => {
     title: 'Give generously, change lives',
     text: 'Your giving keeps our doors open, our pantry stocked, and our outreach on the streets. Every gift, of any size, makes a difference in our city.',
     cta: { label: 'Give Online', to: '/donate' },
+  },
+  mediaMinistry: {
+    intro: {
+      chip: '🎥 Media & Broadcast',
+      title: 'Every service,\nbeyond the walls',
+      paragraphs: [
+        `The Media Team carries Sunday worship to everyone who can't be in the room — cameras, sound desk and livestream reaching ${liveNames || 'our channels'} every week.`,
+        'We also keep the sermon archive, the podcast and the photo galleries flowing, so a message preached once keeps serving all week. No experience needed — every operator on the desk today started as a trainee beside someone patient.',
+      ],
+      img: { src: '/assets/images/event-3.jpg', alt: 'Media team filming a service' },
+      chips: [
+        { icon: '🔴', label: 'Live', value: 'Every Sunday' },
+        { icon: '🎧', label: 'Training', value: 'At the desk' },
+      ],
+      facts: [
+        { label: 'Led by', value: 'Samuel Reyes' },
+        { label: 'Call time', value: 'Sundays 8:30 AM — Media Desk' },
+        { label: 'Team', value: '25+ volunteers, teens & adults' },
+      ],
+    },
+    rolesEyebrow: 'Serve on the team',
+    rolesTitle: 'Find your station',
+    roles: [
+      { icon: '📹', title: 'Camera Operators', text: 'Frame the service from the floor and the balcony — steady hands, good eyes, full training given.' },
+      { icon: '🎚', title: 'Sound & Audio', text: 'Mix the room and the stream — mics, monitors and the broadcast feed from the sound desk.' },
+      { icon: '🖥', title: 'Stream Directors', text: 'Cut between cameras, run titles and keep the livestream healthy across every platform.' },
+      { icon: '📸', title: 'Photography', text: 'Capture services, events and baptisms for the galleries, socials and the weekly newsletter.' },
+      { icon: '🎙', title: 'Podcast & Editing', text: 'Trim, master and publish the sermon podcast and audio archive every week.' },
+      { icon: '📱', title: 'Social Clips', text: 'Cut the moments that travel — shorts and reels that bring the message to new feeds.' },
+    ],
+    gallery: [
+      { img: '/assets/images/gallery-9.jpg', title: 'At the sound desk' },
+      { img: '/assets/images/gallery-5.jpg', title: 'Sunday livestream' },
+      { img: '/assets/images/gallery-7.jpg', title: 'Recording the choir' },
+      { img: '/assets/images/gallery-10.jpg', title: 'Behind the cameras' },
+    ],
+    join: {
+      chip: '✳ Join the Media Team',
+      title: 'Learn the desk with us',
+      sub: "Tell us what you'd love to try and we'll pair you with a trainer for a Sunday — no commitment until you're ready.",
+      rolePlaceholder: 'Which station interests you?',
+      fine: 'We train teens (13+) and adults — no experience required.',
+      thanks: '🎥 Thank you — the team lead will be in touch before Sunday.',
+    },
+    sidebar: {
+      watchTitle: 'Watch & Listen',
+      watchLinks: [
+        { icon: '🔴', label: 'Sunday livestream', to: '/broadcast' },
+        { icon: '🎬', label: 'Sermon archive', to: '/sermons' },
+        { icon: '🎙', label: '24hr podcast', to: '/broadcast' },
+        { icon: '🖼', label: 'Photo galleries', to: '/worship' },
+      ],
+      liveTitle: 'Live on',
+      liveNote: 'Streaming every Sunday service.',
+      latestTitle: 'Latest messages',
+    },
   },
   about: {
     chip: '✳ Our Story',
@@ -608,14 +761,8 @@ export const useSiteContent = (): SiteContent => {
       { chip: 'Our Pledge', title: 'What you can count on', text: 'We pledge to keep our doors open to everyone, to handle every gift with integrity and transparency, to protect and nurture our children and youth, and to speak the truth in love — always.' },
     ],
     sideMission: { title: 'Our Mission', text: 'Loving God, loving people, serving the city' },
-    sideMinistries: [
-      { icon: '🙏', title: 'Sunday Worship', meets: 'Sundays' },
-      { icon: '🧒', title: 'Kids & Youth', meets: 'Sun & Fri' },
-      { icon: '🤝', title: 'Community Care', meets: 'Saturdays' },
-      { icon: '📖', title: 'Bible Study', meets: 'Weeknights' },
-      { icon: '🕯', title: 'Prayer Watch', meets: 'Wed 6 AM' },
-      { icon: '🎵', title: 'Choir & Band', meets: 'Thursdays' },
-    ],
+    // derived from ministriesBento — sidebar shows each ministry's altName
+    sideMinistries: ministriesBento.map(m => ({ icon: m.icon, title: m.altName ?? m.title, meets: m.meets })),
     photos: [
       { img: '/assets/images/gallery-1.jpg', title: 'Sunday worship' },
       { img: '/assets/images/gallery-2.jpg', title: 'Community outreach' },
@@ -623,15 +770,20 @@ export const useSiteContent = (): SiteContent => {
       { img: '/assets/images/gallery-4.jpg', title: 'Youth night' },
     ],
   },
-  ministriesBento: [
-    { size: 'small', color: 'm-red', tag: 'Worship', icon: '🙏', title: 'Sunday Worship', text: 'Gather every Sunday for heartfelt music, honest teaching and open arms.', members: '400+', meets: 'Sundays' },
-    { size: 'small', color: 'm-green', tag: 'Next Gen', icon: '🧒', title: 'Kids & Youth', text: 'Safe, joyful programs where children and teens grow, question and belong.', members: '120+', meets: 'Sun & Fri' },
-    { size: 'big', color: 'm-orange', tag: 'Outreach', icon: '🤝', title: 'Community Care', text: 'Food drives, shelter support and neighbourhood projects that serve our city — practical love, every single week.', members: '80+', meets: 'Saturdays' },
-    { size: 'big', color: 'm-pink', tag: 'Discipleship', icon: '📖', title: 'Bible Study', text: 'Midweek small groups in homes across the city — study the Word, share a meal, and belong to a circle that knows your name.', members: '150+', meets: 'Weeknights' },
-    { size: 'small', color: 'm-blue', tag: 'Prayer', icon: '🕯', title: 'Prayer Watch', text: 'Intercessors praying for the church, the city and every request received.', members: '40+', meets: 'Wed 6 AM' },
-    { size: 'small', color: 'm-purple', tag: 'Music', icon: '🎵', title: 'Choir & Band', text: 'Choir, band and tech teams bringing every service to life — all levels welcome.', members: '60+', meets: 'Thursdays' },
-  ],
+  ministriesBento,
   ministriesOverview: [
+    {
+      to: '/media-ministry',
+      img: '/assets/images/event-3.jpg',
+      tag: 'Media & Broadcast',
+      title: 'Carry the service beyond the walls',
+      text: 'Cameras, sound desks and livestreams — the Media Team broadcasts every Sunday service to YouTube, Facebook and beyond, and keeps the podcast and sermon archive flowing. No experience needed; we train you at the desk.',
+      facts: [
+        { label: 'Leader', value: 'Samuel Reyes' },
+        { label: 'Meets', value: 'Sundays — Media Desk, 8:30 AM call' },
+        { label: 'Who', value: 'Teens & adults, training provided' },
+      ],
+    },
     {
       to: '/worship',
       img: '/assets/images/event-2.jpg',
@@ -740,6 +892,11 @@ export const useSiteContent = (): SiteContent => {
       img: '/assets/images/circle-2.jpg', alt: 'Prayer ministry',
       text: 'Intercessors praying for the church, the city and every request received — join the Wednesday 6 AM watch or pray from home.',
       meets: 'Wednesdays 6:00 AM — The Chapel', leader: 'Esther Mwangi',
+    },
+    '/media-ministry': {
+      img: '/assets/images/event-3.jpg', alt: 'Media & broadcast ministry',
+      text: 'The Media Team runs cameras, sound and livestreams so every service reaches those worshipping from home — and keeps the sermon archive and podcast up to date. Training provided at the desk.',
+      meets: 'Sundays 8:30 AM — Media Desk', leader: 'Samuel Reyes',
     },
   },
   join: {

@@ -3,25 +3,17 @@ const oluxCms = useOluxContent('site-header')
 const oluxFb: Record<string, string> = {"Phone":"+1 705 55 50 000","Phone Link":"tel:+17055550000","Caption":"121 Wallstreet street, NY York, USA","Image":"/assets/images/logo.png"}
 // single source of truth for the main menu — rendered by both desktop nav and mobile menu.
 // `match` lists the path prefixes (sub-pages included) that highlight the item.
+// the Ministries submenu mirrors the ministries data source
+const ministries = useSiteContent().ministriesBento
 const menuLinks = oluxCms.items('Menu Link', {"Label":"label","To":"to"}, [
   { label: 'Home', to: '/', match: ['/'] },
   { label: 'About Us', to: '/about', match: ['/about', '/leadership']},
-  { label: 'Ministries', to: '/ministries', match: ['/ministries', '/youth', '/worship', '/bible-study', '/prayer', '/community-care', '/kids'], children: [
-    // { label: 'Youth', to: '/youth', icon: '🔥' },
-    // { label: 'Worship & Praise', to: '/worship', icon: '🙌' },
-    // { label: 'Bible Study', to: '/bible-study', icon: '📖' },
-    // { label: 'Prayer', to: '/prayer', icon: '💒' },
-    // { label: 'Community Care', to: '/community-care', icon: '🤝' },
-    // { label: 'Kids Church', to: '/kids', icon: '👶' },
-	{ label: 'Youth', to: '/youth' },
-    { label: 'Worship & Praise', to: '/worship' },
-    { label: 'Bible Study', to: '/bible-study' },
-    { label: 'Prayer', to: '/prayer' },
-    { label: 'Community Care', to: '/community-care' },
-    { label: 'Kids Church', to: '/kids' },
-  ] },
-  { label: 'Events', to: '/events', match: ['/events', '/broadcast'], children: [
+  { label: 'Ministries', to: '/ministries',
+    match: ['/ministries', '/kids', ...ministries.map(m => m.to).filter(Boolean) as string[]],
+    children: ministries.filter(m => m.to).map(m => ({ label: m.title, to: m.to! })) },
+  { label: 'Events', to: '/events', match: ['/events', '/event-archive', '/broadcast'], children: [
     { label: 'Upcoming Events', to: '/events' },
+    { label: 'Event Archive', to: '/event-archive' },
     { label: 'Live Broadcast', to: '/broadcast' },
   ] },
   { label: 'Sermons', to: '/sermons', match: ['/sermons']},
@@ -35,6 +27,12 @@ const openSub = ref<string | null>(null)
 // a menu item is active when the current path is one of its prefixes (Home only on exact '/')
 // CMS-rebuilt menu items may carry only label/to — fall back to the link
 // target itself so a missing match array can never crash the header.
+// a submenu entry is active on its page or a sub-path of it; among siblings
+// the LONGEST matching path wins (so /events/archive doesn't also light /events)
+const matches = (to: string) => route.path === to || route.path.startsWith(to + '/')
+const isSubActive = (c: any, siblings: any[] = []) => matches(c.to)
+  && !siblings.some(o => o.to !== c.to && o.to.length > c.to.length && matches(o.to))
+
 const isActive = (link: any) =>
   ((link.match ?? [link.to]) as string[]).filter(Boolean).some(m => m === '/' ? route.path === '/' : route.path === m || route.path.startsWith(m + '/'))
 
@@ -79,7 +77,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
       <div class="container">
         <NuxtLink to="/" class="logo">
         <img data-olx-field="image" :src="oluxCms.t('Image', oluxFb['Image'])" alt="Church logo" class="logo-img" onerror="this.remove()">
-        <span class="logo-text">CAC <small>Blackburn.</small></span>
+        <span class="logo-text">CAC  <br/>Mount Zion<br/>International<small>Blackburn.</small></span>
       </NuxtLink>
         <nav class="site-nav">
           <div v-for="l in menuLinks" :key="l.label" class="nav-item">
@@ -87,7 +85,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
               {{ l.label }}<span v-if="l.children" class="caret" aria-hidden="true"> ▾</span>
             </NuxtLink>
             <div v-if="l.children" class="dropdown">
-              <NuxtLink v-for="c in l.children" :key="c.label" :to="c.to"><span v-if="c.icon" class="mi-icon" aria-hidden="true">{{ c.icon }}</span>{{ c.label }}</NuxtLink>
+              <NuxtLink v-for="c in l.children" :key="c.label" :to="c.to" :class="{ active: isSubActive(c, l.children) }"><span v-if="c.icon" class="mi-icon" aria-hidden="true">{{ c.icon }}</span>{{ c.label }}</NuxtLink>
             </div>
           </div>
         </nav>
@@ -112,7 +110,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
               >▾</button>
             </div>
             <div v-if="l.children && openSub === l.label" class="mm-sub">
-              <NuxtLink v-for="c in l.children" :key="c.label" :to="c.to"><span v-if="c.icon" class="mi-icon" aria-hidden="true">{{ c.icon }}</span>{{ c.label }}</NuxtLink>
+              <NuxtLink v-for="c in l.children" :key="c.label" :to="c.to" :class="{ active: isSubActive(c, l.children) }"><span v-if="c.icon" class="mi-icon" aria-hidden="true">{{ c.icon }}</span>{{ c.label }}</NuxtLink>
             </div>
           </template>
           <NuxtLink class="btn dark" to="/newsletter">Join the Church</NuxtLink>

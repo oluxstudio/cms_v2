@@ -8,6 +8,9 @@ export interface Member {
   email: string
   /** casual one-liner used in "meet the leaders" widgets */
   fact: string
+  /** personal social accounts — any number per member (0 is fine);
+      `key` matches an entry in the global socials data source (icon/color) */
+  socials?: { key: string; href: string }[]
 }
 
 export interface MemberProfileExtras {
@@ -39,16 +42,29 @@ const members: Member[] = [
     slug: 'daniel-okafor', img: '/assets/images/pastor-1.jpg', name: 'Rev. Daniel Okafor', role: 'Senior Pastor',
     bio: 'Pastor Daniel has led CAC Blackburn for over fifteen years. A gifted teacher with a shepherd\'s heart, he is passionate about seeing every believer rooted in scripture and serving the city. He is married to Adaeze and they have three children.',
     verse: '"Let all that you do be done in love." — 1 Corinthians 16:14', email: 'daniel@cacblackburn.org', fact: 'Preaches better after two coffees. Scientifically proven.',
+    socials: [
+      { key: 'youtube', href: 'https://youtube.com/@pastordaniel' },
+      { key: 'facebook', href: 'https://facebook.com/pastordanielokafor' },
+      { key: 'instagram', href: 'https://instagram.com/pastordaniel' },
+      { key: 'x', href: 'https://x.com/pastordaniel' },
+    ],
   },
   {
     slug: 'grace-lindqvist', img: '/assets/images/pastor-2.jpg', name: 'Grace Lindqvist', role: 'Worship & Music Director',
     bio: 'Grace directs our choirs, bands and production teams. She believes worship is for every voice — trained or not — and has built a music ministry where all skill levels find a place to serve.',
     verse: '"Sing to the Lord a new song." — Psalm 96:1', email: 'grace@cacblackburn.org', fact: 'Can harmonize with a fire alarm.',
+    socials: [
+      { key: 'youtube', href: 'https://youtube.com/@graceworship' },
+      { key: 'instagram', href: 'https://instagram.com/graceworship' },
+    ],
   },
   {
     slug: 'samuel-reyes', img: '/assets/images/pastor-3.jpg', name: 'Samuel Reyes', role: 'Youth & Outreach Pastor',
     bio: 'Samuel leads our teens and our neighbourhood outreach. From Friday youth nights to Saturday food drives, he lives the belief that faith gets real when it crosses the street.',
     verse: '"Let no one despise you for your youth." — 1 Timothy 4:12', email: 'samuel@cacblackburn.org', fact: 'Undefeated at table tennis. Allegedly.',
+    socials: [
+      { key: 'tiktok', href: 'https://tiktok.com/@pastorsam' },
+    ],
   },
   {
     slug: 'esther-mwangi', img: '/assets/images/pastor-4.jpg', name: 'Esther Mwangi', role: 'Prayer Ministry Lead',
@@ -64,6 +80,11 @@ const members: Member[] = [
     slug: 'peter-adeyemi', img: '/assets/images/pastor-6.jpg', name: 'Peter Adeyemi', role: 'Missions & Community Pastor',
     bio: 'Peter coordinates our mission partnerships abroad and our community projects at home, from the food pantry to shelter support. He is happiest with his sleeves rolled up.',
     verse: '"Go into all the world." — Mark 16:15', email: 'peter@cacblackburn.org', fact: 'Owns more hi-vis vests than shirts.',
+    socials: [
+      { key: 'facebook', href: 'https://facebook.com/peteradeyemi' },
+      { key: 'instagram', href: 'https://instagram.com/peteronmission' },
+      { key: 'x', href: 'https://x.com/peteronmission' },
+    ],
   },
 ]
 

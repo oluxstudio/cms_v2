@@ -29,17 +29,17 @@ const { hero } = useSiteContent()
 
       <div class="hero-collage">
         <div v-for="(col, c) in [hero.pills.slice(0, 2), hero.pills.slice(2, 4), hero.pills.slice(4, 6)]" :key="c" class="col" :class="`col-${['a','b','c'][c]}`">
-          <a
+          <NuxtLink
             v-for="p in col" :key="p.key"
-            class="pill" :class="p.tint" :href="`#${p.section}`"
-            :aria-label="`Go to ${p.label} section`"
+            class="pill" :class="p.tint" :to="p.to"
+            :aria-label="`Open the ${p.label} page`"
           >
             <img :src="p.img" :alt="p.label">
             <span class="pill-label">{{ p.label }}</span>
             <span class="pill-overlay">
               <small>{{ p.desc }}</small>
             </span>
-          </a>
+          </NuxtLink>
         </div>
         <span class="dot d4"></span>
         <span class="dot d5"></span>

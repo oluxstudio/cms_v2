@@ -14,29 +14,30 @@ import ContactBlock from '~/components/ContactBlock.vue'
 import ContactMap from '~/components/ContactMap.vue'
 import LegalDoc from '~/components/LegalDoc.vue'
 import DonateGiving from '~/components/DonateGiving.vue'
+import EventsArchive from '~/components/EventsArchive.vue'
 import EventsGrid from '~/components/EventsGrid.vue'
 import HeroBlock from '~/components/HeroBlock.vue'
 import WelcomeBlock from '~/components/WelcomeBlock.vue'
-import MinistriesDirections from '~/components/MinistriesDirections.vue'
 import MinistriesBlock from '~/components/MinistriesBlock.vue'
-import WorshipBlock from '~/components/WorshipBlock.vue'
-import BibleStudyBlock from '~/components/BibleStudyBlock.vue'
-import YouthBlock from '~/components/YouthBlock.vue'
-import BooksBlock from '~/components/BooksBlock.vue'
 import EventsBlock from '~/components/EventsBlock.vue'
 import BroadcastBlock from '~/components/BroadcastBlock.vue'
 import MinistryDetail from '~/components/MinistryDetail.vue'
+import MediaMinistryBlock from '~/components/MediaMinistryBlock.vue'
 import MinistriesOverview from '~/components/MinistriesOverview.vue'
 import JoinChurchBlock from '~/components/JoinChurchBlock.vue'
 import PrayerBlock from '~/components/PrayerBlock.vue'
 import SermonsArchive from '~/components/SermonsArchive.vue'
+import BooksBlock from '~/components/BooksBlock.vue'
 import BookStoreBlock from '~/components/BookStoreBlock.vue'
 import WorshipShowcase from '~/components/WorshipShowcase.vue'
 import YouthLayout from '~/components/YouthLayout.vue'
+import BibleStudyBlock from '~/components/BibleStudyBlock.vue'
 import PodcastBlock from '~/components/PodcastBlock.vue'
+import WorshipBlock from '~/components/WorshipBlock.vue'
+import YouthBlock from '~/components/YouthBlock.vue'
 
 const route = useRoute()
-const oluxBlocks: Record<string, any> = { 'site-header': SiteHeader, 'page-hero-content': PageHeroContent, 'about': AboutBlock, 'times': TimesBlock, 'pastors': PastorsBlock, 'donate-cta': DonateCta, 'site-footer': SiteFooter, 'studies-archive': StudiesArchive, 'broadcast-channels': BroadcastChannels, 'sermons': SermonsBlock, 'community-care-overview': CommunityCareOverview, 'contact': ContactBlock, 'contact-map': ContactMap, 'legal-doc': LegalDoc, 'donate-giving': DonateGiving, 'events-grid': EventsGrid, 'hero': HeroBlock, 'welcome': WelcomeBlock, 'ministries-directions': MinistriesDirections, 'ministries': MinistriesBlock, 'worship': WorshipBlock, 'bible-study': BibleStudyBlock, 'youth': YouthBlock, 'books': BooksBlock, 'events': EventsBlock, 'broadcast': BroadcastBlock, 'ministry-detail': MinistryDetail, 'ministries-overview': MinistriesOverview, 'join-church': JoinChurchBlock, 'prayer': PrayerBlock, 'sermons-archive': SermonsArchive, 'book-store': BookStoreBlock, 'worship-showcase': WorshipShowcase, 'youth-layout': YouthLayout, 'podcast': PodcastBlock }
+const oluxBlocks: Record<string, any> = { 'site-header': SiteHeader, 'page-hero-content': PageHeroContent, 'about': AboutBlock, 'times': TimesBlock, 'pastors': PastorsBlock, 'donate-cta': DonateCta, 'site-footer': SiteFooter, 'studies-archive': StudiesArchive, 'broadcast-channels': BroadcastChannels, 'sermons': SermonsBlock, 'community-care-overview': CommunityCareOverview, 'contact': ContactBlock, 'contact-map': ContactMap, 'legal-doc': LegalDoc, 'donate-giving': DonateGiving, 'events-archive': EventsArchive, 'events-grid': EventsGrid, 'hero': HeroBlock, 'welcome': WelcomeBlock, 'ministries': MinistriesBlock, 'events': EventsBlock, 'broadcast': BroadcastBlock, 'ministry-detail': MinistryDetail, 'media-ministry': MediaMinistryBlock, 'ministries-overview': MinistriesOverview, 'join-church': JoinChurchBlock, 'prayer': PrayerBlock, 'sermons-archive': SermonsArchive, 'books': BooksBlock, 'book-store': BookStoreBlock, 'worship-showcase': WorshipShowcase, 'youth-layout': YouthLayout, 'bible-study': BibleStudyBlock, 'podcast': PodcastBlock, 'worship': WorshipBlock, 'youth': YouthBlock }
 // Reactive URL getter — this component is reused across navigations.
 const oluxPage = useOluxPageOrder(() => route.path, oluxBlocks)
 </script>

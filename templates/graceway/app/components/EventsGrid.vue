@@ -187,7 +187,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .ev-booked { margin-top: .6rem; font-size: 17px; font-weight: 700; color: var(--color-primary); }
 
 /* seat stepper */
-.ev-seats { display: flex; align-items: center; gap: 1rem; }
+.ev-seats { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+@media (max-width: 600px) { .ev-seats-label { flex-basis: 100%; } }
 .ev-seats-label { font-size: .85rem; font-weight: 700; color: var(--color-secondary); }
 .ev-stepper { display: flex; align-items: center; gap: .9rem; background: #f4f1ea; border-radius: 999px; padding: .3rem .5rem; }
 .ev-stepper button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: #fff; color: var(--color-secondary);

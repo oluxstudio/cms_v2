@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Push the ORIGINAL project to the CMS and make the applied site match it
+# EXACTLY: full pipeline deploy, then a strict mirror that removes sections
+# deleted in the original, restores block order and template content.
+#
+#   ./mirror-template graceway                 deploy + strict mirror
+#   ./mirror-template graceway --keep-content  mirror structure only
+set -euo pipefail
+KEY="${1:?usage: ./mirror-template <key> [--keep-content] [--site=name]}"; shift || true
+"$(dirname "$0")/sync-template" "$KEY"
+docker exec -u sail backend-cms-app-1 php artisan template:mirror "$KEY" "$@"

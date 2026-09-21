@@ -8,7 +8,7 @@ const { ministriesBento: ministries } = useSiteContent()
   <section class="ministries" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="ministry-bento">
-        <NuxtLink v-for="m in ministries" :key="m.title" class="mcard" :class="[m.color, m.size]" to="/ministries">
+        <NuxtLink v-for="m in ministries" :key="m.title" class="mcard" :class="[m.color, m.size]" :to="m.to ?? '/ministries'">
           <div class="mcard-top">
             <span class="mcard-tag">{{ m.tag }}</span>
             <span class="mcard-badge">{{ m.icon }}</span>
