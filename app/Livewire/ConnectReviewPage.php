@@ -191,6 +191,13 @@ class ConnectReviewPage extends LivewireComponent
             }
             $this->select($kind, $model->id);
         } else {
+            // Nothing on this site carries that key — say so instead of
+            // silently doing nothing (content drift between template & site).
+            if ($key) {
+                $this->dispatch('toast', level: 'error', title: 'Nothing to edit here yet',
+                    message: 'This site has no "'.Str::headline($key).'" content — apply the latest template version to add it.');
+            }
+
             return;
         }
         // Clicked a specific entry in the preview → open its card in the panel.
@@ -246,7 +253,12 @@ class ConnectReviewPage extends LivewireComponent
             // Markers may carry the slug ("about-points") OR its camel form
             // ("heroTags") — accept both by kebab-ing the key too.
             'collection' => Collection::where('site_id', $this->site->id)
-                ->whereRaw('LOWER(slug) IN (?, ?)', [$lkey, strtolower(Str::kebab((string) $key))])->first(),
+                ->whereRaw('LOWER(slug) IN (?, ?)', [$lkey, strtolower(Str::kebab((string) $key))])->first()
+                // Separator-style drift ("bible_studies" vs "bible-studies"):
+                // compare with -/_ stripped before giving up.
+                ?? Collection::where('site_id', $this->site->id)->get(['id', 'slug', 'name'])
+                    ->first(fn ($c) => str_replace(['-', '_'], '', strtolower($c->slug)) === str_replace(['-', '_'], '', $lkey))
+                    ?->fresh(),
             'form' => Form::where('site_id', $this->site->id)->whereRaw('LOWER(name) = ?', [$lkey])->first(),
             'post' => Post::where('site_id', $this->site->id)->whereRaw('LOWER(slug) = ?', [$lkey])->first(),
             // Component key = camelCase(name); match case-insensitively so
@@ -954,7 +966,7 @@ class ConnectReviewPage extends LivewireComponent
                 continue;
             }
             $path = trim((string) ($spec['field'] ?? ''));
-            if ($path === '' || strlen($path) > 80 || ! preg_match('/^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)?$/', $path)) {
+            if ($path === '' || strlen($path) > 80 || ! preg_match('/^[A-Za-z0-9 _-]+(\.[A-Za-z0-9 _-]+)?$/', $path)) {
                 continue;
             }
             $component->load('nodes');
@@ -965,7 +977,7 @@ class ConnectReviewPage extends LivewireComponent
             $parent = '0';
             if (count($segments) === 2) {
                 $parentNode = $this->nodeByFieldKey($component, $segments[0])
-                    ?? $component->nodes()->create(['label' => Str::headline($segments[0]), 'type' => 'text',
+                    ?? $component->nodes()->create(['label' => Str::headline(Str::slug($segments[0])), 'type' => 'text',
                         'value' => '', 'parent' => '0', 'order' => (int) $component->nodes()->max('order') + 1]);
                 $parent = $parentNode->id;
             }
@@ -973,7 +985,7 @@ class ConnectReviewPage extends LivewireComponent
             if (! in_array($type, ['text', 'url', 'image', 'number', 'boolean', 'color'], true)) {
                 $type = 'text';
             }
-            $component->nodes()->create(['label' => Str::headline(end($segments)), 'type' => $type,
+            $component->nodes()->create(['label' => Str::headline(Str::slug(end($segments))), 'type' => $type,
                 'value' => Str::limit((string) ($spec['value'] ?? ''), 5000, ''),
                 'parent' => $parent, 'order' => (int) $component->nodes()->max('order') + 1]);
             $added++;
@@ -1002,6 +1014,10 @@ class ConnectReviewPage extends LivewireComponent
 
         $current = null;
         foreach (explode('.', $field) as $seg) {
+            // Markers may carry the display form ("Headline", "CTA Label") —
+            // normalise to the generator's camel key before comparing, or the
+            // register loop re-adds the same field on every preview reload.
+            $seg = Str::camel(Str::slug($seg));
             $pool = $current
                 ? $nodes->filter(fn (Node $n) => $n->parent === $current->id)
                 : $nodes->filter($isRoot);

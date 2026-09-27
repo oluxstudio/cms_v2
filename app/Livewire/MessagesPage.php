@@ -141,20 +141,29 @@ class MessagesPage extends Component
         return $messages;
     }
 
-    /** The user's OTHER inboxes (owned + member sites) with unread badges. */
+    /** The selected DM partner's profile for the right rail (null on # Team). */
     #[Computed]
-    public function otherInboxes(): array
+    public function profile(): ?array
     {
-        $me = Auth::user();
-        $names = $me->sites()->pluck('name')->merge($me->memberSiteNames())->unique()
-            ->reject(fn ($n) => $n === $this->site->name)->values();
+        if ($this->thread === 'team') {
+            return null;
+        }
+        $user = $this->team->firstWhere('id', $this->thread)
+            ?? User::find($this->thread);
+        if (! $user) {
+            return null;
+        }
+        $full = User::find($user->id);
+        $dm = $this->dmQuery($user->id);
+        $last = (clone $dm)->latest()->first();
 
-        return Site::whereIn('name', $names)->get(['id', 'name'])
-            ->map(fn (Site $s) => [
-                'name' => $s->name,
-                'label' => (string) ($s->getAttr('business_name') ?: ucwords(str_replace('-', ' ', $s->name))),
-                'unread' => Message::unreadCountFor($s, $me),
-            ])->all();
+        return [
+            'user' => $full,
+            'role' => $this->roleLabels[$user->id] ?? 'member',
+            'messages' => (clone $dm)->count(),
+            'last_at' => $last?->created_at,
+            'member_since' => $full->created_at,
+        ];
     }
 
     #[Computed]
@@ -166,7 +175,7 @@ class MessagesPage extends Component
     public function openThread(string $key): void
     {
         $this->thread = $key;
-        unset($this->threadMessages, $this->conversations);
+        unset($this->threadMessages, $this->conversations, $this->profile);
         $this->dispatch('carousel-go', i: 1); // mobile: slide to the conversation
     }
 
@@ -205,7 +214,7 @@ class MessagesPage extends Component
         }
 
         $this->reset('body');
-        unset($this->threadMessages, $this->conversations);
+        unset($this->threadMessages, $this->conversations, $this->profile);
         $this->dispatch('message-sent');
     }
 
@@ -213,7 +222,7 @@ class MessagesPage extends Component
     public function deleteMessage(string $id): void
     {
         Message::where('site_id', $this->site->id)->where('sender_id', Auth::id())->whereKey($id)->delete();
-        unset($this->threadMessages, $this->conversations);
+        unset($this->threadMessages, $this->conversations, $this->profile);
     }
 
     public function render()

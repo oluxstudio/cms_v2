@@ -101,20 +101,3 @@ test('messages permissions gate the page and sending', function () {
         ->assertStatus(403);
     expect(Message::where('site_id', $site->id)->count())->toBe(0);
 });
-
-test('the other-inboxes strip lists the sites a user can reach with unread counts', function () {
-    [$site, $owner, $a, $b] = messagingSite();
-    // Amy also owns her own account/site.
-    $ownSite = Site::create(['user_id' => $a->id, 'name' => 'own-'.uniqid(), 'domain' => 'own-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
-    $ownSite->members()->syncWithoutDetaching([$a->id => ['role' => 'owner']]);
-
-    // Unread broadcast waiting for Amy on the team site.
-    $site->messages()->create(['sender_id' => $owner->id, 'recipient_id' => null, 'body' => 'ping']);
-
-    // Viewing her OWN site's inbox, the team site shows up with 1 unread.
-    $inboxes = Livewire::actingAs($a)->test(MessagesPage::class, ['siteId' => $ownSite->id])
-        ->instance()->otherInboxes;
-    $entry = collect($inboxes)->firstWhere('name', $site->name);
-    expect($entry)->not->toBeNull()
-        ->and($entry['unread'])->toBe(1);
-});

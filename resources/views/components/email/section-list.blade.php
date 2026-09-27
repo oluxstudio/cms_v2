@@ -5,6 +5,7 @@
     'prefix',          // wire:model path prefix, e.g. "sections" or "fbTemplate.sections"
     'up',              // wire method name for move-up, e.g. "moveSectionUp"
     'down',            // wire method name for move-down
+    'placeholders' => null, // token => description map for the legend (null = classic receipt set)
 ])
 
 <div class="space-y-2">
@@ -32,17 +33,28 @@
                 <p class="mt-2 text-[11px] text-gray-400">Shows the site logo above — or the app logo if none is set.</p>
             @elseif ($section['key'] === 'summary')
                 <p class="mt-2 text-[11px] text-gray-400">Automatically lists everything the visitor submitted.</p>
+            @else
+                <p class="mt-2 text-[11px] text-gray-400">Filled in automatically from the email's data.</p>
             @endif
         </div>
     @endforeach
 </div>
 
-<p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
-    Placeholders:
-    @foreach(['{name}', '{site}', '{type}', '{field:email}', '{fields}'] as $ph)
-        <code class="mx-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300">{{ $ph }}</code>
-    @endforeach
-    <br>
-    <b>{field:key}</b> inserts one submitted value (e.g. <code class="px-1 rounded bg-gray-100 dark:bg-white/[0.06]">{field:phone}</code>);
-    <b>{fields}</b> lists everything they submitted.
-</p>
+@if (is_array($placeholders) && $placeholders !== [])
+    <div class="text-[11px] text-gray-400 mt-2 leading-relaxed">
+        <p class="font-bold text-gray-500 dark:text-gray-400 mb-0.5">Placeholders</p>
+        @foreach ($placeholders as $token => $desc)
+            <p><code class="mr-1 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300">{{ $token }}</code> {{ $desc }}</p>
+        @endforeach
+    </div>
+@else
+    <p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
+        Placeholders:
+        @foreach(['{name}', '{site}', '{type}', '{field:email}', '{fields}'] as $ph)
+            <code class="mx-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300">{{ $ph }}</code>
+        @endforeach
+        <br>
+        <b>{field:key}</b> inserts one submitted value (e.g. <code class="px-1 rounded bg-gray-100 dark:bg-white/[0.06]">{field:phone}</code>);
+        <b>{fields}</b> lists everything they submitted.
+    </p>
+@endif

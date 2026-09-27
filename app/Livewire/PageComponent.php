@@ -231,6 +231,7 @@ class PageComponent extends Component
 
     public function openCreate(): void
     {
+        abort_unless($this->site->allowsPageEdit(auth()->user(), null), 403);
         $this->form->reset();
         $this->editingId = 0;
         $this->layout = 'blank';
@@ -239,6 +240,7 @@ class PageComponent extends Component
 
     public function openEdit(string $id): void
     {
+        abort_unless($this->site->allowsPageEdit(auth()->user(), $id), 403);
         $page = Page::findOrFail($id);
         $this->editingId = $id;
         $this->form->name = $page->name;
@@ -252,12 +254,14 @@ class PageComponent extends Component
         $this->form->validate();
 
         if ($this->editingId) {
+            abort_unless($this->site->allowsPageEdit(auth()->user(), (string) $this->editingId), 403);
             Page::findOrFail($this->editingId)->update([
                 'name' => $this->form->name,
                 'url' => $this->form->url,
                 'keywords' => $this->form->keywords,
             ]);
         } else {
+            abort_unless($this->site->allowsPageEdit(auth()->user(), null), 403);
             // applyPages silently skips existing URLs — surface it instead.
             if (Page::where('site_id', $this->site->id)->where('url', $this->form->url)->exists()) {
                 $this->addError('form.url', 'A page with this URL already exists.');
@@ -296,6 +300,7 @@ class PageComponent extends Component
     /** Delete a page — confirmation happens in the shared modal (data-confirm). */
     public function deletePage(string $id): void
     {
+        abort_unless($this->site->allowsPageEdit(auth()->user(), $id), 403);
         Page::where('site_id', $this->site->id)->findOrFail($id)->delete();
     }
 }

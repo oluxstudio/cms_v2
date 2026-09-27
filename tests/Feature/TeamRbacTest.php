@@ -1,9 +1,11 @@
 <?php
 
+use App\Livewire\PageComponent;
 use App\Livewire\SiteTeamPage;
 use App\Mail\TeamInvitationMail;
 use App\Models\AccountMember;
 use App\Models\Message;
+use App\Models\Page;
 use App\Models\Role;
 use App\Models\Site;
 use App\Models\TeamInvitation;
@@ -213,4 +215,56 @@ test('sending an invite creates an onboarding task for the new member and notifi
     expect(Message::where('site_id', $site->id)
         ->where('recipient_id', $user->id)->where('sender_id', $owner->id)
         ->where('body', 'like', '%assigned a task%')->exists())->toBeTrue();
+});
+
+test('a role scoped to certain pages limits page CRUD to just those pages', function () {
+    [$owner, $site] = rbacAccount();
+    $home = Page::create(['site_id' => $site->id, 'name' => 'Home', 'url' => 'home', 'keywords' => '']);
+    $about = Page::create(['site_id' => $site->id, 'name' => 'About', 'url' => 'about', 'keywords' => '']);
+    $member = User::factory()->create();
+    $role = Role::create([
+        'account_id' => $owner->id, 'name' => 'Home editor', 'slug' => 'home-editor',
+        'permissions' => ['pages.view', 'pages.manage'], 'page_scope' => [$home->id],
+    ]);
+    AccountMember::create(['account_id' => $owner->id, 'user_id' => $member->id, 'role_id' => $role->id, 'site_id' => $site->id]);
+
+    expect($site->allowsPageEdit($member, $home->id))->toBeTrue()
+        ->and($site->allowsPageEdit($member, $about->id))->toBeFalse()
+        ->and($site->allowsPageEdit($member, null))->toBeFalse()   // no creating
+        ->and($site->allowsPageEdit($owner, $about->id))->toBeTrue();
+
+    // Enforcement: the Pages admin refuses out-of-scope edits and deletes.
+    Livewire::actingAs($member)->test(PageComponent::class, ['site' => $site])
+        ->call('deletePage', $about->id)->assertForbidden();
+    expect(Page::find($about->id))->not->toBeNull();
+    Livewire::actingAs($member)->test(PageComponent::class, ['site' => $site])
+        ->call('openEdit', $home->id)->assertOk();
+});
+
+test('the role editor saves a page scope and the description as long text', function () {
+    [$owner, $site] = rbacAccount();
+    $home = Page::create(['site_id' => $site->id, 'name' => 'Home', 'url' => 'home', 'keywords' => '']);
+    Page::create(['site_id' => $site->id, 'name' => 'About', 'url' => 'about', 'keywords' => '']);
+
+    Livewire::actingAs($owner)->test(SiteTeamPage::class, ['site' => $site])
+        ->call('openRoleEditor')
+        ->set('roleName', 'Landing editor')
+        ->set('roleDescription', str_repeat('Owns the landing page copy. ', 10))
+        ->set('rolePerms.pages__manage', true)
+        ->set('rolePageMode', 'selected')
+        ->set('rolePageIds.'.$home->id, true)
+        ->call('saveRole')->assertHasNoErrors();
+
+    $role = Role::where('account_id', $owner->id)->where('name', 'Landing editor')->first();
+    expect($role)->not->toBeNull()
+        ->and($role->page_scope)->toBe([$home->id])
+        ->and(strlen($role->description))->toBeGreaterThan(100);
+
+    // 'selected' with nothing ticked is refused.
+    Livewire::actingAs($owner)->test(SiteTeamPage::class, ['site' => $site])
+        ->call('openRoleEditor')
+        ->set('roleName', 'Empty scope')
+        ->set('rolePerms.pages__manage', true)
+        ->set('rolePageMode', 'selected')
+        ->call('saveRole')->assertHasErrors('rolePageIds');
 });

@@ -190,11 +190,11 @@
                                class="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
                         @error('roleName')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Description</label>
-                        <input wire:model="roleDescription" type="text" placeholder="What is this role for?"
-                               class="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
-                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">Description</label>
+                    <textarea wire:model="roleDescription" rows="3" placeholder="What is this role for? Who should hold it, and what are they responsible for?"
+                              class="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 resize-y"></textarea>
                 </div>
 
                 @foreach ($permissionGroups as $groupLabel => $perms)
@@ -203,7 +203,7 @@
                     <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
                         @foreach ($perms as $key => $label)
                         <label class="flex items-center gap-2.5 py-1 cursor-pointer select-none">
-                            <input type="checkbox" wire:model="rolePerms.{{ $key }}"
+                            <input type="checkbox" wire:model="rolePerms.{{ str_replace('.', '__', $key) }}"
                                    class="w-4 h-4 rounded border-gray-300 dark:border-white/20 text-indigo-600 focus:ring-indigo-500/40 bg-transparent">
                             <span class="text-sm text-gray-700 dark:text-gray-200">{{ $label }}</span>
                             <span class="ml-auto text-[10px] font-mono text-gray-300 dark:text-gray-600">{{ $key }}</span>
@@ -212,6 +212,38 @@
                     </div>
                 </div>
                 @endforeach
+
+                {{-- Page-level CRUD scope — applies when 'Create & edit pages' is on --}}
+                <div class="rounded-xl border border-gray-100 dark:border-white/[0.06] p-4">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Page access</p>
+                    <p class="text-[12px] text-gray-400 mt-0.5 mb-2.5">Applies when <span class="font-bold text-gray-500 dark:text-gray-300">Create &amp; edit pages</span> is ticked — limit the role to working on specific pages.</p>
+                    <div class="flex items-center gap-4 mb-2">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="radio" wire:model.live="rolePageMode" value="all" class="w-4 h-4 border-gray-300 dark:border-white/20 text-indigo-600 focus:ring-indigo-500/40">
+                            <span class="text-sm text-gray-700 dark:text-gray-200">All pages</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="radio" wire:model.live="rolePageMode" value="selected" class="w-4 h-4 border-gray-300 dark:border-white/20 text-indigo-600 focus:ring-indigo-500/40">
+                            <span class="text-sm text-gray-700 dark:text-gray-200">Only these pages</span>
+                        </label>
+                    </div>
+                    @if ($rolePageMode === 'selected')
+                        <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1 max-h-44 overflow-y-auto pr-1">
+                            @forelse ($sitePages as $pg)
+                                <label class="flex items-center gap-2.5 py-1 cursor-pointer select-none">
+                                    <input type="checkbox" wire:model="rolePageIds.{{ $pg->id }}"
+                                           class="w-4 h-4 rounded border-gray-300 dark:border-white/20 text-indigo-600 focus:ring-indigo-500/40 bg-transparent">
+                                    <span class="text-sm text-gray-700 dark:text-gray-200 truncate">{{ $pg->name }}</span>
+                                    <span class="ml-auto text-[10px] font-mono text-gray-300 dark:text-gray-600 truncate">/{{ ltrim($pg->url, '/') }}</span>
+                                </label>
+                            @empty
+                                <p class="text-xs text-gray-400 col-span-2">This site has no pages yet.</p>
+                            @endforelse
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-2">Members with this role can edit and delete only the ticked pages — and cannot create new ones.</p>
+                        @error('rolePageIds')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror
+                    @endif
+                </div>
 
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" wire:click="closeRoleEditor" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 border border-gray-200 dark:border-white/[0.08]">Cancel</button>

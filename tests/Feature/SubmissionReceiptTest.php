@@ -72,7 +72,8 @@ test('the receipt uses the admin-edited subject and body', function () {
 test('the emails editor saves subject + sections and requires forms.manage', function () {
     [$owner, $site] = receiptSite();
 
-    $component = Livewire::actingAs($owner)->test(SiteEmailsPage::class, ['site' => $site]);
+    $component = Livewire::actingAs($owner)->test(SiteEmailsPage::class, ['site' => $site])
+        ->call('edit', 'receipt');
     // The default sections load; edit the intro copy and save.
     $sections = $component->get('sections');
     $introIndex = collect($sections)->search(fn ($s) => $s['key'] === 'intro');

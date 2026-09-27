@@ -558,3 +558,40 @@ test('removing an item from the panel refreshes the preview immediately', functi
         ->assertDispatched('olx-reload-frame');
     expect($site->products()->count())->toBe(0);
 });
+
+test('display-form field names (Headline, CTA Label) register once and never loop', function () {
+    [$user, $site] = previewSite();
+    Page::factory()->create(['site_id' => $site->id, 'name' => 'Donate', 'url' => '/donate']);
+    $marker = ['kind' => 'component', 'key' => 'donateCta',
+        'fields' => [
+            ['field' => 'Headline', 'type' => 'text', 'value' => 'Give today'],
+            ['field' => 'Text', 'type' => 'text', 'value' => 'Every gift counts'],
+            ['field' => 'CTA Label', 'type' => 'text', 'value' => 'Donate'],
+        ]];
+
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site]);
+    $lw->call('registerMarkers', [$marker]);
+    $cta = $site->contentComponents()->where('name', 'Donate Cta')->first();
+    expect($cta)->not->toBeNull()->and($cta->nodes()->count())->toBe(3);
+
+    // Re-registering (what every preview reload does) must add NOTHING —
+    // this was the endless "New fields added: Donate Cta" reload loop.
+    $lw->call('registerMarkers', [$marker]);
+    $lw->call('registerMarkers', [$marker]);
+    expect($cta->nodes()->count())->toBe(3)
+        ->and($cta->nodes()->pluck('label')->sort()->values()->all())->toBe(['Cta Label', 'Headline', 'Text']);
+});
+
+test('a collection resolves across separator drift (bible_studies vs bible-studies)', function () {
+    [$user, $site] = previewSite();
+    $col = Collection::create(['site_id' => $site->id, 'name' => 'Bible Studies', 'slug' => 'bible_studies',
+        'type' => 'grid', 'is_public' => true, 'fields' => [['key' => 'title', 'name' => 'title', 'label' => 'Title', 'type' => 'text']]]);
+
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site]);
+    $lw->call('onEditSelect', null, 'bible-studies', 'collection');
+    expect($lw->get('edit')['type'] ?? null)->toBe('collection')
+        ->and($lw->get('edit')['id'] ?? null)->toBe($col->id);
+
+    // A key that matches nothing tells the user instead of silently no-oping.
+    $lw->call('onEditSelect', null, 'ghost-panel', 'collection')->assertDispatched('toast');
+});

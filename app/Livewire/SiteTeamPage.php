@@ -44,6 +44,12 @@ class SiteTeamPage extends Component
 
     public string $roleDescription = '';
 
+    /** 'all' or 'selected' — page-level CRUD scope for the role. */
+    public string $rolePageMode = 'all';
+
+    /** page id => bool, used when rolePageMode === 'selected'. */
+    public array $rolePageIds = [];
+
     /** permission key => bool */
     public array $rolePerms = [];
 
@@ -255,15 +261,21 @@ class SiteTeamPage extends Component
     {
         $this->guard();
         $this->editingRoleId = $roleId;
-        $this->rolePerms = array_fill_keys(Permissions::keys(), false);
+        $this->rolePerms = array_fill_keys(array_map(fn ($k) => str_replace('.', '__', $k), Permissions::keys()), false);
+        $this->rolePageMode = 'all';
+        $this->rolePageIds = [];
 
         if ($roleId) {
             $role = Role::where('account_id', $this->accountId)->findOrFail($roleId);
             $this->roleName = $role->name;
             $this->roleDescription = (string) $role->description;
+            if (! empty($role->page_scope)) {
+                $this->rolePageMode = 'selected';
+                $this->rolePageIds = array_fill_keys($role->page_scope, true);
+            }
             $all = in_array('*', $role->permissions ?? [], true);
             foreach (Permissions::keys() as $key) {
-                $this->rolePerms[$key] = $all || $role->allows($key);
+                $this->rolePerms[str_replace('.', '__', $key)] = $all || $role->allows($key);
             }
         } else {
             $this->roleName = '';
@@ -273,7 +285,7 @@ class SiteTeamPage extends Component
 
     public function closeRoleEditor(): void
     {
-        $this->reset(['editingRoleId', 'roleName', 'roleDescription', 'rolePerms']);
+        $this->reset(['editingRoleId', 'roleName', 'roleDescription', 'rolePerms', 'rolePageMode', 'rolePageIds']);
     }
 
     public function saveRole(): void
@@ -282,7 +294,19 @@ class SiteTeamPage extends Component
         $this->validate(['roleName' => ['required', 'string', 'max:60']]);
 
         // Only catalog keys can ever be stored.
-        $permissions = array_values(array_filter(Permissions::keys(), fn ($k) => ! empty($this->rolePerms[$k])));
+        $permissions = array_values(array_filter(Permissions::keys(), fn ($k) => ! empty($this->rolePerms[str_replace('.', '__', $k)])));
+
+        // Page-level scope: only ids belonging to THIS site can be stored.
+        $pageScope = null;
+        if ($this->rolePageMode === 'selected' && in_array('pages.manage', $permissions, true)) {
+            $valid = $this->site->pages()->pluck('id')->all();
+            $pageScope = array_values(array_intersect(array_keys(array_filter($this->rolePageIds)), $valid));
+            if ($pageScope === []) {
+                $this->addError('rolePageIds', 'Pick at least one page, or allow all pages.');
+
+                return;
+            }
+        }
 
         if ($this->editingRoleId) {
             $role = Role::where('account_id', $this->accountId)->findOrFail($this->editingRoleId);
@@ -290,6 +314,7 @@ class SiteTeamPage extends Component
                 'name' => $this->roleName,
                 'description' => $this->roleDescription ?: null,
                 'permissions' => $permissions,
+                'page_scope' => $pageScope,
             ]);
             AccountActivity::roleSaved($this->accountId, $this->roleName, isNew: false);
         } else {
@@ -299,6 +324,7 @@ class SiteTeamPage extends Component
                 'slug' => Role::slugFor($this->accountId, $this->roleName),
                 'description' => $this->roleDescription ?: null,
                 'permissions' => $permissions,
+                'page_scope' => $pageScope,
             ]);
             AccountActivity::roleSaved($this->accountId, $this->roleName, isNew: true);
         }
@@ -329,6 +355,7 @@ class SiteTeamPage extends Component
     {
         return view('livewire.site-team-page', [
             'permissionGroups' => Permissions::groups(),
+            'sitePages' => $this->site->pages()->orderBy('name')->get(['id', 'name', 'url']),
         ]);
     }
 }

@@ -18,9 +18,9 @@ class Role extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['account_id', 'name', 'slug', 'description', 'permissions', 'is_system'];
+    protected $fillable = ['account_id', 'name', 'slug', 'description', 'permissions', 'page_scope', 'is_system'];
 
-    protected $casts = ['permissions' => 'array', 'is_system' => 'boolean'];
+    protected $casts = ['permissions' => 'array', 'page_scope' => 'array', 'is_system' => 'boolean'];
 
     public function account(): BelongsTo
     {
@@ -43,6 +43,21 @@ class Role extends Model
         $perms = $this->permissions ?? [];
 
         return in_array('*', $perms, true) || in_array($permission, $perms, true);
+    }
+
+    /**
+     * Page-level CRUD scope: null/empty = every page; otherwise only the
+     * listed page ids may be edited or deleted (and no new pages created).
+     */
+    public function allowsPage(string $pageId): bool
+    {
+        return empty($this->page_scope) || in_array($pageId, $this->page_scope, true);
+    }
+
+    /** A scoped role may not create pages — only work the listed ones. */
+    public function allowsPageCreate(): bool
+    {
+        return empty($this->page_scope);
     }
 
     /**

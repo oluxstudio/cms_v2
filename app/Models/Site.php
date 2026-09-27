@@ -288,6 +288,27 @@ class Site extends Model
      * per-site memberships (site_user pivot) map onto the default role
      * templates so old data keeps working.
      */
+    /**
+     * Page-level CRUD check: pages.manage plus the role's page scope
+     * (owners, supers and unscoped roles pass; pass null to ask about
+     * CREATING a page, which scoped roles may not do).
+     */
+    public function allowsPageEdit(?User $user, ?string $pageId): bool
+    {
+        if (! $this->allows($user, 'pages.manage')) {
+            return false;
+        }
+        if ($user->isSuper() || ($this->user_id !== null && $this->user_id === $user->id)) {
+            return true;
+        }
+        $role = $user->membershipFor($this)?->role;
+        if (! $role) {
+            return true; // legacy site_user membership — no page scoping
+        }
+
+        return $pageId === null ? $role->allowsPageCreate() : $role->allowsPage($pageId);
+    }
+
     public function allows(?User $user, ?string $permission): bool
     {
         if (! $user) {
