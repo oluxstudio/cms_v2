@@ -92,10 +92,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Health flag: a production platform without a DNS target silently breaks
-        // client domain connection — surface it in the logs once a day.
-        if (app()->environment('production') && blank(config('publishing.dns_target'))
-            && Cache::add('dns-target-missing-boot:'.now()->toDateString(), true, now()->addDay())) {
-            Log::warning('PLATFORM_DNS_TARGET is not configured — domain connection is disabled for clients.');
+        // client domain connection — surface it in the logs once a day. Must
+        // never break boot (composer's package:discover runs with no DB).
+        try {
+            if (app()->environment('production') && blank(config('publishing.dns_target'))
+                && Cache::add('dns-target-missing-boot:'.now()->toDateString(), true, now()->addDay())) {
+                Log::warning('PLATFORM_DNS_TARGET is not configured — domain connection is disabled for clients.');
+            }
+        } catch (\Throwable) {
+            // Cache store unavailable (fresh checkout, CI) — skip the flag.
         }
 
         $this->defineApiRateLimits();
