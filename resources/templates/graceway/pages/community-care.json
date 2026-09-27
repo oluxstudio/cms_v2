@@ -15,7 +15,85 @@
         {
             "type": "app:graceway:community-care-overview",
             "name": "Community Care Overview",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Help Lead",
+                    "type": "text",
+                    "value": "Need help right now?",
+                    "order": 0,
+                    "description": "copy:cc.helpLead"
+                },
+                {
+                    "label": "Help Pre",
+                    "type": "text",
+                    "value": "Come to the church office any weekday morning, or call",
+                    "order": 1,
+                    "description": "copy:cc.helpPre"
+                },
+                {
+                    "label": "Help Post",
+                    "type": "text",
+                    "value": "Food parcels, a warm room, and someone to talk to \u2014 no appointment, no judgement.",
+                    "order": 2,
+                    "description": "copy:cc.helpPost"
+                },
+                {
+                    "label": "Programmes Eyebrow",
+                    "type": "text",
+                    "value": "What we do",
+                    "order": 3,
+                    "description": "copy:cc.programmesEyebrow"
+                },
+                {
+                    "label": "Programmes Title",
+                    "type": "text",
+                    "value": "Our outreach programmes",
+                    "order": 4,
+                    "description": "copy:cc.programmesTitle"
+                },
+                {
+                    "label": "Story Img",
+                    "type": "image",
+                    "value": "/assets/images/circle-2.jpg",
+                    "order": 5,
+                    "description": "copy:cc.story.img"
+                },
+                {
+                    "label": "Story Alt",
+                    "type": "text",
+                    "value": "A neighbour helped by the food pantry",
+                    "order": 6,
+                    "description": "copy:cc.story.alt"
+                },
+                {
+                    "label": "Story Quote",
+                    "type": "text",
+                    "value": "\"I came for a food parcel and stayed for the cup of tea. Six months later I'm the one pouring it for someone else.\"",
+                    "order": 7,
+                    "description": "copy:cc.story.quote"
+                },
+                {
+                    "label": "Story Cite",
+                    "type": "text",
+                    "value": "\u2014 Maria, food pantry volunteer",
+                    "order": 8,
+                    "description": "copy:cc.story.cite"
+                },
+                {
+                    "label": "Involve Eyebrow",
+                    "type": "text",
+                    "value": "Get involved",
+                    "order": 9,
+                    "description": "copy:cc.involveEyebrow"
+                },
+                {
+                    "label": "Involve Title",
+                    "type": "text",
+                    "value": "Three ways to help this week",
+                    "order": 10,
+                    "description": "copy:cc.involveTitle"
+                }
+            ]
         },
         {
             "type": "app:graceway:donate-cta",

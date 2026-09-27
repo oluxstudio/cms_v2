@@ -12,7 +12,7 @@ class DomainOrder extends Model
     use HasUlids;
 
     protected $fillable = [
-        'user_id', 'site_id', 'domain', 'years', 'price_cents', 'plan', 'status',
+        'user_id', 'site_id', 'domain', 'type', 'years', 'price_cents', 'plan', 'status',
         'stripe_session_id', 'registrar_ref', 'error', 'expires_at',
     ];
 

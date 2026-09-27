@@ -1,14 +1,27 @@
-<div class="h-full overflow-y-auto p-5 sm:p-6" wire:key="invoices-{{ $site->id }}">
+@php
+    $s = $this->stats; $bal = $this->balance; $hero = $this->hero;
+    $accent = 'var(--primary)'; // APP theme token (orange light / blue dark)
+    $delta = fn (?int $d) => $d === null ? null : (($d >= 0 ? '▲ ' : '▼ ').abs($d).'% vs last month');
+    $donutColors = [$accent, '#f59e0b', '#10b981', '#ec4899'];
+@endphp
+<div wire:key="invoices-{{ $site->id }}">
+<x-tri-layout :site-name="$site->name" :labels="['📊 Billing', '🧾 Invoices', '⚡ Quick access']">
 
-    @php
-        $s = $this->stats; $bal = $this->balance; $hero = $this->hero;
-        $accent = 'var(--primary)'; // APP theme token (orange light / blue dark)
-        $delta = fn (?int $d) => $d === null ? null : (($d >= 0 ? '▲ ' : '▼ ').abs($d).'% vs last month');
-        $donutColors = [$accent, '#f59e0b', '#10b981', '#ec4899'];
-    @endphp
+    {{-- ── LEFT rail: this month's numbers ── --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile accent="ink" :value="\App\Support\Money::format($bal['cents'], $site->currency)"
+                label="Total revenue this month" :sub="$delta($bal['delta']) ?? 'this month'" />
+        <x-tile accent="lime" :value="$hero['invoices']"
+                label="Invoices sent this month" :sub="$delta($hero['invDelta']) ?? 'this month'" />
+        <x-tile accent="lavender" :value="$hero['clients']"
+                label="Clients billed this month" :sub="$delta($hero['cliDelta']) ?? 'this month'" />
+        <x-tile accent="cocoa" :value="$s['outstanding']"
+                label="Outstanding balance" :sub="$s['overdueN'] > 0 ? '⚠ '.$s['overdueN'].' overdue' : 'nothing overdue'" />
+    </div>
+    </x-slot:rail>
 
-    <x-carousel :labels="['📊 Analytics', '🧾 Invoices']" :start="1" class="lg:flex-col">
-    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+<div>
 
     {{-- ══ Hero greeting ══ --}}
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -30,21 +43,9 @@
         </p>
     @endunless
 
-    {{-- ══ Row: stat tiles + revenue chart ══ --}}
-    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 mb-4">
-        <div class="xl:col-span-2 grid grid-cols-2 gap-4">
-            <x-tile accent="ink" :value="\App\Support\Money::format($bal['cents'], $site->currency)"
-                    label="Total revenue this month" :sub="$delta($bal['delta']) ?? 'this month'" />
-            <x-tile accent="lime" :value="$hero['invoices']"
-                    label="Invoices sent this month" :sub="$delta($hero['invDelta']) ?? 'this month'" />
-            <x-tile accent="lavender" :value="$hero['clients']"
-                    label="Clients billed this month" :sub="$delta($hero['cliDelta']) ?? 'this month'" />
-            <x-tile accent="cocoa" :value="$s['outstanding']"
-                    label="Outstanding balance" :sub="$s['overdueN'] > 0 ? '⚠ '.$s['overdueN'].' overdue' : 'nothing overdue'" />
-        </div>
-
-        {{-- Revenue chart (hatched past months, accent current) --}}
-        <div class="xl:col-span-3 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-5">
+    {{-- ══ Revenue chart (hatched past months, accent current) ══ --}}
+    <div class="grid grid-cols-1 gap-4 mb-4">
+        <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-5">
             <div class="flex items-baseline justify-between mb-3">
                 <h2 class="text-sm font-bold text-gray-900 dark:text-white">Revenue</h2>
                 <span class="text-[11px] text-gray-400">last 6 months · all sources</span>
@@ -182,9 +183,7 @@
                     style="background:{{ $accent }}">✨ Generate draft</button>
         </div>
     </div>
-    </x-carousel.slide>
 
-    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {{-- ── New invoices (drafts, not yet sent) ── --}}
         <div class="lg:col-span-2">
@@ -237,11 +236,7 @@
                             <option value="{{ $f }}">{{ $f === 'all' ? 'All statuses' : ucfirst($f) }}</option>
                         @endforeach
                     </select>
-                    <div class="relative w-full sm:w-auto">
-                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-xs">⌕</span>
-                        <input type="search" wire:model.live.debounce.400ms="search" placeholder="Search"
-                               class="w-full sm:w-36 text-[11px] font-medium rounded-lg border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] pl-7 pr-2 py-1.5 text-gray-700 dark:text-gray-200">
-                    </div>
+                    <x-field.search model="search" placeholder="Search" class="sm:w-40" />
                 </div>
                 @forelse($this->invoices as $inv)
                     <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
@@ -319,8 +314,8 @@
         .ivc .ivc-bar:hover .ivc-ghost { opacity: .75; }
     </style>
 
-    </x-carousel.slide>
-    </x-carousel>
+</div>
+</x-tri-layout>
 
     {{-- ══════════ CREATE / EDIT — form lightbox ══════════ --}}
     @if($formOpen)
@@ -477,4 +472,5 @@
             </div>{{-- /drawer --}}
         </div>
     @endif
+</div>
 </div>

@@ -42,10 +42,15 @@ class PlatformBilling
         $tier = config("plans.tiers.{$plan}");
         $cents = $sub->priceFor($plan);
 
-        $session = $this->client()->checkout->sessions->create([
+        // Stripe rejects sending BOTH customer and customer_email — even a null one.
+        $who = $sub->stripe_customer_id
+            ? ['customer' => $sub->stripe_customer_id]
+            : ['customer_email' => $user->email];
+
+        $session = $this->client()->checkout->sessions->create($who + [
             'mode' => 'subscription',
-            'customer_email' => $sub->stripe_customer_id ? null : $user->email,
-            'customer' => $sub->stripe_customer_id,
+            // Ad-hoc price_data has no product tax code — opt out of Managed Payments.
+            'managed_payments' => ['enabled' => false],
             'line_items' => [[
                 'price_data' => [
                     'currency' => 'gbp',
@@ -72,7 +77,7 @@ class PlatformBilling
     public function activateFromSession(User $user, string $sessionId): ?string
     {
         $session = $this->client()->checkout->sessions->retrieve($sessionId);
-        if (! $session || (int) ($session->metadata->user_id ?? 0) !== $user->id) {
+        if (! $session || (string) ($session->metadata->user_id ?? '') !== (string) $user->id) {
             return null;
         }
         if (! in_array($session->payment_status, ['paid', 'no_payment_required'], true)) {
@@ -95,7 +100,12 @@ class PlatformBilling
 
                 return;
             }
-            $user = User::find((int) ($session->metadata->user_id ?? 0));
+            if (($session->metadata->kind ?? '') === 'template') {
+                app(TemplateCommerce::class)->fulfilFromSession($session);
+
+                return;
+            }
+            $user = User::find((string) ($session->metadata->user_id ?? ''));
             $plan = (string) ($session->metadata->plan ?? '');
             if ($user && $plan !== '') {
                 $this->activate($user, $plan, $session);

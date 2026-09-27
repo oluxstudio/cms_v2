@@ -18,29 +18,29 @@ const sendForm = async (e: Event) => {
       <!-- about the prayer watch -->
       <div class="pr-intro">
         <div class="pr-intro-text">
-          <span class="ct-chip">{{ prayer.intro.chip }}</span>
-          <h2>{{ prayer.intro.title }}</h2>
+          <span class="ct-chip" data-olx-field="introChip">{{ oluxCms.t('Intro Chip', prayer.intro.chip) }}</span>
+          <h2 data-olx-field="introTitle">{{ oluxCms.t('Intro Title', prayer.intro.title) }}</h2>
           <p v-for="(para, pi) in prayer.intro.paragraphs" :key="pi">{{ para }}</p>
           <ul class="pr-facts">
             <li v-for="f in prayer.intro.facts" :key="f.label"><b>{{ f.label }}</b><span>{{ f.value }}</span></li>
           </ul>
         </div>
-        <img class="pr-intro-img" :src="prayer.intro.img.src" :alt="prayer.intro.img.alt">
+        <img class="pr-intro-img" :src="oluxCms.t('Intro Img Src', prayer.intro.img.src)" data-olx-field="introImgSrc" :alt="oluxCms.t('Intro Img Alt', prayer.intro.img.alt)">
       </div>
 
       <!-- verse banner -->
       <div class="pr-verse">
-        <p class="pr-verse-label">{{ prayer.verse.label }}</p>
-        <blockquote>{{ prayer.verse.text }} <cite>{{ prayer.verse.cite }}</cite></blockquote>
+        <p class="pr-verse-label" data-olx-field="verseLabel">{{ oluxCms.t('Verse Label', prayer.verse.label) }}</p>
+        <blockquote data-olx-field="verseText">{{ oluxCms.t('Verse Text', prayer.verse.text) }} <cite data-olx-field="verseCite">{{ oluxCms.t('Verse Cite', prayer.verse.cite) }}</cite></blockquote>
       </div>
 
       <!-- prayer rhythms -->
       <div class="section-head center">
-        <p class="eyebrow">{{ prayer.rhythmsEyebrow }}</p>
-        <h2>{{ prayer.rhythmsTitle }}</h2>
+        <p class="eyebrow" data-olx-field="rhythmsEyebrow">{{ oluxCms.t('Rhythms Eyebrow', prayer.rhythmsEyebrow) }}</p>
+        <h2 data-olx-field="rhythmsTitle">{{ oluxCms.t('Rhythms Title', prayer.rhythmsTitle) }}</h2>
       </div>
-      <div class="pr-rhythms">
-        <article v-for="r in rhythms" :key="r.title" class="pr-card">
+      <div class="pr-rhythms" data-olx-panel="prayer-rhythms">
+        <article data-olx-item v-for="r in rhythms" :key="r.title" class="pr-card">
           <span class="icon">{{ r.icon }}</span>
           <h3>{{ r.title }}</h3>
           <p class="pr-when">{{ r.when }} · {{ r.where }}</p>
@@ -50,9 +50,9 @@ const sendForm = async (e: Event) => {
 
       <!-- prayer request form -->
       <div class="ct-form-panel pr-form-panel">
-        <span class="ct-chip">{{ prayer.form.chip }}</span>
-        <h2>{{ prayer.form.title }}</h2>
-        <p class="ct-sub">{{ prayer.form.sub }}</p>
+        <span class="ct-chip" data-olx-field="formChip">{{ oluxCms.t('Form Chip', prayer.form.chip) }}</span>
+        <h2 data-olx-field="formTitle">{{ oluxCms.t('Form Title', prayer.form.title) }}</h2>
+        <p class="ct-sub" data-olx-field="formSub">{{ oluxCms.t('Form Sub', prayer.form.sub) }}</p>
 
         <form v-if="!sent" class="ct-form" @submit.prevent="sendForm">
           <div class="row">
@@ -65,7 +65,7 @@ const sendForm = async (e: Event) => {
           <button class="btn ct-send" type="submit" :disabled="sending">{{ sending ? 'Sending…' : 'Send Prayer Request' }} <span class="arrow">↗</span></button>
         </form>
         <div v-else class="ct-thanks">
-          <p>{{ prayer.form.thanks }}</p>
+          <p data-olx-field="formThanks">{{ oluxCms.t('Form Thanks', prayer.form.thanks) }}</p>
           <button data-olx-field="text" class="btn ghost" type="button" @click="sent = false">{{ oluxCms.t('Text', oluxFb['Text']) }}</button>
         </div>
       </div>

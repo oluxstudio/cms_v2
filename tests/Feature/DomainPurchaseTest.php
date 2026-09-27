@@ -1,12 +1,14 @@
 <?php
 
 use App\Livewire\DomainSearch;
+use App\Models\Alert;
 use App\Models\DomainOrder;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\Domains\DomainPurchase;
 use App\Services\Domains\Registrar;
 use Livewire\Livewire;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 function domainSite(): array
 {
@@ -44,7 +46,7 @@ test('buying without Stripe configured registers instantly, activates the plan a
         ->assertSee($label.'.co.uk')
         ->set('plan', 'pro')
         ->call('buy', $label.'.co.uk')
-        ->assertRedirect(route('site.publish', $site->id));
+        ->assertRedirect(route('site.publish', $site->name));
 
     $order = DomainOrder::where('site_id', $site->id)->first();
     expect($order->status)->toBe('registered')
@@ -87,6 +89,8 @@ test('fulfilment is idempotent and a registrar failure is recorded, not hidden',
         }
 
         public function pointAt(string $d, string $t): void {}
+
+        public function renew(string $d, int $y): void {}
     };
     app()->instance(Registrar::class, $failing);
     app()->forgetInstance(DomainPurchase::class);
@@ -101,4 +105,70 @@ test('non-owners cannot buy domains for a site', function () {
     Livewire::actingAs(User::factory()->create())
         ->test(DomainSearch::class, ['site' => $site])
         ->assertForbidden();
+});
+
+// ─── Phase 3: renewals ───────────────────────────────────────────
+
+test('renewing without Stripe extends the expiry instantly', function () {
+    config(['domains.driver' => 'fake', 'services.stripe_platform.secret' => null]);
+    [$owner, $site] = domainSite();
+
+    $registered = DomainOrder::create([
+        'user_id' => $owner->id, 'site_id' => $site->id, 'domain' => $d = 'renewme-'.uniqid().'.com',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1500,
+        'status' => 'registered', 'expires_at' => now()->addDays(20),
+    ]);
+    $site->update(['domain' => $d]);
+
+    $back = app(DomainPurchase::class)
+        ->startRenewal($owner, $registered, 'http://x/back');
+
+    expect($back)->toBe('http://x/back');
+    $renewal = DomainOrder::where('domain', $d)->where('type', 'renew')->first();
+    expect($renewal->status)->toBe('registered')
+        ->and($renewal->expires_at->toDateString())->toBe(now()->addDays(20)->addYear()->toDateString())
+        ->and($registered->fresh()->expires_at->toDateString())->toBe(now()->addDays(20)->addYear()->toDateString());
+});
+
+test('only registered orders can be renewed', function () {
+    config(['domains.driver' => 'fake', 'services.stripe_platform.secret' => null]);
+    [$owner, $site] = domainSite();
+    $pending = DomainOrder::create([
+        'user_id' => $owner->id, 'site_id' => $site->id, 'domain' => 'nope-'.uniqid().'.com',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1500, 'status' => 'pending',
+    ]);
+
+    app(DomainPurchase::class)->startRenewal($owner, $pending, 'http://x');
+})->throws(HttpException::class);
+
+test('the renewal sweep raises deduped expiry alerts', function () {
+    [$owner, $site] = domainSite();
+    DomainOrder::create([
+        'user_id' => $owner->id, 'site_id' => $site->id, 'domain' => $d = 'soon-'.uniqid().'.com',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1500,
+        'status' => 'registered', 'expires_at' => now()->addDays(5),
+    ]);
+    $site->update(['domain' => $d]);
+
+    $this->artisan('domains:renewal-sweep')->assertSuccessful();
+    $this->artisan('domains:renewal-sweep')->assertSuccessful(); // dedupe: still one alert
+
+    $alerts = Alert::where('site_id', $site->id)->where('type', 'domain')->get();
+    expect($alerts)->toHaveCount(1)
+        ->and($alerts->first()->level)->toBe('error')          // ≤7 days → urgent
+        ->and($alerts->first()->title)->toContain($d);
+});
+
+test('the sweep ignores domains the site no longer uses', function () {
+    [$owner, $site] = domainSite();
+    DomainOrder::create([
+        'user_id' => $owner->id, 'site_id' => $site->id, 'domain' => 'old-'.uniqid().'.com',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1500,
+        'status' => 'registered', 'expires_at' => now()->addDays(5),
+    ]);
+    // site->domain stays {name}.test — the expiring order is for a domain not in use
+
+    $this->artisan('domains:renewal-sweep')->assertSuccessful();
+
+    expect(Alert::where('site_id', $site->id)->where('type', 'domain')->count())->toBe(0);
 });

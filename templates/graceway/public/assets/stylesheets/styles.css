@@ -131,7 +131,7 @@ h3 { font-weight: 700; }
 
 .mobile-menu { display: none; }
 
-@media (max-width: 880px) {
+@media (max-width: 1230px) {
   .site-header .container { height: 105px; gap: 1rem; }
   .logo { font-size: 1.15rem; }
   .logo .logo-img { width: 110px; height: 110px; }
@@ -163,7 +163,7 @@ h3 { font-weight: 700; }
   -webkit-mask-image: radial-gradient(85% 65% at 25% 30%, #000 30%, transparent 78%);
           mask-image: radial-gradient(85% 65% at 25% 30%, #000 30%, transparent 78%); }
 .page-hero .container { position: relative; z-index: 1; }
-@media (max-width: 880px) { .page-hero { margin-top: -130px; padding-top: calc(72px + 64px); } }
+@media (max-width: 1230px) { .page-hero { margin-top: -130px; padding-top: calc(72px + 64px); } }
 .page-hero .eyebrow { color: #f3e6d8; }
 .page-hero h1 { color: #fff; }
 .page-hero p { color: #f3e6d8; margin-top: .5rem; max-width: 620px; font-size: 1.1rem; }
@@ -298,7 +298,7 @@ h3 { font-weight: 700; }
 
 /* ── Mobile hero: full-screen 2-column pill grid over an abstract gradient;
       tapping a pill opens its text as a bottom sheet ── */
-@media (max-width: 880px) {
+@media (max-width:1230px) {
   .hero { padding: 80px 0 24px; margin-top: -105px; display: block; height: auto; min-height: 100svh; overflow: hidden;
     background-color: var(--color-secondary); /* solid base from the theme token */
     background-image:
@@ -769,7 +769,8 @@ box-shadow: 0 0 10px -5px;
 
 /* Service times ribbon */
 .times { background: var(--color-secondary); }
-.times .container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding-top: 2rem; padding-bottom: 2rem; }
+/* auto-fit: the grid tracks the Services collection size instead of a fixed 4 */
+.times .container { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1.5rem; padding-top: 2rem; padding-bottom: 2rem; }
 @media (max-width: 720px) { .times .container { grid-template-columns: 1fr; } }
 .times h3 { color: #ffb44d; font-family: var(--font-default); font-size: .82rem; text-transform: uppercase; letter-spacing: .14em; margin-bottom: .2rem; }
 .times p { color: #fff; font-weight: 600; }
@@ -1158,7 +1159,7 @@ a.ys-leader:hover .ys-leader-go { transform: translateX(3px); color: var(--color
 .ys-leader-go { margin-left: auto; color: #c6cdd4; font-weight: 800; transition: transform .2s, color .2s; }
 
 /* breadcrumbs (on the dark page hero) */
-.breadcrumbs { margin-bottom: 1.1rem; font-size: 1rem; font-family: var(--font-secondary); }
+.breadcrumbs { margin-top: 1.5rem; margin-bottom: 1.1rem; font-size: 1rem; font-family: var(--font-secondary); }
 .breadcrumbs ol { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .breadcrumbs li { display: flex; align-items: center; gap: .5rem; color: #fff; font-weight: 700; }
 .breadcrumbs li + li::before { content: '›'; color: rgba(255, 255, 255, .45); font-weight: 400; }
@@ -1498,7 +1499,7 @@ a.ys-leader:hover .ys-leader-go { transform: translateX(3px); color: var(--color
 .ct-row .icon { width: 44px; height: 44px; border-radius: 12px; background: #fdeef3; display: grid; place-items: center;
   font-size: 1.15rem; flex: 0 0 auto; }
 .ct-row b { display: block; font-size: .95rem; color: var(--color-secondary); }
-.ct-row a, .ct-row p { font-size: .88rem; color: #55606b; }
+.ct-row a, .ct-row p { font-size: 1.25rem; color: #55606b; }
 .ct-row a:hover { color: var(--color-primary); }
 
 .ct-form-panel { background: #fdf1e9; border-radius: 20px; padding: 2.4rem; }

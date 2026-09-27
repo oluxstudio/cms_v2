@@ -32,19 +32,19 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <div class="about-panel">
             <div class="about-flex">
               <div class="about-text">
-                <span class="ct-chip">{{ about.chip }}</span>
-                <h2>{{ about.title }}</h2>
-                <p class="ct-sub">{{ about.intro }}</p>
+                <span class="ct-chip" data-olx-field="chip">{{ oluxCms.t('Chip', about.chip) }}</span>
+                <h2 data-olx-field="title">{{ oluxCms.t('Title', about.title) }}</h2>
+                <p class="ct-sub" data-olx-field="intro">{{ oluxCms.t('Intro', about.intro) }}</p>
 
-                <div v-for="s in story" :key="s.title" class="about-story">
+                <div data-olx-item data-olx-panel="about-story" v-for="s in story" :key="s.title" class="about-story">
                   <h3>{{ s.title }}</h3>
                   <p>{{ s.text }}</p>
                 </div>
               </div>
 
               <!-- photo column — click to open lightbox -->
-              <div class="about-media">
-                <figure
+              <div class="about-media" data-olx-panel="about-photos">
+                <figure data-olx-item
                   v-for="(p, i) in photos" :key="p.img"
                   role="button" tabindex="0" :aria-label="`Open ${p.title}`"
                   @click="lightbox = i" @keydown.enter="lightbox = i"
@@ -56,8 +56,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </div>
 
           <!-- at-a-glance: horizontal facts strip -->
-          <div class="ct-info about-facts">
-            <div v-for="f in facts" :key="f.label" class="ct-row">
+          <div class="ct-info about-facts" data-olx-panel="about-facts">
+            <div data-olx-item v-for="f in facts" :key="f.label" class="ct-row">
               <span class="icon">{{ f.icon }}</span>
               <div>
                 <b>{{ f.label }}</b>
@@ -67,8 +67,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </div>
 
           <!-- mission · vision · pledge -->
-          <div class="about-pillars">
-            <div v-for="p in pillars" :key="p.chip" class="pillar">
+          <div class="about-pillars" data-olx-panel="about-pillars">
+            <div data-olx-item v-for="p in pillars" :key="p.chip" class="pillar">
               <span class="ct-chip">{{ p.chip }}</span>
               <h3>{{ p.title }}</h3>
               <p>{{ p.text }}</p>
@@ -80,8 +80,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <aside class="about-side">
           <!-- our mission -->
           <div class="side-card side-mission">
-            <h3>{{ about.sideMission.title }}</h3>
-            <p>{{ about.sideMission.text }}</p>
+            <h3 data-olx-field="sideMissionTitle">{{ oluxCms.t('Side Mission Title', about.sideMission.title) }}</h3>
+            <p data-olx-field="sideMissionText">{{ oluxCms.t('Side Mission Text', about.sideMission.text) }}</p>
           </div>
 
           <!-- ministries -->

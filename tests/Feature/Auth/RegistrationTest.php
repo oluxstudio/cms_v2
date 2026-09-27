@@ -39,7 +39,7 @@ test('new users register in two steps: email a code, then verify to create the a
     $component->set('code', $code)
         ->call('verifyCode')
         ->assertHasNoErrors()
-        ->assertRedirect(route('start', absolute: false));
+        ->assertRedirect(route('home', absolute: false));
 
     $this->assertAuthenticated();
     $user = User::where('email', 'test@example.com')->first();

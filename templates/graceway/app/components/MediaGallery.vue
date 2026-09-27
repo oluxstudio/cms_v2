@@ -96,8 +96,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </div>
 
       <!-- masonry of mixed media — click any item to open the lightbox -->
-      <div class="gallery-grid">
-        <figure
+      <div class="gallery-grid" data-olx-panel="media">
+        <figure data-olx-item
           v-for="(g, i) in shown" :key="g.title + g.date"
           class="gallery-item clickable" :class="`is-${g.type}`"
           role="button" tabindex="0" :aria-label="`Open ${g.title}`"

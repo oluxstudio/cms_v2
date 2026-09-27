@@ -10,7 +10,29 @@
         {
             "type": "app:graceway:hero",
             "name": "Hero",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Connecting believers,",
+                    "order": 0,
+                    "description": "copy:hero.title"
+                },
+                {
+                    "label": "Title Highlight",
+                    "type": "text",
+                    "value": "strengthening faith",
+                    "order": 1,
+                    "description": "copy:hero.titleHighlight"
+                },
+                {
+                    "label": "Lead",
+                    "type": "text",
+                    "value": "We're a church family building a community where everyone belongs \u2014 come as you are, grow in faith, and serve alongside people who care.",
+                    "order": 2,
+                    "description": "copy:hero.lead"
+                }
+            ]
         },
         {
             "type": "app:graceway:times",
@@ -20,17 +42,105 @@
         {
             "type": "app:graceway:welcome",
             "name": "Welcome",
-            "nodes": []
-        },
-        {
-            "type": "app:graceway:ministries",
-            "name": "Ministries",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Img Src",
+                    "type": "image",
+                    "value": "/assets/images/welcome.jpg",
+                    "order": 0,
+                    "description": "copy:welcome.img.src"
+                },
+                {
+                    "label": "Img Alt",
+                    "type": "text",
+                    "value": "Congregation gathered together in worship",
+                    "order": 1,
+                    "description": "copy:welcome.img.alt"
+                },
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Who we are",
+                    "order": 2,
+                    "description": "copy:welcome.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "A church for the whole community",
+                    "order": 3,
+                    "description": "copy:welcome.title"
+                },
+                {
+                    "label": "Quote",
+                    "type": "text",
+                    "value": "\"Let all that you do be done in love.\" \u2014 1 Corinthians 16:14",
+                    "order": 4,
+                    "description": "copy:welcome.quote"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "For over thirty years, CAC Blackburn has been a gathering place for families, students and neighbours. We believe faith grows best in community \u2014 through honest worship, shared meals, and serving the city we love.",
+                    "order": 5,
+                    "description": "copy:welcome.text"
+                },
+                {
+                    "label": "Cta To",
+                    "type": "url",
+                    "value": "/about",
+                    "order": 6,
+                    "description": "copy:welcome.cta.to"
+                },
+                {
+                    "label": "Cta Label",
+                    "type": "text",
+                    "value": "Learn More About Us",
+                    "order": 7,
+                    "description": "copy:welcome.cta.label"
+                }
+            ]
         },
         {
             "type": "app:graceway:sermons",
             "name": "Sermons",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Sermons & blog",
+                    "order": 0,
+                    "description": "copy:sermonsHead.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Latest messages",
+                    "order": 1,
+                    "description": "copy:sermonsHead.title"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Video, audio and written reflections from our preachers \u2014 catch up wherever you are.",
+                    "order": 2,
+                    "description": "copy:sermonsHead.text"
+                },
+                {
+                    "label": "Cta To",
+                    "type": "url",
+                    "value": "/sermons",
+                    "order": 3,
+                    "description": "copy:sermonsHead.cta.to"
+                },
+                {
+                    "label": "Cta Label",
+                    "type": "text",
+                    "value": "View All Sermons",
+                    "order": 4,
+                    "description": "copy:sermonsHead.cta.label"
+                }
+            ]
         },
         {
             "type": "app:graceway:events",
@@ -42,18 +152,76 @@
                     "value": "Slide for more <span>\u2192</span>",
                     "order": 0,
                     "description": "html"
+                },
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Upcoming events",
+                    "order": 1,
+                    "description": "copy:eventsHead.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Life together, beyond Sunday",
+                    "order": 2,
+                    "description": "copy:eventsHead.title"
                 }
             ]
         },
         {
             "type": "app:graceway:broadcast",
             "name": "Broadcast",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Live broadcast",
+                    "order": 0,
+                    "description": "copy:broadcast.eyebrow"
+                }
+            ]
         },
         {
             "type": "app:graceway:pastors",
             "name": "Pastors",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Leadership",
+                    "order": 0,
+                    "description": "copy:pastorsHead.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Meet our pastors",
+                    "order": 1,
+                    "description": "copy:pastorsHead.title"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Shepherds, teachers and neighbours \u2014 here to walk with you.",
+                    "order": 2,
+                    "description": "copy:pastorsHead.text"
+                },
+                {
+                    "label": "Cta To",
+                    "type": "url",
+                    "value": "/about#leadership",
+                    "order": 3,
+                    "description": "copy:pastorsHead.cta.to"
+                },
+                {
+                    "label": "Cta Label",
+                    "type": "text",
+                    "value": "View All Members",
+                    "order": 4,
+                    "description": "copy:pastorsHead.cta.label"
+                }
+            ]
         },
         {
             "type": "app:graceway:donate-cta",

@@ -55,7 +55,8 @@ test('subtasks move the task through in progress to done, and tabs count each st
     expect($task->fresh()->status)->toBe('done')->and($task->fresh()->completed_at)->not->toBeNull();
     expect($c->instance()->counts())->toMatchArray(['done' => 1, 'in_progress' => 0]);
 
-    $c->set('filter', 'overdue')->assertSee('Late')->assertDontSee('Two steps');
+    $c->set('filter', 'overdue')->assertSee('Late');
+    expect($c->instance()->tasks()->pluck('title'))->toContain('Late')->not->toContain('Two steps');
 });
 
 test('teammates comment on a task and everyone else on the thread is notified', function () {
@@ -63,7 +64,7 @@ test('teammates comment on a task and everyone else on the thread is notified', 
     $task = $site->todos()->create(['user_id' => $owner->id, 'assigned_user_id' => $mate->id, 'title' => 'Discuss', 'status' => 'open', 'priority' => 'normal']);
 
     Livewire::actingAs($mate)->test(TasksPage::class, ['siteId' => $site->id])
-        ->call('open', $task->id)->assertSee('No comments yet')
+        ->call('open', $task->id)->assertSee('No notes yet')
         ->set('comment', 'Started on this')->call('addComment')->assertHasNoErrors()
         ->assertSee('Started on this');
 
@@ -97,7 +98,7 @@ test('task items carry who / what / when, and dated ones build the timeline', fu
         ->call('saveItem')->assertHasErrors('itemForm.endsAt')
         ->set('itemForm.endsAt', now()->addDays(4)->toDateString())
         ->call('saveItem')->assertHasNoErrors()
-        ->assertSee('Homepage mockups')->assertSee('↳ Design');
+        ->assertSee('Homepage mockups');
 
     $a->refresh();
     expect($a->assigned_user_id)->toBe($mate->id)->and($a->isScheduled())->toBeTrue()->and($b->fresh()->isScheduled())->toBeFalse();
@@ -107,7 +108,9 @@ test('task items carry who / what / when, and dated ones build the timeline', fu
     expect($tl['days'])->toBe(10)->and($tl['task'])->not->toBeNull()->and($tl['rows'])->toHaveCount(1)
         ->and($tl['rows'][0]['label'])->toBe('Design')->and($tl['rows'][0]['left'])->toBeGreaterThan(0);
 
-    // A task with no dates anywhere has no timeline.
+    // Even a task with no dates gets a timeline (created → today) so the drawer always shows one.
     $bare = $site->todos()->create(['user_id' => $owner->id, 'title' => 'Bare', 'status' => 'open', 'priority' => 'normal']);
-    expect($bare->load('items')->timeline())->toBeNull();
+    $bareTl = $bare->load('items')->timeline();
+    expect($bareTl)->not->toBeNull()
+        ->and($bareTl['start']->isSameDay($bare->created_at))->toBeTrue();
 });

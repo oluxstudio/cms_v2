@@ -4,6 +4,7 @@ const oluxCms = useOluxContent('youth-layout')
 const oluxFb: Record<string, string> = {}
 </script>
 
+<!-- @olux-source youth-events -->
 <template>
   <div class="container youth-layout" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="youth-main">

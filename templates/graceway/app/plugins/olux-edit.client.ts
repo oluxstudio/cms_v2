@@ -11,23 +11,41 @@ export default defineNuxtPlugin(() => {
 
   const style = document.createElement('style')
   style.textContent = `
-    [data-olx-key][data-olx-kind]{cursor:pointer;outline:1px dashed rgba(227,135,4,.45);outline-offset:-1px;transition:outline-color .15s}
-    .olx-hot{outline:3px solid #e38704 !important;outline-offset:-3px}
+    [data-olx-key][data-olx-kind]{cursor:pointer;outline:1px dashed color-mix(in srgb, var(--olx-primary,#e38704) 45%, transparent);outline-offset:-1px;transition:outline-color .15s}
+    /* Author-declared data-source panels: click loads the collection editor */
+    [data-olx-panel],[olx-panel]{cursor:pointer}
+    [data-olx-panel]:hover,[olx-panel]:hover{outline:2px dashed color-mix(in srgb, var(--olx-primary,#14a98f) 60%, transparent);outline-offset:-2px}
+    .olx-hot{outline:3px solid var(--olx-primary,#e38704) !important;outline-offset:-3px}
+    /* Floating name tag on the hovered section */
+    #olx-hover-tag{position:fixed;z-index:2147483646;background:var(--olx-primary,#e38704);color:#fff;
+      font:700 11px/1 system-ui,sans-serif;padding:5px 10px;border-radius:0 0 10px 0;
+      pointer-events:none;display:none;box-shadow:0 2px 8px rgba(0,0,0,.25);white-space:nowrap}
+    #olx-hover-tag small{font-weight:500;opacity:.8;margin-left:6px}
+    /* Click fired → the editor panel is being loaded for this section */
+    #olx-hover-tag .olx-spin{display:inline-block;width:9px;height:9px;margin-left:6px;
+      border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;
+      vertical-align:-1px;animation:olx-spin .6s linear infinite}
+    @keyframes olx-spin{to{transform:rotate(360deg)}}
     /* Positioning context for the ::after overlay — added by JS ONLY when the
        block is position:static, so fixed/sticky headers keep their position. */
     .olx-rel{position:relative}
-    .olx-hot::after{content:'';position:absolute;inset:0;background:rgba(227,135,4,.14);pointer-events:none;z-index:2147483000}
+    .olx-hot::after{content:'';position:absolute;inset:0;background:color-mix(in srgb, var(--olx-primary,#e38704) 14%, transparent);pointer-events:none;z-index:2147483000}
     /* Editable areas highlight with a BOLD translucent fill on HOVER only. */
     [data-olx-field]:not(img){cursor:text;border-radius:4px;transition:background .15s,box-shadow .15s}
-    [data-olx-field]:not(img):hover{background:rgba(227,135,4,.18);
-      box-shadow:0 0 0 2px rgba(227,135,4,.65)}
-    img[data-olx-field]:hover{outline:2px dashed rgba(227,135,4,.9);outline-offset:3px;cursor:pointer}
+    [data-olx-field]:not(img):hover{background:color-mix(in srgb, var(--olx-primary,#e38704) 18%, transparent);
+      box-shadow:0 0 0 2px color-mix(in srgb, var(--olx-primary,#e38704) 65%, transparent)}
+    img[data-olx-field]:hover{outline:2px dashed color-mix(in srgb, var(--olx-primary,#e38704) 90%, transparent);outline-offset:3px;cursor:pointer}
     /* EMPTY fields (e.g. a freshly added item) stay visible with a ghost hint.
        .olx-empty is toggled by the agent from the field's REAL text (the CSS
        :empty selector can't see past the injected ✕ control). */
-    [data-olx-field].olx-empty{min-width:8ch;min-height:1em;
+    /* Empty-field ghosts must NOT take space by default — inflating them
+       pushed real layout down (hero no longer met the topbar). They pop in
+       only while the pointer is over their block. */
+    [data-olx-key]:hover [data-olx-field].olx-empty,
+    [data-olx-field].olx-empty:hover{min-width:8ch;min-height:1em;
       box-shadow:inset 0 0 0 1.5px rgba(227,135,4,.45);background:rgba(227,135,4,.06)}
-    [data-olx-field].olx-empty::before{content:'Click to type…';opacity:.45;font-style:italic}
+    [data-olx-key]:hover [data-olx-field].olx-empty::before,
+    [data-olx-field].olx-empty:hover::before{content:'Click to type…';opacity:.45;font-style:italic}
     [data-olx-field][contenteditable]{outline:2px solid #6366f1 !important;outline-offset:2px;
       background:rgba(99,102,241,.08);box-shadow:none;min-width:1ch}
     [data-olx-field][contenteditable]:empty::before{content:''}
@@ -63,6 +81,10 @@ export default defineNuxtPlugin(() => {
       color:#e38704;background:#fff;font:700 11px/1 system-ui;cursor:pointer;
       opacity:0;pointer-events:none;transition:opacity .15s;vertical-align:middle}
     [data-olx-item]:hover>.olx-item-x,.olx-hot .olx-item-x{opacity:1;pointer-events:auto}
+    /* Entries light up on hover; the one open in the panel keeps a solid ring */
+    [data-olx-panel] [data-olx-item]:hover,[data-olx-key][data-olx-kind] [data-olx-item]:hover{
+      outline:2px dashed rgba(99,102,241,.8);outline-offset:2px;cursor:pointer;border-radius:6px}
+    [data-olx-item].olx-item-active{outline:3px solid var(--olx-primary,#6366f1) !important;outline-offset:2px;border-radius:6px}
     .olx-item-x:hover{background:#e38704;color:#fff}
   `
   document.head.appendChild(style)
@@ -88,6 +110,19 @@ export default defineNuxtPlugin(() => {
 
   // In-place refresh: after a save the CMS posts olx-refresh-content — pull
   // fresh content and let Vue re-render, instead of reloading the iframe.
+  window.addEventListener('message', (e) => {
+    const d = e.data
+    // The CMS hands over its admin theme colour so every editor highlight
+    // (hover overlay, active rings, name tag) matches the edit panel.
+    if (d && d.source === 'olx-cms' && d.type === 'olx-theme' && typeof d.primary === 'string' && /^[#a-z0-9(),.\s%-]+$/i.test(d.primary)) {
+      document.documentElement.style.setProperty('--olx-primary', d.primary)
+    }
+    if (!d || d.source !== 'olx-cms' || d.type !== 'olx-edit-opened') return
+    // The panel finished loading — the hover tag's "loading editor" spinner
+    // gives way to the normal hint.
+    const hint = document.querySelector('#olx-hover-tag small')
+    if (hint && hint.querySelector('.olx-spin')) hint.textContent = 'editing in the panel →'
+  })
   window.addEventListener('message', async (e) => {
     const d = e.data
     if (!d || d.source !== 'olx-cms' || d.type !== 'olx-refresh-content') return
@@ -144,7 +179,10 @@ export default defineNuxtPlugin(() => {
       const key = host.getAttribute('data-olx-key') || ''
       if (!host.querySelector('.olx-add-item')) {
         const btn = document.createElement('button')
-        btn.className = 'olx-add-item' + (inFixedChrome(host) ? ' olx-add-float' : '')
+        // ALWAYS a float overlay: an in-flow button changes the block's height
+        // and the whole page drifts from the original (hero left the topbar).
+        btn.className = 'olx-add-item olx-add-float'
+        if (getComputedStyle(host).position === 'static') host.classList.add('olx-rel')
         btn.type = 'button'
         btn.textContent = '＋ Add item'
         btn.addEventListener('click', (e) => {
@@ -177,7 +215,10 @@ export default defineNuxtPlugin(() => {
       const key = host.getAttribute('data-olx-key') || ''
       for (const prefix of prefixesFor(key)) {
         const btn = document.createElement('button')
-        btn.className = 'olx-add-item' + (inFixedChrome(host) ? ' olx-add-float' : '')
+        // Same rule as collections: overlays only — in-flow buttons make the
+        // edit preview drift from the original layout.
+        btn.className = 'olx-add-item olx-add-float'
+        if (getComputedStyle(host).position === 'static') host.classList.add('olx-rel')
         btn.type = 'button'
         btn.textContent = `＋ Add ${prefix.replace(/^Fallback /, '').toLowerCase()}`
         btn.addEventListener('click', (e) => {
@@ -246,7 +287,33 @@ export default defineNuxtPlugin(() => {
   const canInlineEdit = (f: HTMLElement) =>
     ['IMG', 'INPUT', 'TEXTAREA', 'SELECT'].indexOf(f.tagName) === -1
 
+  // Name tag pinned to the hovered section's top-left corner.
+  const hoverTag = document.createElement('div')
+  hoverTag.id = 'olx-hover-tag'
+  const attachTag = () => { document.body ? document.body.appendChild(hoverTag) : setTimeout(attachTag, 100) }
+  attachTag()
+  const headline = (key: string) => key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  const placeTag = () => {
+    if (!hot) { hoverTag.style.display = 'none'; return }
+    const r = hot.getBoundingClientRect()
+    hoverTag.style.left = Math.max(0, r.left) + 'px'
+    hoverTag.style.top = Math.max(0, r.top) + 'px'
+    hoverTag.style.display = 'block'
+  }
+  window.addEventListener('scroll', placeTag, { passive: true })
+  window.addEventListener('resize', placeTag, { passive: true })
+
   let hot: HTMLElement | null = null
+  // A section select is CLICK-driven; while the CMS loads the panel, the
+  // hover tag's hint becomes a spinner + "loading" until olx-edit-opened.
+  const tagLoading = () => {
+    const hint = hoverTag.querySelector('small')
+    if (!hint) return
+    hint.textContent = 'loading editor'
+    const sp = document.createElement('span')
+    sp.className = 'olx-spin'
+    hint.append(sp)
+  }
   document.addEventListener('mouseover', (e) => {
     const f = fieldOf(e.target)
     post({ type: 'olx-hover-field', field: f ? f.getAttribute('data-olx-field') : null })
@@ -259,8 +326,17 @@ export default defineNuxtPlugin(() => {
       // would jump out of place and flicker) — only ground static blocks.
       if (getComputedStyle(hot).position === 'static') hot.classList.add('olx-rel')
       hot.classList.add('olx-hot')
+      const key = hot.getAttribute('data-olx-key') || hot.getAttribute('data-olx-panel') || 'section'
+      const kind = hot.getAttribute('data-olx-kind') === 'collection' || hot.hasAttribute('data-olx-panel') ? 'click to edit list' : 'click to edit'
+      hoverTag.innerHTML = ''
+      hoverTag.append(headline(key))
+      const hint = document.createElement('small')
+      hint.textContent = kind
+      hoverTag.append(hint)
     }
+    placeTag()
   }, true)
+  document.addEventListener('mouseleave', () => { hot?.classList.remove('olx-hot', 'olx-rel'); hot = null; placeTag() })
 
   const startInlineEdit = (block: HTMLElement, field: HTMLElement) => {
     if (field.isContentEditable) return
@@ -449,30 +525,92 @@ export default defineNuxtPlugin(() => {
     if (interactive && !interactive.closest('[data-olx-field]')) return
 
     // Links NEVER navigate in edit mode. Clicking a link (or a button that is
-    // a marked field) opens a small editor for its label + URL instead.
+    // a marked field) opens a small editor for its label + URL instead —
+    // EXCEPT inside a collection entry or data-source panel, where the click
+    // selects the entry (its link is edited in the panel).
     const a = e.target instanceof Element ? (e.target.closest('a[href], a, button[data-olx-field]') as HTMLElement | null) : null
-    if (a) {
+    if (a && ! a.closest('[data-olx-item], [data-olx-panel], [olx-panel]')) {
       e.preventDefault()
       e.stopPropagation()
       openLinkEditor(a)
       return
     }
+    if (a) {
+      e.preventDefault() // still no navigation in edit mode
+      e.stopPropagation()
+    }
 
+    // Panel selection works even OUTSIDE data-olx-key blocks (dynamic
+    // pages keep their authored markup) — so it runs before the block guard.
+    // Ring the clicked entry — it is now the one open in the edit panel.
+    const markItem = (row: Element | null) => {
+      document.querySelectorAll('[data-olx-item].olx-item-active').forEach((r) => r.classList.remove('olx-item-active'))
+      row?.classList.add('olx-item-active')
+    }
+    // Templates sort/filter their grids (newest-first, tabs…), so a row's DOM
+    // position rarely matches the CMS item order — send the row's visible text
+    // too and let the CMS match the entry by content, index as fallback.
+    const rowText = (row: Element | null) =>
+      (row?.querySelector('h1,h2,h3,h4,h5,strong,b,[class*="title"]')?.textContent || row?.textContent || '')
+        .replace(/\s+/g, ' ').trim().slice(0, 200) || null
+    // Author-declared panel (data-olx-panel="<collection-slug>"): the click
+    // loads that section's DATA SOURCE straight into the editor — the direct
+    // route when generic block selection can't surface the rows.
+    const panelHost = (e.target as Element).closest('[data-olx-panel], [olx-panel]')
+    const panelSlug = panelHost?.getAttribute('data-olx-panel') || panelHost?.getAttribute('olx-panel') || ''
+    if (panelHost && panelSlug) {
+      const pRow = (e.target as Element).closest('[data-olx-item]')
+      // Rows normally live INSIDE the panel; when a row IS the panel (no
+      // wrapper element available), index among all rows sharing the slug.
+      const pRows = pRow && panelHost === pRow
+        ? [...document.querySelectorAll(`[data-olx-panel="${panelSlug}"][data-olx-item], [olx-panel="${panelSlug}"][data-olx-item]`)]
+        : [...panelHost.querySelectorAll('[data-olx-item]')]
+      const pIndex = pRow ? pRows.indexOf(pRow) : null
+      tagLoading()
+      markItem(pRow)
+      post({
+        type: 'olx-edit-select',
+        id: null,
+        key: panelSlug,
+        kind: 'collection',
+        itemIndex: pIndex,
+        itemText: rowText(pRow),
+        field: (e.target as Element).closest('[data-olx-field]')?.getAttribute('data-olx-field') || null,
+      })
+      return
+    }
     const b = blockOf(e.target)
     if (!b) return
     const f = fieldOf(e.target)
     if (f && f.isContentEditable) return // typing inside an active edit
     e.preventDefault()
     e.stopPropagation()
-    if (f && canInlineEdit(f)) {
-      startInlineEdit(b, f)
-      return
-    }
+    // Clicking ANY node opens the edit panel of the section it belongs to;
+    // a clicked field also lights up its matching input in the panel.
+    // In-place typing stays available on DOUBLE-click.
+    const itemRow = (e.target as Element).closest('[data-olx-item]')
+    const itemIndex = itemRow ? [...b.querySelectorAll('[data-olx-item]')].indexOf(itemRow) : null
+    tagLoading()
+    markItem(itemRow)
     post({
       type: 'olx-edit-select',
       id: null,
       key: b.getAttribute('data-olx-key'),
       kind: b.getAttribute('data-olx-kind') || 'component',
+      itemIndex,
+      itemText: rowText(itemRow),
+      field: f ? f.getAttribute('data-olx-field') : null,
     })
+    }, true)
+
+  // In-place typing: double-click a text field to edit it right on the page
+  // (single click opens the section's panel instead).
+  document.addEventListener('dblclick', (e) => {
+    const b = blockOf(e.target)
+    const f = fieldOf(e.target)
+    if (!b || !f || f.isContentEditable || !canInlineEdit(f)) return
+    e.preventDefault()
+    e.stopPropagation()
+    startInlineEdit(b, f)
   }, true)
 })

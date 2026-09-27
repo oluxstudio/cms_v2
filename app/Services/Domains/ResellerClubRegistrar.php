@@ -105,4 +105,11 @@ class ResellerClubRegistrar implements Registrar
 
         return (string) ($res['value'] ?? '');
     }
+
+    public function renew(string $domain, int $years): void
+    {
+        // RC renewals need the order's current expiry timestamp — wire this up
+        // if ResellerClub becomes the production registrar.
+        throw new RuntimeException('ResellerClub: renewals are not implemented for this driver yet.');
+    }
 }

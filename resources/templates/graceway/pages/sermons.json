@@ -64,6 +64,41 @@
                     "value": "Speakers",
                     "order": 6,
                     "description": "text"
+                },
+                {
+                    "label": "Live Title",
+                    "type": "text",
+                    "value": "\ud83d\udd34 Live every Sunday",
+                    "order": 7,
+                    "description": "copy:sermonsArchive.live.title"
+                },
+                {
+                    "label": "Live Cta To",
+                    "type": "url",
+                    "value": "/broadcast",
+                    "order": 8,
+                    "description": "copy:sermonsArchive.live.cta.to"
+                },
+                {
+                    "label": "Live Cta Label",
+                    "type": "text",
+                    "value": "\u25b6 Watch Live",
+                    "order": 9,
+                    "description": "copy:sermonsArchive.live.cta.label"
+                },
+                {
+                    "label": "Take Away Title",
+                    "type": "text",
+                    "value": "Take it with you",
+                    "order": 10,
+                    "description": "copy:sermonsArchive.takeAway.title"
+                },
+                {
+                    "label": "Take Away Text",
+                    "type": "text",
+                    "value": "Sermons land on the podcast every Monday.",
+                    "order": 11,
+                    "description": "copy:sermonsArchive.takeAway.text"
                 }
             ]
         },

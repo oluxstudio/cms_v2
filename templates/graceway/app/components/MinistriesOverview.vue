@@ -6,7 +6,7 @@ const { ministriesOverview: ministries } = useSiteContent()
 </script>
 
 <template>
-  <section class="mn-overview" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
+  <section class="mn-overview" data-olx-panel="ministries" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <!-- quick jump strip -->
       <nav class="mn-jump" aria-label="Ministries">
@@ -14,7 +14,7 @@ const { ministriesOverview: ministries } = useSiteContent()
       </nav>
 
       <!-- alternating feature rows -->
-      <article v-for="(m, i) in ministries" :key="m.to" class="mn-row" :class="{ flip: i % 2 }">
+      <article data-olx-item v-for="(m, i) in ministries" :key="m.to" class="mn-row" :class="{ flip: i % 2 }">
         <NuxtLink class="mn-photo" :to="m.to" :aria-label="`Visit ${m.tag}`">
           <img :src="m.img" :alt="m.tag" loading="lazy">
         </NuxtLink>

@@ -24,3 +24,6 @@ Schedule::command('bookings:automate rebook')->dailyAt('10:00')->withoutOverlapp
 Schedule::command('site:digest')->mondays()->at('08:00')->withoutOverlapping();
 // Abandoned-signup recovery: one nudge after a day of inactivity.
 Schedule::command('signup:nudge')->dailyAt('09:30')->withoutOverlapping();
+
+// Domains: warn site teams 30 (and urgently 7) days before expiry.
+Schedule::command('domains:renewal-sweep')->dailyAt('08:30')->withoutOverlapping();

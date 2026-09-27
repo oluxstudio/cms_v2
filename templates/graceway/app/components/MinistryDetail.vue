@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const oluxCms = useOluxContent('ministry-detail')
 const oluxFb: Record<string, string> = {"Headline":"About this ministry"}
+// @olux-source ministry-pages — this page's content rows live in that collection
 // Self-contained ministry detail (kids, prayer, …) — copy keyed by route so
 // the section lives inside a block the CMS pipeline can carry 1:1.
 const route = useRoute()
@@ -9,7 +10,7 @@ const d = computed(() => map[route.path] || map['/kids'])
 </script>
 
 <template>
-  <section class="study-detail" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
+  <section class="study-detail" data-olx-panel="ministry-pages" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="study-detail-grid">
         <img :src="d.img" :alt="d.alt">

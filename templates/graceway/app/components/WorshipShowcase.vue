@@ -43,12 +43,12 @@ watch(libCat, () => { page.value = 1 })
         <section class="wb-banner-sec">
           <div class="wb-banner">
             <div class="wb-banner-copy">
-              <h2>{{ worshipShowcase.banner.title }}</h2>
+              <h2 data-olx-field="bannerTitle">{{ oluxCms.t('Banner Title', worshipShowcase.banner.title) }}</h2>
               <div class="wb-banner-actions">
                 <NuxtLink v-for="(a, ai) in worshipShowcase.banner.actions" :key="a.label" class="wb-btn" :class="{ solid: ai === 0 }" :to="a.to">{{ a.label }}</NuxtLink>
               </div>
             </div>
-            <img :src="worshipShowcase.banner.img.src" :alt="worshipShowcase.banner.img.alt">
+            <img :src="oluxCms.t('Banner Img Src', worshipShowcase.banner.img.src)" data-olx-field="bannerImgSrc" :alt="oluxCms.t('Banner Img Alt', worshipShowcase.banner.img.alt)">
             <span class="wb-dots"><i class="on"></i><i></i><i></i></span>
           </div>
         </section>
@@ -57,14 +57,14 @@ watch(libCat, () => { page.value = 1 })
         <section class="wb-trending">
           <div class="container">
             <div class="wb-row-head">
-              <h2>{{ worshipShowcase.trendingTitle }}</h2>
+              <h2 data-olx-field="trendingTitle">{{ oluxCms.t('Trending Title', worshipShowcase.trendingTitle) }}</h2>
               <div class="wb-car-nav">
                 <button type="button" aria-label="Scroll back" @click="slide(-1)">←</button>
                 <button type="button" aria-label="Scroll forward" @click="slide(1)">→</button>
               </div>
             </div>
-            <div ref="track" class="wb-carousel">
-              <article v-for="m in trending" :key="m.title + m.date" class="wb-card">
+            <div ref="track" class="wb-carousel" data-olx-panel="media">
+              <article data-olx-item v-for="m in trending" :key="m.title + m.date" class="wb-card">
                 <NuxtLink class="wb-card-media" :to="mediaLink(m)">
                   <img :src="m.img || '/assets/images/gallery-9.jpg'" :alt="m.title">
                   <button class="wb-heart" :class="{ on: liked[m.title] }" type="button" :aria-label="`Like ${m.title}`" @click.prevent="liked[m.title] = !liked[m.title]">♥</button>
@@ -88,13 +88,13 @@ watch(libCat, () => { page.value = 1 })
         <section class="wb-trending wb-library">
           <div class="container">
             <div class="wb-row-head">
-              <h2>{{ worshipShowcase.libraryTitle }}</h2>
+              <h2 data-olx-field="libraryTitle">{{ oluxCms.t('Library Title', worshipShowcase.libraryTitle) }}</h2>
               <div class="wb-tabs">
                 <button v-for="c in libCats" :key="c" type="button" :class="{ active: libCat === c }" @click="libCat = c">{{ c }}</button>
               </div>
             </div>
-            <div class="wb-cards">
-              <article v-for="m in shown" :key="m.title + m.date" class="wb-card">
+            <div class="wb-cards" data-olx-panel="media">
+              <article data-olx-item v-for="m in shown" :key="m.title + m.date" class="wb-card">
                 <NuxtLink class="wb-card-media" :to="mediaLink(m)">
                   <img :src="m.img || '/assets/images/gallery-9.jpg'" :alt="m.title">
                   <button class="wb-heart" :class="{ on: liked[m.title] }" type="button" :aria-label="`Like ${m.title}`" @click.prevent="liked[m.title] = !liked[m.title]">♥</button>

@@ -15,7 +15,43 @@
         {
             "type": "app:graceway:worship-showcase",
             "name": "Worship Showcase",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Banner Title",
+                    "type": "text",
+                    "value": "Discover, sing and share your worship",
+                    "order": 0,
+                    "description": "copy:worshipShowcase.banner.title"
+                },
+                {
+                    "label": "Banner Img Src",
+                    "type": "image",
+                    "value": "/assets/images/pastor-2.jpg",
+                    "order": 1,
+                    "description": "copy:worshipShowcase.banner.img.src"
+                },
+                {
+                    "label": "Banner Img Alt",
+                    "type": "text",
+                    "value": "Worship leader",
+                    "order": 2,
+                    "description": "copy:worshipShowcase.banner.img.alt"
+                },
+                {
+                    "label": "Trending Title",
+                    "type": "text",
+                    "value": "Trending worship",
+                    "order": 3,
+                    "description": "copy:worshipShowcase.trendingTitle"
+                },
+                {
+                    "label": "Library Title",
+                    "type": "text",
+                    "value": "Worship library",
+                    "order": 4,
+                    "description": "copy:worshipShowcase.libraryTitle"
+                }
+            ]
         },
         {
             "type": "app:graceway:times",

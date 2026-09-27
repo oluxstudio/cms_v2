@@ -5,6 +5,7 @@ use App\Models\AccountMember;
 use App\Models\Role;
 use App\Models\Site;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
 
 function goLiveSite(?string $domain = null): array
@@ -28,6 +29,7 @@ test('domains are normalized and junk is rejected', function () {
 test('owner can connect a domain; duplicates are refused', function () {
     [$owner, $site] = goLiveSite();
     $wanted = 'brand-'.uniqid().'.com';
+    Cache::put('domain-exists:'.$wanted, true, 600); // hermetic existence check
 
     Livewire::actingAs($owner)
         ->test(GoLivePage::class, ['site' => $site])
@@ -50,9 +52,11 @@ test('changing the domain resets verification and live state', function () {
     [$owner, $site] = goLiveSite();
     $site->update(['live' => true, 'domain_verified_at' => now()]);
 
+    $switched = 'switched-'.uniqid().'.com';
+    Cache::put('domain-exists:'.$switched, true, 600);
     Livewire::actingAs($owner)
         ->test(GoLivePage::class, ['site' => $site])
-        ->set('domain', 'switched-'.uniqid().'.com')
+        ->set('domain', $switched)
         ->call('saveDomain');
 
     $site->refresh();

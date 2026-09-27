@@ -58,8 +58,11 @@ class Todo extends Model
     public function timeline(): ?array
     {
         $items = $this->items->filter(fn ($i) => $i->isScheduled());
-        $starts = $items->pluck('starts_at')->push($this->starts_at)->filter();
-        $ends = $items->pluck('ends_at')->push($this->due_at)->filter();
+        // Every task gets a timeline: undated tasks span created → due
+        // (or created → today), so clicking one always shows the breakdown
+        // against time, with item bars appearing once they're scheduled.
+        $starts = $items->pluck('starts_at')->push($this->starts_at ?? $this->created_at)->filter();
+        $ends = $items->pluck('ends_at')->push($this->due_at ?? $this->completed_at ?? now())->filter();
         if ($starts->isEmpty() || $ends->isEmpty()) {
             return null;
         }
@@ -76,7 +79,7 @@ class Todo extends Model
             'start' => $start,
             'end' => $end,
             'days' => (int) $start->diffInDays($end) + 1,
-            'task' => ($this->starts_at && $this->due_at) ? $bar($this->starts_at, $this->due_at) : null,
+            'task' => $bar($this->starts_at ?? $this->created_at, $this->due_at ?? $this->completed_at ?? now()),
             'today' => now()->between($start, $end) ? $pct(now()) : null,
             'rows' => $items->values()->map(fn ($i) => [
                 'id' => $i->id, 'label' => $i->label, 'done' => $i->done,

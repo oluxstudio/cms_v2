@@ -9,8 +9,8 @@ const { hero } = useSiteContent()
   <section class="hero" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="hero-copy">
-        <h1>{{ hero.title }} <span class="hl">{{ hero.titleHighlight }}</span></h1>
-        <p class="lead">{{ hero.lead }}</p>
+        <h1 data-olx-field="title">{{ oluxCms.t('Title', hero.title) }} <span class="hl" data-olx-field="titleHighlight">{{ oluxCms.t('Title Highlight', hero.titleHighlight) }}</span></h1>
+        <p class="lead" data-olx-field="lead">{{ oluxCms.t('Lead', hero.lead) }}</p>
 
         <div class="hero-live">
           <span class="hero-live-dot" aria-hidden="true"></span>

@@ -19,10 +19,9 @@
                             class="text-gray-400 hover:text-gray-700 disabled:opacity-30 leading-none">▼</button>
                 </div>
                 <span class="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-200">{{ $labels[$section['key']] ?? $section['key'] }}</span>
-                <label class="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" wire:model.live="{{ $prefix }}.{{ $index }}.enabled" class="sr-only peer">
-                    <span class="relative h-5 w-9 rounded-full bg-gray-300 dark:bg-white/20 peer-checked:bg-indigo-600 transition-colors
-                                 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" wire:model.live="{{ $prefix }}.{{ $index }}.enabled" class="sr-only">
+                    <span class="bkf-switch scale-90"></span>
                 </label>
             </div>
 

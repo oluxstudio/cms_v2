@@ -33,4 +33,9 @@ class FakeRegistrar implements Registrar
     {
         Cache::forever("fake-registrar:{$domain}:dns", $target);
     }
+
+    public function renew(string $domain, int $years): void
+    {
+        // Instant, like everything else here.
+    }
 }

@@ -11,7 +11,7 @@ const { profile, communityCare: cc } = useSiteContent()
     <!-- need help now? — for people in need, not just supporters -->
     <section class="oc-help-strip">
       <div class="container">
-        <p><b>{{ cc.helpLead }}</b> {{ cc.helpPre }} <a :href="profile.phoneHref">{{ profile.phone }}</a>. {{ cc.helpPost }}</p>
+        <p><b data-olx-field="helpLead">{{ oluxCms.t('Help Lead', cc.helpLead) }}</b> {{ oluxCms.t('Help Pre', cc.helpPre) }} <a :href="profile.phoneHref">{{ profile.phone }}</a>. {{ oluxCms.t('Help Post', cc.helpPost) }}</p>
       </div>
     </section>
 
@@ -19,11 +19,11 @@ const { profile, communityCare: cc } = useSiteContent()
     <section class="oc-programmes">
       <div class="container">
         <div class="section-head">
-          <p class="eyebrow">{{ cc.programmesEyebrow }}</p>
-          <h2>{{ cc.programmesTitle }}</h2>
+          <p class="eyebrow" data-olx-field="programmesEyebrow">{{ oluxCms.t('Programmes Eyebrow', cc.programmesEyebrow) }}</p>
+          <h2 data-olx-field="programmesTitle">{{ oluxCms.t('Programmes Title', cc.programmesTitle) }}</h2>
         </div>
-        <div class="oc-grid">
-          <NuxtLink v-for="p in programmes" :key="p.slug" class="oc-card" :to="`/community-care/${p.slug}`">
+        <div class="oc-grid" data-olx-panel="outreach-programmes">
+          <NuxtLink data-olx-item v-for="p in programmes" :key="p.slug" class="oc-card" :to="`/community-care/${p.slug}`">
             <img :src="p.img" :alt="p.name">
             <div class="body">
               <h3>{{ p.name }}</h3>
@@ -39,8 +39,8 @@ const { profile, communityCare: cc } = useSiteContent()
     <!-- impact numbers -->
     <section class="oc-impact">
       <div class="container">
-        <div class="broadcast-stats">
-          <div v-for="i in cc.impact" :key="i.label"><b>{{ i.value }}</b><span>{{ i.label }}</span></div>
+        <div class="broadcast-stats" data-olx-panel="care-impact">
+          <div data-olx-item v-for="i in cc.impact" :key="i.label"><b>{{ i.value }}</b><span>{{ i.label }}</span></div>
         </div>
       </div>
     </section>
@@ -49,10 +49,10 @@ const { profile, communityCare: cc } = useSiteContent()
     <section class="oc-story">
       <div class="container">
         <figure class="oc-story-card">
-          <img :src="cc.story.img" :alt="cc.story.alt">
-          <blockquote>
-            {{ cc.story.quote }}
-            <cite>{{ cc.story.cite }}</cite>
+          <img :src="oluxCms.t('Story Img', cc.story.img)" data-olx-field="storyImg" :alt="oluxCms.t('Story Alt', cc.story.alt)">
+          <blockquote data-olx-field="storyQuote">
+            {{ oluxCms.t('Story Quote', cc.story.quote) }}
+            <cite data-olx-field="storyCite">{{ oluxCms.t('Story Cite', cc.story.cite) }}</cite>
           </blockquote>
         </figure>
       </div>
@@ -62,11 +62,11 @@ const { profile, communityCare: cc } = useSiteContent()
     <section class="oc-involve">
       <div class="container">
         <div class="section-head center">
-          <p class="eyebrow">{{ cc.involveEyebrow }}</p>
-          <h2>{{ cc.involveTitle }}</h2>
+          <p class="eyebrow" data-olx-field="involveEyebrow">{{ oluxCms.t('Involve Eyebrow', cc.involveEyebrow) }}</p>
+          <h2 data-olx-field="involveTitle">{{ oluxCms.t('Involve Title', cc.involveTitle) }}</h2>
         </div>
-        <div class="grid-3">
-          <div v-for="w in cc.involve" :key="w.title" class="card"><div class="icon">{{ w.icon }}</div><h3>{{ w.title }}</h3><p>{{ w.text }}</p><NuxtLink class="btn ghost" :to="w.cta.to">{{ w.cta.label }}</NuxtLink></div>
+        <div class="grid-3" data-olx-panel="care-involvement">
+          <div data-olx-item v-for="w in cc.involve" :key="w.title" class="card"><div class="icon">{{ w.icon }}</div><h3>{{ w.title }}</h3><p>{{ w.text }}</p><NuxtLink class="btn ghost" :to="w.cta.to">{{ w.cta.label }}</NuxtLink></div>
         </div>
       </div>
     </section>

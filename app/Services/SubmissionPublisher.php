@@ -39,7 +39,7 @@ class SubmissionPublisher
         // woff2 + @font-face under public/assets/fonts (failure-safe: any
         // download problem keeps the CDN links and only logs a warning).
         try {
-            $fonts = app(\App\Services\FontLocalizer::class)->localize($appDir);
+            $fonts = app(FontLocalizer::class)->localize($appDir);
             foreach ($fonts['warnings'] as $w) {
                 \Log::warning("[template:{$submission->key}] fonts: {$w}");
             }
@@ -337,6 +337,7 @@ class SubmissionPublisher
         // (tagged by their generated description) must follow the sources —
         // the author editing the array in the original updates them here.
         $wasExtracted = fn ($c) => str_contains((string) ($c['description'] ?? ''), 'Data source extracted from')
+            || str_contains((string) ($c['description'] ?? ''), 'Data source auto-detected from')
             || str_contains((string) ($c['description'] ?? ''), 'components read it live');
         foreach (['collections', 'forms'] as $k) {
             $fresh = collect((array) ($manifest[$k] ?? []));

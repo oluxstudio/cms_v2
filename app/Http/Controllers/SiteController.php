@@ -286,6 +286,21 @@ class SiteController extends Controller
         return view('forms', ['site' => $site, 'openResponse' => $responseId]);
     }
 
+    public function design($siteID)
+    {
+        return view('design', ['site' => $this->findSiteBySlug($siteID)]);
+    }
+
+    public function templatesStore($siteID)
+    {
+        return view('marketplace-store', ['site' => $this->findSiteBySlug($siteID)]);
+    }
+
+    public function templatesStoreDetail($siteID, string $slug)
+    {
+        return view('marketplace-template', ['site' => $this->findSiteBySlug($siteID), 'slug' => $slug]);
+    }
+
     public function sites()
     {
         dd('site');

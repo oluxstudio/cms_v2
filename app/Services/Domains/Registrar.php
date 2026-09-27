@@ -25,4 +25,7 @@ interface Registrar
 
     /** Make the apex A record + www CNAME point at the platform. */
     public function pointAt(string $domain, string $target): void;
+
+    /** Extend the registration by $years from its current expiry. */
+    public function renew(string $domain, int $years): void;
 }

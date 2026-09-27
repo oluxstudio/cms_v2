@@ -43,7 +43,7 @@ test('saving with the switch on but nothing configured refuses; with keys it ena
 
 test('the marketplace no longer hosts the payments drawer and links to the page instead', function () {
     [$owner, $site] = paymentsPageSite();
-    $this->actingAs($owner)->get("/{$site->name}/marketplace")
+    $this->actingAs($owner)->get("/{$site->name}/addons")
         ->assertSee(url("{$site->name}/payments"))
         ->assertDontSee('Webhook signing secret');
 });

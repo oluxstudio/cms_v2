@@ -130,8 +130,8 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
   <section class="bookstore" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head">
-        <p class="eyebrow">{{ bookStore.eyebrow }}</p>
-        <h2 data-olx-field="Headline">{{ bookStore.title }}</h2>
+        <p class="eyebrow" data-olx-field="eyebrow">{{ oluxCms.t('Eyebrow', bookStore.eyebrow) }}</p>
+        <h2 data-olx-field="Headline">{{ oluxCms.t('Title', bookStore.title) }}</h2>
       </div>
 
       <div class="store-layout">
@@ -144,9 +144,9 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
 
         <!-- category sidebar -->
         <aside class="store-side" :class="{ open: filtersOpen }">
-          <h3>{{ bookStore.categoryTitle }}</h3>
-          <button type="button" class="store-cat all" :class="{ on: !activeCat && !activeQuick }" @click="pickCat(null)">
-            {{ bookStore.allLabel }} <span class="count">{{ books.length }}</span>
+          <h3 data-olx-field="categoryTitle">{{ oluxCms.t('Category Title', bookStore.categoryTitle) }}</h3>
+          <button type="button" class="store-cat all" :class="{ on: !activeCat && !activeQuick }" @click="pickCat(null)" data-olx-field="allLabel">
+            {{ oluxCms.t('All Label', bookStore.allLabel) }} <span class="count">{{ books.length }}</span>
           </button>
           <button
             v-for="c in categories" :key="c" type="button"
@@ -162,8 +162,10 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
 
         <!-- product grid + pagination -->
         <div class="store-main">
-          <div class="bs-grid store-grid">
-            <article v-for="b in shown" :key="b.slug" class="bs-card">
+          <!-- CMS edit mode treats the product list as a collection grid:
+               clicking a card opens that product in the edit panel -->
+          <div class="bs-grid store-grid" data-olx-panel="products">
+            <article v-for="b in shown" :key="b.slug" class="bs-card" data-olx-item>
               <div class="bs-cover">
                 <img :src="img(b)" :alt="`Cover of ${b.name}`" loading="lazy">
                 <span class="bs-cat">{{ b.category }}</span>
@@ -197,7 +199,7 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
 
       <!-- recommendations -->
       <div class="store-recs">
-        <h3>{{ bookStore.recTitle }}</h3>
+        <h3 data-olx-field="recTitle">{{ oluxCms.t('Rec Title', bookStore.recTitle) }}</h3>
         <div class="store-rec-row">
           <article v-for="b in recs" :key="b.slug" class="bs-card rec">
             <div class="bs-cover">
@@ -227,12 +229,12 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
           </template>
         </h2>
         <div class="store-cta-side">
-          <p>{{ bookStore.cta.text }}</p>
+          <p data-olx-field="ctaText">{{ oluxCms.t('Cta Text', bookStore.cta.text) }}</p>
           <form v-if="!ctaSent" class="store-cta-form" @submit.prevent="sendCta">
-            <input v-model="ctaEmail" type="email" :placeholder="bookStore.cta.placeholder" required>
+            <input v-model="ctaEmail" type="email" :placeholder="oluxCms.t('Cta Placeholder', bookStore.cta.placeholder)" required>
             <button type="submit" :disabled="ctaSending">{{ ctaSending ? '…' : bookStore.cta.button }}</button>
           </form>
-          <p v-else class="store-cta-thanks">✓ {{ bookStore.cta.thanks }}</p>
+          <p v-else class="store-cta-thanks">✓ {{ oluxCms.t('Cta Thanks', bookStore.cta.thanks) }}</p>
         </div>
       </div>
 

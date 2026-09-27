@@ -2,13 +2,18 @@
 
 namespace App\Livewire;
 
+use App\Models\Alert;
 use App\Models\Message;
 use App\Models\Site;
+use App\Models\SiteActivityLog;
+use App\Models\TaskComment;
 use App\Models\Todo;
 use App\Models\TodoItem;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -64,12 +69,25 @@ class TasksPage extends Component
         return Site::findOrFail($this->siteId);
     }
 
+    /** A calendar day picked in the right rail — shows only tasks due that day. */
+    public ?string $onDay = null;
+
+    public function pickDay(string $date): void
+    {
+        $this->onDay = $this->onDay === $date ? null : $date;
+        unset($this->tasks);
+    }
+
     #[Computed]
     public function tasks()
     {
         $q = Todo::visibleTo($this->site, Auth::user())
             ->with(['items', 'assignee:id,name,avatar', 'creator:id,name,avatar', 'comments.author:id,name,avatar'])
             ->withCount('comments');
+
+        if ($this->onDay) {
+            $q->whereDate('due_at', $this->onDay);
+        }
 
         match ($this->filter) {
             'open', 'in_progress', 'done' => $q->where('status', $this->filter),
@@ -78,7 +96,8 @@ class TasksPage extends Component
             default => null,
         };
 
-        return $q->orderByRaw("status = 'done'")->orderByRaw('due_at is null')->orderBy('due_at')->orderByDesc('created_at')->take(200)->get();
+        // Newest tasks first (done sinks to the bottom).
+        return $q->orderByRaw("status = 'done'")->orderByDesc('created_at')->take(200)->get();
     }
 
     #[Computed]
@@ -92,8 +111,9 @@ class TasksPage extends Component
     #[Computed]
     public function members()
     {
-        return $this->site->members()->orderBy('name')->get(['users.id', 'name', 'avatar'])
-            ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'avatar' => $u->avatar, 'role' => $this->site->roleFor($u)]);
+        return $this->site->teamUsers()
+            ->map(fn (array $t) => ['id' => $t['user']->id, 'name' => $t['user']->name, 'avatar' => $t['user']->avatar, 'role' => $t['role']])
+            ->sortBy('name')->values();
     }
 
     /** Tab counts: all / open / in progress / done / overdue / mine. */
@@ -112,6 +132,59 @@ class TasksPage extends Component
         ];
     }
 
+    /** Sample-style right rail: average completion across every task. */
+    #[Computed]
+    public function overallProgress(): int
+    {
+        $tasks = $this->site->todos()->with('items')->get();
+        if ($tasks->isEmpty()) {
+            return 0;
+        }
+
+        return (int) round($tasks->avg(fn ($t) => $t->status === 'done' ? 100 : $t->progress()));
+    }
+
+    /** Recent site activity: assignments, completions, new tasks, comments. */
+    #[Computed]
+    public function activity()
+    {
+        $todos = $this->site->todos()->with(['creator:id,name', 'assignee:id,name'])->latest()->limit(30)->get();
+
+        $events = collect();
+        foreach ($todos as $t) {
+            $events->push(['at' => $t->created_at, 'icon' => '🆕', 'taskId' => $t->id,
+                'text' => ($t->creator?->name ?? 'Someone').' created “'.$t->title.'”'.($t->assignee ? ' for '.$t->assignee->name : '')]);
+            if ($t->completed_at) {
+                $events->push(['at' => $t->completed_at, 'icon' => '✅', 'taskId' => $t->id,
+                    'text' => '“'.$t->title.'” was completed'.($t->assignee ? ' by '.$t->assignee->name : '')]);
+            }
+        }
+        // status / milestone events recorded for the dashboard feed
+        SiteActivityLog::where('site_id', $this->site->id)
+            ->where('entity_type', 'todo')->whereIn('action', ['started', 'reopened', 'milestone'])
+            ->with('user:id,name')->latest()->limit(15)->get()
+            ->each(fn ($l) => $events->push(['at' => $l->created_at,
+                'icon' => ['started' => '▶️', 'reopened' => '🔁', 'milestone' => '🏁'][$l->action],
+                'taskId' => $l->entity_id,
+                'text' => $l->title.($l->user ? ' — '.$l->user->name : '').($l->description ? ' '.$l->description : '')]));
+
+        TaskComment::whereHas('task', fn ($q) => $q->where('site_id', $this->site->id))
+            ->with(['author:id,name', 'task:id,title'])->latest()->limit(15)->get()
+            ->each(fn ($c) => $events->push(['at' => $c->created_at, 'icon' => '💬', 'taskId' => $c->todo_id,
+                'text' => ($c->author?->name ?? 'Someone').' commented on “'.($c->task?->title ?? 'a task').'”']));
+
+        return $events->sortByDesc('at')->take(8)->values();
+    }
+
+    /** Overdue + due-in-48h tasks that need a push. */
+    #[Computed]
+    public function needsAttention()
+    {
+        return $this->site->todos()->where('status', '!=', 'done')
+            ->whereNotNull('due_at')->where('due_at', '<', now()->addDays(2))
+            ->orderBy('due_at')->limit(4)->get();
+    }
+
     public function canManage(): bool
     {
         return $this->site->canManageTeam(Auth::user());
@@ -121,6 +194,9 @@ class TasksPage extends Component
 
     public function create(): void
     {
+        // The breakdown is what the progress bar measures — every task needs ≥1 step.
+        $steps = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $this->items))));
+
         $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -128,7 +204,11 @@ class TasksPage extends Component
             'priority' => ['required', 'in:low,normal,high'],
             'startAt' => ['nullable', 'date'],
             'dueAt' => ['nullable', 'date', 'after_or_equal:startAt'],
-        ], ['dueAt.after_or_equal' => 'The finish date must be on or after the start date.']);
+            'items' => ['required', fn ($attr, $value, $fail) => $steps === [] ? $fail('Break the task into at least one step — that\'s how its progress is tracked.') : null],
+        ], [
+            'dueAt.after_or_equal' => 'The finish date must be on or after the start date.',
+            'items.required' => 'Break the task into at least one step — that\'s how its progress is tracked.',
+        ]);
         $assignee = $this->memberOrNull($this->assignee);
 
         $task = $this->site->todos()->create([
@@ -140,14 +220,14 @@ class TasksPage extends Component
             'status' => 'open',
             'due_at' => $this->dueAt ? Carbon::parse($this->dueAt)->endOfDay() : null,
         ]);
-        foreach (preg_split('/\r\n|\r|\n/', $this->items) as $i => $line) {
-            if (($line = trim($line)) !== '') {
-                $task->items()->create(['label' => $line, 'sort' => $i + 1]);
-            }
+        foreach ($steps as $i => $line) {
+            $task->items()->create(['label' => $line, 'sort' => $i + 1]);
         }
-        if ($assignee) {
+        if ($assignee && $assignee->id !== Auth::id()) {
             $this->notify($assignee, "You've been assigned a task: {$task->title}");
+            $this->alertAssignment($assignee, $task);
         }
+        ActivityLogger::todoCreated($task);
 
         $this->reset('title', 'description', 'assignee', 'startAt', 'dueAt', 'items', 'composing');
         $this->priority = 'normal';
@@ -162,7 +242,9 @@ class TasksPage extends Component
         abort_unless(array_key_exists($status, Todo::STATUSES), 422);
         $task = $this->find($taskId);
         abort_unless($task->editableBy(Auth::user()), 403);
+        $was = $task->status;
         $task->update(['status' => $status, 'completed_at' => $status === 'done' ? now() : null]);
+        $this->logTransition($task, $was, $status);
         if ($status === 'done' && $task->creator && $task->creator->id !== Auth::id()) {
             $this->notify($task->creator, Auth::user()->name." completed: {$task->title}");
         }
@@ -177,6 +259,57 @@ class TasksPage extends Component
         $task->update(['assigned_user_id' => $user?->id]);
         if ($user && $user->id !== Auth::id()) {
             $this->notify($user, Auth::user()->name." assigned you: {$task->title}");
+            $this->alertAssignment($user, $task);
+        }
+        $this->refresh();
+    }
+
+    /** Set the whole task's start or due date straight from the drawer. */
+    public function setTaskDate(string $taskId, string $which, ?string $value): void
+    {
+        abort_unless(in_array($which, ['start', 'due']), 422);
+        $task = $this->find($taskId);
+        abort_unless($task->editableBy(Auth::user()) || $this->canManage(), 403);
+        $date = trim((string) $value) !== '' ? Carbon::parse($value) : null;
+        if ($which === 'start') {
+            if ($date && $task->due_at && $date->gt($task->due_at)) {
+                $this->dispatch('toast', level: 'error', title: 'Dates', message: 'Start must be on or before the due date.');
+
+                return;
+            }
+            $task->update(['starts_at' => $date?->startOfDay()]);
+        } else {
+            if ($date && $task->starts_at && $date->lt($task->starts_at->copy()->startOfDay())) {
+                $this->dispatch('toast', level: 'error', title: 'Dates', message: 'Due date must be on or after the start.');
+
+                return;
+            }
+            $task->update(['due_at' => $date?->endOfDay()]);
+        }
+        $this->refresh();
+    }
+
+    /** Set one breakdown item's start or finish date inline (no edit form needed). */
+    public function setItemDate(string $itemId, string $which, ?string $value): void
+    {
+        abort_unless(in_array($which, ['start', 'end']), 422);
+        $item = $this->findItem($itemId);
+        abort_unless($item->todo->editableBy(Auth::user()) || $this->canManage(), 403);
+        $date = trim((string) $value) !== '' ? Carbon::parse($value) : null;
+        if ($which === 'start') {
+            if ($date && $item->ends_at && $date->gt($item->ends_at)) {
+                $this->dispatch('toast', level: 'error', title: 'Dates', message: 'Start must be on or before the finish.');
+
+                return;
+            }
+            $item->update(['starts_at' => $date?->startOfDay()]);
+        } else {
+            if ($date && $item->starts_at && $date->lt($item->starts_at->copy()->startOfDay())) {
+                $this->dispatch('toast', level: 'error', title: 'Dates', message: 'Finish must be on or after the start.');
+
+                return;
+            }
+            $item->update(['ends_at' => $date?->endOfDay()]);
         }
         $this->refresh();
     }
@@ -198,6 +331,10 @@ class TasksPage extends Component
     {
         $item = TodoItem::whereHas('todo', fn ($q) => $q->where('site_id', $this->siteId))->findOrFail($itemId);
         $item->update(['done' => ! $item->done]);
+        if ($item->done) {
+            $todo = Todo::with('items')->find($item->todo_id);
+            ActivityLogger::todoMilestone($todo, $item->label, $todo->progress());
+        }
         $this->syncStatus($item->todo_id);
         $this->refresh();
     }
@@ -283,6 +420,11 @@ class TasksPage extends Component
     {
         $item = $this->findItem($itemId);
         abort_unless($item->todo->editableBy(Auth::user()) || $this->canManage(), 403);
+        if ($item->todo->items()->count() <= 1) {
+            $this->dispatch('toast', level: 'error', title: 'Task breakdown', message: 'A task keeps at least one step — add another before removing this one.');
+
+            return;
+        }
         $todoId = $item->todo_id;
         $item->delete();
         $this->syncStatus($todoId);
@@ -321,7 +463,30 @@ class TasksPage extends Component
 
     private function memberOrNull(string $userId): ?User
     {
-        return $userId !== '' ? $this->site->members()->where('users.id', $userId)->first() : null;
+        return $userId !== ''
+            ? $this->site->teamUsers()->pluck('user')->first(fn ($u) => $u->id === $userId)
+            : null;
+    }
+
+    /** Dashboard alert for an assignment: title + a brief of what the task is about. */
+    private function alertAssignment(User $to, Todo $task): void
+    {
+        $brief = collect([
+            $task->description ? Str::limit(trim($task->description), 140) : null,
+            $task->due_at ? 'Due '.$task->due_at->format('D j M Y') : null,
+            $task->priority === 'high' ? 'High priority' : null,
+        ])->filter()->implode(' · ');
+
+        Alert::create([
+            'site_id' => $this->site->id,
+            'user_id' => $to->id,
+            'level' => $task->priority === 'high' ? 'warning' : 'info',
+            'type' => 'task',
+            'audience' => 'all',
+            'title' => Auth::user()->name.' assigned you: '.$task->title,
+            'body' => $brief ?: 'Open the task for the details.',
+            'link' => url($this->site->name.'/tasks?show=mine'),
+        ]);
     }
 
     /** A direct message in the site's Messages hub — shows as unread in the recipient's rail. */
@@ -344,7 +509,23 @@ class TasksPage extends Component
         }
         $done = $task->items->where('done', true)->count();
         $status = $done === $task->items->count() ? 'done' : ($done > 0 ? 'in_progress' : 'open');
+        $was = $task->status;
         $task->update(['status' => $status, 'completed_at' => $status === 'done' ? ($task->completed_at ?? now()) : null]);
+        $this->logTransition($task, $was, $status);
+    }
+
+    /** Dashboard activity: record what a status change means in plain words. */
+    private function logTransition(Todo $task, string $was, string $now): void
+    {
+        if ($was === $now) {
+            return;
+        }
+        match (true) {
+            $now === 'done' => ActivityLogger::todoCompleted($task),
+            $now === 'in_progress' => ActivityLogger::todoStarted($task),
+            $now === 'open' && $was !== 'open' => ActivityLogger::todoReopened($task),
+            default => null,
+        };
     }
 
     private function refresh(): void

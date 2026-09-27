@@ -15,7 +15,85 @@
         {
             "type": "app:graceway:join-church",
             "name": "Join Church",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Perks Title",
+                    "type": "text",
+                    "value": "What happens when you join?",
+                    "order": 0,
+                    "description": "copy:join.perksTitle"
+                },
+                {
+                    "label": "Note Title",
+                    "type": "text",
+                    "value": "No forms required to visit.",
+                    "order": 1,
+                    "description": "copy:join.note.title"
+                },
+                {
+                    "label": "Note Text",
+                    "type": "text",
+                    "value": "This form just helps us welcome you well \u2014 you're free to simply show up on Sunday.",
+                    "order": 2,
+                    "description": "copy:join.note.text"
+                },
+                {
+                    "label": "Chip",
+                    "type": "text",
+                    "value": "\u2733 Join the Church",
+                    "order": 3,
+                    "description": "copy:join.chip"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Become part of the family",
+                    "order": 4,
+                    "description": "copy:join.title"
+                },
+                {
+                    "label": "Sub",
+                    "type": "text",
+                    "value": "Tell us a little about yourself and our welcome team will take it from there \u2014 usually within a couple of days.",
+                    "order": 5,
+                    "description": "copy:join.sub"
+                },
+                {
+                    "label": "Interest Placeholder",
+                    "type": "text",
+                    "value": "Ministry you're curious about",
+                    "order": 6,
+                    "description": "copy:join.interestPlaceholder"
+                },
+                {
+                    "label": "Fine",
+                    "type": "text",
+                    "value": "One email a week, never shared, unsubscribe anytime.",
+                    "order": 7,
+                    "description": "copy:join.fine"
+                },
+                {
+                    "label": "Thanks",
+                    "type": "text",
+                    "value": "\ud83c\udf89 Welcome to the family! Look out for a welcome email this week \u2014 and we'd love to see you on Sunday.",
+                    "order": 8,
+                    "description": "copy:join.thanks"
+                },
+                {
+                    "label": "Faq Eyebrow",
+                    "type": "text",
+                    "value": "Good to know",
+                    "order": 9,
+                    "description": "copy:join.faqEyebrow"
+                },
+                {
+                    "label": "Faq Title",
+                    "type": "text",
+                    "value": "Questions people ask",
+                    "order": 10,
+                    "description": "copy:join.faqTitle"
+                }
+            ]
         },
         {
             "type": "app:graceway:times",

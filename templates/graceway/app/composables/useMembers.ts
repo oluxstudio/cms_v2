@@ -20,20 +20,31 @@ export interface MemberProfileExtras {
 
 // Shared profile extras rendered on every leadership profile page;
 // per-member values can replace this when the CMS is wired up.
-export const memberExtras: MemberProfileExtras = {
-  stats: [
+/** @olux-collection Profile Stats */
+const profileStats = [
     { value: '15+', label: 'Years Serving' },
     { value: '6', label: 'Ministries Led' },
     { value: '1k+', label: 'Lives Touched' },
-  ],
-  skills: [
+  ]
+/** @olux-collection Profile Skills */
+const profileSkills = [
     { icon: '📖', name: 'Teaching & Preaching', pct: 95 },
     { icon: '🙏', name: 'Pastoral Care', pct: 90 },
     { icon: '🎵', name: 'Worship Leading', pct: 75 },
     { icon: '🤝', name: 'Community Outreach', pct: 85 },
     { icon: '👥', name: 'Small Groups', pct: 80 },
     { icon: '🧒', name: 'Youth & Children', pct: 70 },
-  ],
+  ]
+// CMS-first: the Profile Stats / Profile Skills collections feed every
+// leadership profile page; the authored rows seed them.
+export const useMemberExtras = (): MemberProfileExtras => {
+  const { items } = useCms()
+  const stats = items('profileStats', []) as any[]
+  const skills = items('profileSkills', []) as any[]
+  return {
+    stats: stats.length ? stats as MemberProfileExtras['stats'] : profileStats,
+    skills: skills.length ? skills as MemberProfileExtras['skills'] : profileSkills,
+  }
 }
 
 /** @olux-collection Leadership */

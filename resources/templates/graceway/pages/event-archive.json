@@ -15,7 +15,36 @@
         {
             "type": "app:graceway:events-archive",
             "name": "Events Archive",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Looking back",
+                    "order": 0,
+                    "description": "copy:eventsArchive.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Event archive",
+                    "order": 1,
+                    "description": "copy:eventsArchive.title"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Moments we shared \u2014 services, celebrations and outreach from seasons past.",
+                    "order": 2,
+                    "description": "copy:eventsArchive.text"
+                },
+                {
+                    "label": "Empty",
+                    "type": "text",
+                    "value": "No past events yet \u2014 check back after our next gathering.",
+                    "order": 3,
+                    "description": "copy:eventsArchive.empty"
+                }
+            ]
         },
         {
             "type": "app:graceway:donate-cta",

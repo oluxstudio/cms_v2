@@ -26,15 +26,15 @@ const when = (iso: string) => {
   <section class="ev-archive" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head center">
-        <p class="eyebrow">{{ eventsArchive.eyebrow }}</p>
-        <h2>{{ eventsArchive.title }}</h2>
-        <p>{{ eventsArchive.text }}</p>
+        <p class="eyebrow" data-olx-field="eyebrow">{{ oluxCms.t('Eyebrow', eventsArchive.eyebrow) }}</p>
+        <h2 data-olx-field="title">{{ oluxCms.t('Title', eventsArchive.title) }}</h2>
+        <p data-olx-field="text">{{ oluxCms.t('Text', eventsArchive.text) }}</p>
       </div>
 
-      <p v-if="!past.length" class="eva-empty">{{ eventsArchive.empty }}</p>
+      <p v-if="!past.length" class="eva-empty" data-olx-field="empty">{{ oluxCms.t('Empty', eventsArchive.empty) }}</p>
 
-      <div v-else class="eva-grid">
-        <NuxtLink
+      <div v-else class="eva-grid" data-olx-panel="events">
+        <NuxtLink data-olx-item
           v-for="e in past" :key="e.id ?? e.title" class="eva-card"
           :to="`/event-archive/${e.id}`" :aria-label="`View ${e.title}`"
         >

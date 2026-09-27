@@ -10,12 +10,12 @@ const { books } = useSiteContent()
     <div class="container">
       <div class="books-grid">
         <div class="books-copy">
-          <h2 class="mega">{{ books.title }} <span class="hl">{{ books.titleHighlight }}</span></h2>
-          <p class="sub">{{ books.sub }}</p>
-          <CtaButton :to="books.cta.to" :label="books.cta.label" />
+          <h2 class="mega" data-olx-field="title">{{ oluxCms.t('Title', books.title) }} <span class="hl" data-olx-field="titleHighlight">{{ oluxCms.t('Title Highlight', books.titleHighlight) }}</span></h2>
+          <p class="sub" data-olx-field="sub">{{ oluxCms.t('Sub', books.sub) }}</p>
+          <!-- <CtaButton :to="books.cta.to" :label="books.cta.label" /> -->
         </div>
         <div class="books-collage">
-          <img :src="books.img.src" :alt="books.img.alt">
+          <img :src="oluxCms.t('Img Src', books.img.src)" data-olx-field="imgSrc" :alt="oluxCms.t('Img Alt', books.img.alt)">
         </div>
       </div>
     </div>

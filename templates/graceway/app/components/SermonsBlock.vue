@@ -13,13 +13,13 @@ const { sermonsHead } = useSiteContent()
   <section id="sermons" class="sermons" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head center">
-        <p class="eyebrow">{{ sermonsHead.eyebrow }}</p>
-        <h2>{{ sermonsHead.title }}</h2>
-        <p>{{ sermonsHead.text }}</p>
+        <p class="eyebrow" data-olx-field="eyebrow">{{ oluxCms.t('Eyebrow', sermonsHead.eyebrow) }}</p>
+        <h2 data-olx-field="title">{{ oluxCms.t('Title', sermonsHead.title) }}</h2>
+        <p data-olx-field="text">{{ oluxCms.t('Text', sermonsHead.text) }}</p>
       </div>
 
-      <div class="sermon-grid">
-        <NuxtLink v-for="s in latest" :key="s.slug" class="sermon-card" :to="`/sermons/${s.slug}`">
+      <div class="sermon-grid" data-olx-panel="sermons">
+        <NuxtLink data-olx-item v-for="s in latest" :key="s.slug" class="sermon-card" :to="`/sermons/${s.slug}`">
           <div class="sermon-thumb">
             <img :src="sermonThumb(s)" :alt="s.title" loading="lazy">
             <span v-if="sermonSeriesOf(s)" class="series-badge">{{ sermonSeriesOf(s)!.name }}</span>
@@ -37,7 +37,7 @@ const { sermonsHead } = useSiteContent()
       </div>
 
       <div class="sermon-more"> 
-        <CtaButton :to="sermonsHead.cta.to" :label="sermonsHead.cta.label" />
+        <CtaButton :to="oluxCms.t('Cta To', sermonsHead.cta.to)" :label="oluxCms.t('Cta Label', sermonsHead.cta.label)" data-olx-field="ctaLabel" />
       </div>
     </div>
   </section>

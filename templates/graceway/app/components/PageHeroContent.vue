@@ -15,6 +15,13 @@ const slots = useSlots()
 const copy = computed(() => useHeroCopy()[route.path.replace(/\/+$/, '') || '/'] ?? null)
 const hasSlot = computed(() => !!slots.default)
 const crumbItems = computed(() => props.crumbs?.length ? props.crumbs : copy.value?.crumbs)
+
+// CMS-first: panel edits to the "Page Hero Content" block override the
+// authored map live (useOluxContent resolves the block per current route).
+const cms = useOluxContent('page-hero-content')
+const eyebrow = computed(() => cms.t('Eyebrow', copy.value?.eyebrow ?? ''))
+const title = computed(() => cms.t('Heading', copy.value?.title ?? ''))
+const text = computed(() => cms.t('Text', copy.value?.text ?? ''))
 </script>
 
 <template>
@@ -24,9 +31,9 @@ const crumbItems = computed(() => props.crumbs?.length ? props.crumbs : copy.val
       <div class="page-hero-content">
         <slot v-if="hasSlot" />
         <template v-else-if="copy">
-          <p class="eyebrow" data-olx-field="eyebrow">{{ copy.eyebrow }}</p>
-          <h1 data-olx-field="heading">{{ copy.title }}</h1>
-          <p data-olx-field="text">{{ copy.text }}</p>
+          <p class="eyebrow" data-olx-field="eyebrow">{{ eyebrow }}</p>
+          <h1 data-olx-field="heading">{{ title }}</h1>
+          <p data-olx-field="text">{{ text }}</p>
         </template>
       </div>
     </div>

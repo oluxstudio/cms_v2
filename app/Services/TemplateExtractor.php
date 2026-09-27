@@ -16,6 +16,11 @@ use Illuminate\Support\Str;
  */
 class TemplateExtractor
 {
+    /** Composable-authored copy leaves, indexed once per extract() run. */
+    private ?ComposableCopyIndex $copy = null;
+
+    private string $appDir = '';
+
     /** CDN keyword → behaviour label, matched against nuxt.config head URLs. */
     private const BEHAVIOURS = [
         'swiper' => 'carousel',
@@ -43,6 +48,8 @@ class TemplateExtractor
         if (! File::isDirectory("$root/app/pages")) {
             throw new \RuntimeException("Not a Nuxt template app: {$key} (missing app/pages)");
         }
+        $this->appDir = "$root/app";
+        $this->copy = new ComposableCopyIndex;
 
         $manifest = [
             'key' => $key,
@@ -59,12 +66,12 @@ class TemplateExtractor
 
         // Marked data-source arrays (@olux-collection / data-olx-source)
         // become editable CMS collections seeded on every applied site.
-        if ($collections = app(\App\Services\CollectionSourceExtractor::class)->fromSources($root)) {
+        if ($collections = app(CollectionSourceExtractor::class)->fromSources($root)) {
             $manifest['collections'] = $collections;
         }
 
         // Authored <form> markup becomes real, submittable CMS forms.
-        if ($forms = app(\App\Services\FormSourceExtractor::class)->fromSources($root)) {
+        if ($forms = app(FormSourceExtractor::class)->fromSources($root)) {
             $manifest['forms'] = $forms;
         }
 
@@ -210,6 +217,25 @@ class TemplateExtractor
                 'kind' => 'const:'.$var,
                 'order' => $order++,
             ];
+        }
+
+        // ── Composable-authored copy ({{ donate.title }} from useSiteContent-
+        //    style composables) → fixed nodes, so panel edits exist AND render.
+        //    Labels are deduped against the ones above with the same letter
+        //    convention SfcRewriter re-derives — they must stay in lockstep. ──
+        if ($this->copy !== null) {
+            $taken = array_column($block['nodes'], 'label');
+            foreach ($this->copy->componentCopy($this->appDir, $src, $taken) as $f) {
+                $isImg = (bool) preg_match('/\.(png|jpe?g|webp|svg|gif|avif)(\?|$)/i', $f['value']);
+                $isUrl = ! $isImg && (str_starts_with($f['value'], '/') || str_starts_with($f['value'], 'http'));
+                $block['nodes'][] = [
+                    'label' => $f['label'],
+                    'type' => $isImg ? 'image' : ($isUrl ? 'url' : 'text'),
+                    'value' => $f['value'],
+                    'kind' => 'copy:'.$f['expr'],
+                    'order' => $order++,
+                ];
+            }
         }
 
         // ── Repeatable items: EVERY script data array becomes its own group

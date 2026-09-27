@@ -21,8 +21,8 @@ const sendForm = async (e: Event) => {
         <p class="eyebrow">{{ join.stepsEyebrow }}</p>
         <h2>{{ join.stepsTitle }}</h2>
       </div>
-      <div class="join-steps">
-        <article v-for="s in steps" :key="s.n" class="join-step">
+      <div class="join-steps" data-olx-panel="join-steps">
+        <article data-olx-item v-for="s in steps" :key="s.n" class="join-step">
           <span class="join-step-n">{{ s.n }}</span>
           <h3>{{ s.title }}</h3>
           <p>{{ s.text }}</p>
@@ -32,20 +32,20 @@ const sendForm = async (e: Event) => {
       <!-- perks + form -->
       <div class="join-grid">
         <div class="ct-info join-perks">
-          <h3>{{ join.perksTitle }}</h3>
-          <ul>
-            <li v-for="p in perks" :key="p"><i aria-hidden="true">✓</i><span>{{ p }}</span></li>
+          <h3 data-olx-field="perksTitle">{{ oluxCms.t('Perks Title', join.perksTitle) }}</h3>
+          <ul data-olx-panel="join-perks">
+            <li data-olx-item v-for="p in perks" :key="p"><i aria-hidden="true">✓</i><span>{{ p }}</span></li>
           </ul>
           <div class="join-note">
-            <b>{{ join.note.title }}</b>
-            <p>{{ join.note.text }}</p>
+            <b data-olx-field="noteTitle">{{ oluxCms.t('Note Title', join.note.title) }}</b>
+            <p data-olx-field="noteText">{{ oluxCms.t('Note Text', join.note.text) }}</p>
           </div>
         </div>
 
         <div class="ct-form-panel join-form-panel">
-          <span class="ct-chip">{{ join.chip }}</span>
-          <h2>{{ join.title }}</h2>
-          <p class="ct-sub">{{ join.sub }}</p>
+          <span class="ct-chip" data-olx-field="chip">{{ oluxCms.t('Chip', join.chip) }}</span>
+          <h2 data-olx-field="title">{{ oluxCms.t('Title', join.title) }}</h2>
+          <p class="ct-sub" data-olx-field="sub">{{ oluxCms.t('Sub', join.sub) }}</p>
 
           <form v-if="!submitted" class="ct-form" @submit.prevent="sendForm">
             <div class="row">
@@ -55,7 +55,7 @@ const sendForm = async (e: Event) => {
             <div class="row">
               <input type="tel" name="phone" placeholder="Phone (optional)">
               <select name="interest">
-                <option value="" disabled selected>{{ join.interestPlaceholder }}</option>
+                <option value="" disabled selected data-olx-field="interestPlaceholder">{{ oluxCms.t('Interest Placeholder', join.interestPlaceholder) }}</option>
                 <option v-for="i in interests" :key="i">{{ i }}</option>
               </select>
             </div>
@@ -64,11 +64,11 @@ const sendForm = async (e: Event) => {
             <label class="join-check"><input type="checkbox" name="lunch" value="yes"> Save me a seat at the next newcomers' lunch</label>
             <p v-if="sendError" class="form-error">{{ sendError }}</p>
             <button class="btn ct-send" type="submit" :disabled="sending">{{ sending ? 'Sending…' : 'Join the Church' }} <span class="arrow">↗</span></button>
-            <p class="join-fine">{{ join.fine }}</p>
+            <p class="join-fine" data-olx-field="fine">{{ oluxCms.t('Fine', join.fine) }}</p>
           </form>
 
           <div v-else class="ct-thanks">
-            <p>{{ join.thanks }}</p>
+            <p data-olx-field="thanks">{{ oluxCms.t('Thanks', join.thanks) }}</p>
             <NuxtLink class="btn" to="/events">See What's On</NuxtLink>
           </div>
         </div>
@@ -76,11 +76,11 @@ const sendForm = async (e: Event) => {
 
       <!-- FAQs -->
       <div class="section-head center join-faq-head">
-        <p class="eyebrow">{{ join.faqEyebrow }}</p>
-        <h2>{{ join.faqTitle }}</h2>
+        <p class="eyebrow" data-olx-field="faqEyebrow">{{ oluxCms.t('Faq Eyebrow', join.faqEyebrow) }}</p>
+        <h2 data-olx-field="faqTitle">{{ oluxCms.t('Faq Title', join.faqTitle) }}</h2>
       </div>
-      <div class="join-faqs">
-        <div v-for="(f, i) in faqs" :key="f.q" class="join-faq" :class="{ open: open === i }">
+      <div class="join-faqs" data-olx-panel="faqs">
+        <div data-olx-item v-for="(f, i) in faqs" :key="f.q" class="join-faq" :class="{ open: open === i }">
           <button type="button" :aria-expanded="open === i" @click="open = open === i ? null : i">
             {{ f.q }} <span aria-hidden="true">{{ open === i ? '−' : '+' }}</span>
           </button>

@@ -28,4 +28,8 @@ const programs: YouthProgram[] = [
   },
 ]
 
-export const useYouth = () => programs
+// CMS-first (auto-wired at publish): the 'Programs' collection feeds this; authored rows seed it.
+export const useYouth = () => {
+  const rows = useCms().items('programs', []) as any[]
+  return rows.length ? rows : programs
+}

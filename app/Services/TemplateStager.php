@@ -108,6 +108,14 @@ class TemplateStager
         if (! File::isDirectory($sourceDir)) {
             throw new RuntimeException("Not a directory: {$sourceDir}");
         }
+        // Refuse a source inside the staging area: prepareTarget(replace)
+        // deletes the target dir, and if source == target that destroys the
+        // source before the copy — the template is already staged anyway.
+        $staging = rtrim((string) config('templates.staging_path'), '/');
+        $real = realpath($sourceDir);
+        if ($staging !== '' && $real !== false && str_starts_with($real.'/', $staging.'/')) {
+            throw new RuntimeException("Source {$sourceDir} is inside the staging area — it is already staged; run extract/publish on it instead of importing it onto itself.");
+        }
         $target = $this->prepareTarget($key, $replace);
         $this->copyTree($sourceDir, $target);
 

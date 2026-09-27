@@ -2,10 +2,11 @@
     $stats = $this->stats;
     $canManage = $site->canManageTeam(auth()->user());
 @endphp
-<x-page-layout title="Posts" subtitle="Write, publish and see which posts your visitors love.">
+<x-tri-layout title="Posts" subtitle="Write, publish and see which posts your visitors love." :site-name="$site->name"
+    :labels="['📊 Insights', '📝 Posts', '🏆 Top posts']">
 
     {{-- ── LEFT: insight tiles ── --}}
-    <x-slot:stats>
+    <x-slot:rail>
     {{-- Insight tiles --}}
     <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
         <x-tile label="Posts written" :value="number_format($stats['total'])" :sub="$stats['published'].' published'" accent="ink" />
@@ -13,7 +14,7 @@
         <x-tile label="Total visits" :value="number_format($stats['views'])" sub="across all posts" accent="lime" />
         <x-tile label="Engagement" :value="number_format($stats['engagement'])" sub="likes + comments" accent="lavender" />
     </div>
-    </x-slot:stats>
+    </x-slot:rail>
 
     {{-- ── MAIN: centered content ── --}}
     <div>
@@ -36,7 +37,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
+    <div>
 
         {{-- ── All posts (paginated) ── --}}
         <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden self-start">
@@ -87,7 +88,10 @@
             @endif
         </div>
 
-        {{-- ── Top-10 rankings ── --}}
+    </div>
+
+    {{-- ── RIGHT rail: Top-10 rankings ── --}}
+    <x-slot:quick>
         <div class="space-y-6">
             @foreach([
                 ['Top 10 by visits', $this->topByViews, fn ($p) => '👁 '.number_format($p->views)],
@@ -110,7 +114,7 @@
             </div>
             @endforeach
         </div>
-    </div>
+    </x-slot:quick>
 
     {{-- ── Create / edit modal ── --}}
     @if($showForm)
@@ -188,7 +192,7 @@
     </div>
     @endif
     </div>
-</x-page-layout>
+</x-tri-layout>
 @assets
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>

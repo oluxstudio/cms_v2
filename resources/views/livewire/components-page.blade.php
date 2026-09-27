@@ -1,23 +1,21 @@
 @php $canManage = $this->canManage; @endphp
-<div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+<x-tri-layout title="Components" subtitle="Standalone content components — build the nodes once, attach to pages or link collections anywhere." :site-name="$site->name"
+    :labels="['📊 Overview', '🧩 Components', '⚡ Quick access']">
 
-    {{-- Header — title + description --}}
-    <div class="mb-6">
-        <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">Components</h1>
-        <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Standalone content components — build the nodes once, attach to pages or link collections anywhere.</p>
-    </div>
-
-    @if ($errorMessage)
-        <p class="mb-4 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-sm text-rose-600 dark:text-rose-400">{{ $errorMessage }}</p>
-    @endif
-
-    {{-- Stat tiles — app tile theme --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {{-- ── LEFT rail: stat tiles ── --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
         <x-tile accent="ink" :value="$this->components->count()" label="components" sub="standalone building blocks" />
         <x-tile accent="lime" :value="$this->components->sum(fn ($c) => $c->nodes->count())" label="nodes" sub="typed content fields" />
         <x-tile accent="lavender" :value="$this->components->filter(fn ($c) => $c->pages->isNotEmpty())->count()" label="attached to pages" sub="in use on the site" />
         <x-tile accent="cocoa" :value="$this->components->filter(fn ($c) => $c->nodes->where('type', 'collection')->isNotEmpty())->count()" label="linked to collections" sub="via collection nodes" />
     </div>
+    </x-slot:rail>
+
+    <div>
+    @if ($errorMessage)
+        <p class="mb-4 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-sm text-rose-600 dark:text-rose-400">{{ $errorMessage }}</p>
+    @endif
 
     {{-- List card — toolbar (search · results · layout · new) then the list --}}
     <div class="bg-white dark:bg-[#1e1f2b] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
@@ -384,3 +382,4 @@
     </x-lightbox>
     @endif
 </div>
+</x-tri-layout>

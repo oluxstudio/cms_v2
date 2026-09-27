@@ -22,6 +22,41 @@
                     "value": "Our Ministries",
                     "order": 0,
                     "description": "text"
+                },
+                {
+                    "label": "Chip",
+                    "type": "text",
+                    "value": "\u2733 Our Story",
+                    "order": 1,
+                    "description": "copy:about.chip"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "A church for the whole community",
+                    "order": 2,
+                    "description": "copy:about.title"
+                },
+                {
+                    "label": "Intro",
+                    "type": "text",
+                    "value": "For over thirty years, CAC Blackburn has been a gathering place for families, students and neighbours. Here is who we are, what we believe, and where we're headed.",
+                    "order": 3,
+                    "description": "copy:about.intro"
+                },
+                {
+                    "label": "Side Mission Title",
+                    "type": "text",
+                    "value": "Our Mission",
+                    "order": 4,
+                    "description": "copy:about.sideMission.title"
+                },
+                {
+                    "label": "Side Mission Text",
+                    "type": "text",
+                    "value": "Loving God, loving people, serving the city",
+                    "order": 5,
+                    "description": "copy:about.sideMission.text"
                 }
             ]
         },
@@ -33,7 +68,43 @@
         {
             "type": "app:graceway:pastors",
             "name": "Pastors",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Leadership",
+                    "order": 0,
+                    "description": "copy:pastorsHead.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Meet our pastors",
+                    "order": 1,
+                    "description": "copy:pastorsHead.title"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Shepherds, teachers and neighbours \u2014 here to walk with you.",
+                    "order": 2,
+                    "description": "copy:pastorsHead.text"
+                },
+                {
+                    "label": "Cta To",
+                    "type": "url",
+                    "value": "/about#leadership",
+                    "order": 3,
+                    "description": "copy:pastorsHead.cta.to"
+                },
+                {
+                    "label": "Cta Label",
+                    "type": "text",
+                    "value": "View All Members",
+                    "order": 4,
+                    "description": "copy:pastorsHead.cta.label"
+                }
+            ]
         },
         {
             "type": "app:graceway:donate-cta",

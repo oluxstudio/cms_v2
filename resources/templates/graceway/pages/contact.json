@@ -17,74 +17,96 @@
             "name": "Contact",
             "nodes": [
                 {
-                    "label": "Info 1 Icon",
+                    "label": "Info Title",
                     "type": "text",
-                    "value": "\ud83d\udcf1",
+                    "value": "Contact Information",
                     "order": 0,
-                    "description": "item:icon"
+                    "description": "copy:contact.infoTitle"
                 },
                 {
-                    "label": "Info 1 Label",
+                    "label": "Intro",
                     "type": "text",
-                    "value": "Phone Number",
+                    "value": "Have a question, a prayer request, or want to plan a visit? We're always glad to hear from you \u2014 reach out any time and we'll respond as quickly as possible.",
                     "order": 1,
-                    "description": "item:label"
+                    "description": "copy:contact.intro"
                 },
                 {
-                    "label": "Info 2 Icon",
+                    "label": "Follow Label",
                     "type": "text",
-                    "value": "\u2709\ufe0f",
+                    "value": "Follow Us",
                     "order": 2,
-                    "description": "item:icon"
+                    "description": "copy:contact.followLabel"
                 },
                 {
-                    "label": "Info 2 Label",
+                    "label": "Form Chip",
                     "type": "text",
-                    "value": "Email Address",
+                    "value": "\u2733 Get In Touch",
                     "order": 3,
-                    "description": "item:label"
+                    "description": "copy:contact.formChip"
                 },
                 {
-                    "label": "Info 2 Href",
+                    "label": "Form Title",
                     "type": "text",
-                    "value": "mailto:${profile.email}",
+                    "value": "Get In Touch",
                     "order": 4,
-                    "description": "item:href"
+                    "description": "copy:contact.formTitle"
                 },
                 {
-                    "label": "Info 3 Icon",
+                    "label": "Form Sub",
                     "type": "text",
-                    "value": "\ud83d\udd50",
+                    "value": "We would love to hear about your visit, your questions or how we can pray with you. Fill out the form and our team will get back to you soon.",
                     "order": 5,
-                    "description": "item:icon"
+                    "description": "copy:contact.formSub"
                 },
                 {
-                    "label": "Info 3 Label",
+                    "label": "Topic Placeholder",
                     "type": "text",
-                    "value": "Office Hours",
+                    "value": "What's this about?",
                     "order": 6,
-                    "description": "item:label"
+                    "description": "copy:contact.topicPlaceholder"
                 },
                 {
-                    "label": "Info 4 Icon",
+                    "label": "Thanks",
                     "type": "text",
-                    "value": "\ud83d\udccd",
+                    "value": "\ud83d\udc9b Thank you \u2014 your message is on its way. We usually reply within a day or two.",
                     "order": 7,
-                    "description": "item:icon"
+                    "description": "copy:contact.thanks"
                 },
                 {
-                    "label": "Info 4 Label",
+                    "label": "Send Another",
                     "type": "text",
-                    "value": "Our Location",
+                    "value": "Send Another",
                     "order": 8,
-                    "description": "item:label"
+                    "description": "copy:contact.sendAnother"
                 }
             ]
         },
         {
             "type": "app:graceway:contact-map",
             "name": "Contact Map",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Chip",
+                    "type": "text",
+                    "value": "\u2733 Our Location",
+                    "order": 0,
+                    "description": "copy:contactMap.chip"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Visit us for Sunday services and in-person meetings",
+                    "order": 1,
+                    "description": "copy:contactMap.title"
+                },
+                {
+                    "label": "Map Src",
+                    "type": "url",
+                    "value": "https://www.openstreetmap.org/export/embed.html?bbox=-2.5205%2C53.7330%2C-2.4370%2C53.7770&layer=mapnik&marker=53.7550%2C-2.4790",
+                    "order": 2,
+                    "description": "copy:contactMap.mapSrc"
+                }
+            ]
         },
         {
             "type": "app:graceway:times",

@@ -1,14 +1,17 @@
-<div class="main-body p-6 space-y-6">
+<x-tri-layout title="Collections" subtitle="Structured data sources — the rows behind grids, lists and galleries." :site-name="$site->name"
+    :labels="['📊 Overview', '🗂 Collections', '⚡ Quick access']">
 
-    <x-page-heading segment="collections" />
-
-    {{-- ── Summary Tiles — app tile theme ── --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {{-- ── LEFT rail: summary tiles ── --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
         <x-tile accent="ink" :value="$total" label="Total collections" sub="all types" />
         <x-tile accent="lime" :value="$types" label="Types" sub="distinct kinds" />
         <x-tile accent="lavender" :value="$collections->where('type','list')->count()" label="List type" sub="list collections" />
         <x-tile accent="cocoa" :value="$recent" label="Added this week" sub="last 7 days" />
     </div>
+    </x-slot:rail>
+
+    <div class="space-y-6">
 
     {{-- ── Table Card ── --}}
     <div class="bg-white dark:bg-[#1e1f2b] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
@@ -327,10 +330,16 @@
                 <p class="text-xs font-bold uppercase tracking-[.12em] text-gray-400 mb-3">{{ $editingItemId ? 'Edit entry' : 'New entry' }}</p>
                 <div class="grid sm:grid-cols-2 gap-3">
                     @foreach(($viewing->fields ?? []) as $f)
-                    @php $key = $f['key']; $ftype = $f['type'] ?? 'text'; $isJson = in_array($key, $itemJsonKeys ?? [], true); @endphp
-                    <div class="{{ ($ftype === 'textarea' || $isJson) ? 'sm:col-span-2' : '' }}">
+                    @php
+                        $key = $f['key']; $ftype = $f['type'] ?? 'text';
+                        $isJson = in_array($key, $itemJsonKeys ?? [], true);
+                        $isNested = ! $isJson && is_array($itemForm[$key] ?? null);
+                    @endphp
+                    <div class="{{ ($ftype === 'textarea' || $isJson || $isNested) ? 'sm:col-span-2' : '' }}">
                         <label class="block text-[11px] font-bold text-gray-500 mb-1">{{ $f['label'] ?? $key }}@if($isJson) <span class="font-normal text-gray-400">· list (JSON)</span>@endif</label>
-                        @if($isJson)
+                        @if($isNested)
+                            @include('livewire.partials.nested-field', ['path' => "itemForm.$key", 'value' => $itemForm[$key], 'fieldKey' => $key])
+                        @elseif($isJson)
                             <textarea wire:model="itemForm.{{ $key }}" rows="4" spellcheck="false" class="w-full px-3 py-2 text-xs font-mono rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-y"></textarea>
                             @error('itemForm.'.$key)<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
                         @elseif($ftype === 'textarea')
@@ -426,3 +435,4 @@
     {{-- Asset library dialog for the item editor's photo fields --}}
     <livewire:media-picker :site-id="$site->id" />
 </div>
+</x-tri-layout>

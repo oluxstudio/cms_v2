@@ -3,19 +3,23 @@
 namespace App\Livewire;
 
 use App\Jobs\InstallTemplateJob;
+use App\Livewire\Concerns\WithNestedFields;
 use App\Models\Collection;
 use App\Models\CollectionItem;
 use App\Models\Component;
 use App\Models\ContentVersion;
 use App\Models\Form;
+use App\Models\Media;
 use App\Models\Node;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Site;
+use App\Services\CollectionSourceExtractor;
 use App\Services\ContentVersioner;
 use App\Services\SiteConnect\AssetImporter;
 use App\Services\SiteConnect\PageJsonPublisher;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component as LivewireComponent;
@@ -30,6 +34,11 @@ use Livewire\Component as LivewireComponent;
  */
 class ConnectReviewPage extends LivewireComponent
 {
+    use WithNestedFields;
+
+    /** Roots the nested-field editor may mutate. */
+    protected array $nestedRoots = ['edit.items.'];
+
     public Site $site;
 
     /** Embedded inside another page (e.g. the page-detail Content tab): hides page-level chrome like the client-URL bar. */
@@ -144,19 +153,88 @@ class ConnectReviewPage extends LivewireComponent
 
     /** connect.js click bridge → select the clicked component by id or key. */
     #[On('olx-edit-select')]
-    public function onEditSelect(?string $id = null, ?string $key = null, string $kind = 'component'): void
+    public function onEditSelect(?string $id = null, ?string $key = null, string $kind = 'component', ?int $itemIndex = null, ?string $itemText = null): void
     {
-        if ($id) {
-            $this->select($kind, $id);
+        // The store's product grid edits like a collection grid: the panel
+        // key "products" opens the site's Products as entry cards.
+        if ($id === null && $kind === 'collection' && strtolower((string) $key) === 'products') {
+            $this->select('products', 'products');
+            if (($index = $itemText !== null ? $this->itemIndexByText($itemText) : $itemIndex) !== null) {
+                $this->dispatch('olx-editor-focus', target: 'item', index: $index);
+            }
 
             return;
         }
-        if (! $key) {
+        if ($id) {
+            $this->select($kind, $id);
+        } elseif ($key && ($model = $this->resolveByKey($kind, $key)
+                // Authors also mark plain component sections with
+                // data-olx-panel (e.g. "donate-cta") — when no collection
+                // carries the slug, open the component of that name
+                // instead of loading nothing.
+                ?? ($kind === 'collection' ? $this->componentByKey(strtolower($key)) : null))) {
+            // The fallback may resolve across kinds — trust the model, not
+            // the marker.
+            $kind = match (true) {
+                $model instanceof Component => 'component',
+                $model instanceof Collection => 'collection',
+                $model instanceof Form => 'form',
+                default => $kind,
+            };
+            // A node-less component is an empty panel; when the pipeline
+            // linked it to its data-source collection, open THAT — the
+            // section's real, editable content (legal sections, archives…).
+            if ($model instanceof Component && $model->collection_id
+                && ! $model->nodes()->exists()
+                && Collection::where('site_id', $this->site->id)->whereKey($model->collection_id)->exists()) {
+                [$kind, $model] = ['collection', Collection::find($model->collection_id)];
+            }
+            $this->select($kind, $model->id);
+        } else {
             return;
         }
-        if ($model = $this->resolveByKey($kind, $key)) {
-            $this->select($kind, $model->id);
+        // Clicked a specific entry in the preview → open its card in the panel.
+        if (($this->edit['type'] ?? null) === 'collection') {
+            // Templates sort/filter their grids, so the clicked row's DOM
+            // index rarely matches our item order — match by the row's
+            // visible text first, fall back to the index.
+            $matched = $itemText !== null ? $this->itemIndexByText($itemText) : null;
+            $index = $matched ?? $itemIndex;
+            if ($index !== null) {
+                $this->dispatch('olx-editor-focus', target: 'item', index: $index);
+            }
         }
+    }
+
+    /**
+     * Find the collection entry the clicked preview row shows: the item
+     * whose longest string value appears in the row's visible text wins.
+     */
+    private function itemIndexByText(string $itemText): ?int
+    {
+        $norm = fn (string $s) => mb_strtolower(preg_replace('/\s+/u', ' ', trim($s)));
+        $hay = $norm($itemText);
+        if ($hay === '') {
+            return null;
+        }
+        $best = null;
+        $bestLen = 0;
+        foreach (($this->edit['items'] ?? []) as $i => $item) {
+            foreach (($item['data'] ?? []) as $v) {
+                if (! is_string($v)) {
+                    continue;
+                }
+                $val = $norm($v);
+                $len = mb_strlen($val);
+                // Short values ("yes", "2") match everything — require substance.
+                if ($len >= 6 && $len > $bestLen && str_contains($hay, $val)) {
+                    $best = $i;
+                    $bestLen = $len;
+                }
+            }
+        }
+
+        return $best;
     }
 
     /** Resolve a hand-authored client marker (data-olx-key) to a real model. */
@@ -292,6 +370,71 @@ class ConnectReviewPage extends LivewireComponent
         }
     }
 
+    /**
+     * Detail routes ([slug].vue) grouped with real URLs from their data
+     * source — profiles, study/sermon/programme pages render by id exactly
+     * like the original site, so the editor lists them for preview too.
+     *
+     * @return array<string, array<int, array{label:string,url:string}>>
+     */
+    public function getDynamicPagesProperty(): array
+    {
+        $appDir = base_path('templates/'.$this->site->template);
+        if (! $this->site->template || ! is_dir("$appDir/app/pages")) {
+            return [];
+        }
+        $extractor = app(CollectionSourceExtractor::class);
+        $groups = [];
+        foreach (File::allFiles("$appDir/app/pages") as $f) {
+            if ($f->getExtension() !== 'vue' || ! str_starts_with($f->getFilename(), '[')) {
+                continue;
+            }
+            $rel = str_replace('\\', '/', Str::after($f->getPathname(), '/app/pages/'));
+            $base = trim(dirname($rel), './');
+            if ($base === '') {
+                continue;
+            }
+            // Several data sources may match (shared composables) — take the
+            // first whose rows actually produce routable keys. Rows without a
+            // slug/id field route by their item id (e.g. media detail pages).
+            $candidates = collect($extractor->sourceSlugsForFile($appDir, $f->getPathname()))
+                ->map(fn ($slug) => $this->site->collections()->get()
+                    ->first(fn ($c) => Str::slug($c->slug ?: $c->name) === Str::slug($slug)))
+                ->filter();
+            $build = function ($col, bool $allowItemId) use ($base) {
+                return $col->items()->limit(6)->get()->map(function ($i) use ($base, $allowItemId) {
+                    $d = (array) ($i->data ?? []);
+                    $key = $d['slug'] ?? $d['id'] ?? ($allowItemId ? $i->id : null);
+                    if (! $key) {
+                        return null;
+                    }
+
+                    return [
+                        'label' => (string) ($d['name'] ?? $d['title'] ?? $key),
+                        'url' => '/'.$base.'/'.$key,
+                    ];
+                })->filter()->values()->all();
+            };
+            // Prefer a source whose rows carry their own slug/id; fall back
+            // to item-id routing (media-style detail pages) only after.
+            $rows = [];
+            foreach ([false, true] as $allowItemId) {
+                foreach ($candidates as $col) {
+                    $rows = $build($col, $allowItemId);
+                    if ($rows !== []) {
+                        break 2;
+                    }
+                }
+            }
+            if ($rows !== []) {
+                $groups[Str::headline(basename($base))] = $rows;
+            }
+        }
+        ksort($groups);
+
+        return $groups;
+    }
+
     /** Select a content model by kind + id — loads it for view/edit. */
     public function select(string $kind, string $id): void
     {
@@ -354,6 +497,7 @@ class ConnectReviewPage extends LivewireComponent
         match ($this->selectedKind) {
             'component' => $this->loadComponent($this->selectedId),
             'collection' => $this->loadCollection($this->selectedId),
+            'products' => $this->loadProducts(),
             'form' => $this->loadForm($this->selectedId),
             'post' => $this->loadPost($this->selectedId),
             default => null,
@@ -379,7 +523,7 @@ class ConnectReviewPage extends LivewireComponent
                         return [
                             'id' => $i->id,
                             'label' => (string) ($d['name'] ?? $d['title'] ?? array_values(array_filter($d, 'is_string'))[0] ?? '…'),
-                            'img' => $img !== '' ? \App\Models\Media::resolveRef($this->site->id, '@media/'.basename($img)) : '',
+                            'img' => $img !== '' ? Media::resolveRef($this->site->id, '@media/'.basename($img)) : '',
                         ];
                     })->all(),
                 ];
@@ -395,6 +539,27 @@ class ConnectReviewPage extends LivewireComponent
                 'schema' => collect($col->fields ?? [])->map(fn ($f) => $f['name'] ?? $f['key'] ?? null)->filter()->unique()->values()->all(),
                 'items' => $col->items->map(fn (CollectionItem $i) => ['id' => $i->id, 'data' => $i->data ?? []])->all()];
         }
+    }
+
+    /**
+     * The site's store Products presented exactly like a collection grid —
+     * same entry cards, add/duplicate/remove and save flow in the panel.
+     * `products => true` routes persistence to saveProducts().
+     */
+    private function loadProducts(): void
+    {
+        $this->edit = [
+            'type' => 'collection', 'products' => true, 'id' => 'products', 'name' => 'Products',
+            'schema' => ['name', 'category', 'price', 'description', 'image'],
+            'items' => $this->site->products()->orderBy('sort')->orderBy('created_at')->get()
+                ->map(fn ($p) => ['id' => $p->id, 'data' => [
+                    'name' => (string) $p->name,
+                    'category' => (string) $p->category,
+                    'price' => number_format($p->price_cents / 100, 2, '.', ''),
+                    'description' => (string) $p->description,
+                    'image' => (string) $p->image,
+                ]])->all(),
+        ];
     }
 
     private function loadForm(string $id): void
@@ -989,11 +1154,100 @@ class ConnectReviewPage extends LivewireComponent
 
     public function addItem(): void
     {
+        $this->guard();
         $schema = $this->edit['schema'] ?? [];
         $col = Collection::where('site_id', $this->site->id)->find($this->edit['id'] ?? null);
         $defaults = $col ? $this->schemaDefaults($col) : [];
-        $this->edit['items'][] = ['id' => null, 'data' => array_merge(array_fill_keys($schema, ''), $defaults)];
+        $data = array_merge(array_fill_keys($schema, ''), $defaults);
+        // Persist at once (like delete) so the preview shows the new row
+        // immediately — typing then updates it field by field.
+        $this->edit['items'][] = ['id' => $this->persistNewItem($data, count($this->edit['items'] ?? [])), 'data' => $data];
         $this->dispatch('olx-editor-focus', target: 'last-item');
+        $this->refreshPreview('Item added');
+    }
+
+    /** Copy an item — the fastest way to add another row of the same shape. */
+    public function duplicateItem(int $i): void
+    {
+        $this->guard();
+        $item = $this->edit['items'][$i] ?? null;
+        if ($item === null) {
+            return;
+        }
+        array_splice($this->edit['items'], $i + 1, 0, [['id' => $this->persistNewItem((array) $item['data'], $i + 1), 'data' => $item['data']]]);
+        $this->dispatch('olx-editor-focus', target: 'item', index: $i + 1);
+        $this->refreshPreview('Item duplicated');
+    }
+
+    /** Create the backing row for a fresh panel entry; returns its id. */
+    private function persistNewItem(array $data, int $pos): ?string
+    {
+        if ($this->edit['products'] ?? false) {
+            $name = trim((string) ($data['name'] ?? '')) ?: 'Untitled product';
+            $base = Str::slug($name) ?: 'product';
+            $slug = $base;
+            for ($i = 2; $this->site->products()->where('slug', $slug)->exists(); $i++) {
+                $slug = "{$base}-{$i}";
+            }
+
+            return $this->site->products()->create([
+                'name' => $name, 'slug' => $slug,
+                'category' => (string) ($data['category'] ?? ''),
+                'price_cents' => (int) round(((float) ($data['price'] ?? 0)) * 100),
+                'description' => (string) ($data['description'] ?? ''),
+                'image' => (string) ($data['image'] ?? ''),
+                'currency' => $this->site->products()->value('currency') ?: 'gbp',
+                'is_active' => true, 'sort' => $pos,
+            ])->id;
+        }
+        $col = Collection::where('site_id', $this->site->id)->find($this->edit['id'] ?? null);
+        if (! $col) {
+            return null;
+        }
+
+        return CollectionItem::create([
+            'collection_id' => $col->id, 'site_id' => $this->site->id,
+            'status' => 'published', 'data' => $data, 'position' => $pos,
+        ])->id;
+    }
+
+    /**
+     * Live item edits: a blurred entry-card field persists at once and the
+     * preview follows — the same immediacy as add/delete. (Save still works
+     * as the explicit "persist everything" action.)
+     */
+    public function updated(string $prop): void
+    {
+        if (($this->edit['type'] ?? null) !== 'collection' || ! preg_match('/^edit\.items\.(\d+)\./', $prop, $m)) {
+            return;
+        }
+        $this->guard();
+        $item = $this->edit['items'][(int) $m[1]] ?? null;
+        if (! $item || empty($item['id'])) {
+            return;
+        }
+        $d = (array) ($item['data'] ?? []);
+        if ($this->edit['products'] ?? false) {
+            $this->site->products()->whereKey($item['id'])->update([
+                'name' => trim((string) ($d['name'] ?? '')) ?: 'Untitled product',
+                'category' => (string) ($d['category'] ?? ''),
+                'price_cents' => (int) round(((float) ($d['price'] ?? 0)) * 100),
+                'description' => (string) ($d['description'] ?? ''),
+                'image' => (string) ($d['image'] ?? ''),
+            ]);
+            $this->dispatch('olx-reload-frame');
+
+            return;
+        }
+        CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->update(['data' => $d]);
+        $this->refreshPreview('Item updated');
+    }
+
+    /** From a component's data-source card: jump to the collection AND start a new entry. */
+    public function addToLinkedCollection(string $collectionId): void
+    {
+        $this->select('collection', $collectionId);
+        $this->addItem();
     }
 
     /** Reorder an item one step up (-1) or down (+1); persists immediately. */
@@ -1022,15 +1276,35 @@ class ConnectReviewPage extends LivewireComponent
         $this->guard();
         $item = $this->edit['items'][$i] ?? null;
         if ($item && ! empty($item['id'])) {
-            CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->delete();
+            if ($this->edit['products'] ?? false) {
+                $this->site->products()->whereKey($item['id'])->delete();
+            } else {
+                CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->delete();
+            }
         }
         unset($this->edit['items'][$i]);
         $this->edit['items'] = array_values($this->edit['items']);
+        // The row is gone from the database — show that in the preview
+        // immediately, not only after the next Save.
+        if ($item && ! empty($item['id'])) {
+            if ($this->edit['products'] ?? false) {
+                // The store grid fetches products at mount — hard reload.
+                $this->dispatch('olx-reload-frame');
+                $this->dispatch('toast', level: 'success', title: 'Product removed', message: 'The store preview is reloading.');
+            } else {
+                $this->refreshPreview('Item removed');
+            }
+        }
     }
 
     public function saveCollection(): void
     {
         $this->guard();
+        if ($this->edit['products'] ?? false) {
+            $this->saveProducts();
+
+            return;
+        }
         $col = Collection::where('site_id', $this->site->id)->find($this->edit['id']);
         if (! $col) {
             return;
@@ -1045,6 +1319,38 @@ class ConnectReviewPage extends LivewireComponent
         }
         $this->loadEdit();
         $this->refreshPreview('Collection saved');
+    }
+
+    /** Persist the products grid: update by id, create the id-less rows. */
+    private function saveProducts(): void
+    {
+        foreach ($this->edit['items'] as $pos => $item) {
+            $d = (array) ($item['data'] ?? []);
+            $attrs = [
+                'name' => trim((string) ($d['name'] ?? '')) ?: 'Untitled product',
+                'category' => (string) ($d['category'] ?? ''),
+                'price_cents' => (int) round(((float) ($d['price'] ?? 0)) * 100),
+                'description' => (string) ($d['description'] ?? ''),
+                'image' => (string) ($d['image'] ?? ''),
+                'sort' => $pos,
+            ];
+            if (! empty($item['id'])) {
+                $this->site->products()->whereKey($item['id'])->update($attrs);
+            } else {
+                $base = Str::slug($attrs['name']) ?: 'product';
+                $slug = $base;
+                for ($i = 2; $this->site->products()->where('slug', $slug)->exists(); $i++) {
+                    $slug = "{$base}-{$i}";
+                }
+                $this->site->products()->create($attrs + ['slug' => $slug, 'currency' => $this->site->products()->value('currency') ?: 'gbp', 'is_active' => true]);
+            }
+        }
+        $this->loadEdit();
+        // The store grid fetches products at mount — a hard reload shows the
+        // change (the in-place content refresh doesn't cover the products API).
+        $this->dispatch('olx-reload-frame');
+        $this->dispatch('toast', level: 'success', title: 'Products saved', message: 'The store preview is reloading with your changes.');
+        $this->dispatch('carousel-go', i: 1);
     }
 
     public function addFormField(): void
@@ -1117,6 +1423,16 @@ class ConnectReviewPage extends LivewireComponent
             $current = $this->site->livePages()->get()->first(fn ($p) => $p->url === $this->previewPath);
             if ($current) {
                 app(PageJsonPublisher::class)->publish($current);
+            }
+            // COLLECTION rows are snapshotted by useSiteContent() at component
+            // setup — the in-place content refetch can't re-render them, so
+            // item adds/removes/edits need a real frame reload. Block FIELD
+            // edits stay in-place (reactive through useOluxContent).
+            if ($reloadFrame && ($this->edit['type'] ?? null) === 'collection') {
+                $this->dispatch('olx-reload-frame');
+                $this->dispatch('toast', level: 'success', title: $what, message: 'The preview is reloading with your changes.');
+
+                return;
             }
             // In-place: the shell re-fetches content and Vue re-renders —
             // no iframe reload, the preview never flashes.

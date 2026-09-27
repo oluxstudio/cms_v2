@@ -4,7 +4,7 @@
     $s = $this->stats;
 @endphp
 <div class="min-h-full flex flex-col">
-    <x-carousel :labels="['📊 Overview', '🔔 Alerts']" :start="1">
+    <x-carousel :labels="['📊 Overview', '🔔 Alerts', '⚡ Quick access']" :start="1">
 
     {{-- ════ LEFT: statistics ════ --}}
     <x-carousel.slide class="left-bar lg:!w-72 lg:shrink-0 lg:border-r border-gray-100 dark:border-white/[0.05] p-5 pb-24 lg:pb-5 space-y-5
@@ -102,6 +102,12 @@
                 <div class="rounded-2xl border border-gray-100 dark:border-white/[0.05] p-12 text-center text-sm text-gray-400">No alerts in this view.</div>
             @endforelse
         </div>
+    </x-carousel.slide>
+
+    {{-- ════ RIGHT: quick access ════ --}}
+    <x-carousel.slide class="lg:!w-[270px] xl:!w-[290px] lg:shrink-0 flex flex-col px-5 pb-24 lg:pb-6 gap-3
+                  max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] no-scrollbar">
+        @include('partials.quick-access', ['siteName' => $this->site()->name])
     </x-carousel.slide>
     </x-carousel>
 </div>

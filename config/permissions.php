@@ -82,6 +82,8 @@ return [
         'alerts' => 'analytics.view',
         'blocks' => 'builder.manage',
         'marketplace' => 'addons.manage',
+        'addons' => 'addons.manage',
+        'design' => 'addons.manage',
         'payments' => 'addons.manage',
         'designs' => 'builder.manage',
         'publish' => 'publish.manage',

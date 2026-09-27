@@ -13,18 +13,15 @@ const gatewayUrl = `https://www.biblegateway.com/passage/?search=${encodeURIComp
 
 <template>
   <div v-if="study">
-    <SiteHeader />
-    <section class="page-hero">
-      <div class="container">
+    <SiteHeader /> 
+	<PageHeroContent>
         <BreadCrumbs :items="[{ label: 'Ministries', to: '/ministries' }, { label: 'Bible Study', to: '/bible-study' }, { label: study.title }]" />
-        <PageHeroContent>
-          <p class="eyebrow">{{ study.series }}<template v-if="study.week"> · {{ study.week }}</template> · {{ study.audience }}</p>
-          <h1>{{ study.title }}</h1>
-          <p>{{ study.passage }} · {{ study.date }}</p>
-          <!-- <p>📖 {{ study.passage }} · {{ study.date }}</p> -->
-        </PageHeroContent>
-      </div>
-    </section>
+       
+		<p class="eyebrow">{{ study.series }}<template v-if="study.week"> · {{ study.week }}</template> · {{ study.audience }}</p>
+		<h1>{{ study.title }}</h1>
+		<p>{{ study.passage }} · {{ study.date }}</p>
+		<!-- <p>📖 {{ study.passage }} · {{ study.date }}</p> -->
+	</PageHeroContent>
 
     <section class="study-view">
       <div class="container">
@@ -34,10 +31,13 @@ const gatewayUrl = `https://www.biblegateway.com/passage/?search=${encodeURIComp
           <a :href="gatewayUrl" target="_blank" rel="noopener">Read the full passage ({{ study.passage }}) →</a>
         </div>
 
-        <!-- optional teaching video -->
-        <div v-if="study.videoUrl" class="sermon-media video sv-video">
-          <video :src="study.videoUrl" controls preload="none" playsinline></video>
-        </div>
+        <!-- optional teaching recording — MediaPlayer handles local files and
+             YouTube / Facebook / TikTok links alike -->
+        <MediaPlayer
+          v-if="study.videoUrl || study.audioUrl" class="sv-video"
+          :src="(study.videoUrl || study.audioUrl)!" :type="study.videoUrl ? undefined : 'audio'"
+          :poster="study.poster" :title="study.title" :tags="[study.series, study.audience]" :item="study"
+        />
 
         <div class="sv-body">
           <h2>About this study</h2>

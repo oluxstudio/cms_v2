@@ -24,8 +24,8 @@ const upcoming = computed(() =>
   <section id="events" class="events" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head">
-        <p class="eyebrow">{{ eventsHead.eyebrow }}</p>
-        <h2>{{ eventsHead.title }}</h2>
+        <p class="eyebrow" data-olx-field="eyebrow">{{ oluxCms.t('Eyebrow', eventsHead.eyebrow) }}</p>
+        <h2 data-olx-field="title">{{ oluxCms.t('Title', eventsHead.title) }}</h2>
       </div>
 
       <!-- featured/primed event as the big horizontal card -->
@@ -33,8 +33,8 @@ const upcoming = computed(() =>
 
       <!-- upcoming events (max 5): horizontal carousel, 3-up on desktop / 1-up on mobile -->
       <div class="event-carousel">
-        <div class="event-card-row">
-          <EventCard v-for="e in upcoming" :key="e.title" v-bind="e" cta="Join This Event" to="/contact" />
+        <div class="event-card-row" data-olx-panel="events">
+          <EventCard data-olx-item v-for="e in upcoming" :key="e.title" v-bind="e" cta="Join This Event" to="/contact" />
         </div>
         <p data-olx-field="text" class="carousel-hint" aria-hidden="true" v-html="oluxCms.t('Text', oluxFb['Text'])"></p>
       </div>

@@ -15,7 +15,43 @@
         {
             "type": "app:graceway:books",
             "name": "Books",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Read books that can change your",
+                    "order": 0,
+                    "description": "copy:books.title"
+                },
+                {
+                    "label": "Title Highlight",
+                    "type": "text",
+                    "value": "life",
+                    "order": 1,
+                    "description": "copy:books.titleHighlight"
+                },
+                {
+                    "label": "Sub",
+                    "type": "text",
+                    "value": "Devotionals, study guides and stories of faith \u2014 hand-picked by our pastors to help you grow between Sundays.",
+                    "order": 2,
+                    "description": "copy:books.sub"
+                },
+                {
+                    "label": "Img Src",
+                    "type": "image",
+                    "value": "/assets/images/bookstand.png",
+                    "order": 3,
+                    "description": "copy:books.img.src"
+                },
+                {
+                    "label": "Img Alt",
+                    "type": "text",
+                    "value": "Book stand with devotionals and study guides",
+                    "order": 4,
+                    "description": "copy:books.img.alt"
+                }
+            ]
         },
         {
             "type": "app:graceway:book-store",
@@ -69,6 +105,62 @@
                     "value": "Secure card payment. You'll get an email receipt.",
                     "order": 6,
                     "description": "text"
+                },
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "From our shelves",
+                    "order": 7,
+                    "description": "copy:bookStore.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Hand-picked by our pastors",
+                    "order": 8,
+                    "description": "copy:bookStore.title"
+                },
+                {
+                    "label": "Category Title",
+                    "type": "text",
+                    "value": "Category",
+                    "order": 9,
+                    "description": "copy:bookStore.categoryTitle"
+                },
+                {
+                    "label": "All Label",
+                    "type": "text",
+                    "value": "All Products",
+                    "order": 10,
+                    "description": "copy:bookStore.allLabel"
+                },
+                {
+                    "label": "Rec Title",
+                    "type": "text",
+                    "value": "Explore our recommendations",
+                    "order": 11,
+                    "description": "copy:bookStore.recTitle"
+                },
+                {
+                    "label": "Cta Text",
+                    "type": "text",
+                    "value": "Join the store list and we'll email you when new devotionals, study guides and kids' titles land on the shelves.",
+                    "order": 12,
+                    "description": "copy:bookStore.cta.text"
+                },
+                {
+                    "label": "Cta Placeholder",
+                    "type": "text",
+                    "value": "Your Email",
+                    "order": 13,
+                    "description": "copy:bookStore.cta.placeholder"
+                },
+                {
+                    "label": "Cta Thanks",
+                    "type": "text",
+                    "value": "You're on the list \u2014 we'll be in touch when new titles arrive.",
+                    "order": 14,
+                    "description": "copy:bookStore.cta.thanks"
                 }
             ]
         }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { memberExtras } from '~/composables/useMembers'
+import { useMemberExtras } from '~/composables/useMembers'
+const memberExtras = useMemberExtras()
 
 const route = useRoute()
 const members = useMembers()
@@ -66,8 +67,8 @@ const memberSocials = (member!.socials ?? []).map(s => {
             <blockquote>{{ member.verse }}</blockquote>
             <p>{{ member.bio }}</p>
           </div>
-          <div class="profile-stats">
-            <div v-for="s in memberExtras.stats" :key="s.label">
+          <div class="profile-stats" data-olx-panel="profile-stats">
+            <div data-olx-item v-for="s in memberExtras.stats" :key="s.label">
               <b>{{ s.value }}</b>
               <span>{{ s.label }}</span>
             </div>
@@ -83,8 +84,8 @@ const memberSocials = (member!.socials ?? []).map(s => {
           <h2>Ministry <span class="hl">Focus</span></h2>
           <p>The areas of service where {{ firstName }} leads and equips others.</p>
         </div>
-        <div class="skills-grid">
-          <div v-for="sk in memberExtras.skills" :key="sk.name" class="skill-card">
+        <div class="skills-grid" data-olx-panel="profile-skills">
+          <div data-olx-item v-for="sk in memberExtras.skills" :key="sk.name" class="skill-card">
             <div class="skill-head">
               <span class="skill-icon">{{ sk.icon }}</span>
               <b>{{ sk.name }}</b>

@@ -78,6 +78,9 @@ class SiteFormsPage extends Component
 
     public ?string $openId = null;
 
+    /** Active tab in the form detail view: responses | edit | delivery. */
+    public string $dtab = 'responses';
+
     // ─────────────────────────────────────────────────────────────
     // Boot
     // ─────────────────────────────────────────────────────────────
@@ -93,7 +96,8 @@ class SiteFormsPage extends Component
                 ->find($openResponse);
             if ($response) {
                 $this->activeFormId = $response->form_id;
-                $this->mode = 'responses';
+                $this->loadFormIntoBuilder($response->form);
+                $this->mode = 'detail';
                 $this->openId = $response->id;
                 $response->markAsRead();
             }
@@ -150,7 +154,8 @@ class SiteFormsPage extends Component
 
         $this->activeFormId = $id;
         $this->loadFormIntoBuilder($form);
-        $this->mode = 'form';
+        $this->dtab = 'edit';
+        $this->mode = 'detail';
     }
 
     public function goDetail(string $id): void
@@ -162,6 +167,8 @@ class SiteFormsPage extends Component
 
         $this->activeFormId = $id;
         $this->openId = null;
+        $this->dtab = 'responses';
+        $this->loadFormIntoBuilder($form); // the Edit/Delivery tabs are live immediately
         $this->mode = 'detail';
     }
 
@@ -175,7 +182,11 @@ class SiteFormsPage extends Component
         $this->activeFormId = $formId;
         $this->openId = null;
         $this->resetPage();
-        $this->mode = 'responses';
+        $this->dtab = 'responses';
+        if ($form = $this->guardedForm($formId)) {
+            $this->loadFormIntoBuilder($form);
+        }
+        $this->mode = 'detail';
     }
 
     public function backToList(): void
@@ -453,7 +464,7 @@ class SiteFormsPage extends Component
         }
 
         $responses = collect();
-        if ($this->mode === 'responses' && $this->activeFormId) {
+        if (in_array($this->mode, ['detail', 'responses']) && $this->activeFormId) {
             $responses = FormResponse::where('form_id', $this->activeFormId)
                 ->with('contact:id,name,status')
                 ->latest()

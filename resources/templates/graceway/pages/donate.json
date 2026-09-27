@@ -15,7 +15,71 @@
         {
             "type": "app:graceway:donate-giving",
             "name": "Donate Giving",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Chip",
+                    "type": "text",
+                    "value": "\ud83d\udc9d Give Online",
+                    "order": 0,
+                    "description": "copy:giving.chip"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Sow into the work",
+                    "order": 1,
+                    "description": "copy:giving.title"
+                },
+                {
+                    "label": "Sub",
+                    "type": "text",
+                    "value": "Every gift stays with the ministry \u2014 the pantry, the youth hall, the Sunday welcome. Secure card payment, receipt by email.",
+                    "order": 2,
+                    "description": "copy:giving.sub"
+                },
+                {
+                    "label": "Thanks Title",
+                    "type": "text",
+                    "value": "Thank you for your generosity! \ud83c\udf89",
+                    "order": 3,
+                    "description": "copy:giving.thanksTitle"
+                },
+                {
+                    "label": "Thanks Text",
+                    "type": "text",
+                    "value": "Your gift has been received. A receipt is on its way to your inbox \u2014 and our team prays over every gift on Wednesday mornings.",
+                    "order": 4,
+                    "description": "copy:giving.thanksText"
+                },
+                {
+                    "label": "Fine",
+                    "type": "text",
+                    "value": "\ud83d\udd12 Payments handled by Stripe. We never see your card details.",
+                    "order": 5,
+                    "description": "copy:giving.fine"
+                },
+                {
+                    "label": "Ways Title",
+                    "type": "text",
+                    "value": "Other ways to give",
+                    "order": 6,
+                    "description": "copy:giving.waysTitle"
+                },
+                {
+                    "label": "Verse Text",
+                    "type": "text",
+                    "value": "\"Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver.\"",
+                    "order": 7,
+                    "description": "copy:giving.verse.text"
+                },
+                {
+                    "label": "Verse Cite",
+                    "type": "text",
+                    "value": "\u2014 2 Corinthians 9:7",
+                    "order": 8,
+                    "description": "copy:giving.verse.cite"
+                }
+            ]
         },
         {
             "type": "app:graceway:times",

@@ -12,9 +12,14 @@ export interface Study {
   audience: 'Everyone' | 'Youth' | 'Women' | 'Men' | 'Seniors'
   date: string
   videoUrl?: string
+  /** audio recording — external or local file */
+  audioUrl?: string
+  /** poster shown by the MediaPlayer facade */
+  poster?: string
 }
 
 // Single source of truth for all Bible studies — newest first.
+/** @olux-collection Bible Studies */
 const studies: Study[] = [
   {
     slug: 'rooted-week-4-fruit-that-lasts', title: 'Fruit That Lasts', series: 'Rooted', week: 'Week 4 of 4',
@@ -23,7 +28,8 @@ const studies: Study[] = [
     questions: ['What does "remaining" in Jesus practically mean for you?', 'Where are you trying to produce fruit instead of growing it?', 'Which branch in your life needs pruning?', 'Who has been a gardener in your faith?'],
     takeaway: 'Choose one daily connection point this week — same time, same place, ten minutes with the vine.',
     memoryVerse: 'John 15:5', audience: 'Everyone', date: '2026-09-10',
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', poster: '/assets/images/gallery-7.jpg',
+    audioUrl: 'https://www.w3schools.com/html/horse.mp3', poster: '/assets/images/bible-study.jpg',
   },
   {
     slug: 'identity-week-3-what-they-call-you', title: 'What They Call You', series: 'Identity', week: 'Week 3 of 5',
@@ -32,6 +38,7 @@ const studies: Study[] = [
     questions: ['What label has stuck to you the longest?', 'Which name in this passage is hardest to believe about yourself?', 'How would this week change if "handiwork" was your default label?'],
     takeaway: 'Write God\'s name for you on your lock screen. Read it every time the phone lights up.',
     memoryVerse: 'Ephesians 2:10', audience: 'Youth', date: '2026-09-05',
+	videoUrl: 'https://youtu.be/JvnJYySur1o?si=M2KnClRpfEELYgFl', poster: '/assets/images/gallery-3.jpg',
   },
   {
     slug: 'rooted-week-3-dry-seasons', title: 'Dry Seasons', series: 'Rooted', week: 'Week 3 of 4',
@@ -48,6 +55,7 @@ const studies: Study[] = [
     questions: ['What does anxiety feel like in your body — and what triggers it?', 'Is Paul dismissing anxiety or giving it somewhere to go?', 'What would "thinking about such things" (v8) look like on your feed?'],
     takeaway: 'Try the Philippians pattern once a day: name the worry, thank God for one thing, hand it over.',
     memoryVerse: 'Philippians 4:6–7', audience: 'Youth', date: '2026-08-29',
+    videoUrl: 'https://www.tiktok.com/@scout2015/video/6718335390845095173', poster: '/assets/images/gallery-11.jpg',
   },
   {
     slug: 'women-of-the-word-ruth-1', title: 'Where You Go, I Will Go', series: 'Women of the Word', week: 'Ruth · Part 1',
@@ -56,6 +64,7 @@ const studies: Study[] = [
     questions: ['What did Ruth actually give up in verse 16?', 'Where has loyalty cost you something?', 'How does Naomi\'s honesty about bitterness (v20) sit with you?'],
     takeaway: 'Reach out to someone walking through their own "famine" this week — presence over advice.',
     memoryVerse: 'Ruth 1:16', audience: 'Women', date: '2026-08-26',
+    videoUrl: 'https://www.facebook.com/facebook/videos/10153231379946729/', poster: '/assets/images/gallery-2.jpg',
   },
   {
     slug: 'men-at-dawn-nehemiah-1', title: 'Build With Your Sword On', series: 'Men at Dawn', week: 'Nehemiah · Part 1',
@@ -64,6 +73,7 @@ const studies: Study[] = [
     questions: ['Nehemiah prayed for months before acting. What are you rushing?', 'What "wall" in your family or workplace needs rebuilding?', 'Who are your fellow builders?'],
     takeaway: 'Name one broken thing you\'ve been ignoring and take a first concrete step this week.',
     memoryVerse: 'Nehemiah 1:11', audience: 'Men', date: '2026-08-21',
+    videoUrl: 'https://fb.watch/xYs4mpl3vid/', poster: '/assets/images/gallery-4.jpg',
   },
   {
     slug: 'rooted-week-2-planted-in-community', title: 'Planted in Community', series: 'Rooted', week: 'Week 2 of 4',
@@ -80,6 +90,7 @@ const studies: Study[] = [
     questions: ['What has a long walk with God taught you that youth could not?', 'What does "establish the work of our hands" mean at every age?', 'Who are you passing wisdom to?'],
     takeaway: 'Tell one younger person a story of God\'s faithfulness in your life this week.',
     memoryVerse: 'Psalm 90:12', audience: 'Seniors', date: '2026-08-14',
+    videoUrl: 'https://www.facebook.com/watch/?v=1093831888126364', poster: '/assets/images/gallery-8.jpg',
   },
   {
     slug: 'identity-week-2-comparison', title: 'The Comparison Trap', series: 'Identity', week: 'Week 2 of 5',
@@ -88,6 +99,7 @@ const studies: Study[] = [
     questions: ['Where does comparison hit you hardest?', 'What is the difference between inspiration and comparison?', 'What load is actually yours to carry (v5)?'],
     takeaway: 'Mute one account that consistently makes you feel less. Replace it with the memory verse.',
     memoryVerse: 'Galatians 6:4', audience: 'Youth', date: '2026-08-08',
+    videoUrl: 'https://www.tiktok.com/@tiktok/video/7106594312292453675', poster: '/assets/images/circle-3.jpg',
   },
   {
     slug: 'rooted-week-1-good-soil', title: 'Good Soil', series: 'Rooted', week: 'Week 1 of 4',
@@ -114,6 +126,55 @@ const studies: Study[] = [
     takeaway: 'Encourage a woman whose quiet strength you have noticed — tell her specifically what you see.',
     memoryVerse: 'Proverbs 31:25', audience: 'Women', date: '2026-07-22',
   },
+  {
+    slug: 'psalms-of-ascent-week-1-lift-my-eyes', title: 'I Lift My Eyes', series: 'Psalms of Ascent', week: 'Week 1 of 3',
+    passage: 'Psalm 121:1–8', excerpt: '"I lift up my eyes to the mountains — where does my help come from?" — Psalm 121:1',
+    summary: 'The traveller\'s psalm. Where we instinctively look when trouble comes, and how to retrain the reflex.',
+    questions: ['Where do your eyes go first under pressure?', 'What does "he will not let your foot slip" NOT promise?', 'Who kept watch over you this year?'],
+    takeaway: 'Memorise the first two verses and say them on every uphill walk this week.',
+    memoryVerse: 'Psalm 121:1–2', audience: 'Everyone', date: '2026-09-10',
+    videoUrl: '/assets/media/study-recap-1.mp4', poster: '/assets/images/gallery-5.jpg',
+  },
+  {
+    slug: 'psalms-of-ascent-week-2-peace-within', title: 'Peace Within These Walls', series: 'Psalms of Ascent', week: 'Week 2 of 3',
+    passage: 'Psalm 122:1–9', excerpt: '"I rejoiced with those who said to me, let us go to the house of the Lord." — Psalm 122:1',
+    summary: 'Gladness as a discipline. Why the pilgrims sang on the road, and what praying for the peace of your own city looks like.',
+    questions: ['When did church last feel like rejoicing?', 'What would praying for Blackburn\'s peace change in you?', 'Who could you travel with, spiritually, this month?'],
+    takeaway: 'Pray Psalm 122:6–9 over your street, naming your neighbours.',
+    memoryVerse: 'Psalm 122:1', audience: 'Everyone', date: '2026-09-12',
+    videoUrl: '/assets/media/study-recap-2.mp4', poster: '/assets/images/gallery-9.jpg',
+  },
+  {
+    slug: 'listening-week-1-still-small-voice', title: 'The Still Small Voice', series: 'Listening', week: 'Week 1 of 2',
+    passage: '1 Kings 19:9–13', excerpt: '"After the fire came a gentle whisper." — 1 Kings 19:12',
+    summary: 'Elijah expected the spectacular and got a whisper. An audio study on hearing God in the quiet — best with headphones.',
+    questions: ['What noise drowns out the whisper for you?', 'Why do you think God chose the quiet?', 'Where is your Horeb — the place you actually listen?'],
+    takeaway: 'Ten minutes of silence before the podcast, the playlist, the scroll — every morning this week.',
+    memoryVerse: '1 Kings 19:12', audience: 'Everyone', date: '2026-09-14',
+    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', poster: '/assets/images/gallery-10.jpg',
+  },
+  {
+    slug: 'listening-week-2-speak-lord', title: 'Speak, Lord', series: 'Listening', week: 'Week 2 of 2',
+    passage: '1 Samuel 3:1–10', excerpt: '"Speak, for your servant is listening." — 1 Samuel 3:10',
+    summary: 'Samuel heard his name three times before he knew who was calling. An audio walk through learning to recognise the voice.',
+    questions: ['Who is your Eli — the one who helps you interpret?', 'What has God repeated to you lately?', 'What would answering "speak, Lord" cost this week?'],
+    takeaway: 'Tell one trusted person what you think God has been repeating, and ask what they hear.',
+    memoryVerse: '1 Samuel 3:10', audience: 'Youth', date: '2026-09-16',
+    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+  },
+  {
+    slug: 'selah-meditation-psalm-46', title: 'Be Still: A Guided Meditation', series: 'Selah', week: 'Standalone',
+    passage: 'Psalm 46:1–11', excerpt: '"Be still, and know that I am God." — Psalm 46:10',
+    summary: 'A short guided stillness exercise recorded at the chapel — breathe, read, and let the psalm slow you down.',
+    questions: ['What does stillness feel like in your body?', 'Which line of the psalm found you today?', 'When could Selah fit your daily rhythm?'],
+    takeaway: 'Return to this recording once a day for three days and journal one word each time.',
+    memoryVerse: 'Psalm 46:10', audience: 'Everyone', date: '2026-09-18',
+    audioUrl: '/assets/media/study-audio-1.wav', poster: '/assets/images/gallery-12.jpg',
+  },
 ]
 
-export const useStudies = () => studies
+// CMS-first: the "Bible Studies" collection feeds the archive; authored rows seed it.
+export const useStudies = (): Study[] => {
+  const rows = (useCms().items('bibleStudies', []) as any[]).filter(s => s.slug && s.title)
+  return rows.length ? rows.map(s => ({ ...studies.find(a => a.slug === s.slug), ...s }) as Study) : studies
+}

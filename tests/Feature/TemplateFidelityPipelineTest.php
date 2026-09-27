@@ -3,7 +3,10 @@
 use App\Models\Site;
 use App\Models\User;
 use App\Services\CollectionSourceExtractor;
+use App\Services\ComposableCopyIndex;
 use App\Services\FontLocalizer;
+use App\Services\FormSourceExtractor;
+use App\Services\SfcRewriter;
 use App\Services\SiteConnect\AssetImporter;
 use App\Services\TemplateLint;
 use Illuminate\Support\Facades\File;
@@ -178,7 +181,7 @@ it('rejects unknown extensions and oversize files', function () {
 // ── forms extraction ──
 
 it('extracts authored form markup into a CMS form definition', function () {
-    $forms = app(\App\Services\FormSourceExtractor::class)->fromSources(fixtureApp());
+    $forms = app(FormSourceExtractor::class)->fromSources(fixtureApp());
     $form = collect($forms)->firstWhere('name', 'welcome-signup');
 
     expect($form)->not->toBeNull()
@@ -189,4 +192,128 @@ it('extracts authored form markup into a CMS form definition', function () {
         ->and($byKey['email']['type'])->toBe('email')
         ->and($byKey['message']['type'])->toBe('textarea')
         ->and($byKey->has('submit'))->toBeFalse();
+});
+
+// ── auto-wired data sources (no markers needed) ──
+
+it('auto-detects unmarked content arrays it can safely wire', function () {
+    $cands = app(CollectionSourceExtractor::class)->autoCandidates(fixtureApp());
+    $byName = collect($cands)->keyBy('name');
+
+    expect($byName->has('Notices'))->toBeTrue()
+        ->and($byName['Notices']['kind'])->toBe('component')
+        ->and($byName->has('Faqs'))->toBeTrue()
+        ->and($byName['Faqs']['accessor'])->toBe('useFaqs')
+        ->and($byName['Faqs']['definition']['items'])->toHaveCount(3);
+});
+
+it('publish auto-wires those arrays to the cms overlay', function () {
+    $dir = fixtureApp().'-autowire-tmp';
+    File::deleteDirectory($dir);
+    File::copyDirectory(fixtureApp(), $dir);
+
+    try {
+        (new ReflectionMethod(SfcRewriter::class, 'wireAutoCollections'))
+            ->invoke(app(SfcRewriter::class), $dir);
+
+        $comp = File::get("$dir/app/components/NoticeGrid.vue");
+        expect($comp)->toContain('const notices__seed')
+            ->and($comp)->toContain("useCms().items('notices', [])")
+            ->and($comp)->toContain('r.length ? r : notices__seed');
+
+        $faqs = File::get("$dir/app/composables/useFaqs.ts");
+        expect($faqs)->toContain("useCms().items('faqs', [])")
+            ->and($faqs)->toContain('rows.length ? rows : faqs');
+    } finally {
+        File::deleteDirectory($dir);
+    }
+});
+
+it('types nested arrays and objects structurally', function () {
+    $dir = fixtureApp().'-nested-tmp';
+    File::deleteDirectory($dir);
+    File::ensureDirectoryExists("$dir/app/composables");
+    File::put("$dir/app/composables/useCards.ts", <<<'TS'
+/** @olux-collection Cards */
+const cards = [
+  { title: 'One', tags: ['a', 'b'], facts: [{ label: 'L', value: 'V' }], cta: { label: 'Go', to: '/x' } },
+  { title: 'Two', tags: ['c'], facts: [{ label: 'M', value: 'W' }], cta: { label: 'Hi', to: '/y' } },
+]
+TS);
+
+    try {
+        $defs = app(CollectionSourceExtractor::class)->fromSources($dir);
+        $fields = collect(collect($defs)->firstWhere('name', 'Cards')['fields'])->keyBy('key');
+
+        expect($fields['tags']['type'])->toBe('list')
+            ->and($fields['facts']['type'])->toBe('rows')
+            ->and(collect($fields['facts']['fields'])->pluck('key')->all())->toBe(['label', 'value'])
+            ->and($fields['cta']['type'])->toBe('group')
+            ->and($fields['title']['type'])->toBe('text');
+    } finally {
+        File::deleteDirectory($dir);
+    }
+});
+
+it('extracts composable copy into block nodes and rewrites the component CMS-first', function () {
+    $dir = fixtureApp().'-copy-tmp';
+    File::deleteDirectory($dir);
+    File::ensureDirectoryExists("$dir/app/composables");
+    File::ensureDirectoryExists("$dir/app/components");
+    File::put("$dir/app/composables/useSiteCopy.ts", <<<'TS'
+// God's copy source — the apostrophe in this comment must not shred parsing.
+export const useSiteCopy = () => {
+  const helper = (x: string) => x
+  return {
+    donate: {
+      title: 'Give generously',
+      text: 'Provided "as is" for everyone\'s benefit.',
+      cta: { label: 'Give Online', to: '/donate' },
+    },
+    stats,          // ES shorthand — non-literal, skipped
+    rows: helper('x'),
+    hero: { note: `interpolated ${x} — skipped` },
+  }
+}
+TS);
+    File::put("$dir/app/components/GiveBlock.vue", <<<'VUE'
+<script setup lang="ts">
+const { donate } = useSiteCopy()
+</script>
+<template>
+  <section class="give">
+    <h2>{{ donate.title }}</h2>
+    <p>{{ donate.text }}</p>
+    <CtaButton :to="donate.cta.to" :label="donate.cta.label" />
+  </section>
+</template>
+VUE);
+
+    try {
+        // Extractor side: copy leaves become fixed nodes with derived labels.
+        $idx = new ComposableCopyIndex;
+        $leaves = $idx->build("$dir/app")['useSiteCopy'];
+        expect($leaves['donate.title'])->toBe('Give generously')
+            ->and($leaves['donate.text'])->toContain('"as is"')
+            ->and($leaves)->not->toHaveKey('hero.note');
+
+        $sfc = File::get("$dir/app/components/GiveBlock.vue");
+        $copy = collect($idx->componentCopy("$dir/app", $sfc))->keyBy('label');
+        expect($copy['Title']['value'])->toBe('Give generously')
+            ->and($copy['Cta Label']['binding'])->toBeTrue();
+
+        // Rewriter side: CMS-first t() calls + field markers, fallbacks intact.
+        $out = app(SfcRewriter::class)->rewriteComponent(
+            $sfc,
+            ['component' => 'GiveBlock', 'blockKey' => 'give', 'name' => 'Give', 'nodes' => [], 'items' => null],
+            "$dir/app"
+        );
+        expect($out)->toContain("{{ oluxCms.t('Title', donate.title) }}")
+            ->and($out)->toContain('data-olx-field="title"')
+            ->and($out)->toContain(":label=\"oluxCms.t('Cta Label', donate.cta.label)\" data-olx-field=\"ctaLabel\"")
+            ->and($out)->toContain(":to=\"oluxCms.t('Cta To', donate.cta.to)\"")
+            ->and($out)->toContain("const oluxCms = useOluxContent('give')");
+    } finally {
+        File::deleteDirectory($dir);
+    }
 });

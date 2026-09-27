@@ -27,6 +27,9 @@
             });
         });
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Abel&family=Afacad:ital,wght@0,400..700;1,400..700&family=Aladin&family=Baumans&family=Bellota:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Cantarell:ital,wght@0,400;0,700;1,400;1,700&family=Fjord+One&family=MuseoModerno:ital,wght@0,100..900;1,100..900&family=Text+Me+One&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
     <style>
@@ -95,11 +98,8 @@
                     rounded-2xl shadow-sm border border-white/60 dark:border-white/[0.05]">
 
             {{-- ── Logo (left) ── --}}
-            <a href="{{ url($siteName.'/dashboard') }}" class="flex items-center gap-2 shrink-0">
-                <span class="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm overflow-hidden bg-gray-900 dark:bg-white/10">
-                    <img src="{{ Vite::asset('resources/images/icon.svg') }}" alt="Logo" class="w-5 h-5">
-                </span>
-                <span class="hidden sm:block text-lg font-extrabold tracking-tight text-gray-900 dark:text-white">Olux<span class="text-indigo-500">.</span></span>
+            <a href="{{ url($siteName.'/dashboard') }}" class="flex items-center shrink-0">
+                <img src="{{ asset('images/olux-logo.png') }}" alt="Olux" class="h-9 w-auto">
             </a>
 
             {{-- ── Menu (center): the shared grouped nav component ── --}}
@@ -378,10 +378,14 @@
     const bar = document.getElementById('route-progress');
     const ov  = document.getElementById('route-overlay');
     let started = false;
+    let failsafe;
 
     function start() {
         if (started) return;
         started = true;
+        // Safety net: never let the overlay trap the page (failed fetch, cancelled nav…)
+        clearTimeout(failsafe);
+        failsafe = setTimeout(stop, 10000);
         // restart the bar animation, then drive it toward the end
         bar.classList.remove('on');
         void bar.offsetWidth;            // reflow so the transition replays
@@ -390,6 +394,7 @@
     }
     function stop() {
         started = false;
+        clearTimeout(failsafe);
         bar.classList.remove('on');
         ov.classList.remove('on');
     }
@@ -402,7 +407,12 @@
         if (a.hasAttribute('data-download-progress')) return; // handled by the download-progress component (no navigation)
         const href = a.getAttribute('href');
         if (!href || href[0] === '#' || href.startsWith('javascript:') || href.startsWith('mailto:')) return;
-        if (a.hasAttribute('@click') || a.hasAttribute('x-on:click') || a.hasAttribute('wire:click')) return;
+        // Skip anything JS-handled (any @click/x-on:click/wire:click variant incl.
+        // modifiers like @click.prevent) and SPA links (livewire:navigate hooks below).
+        for (const at of a.attributes) {
+            const n = at.name;
+            if (n.startsWith('@click') || n.startsWith('x-on:click') || n.startsWith('wire:click') || n.startsWith('wire:navigate')) return;
+        }
         try { if (new URL(a.href).origin !== location.origin) return; } catch (_) { return; }
         if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) return;
         start();
@@ -415,6 +425,10 @@
         if (f.target === '_blank') return; // opens a new tab — this page never navigates
         start();
     }, true);
+
+    // Livewire SPA navigations: show while fetching, hide when the new page lands
+    document.addEventListener('livewire:navigate', start);
+    document.addEventListener('livewire:navigated', stop);
 
     // Hide when the new page is shown (covers bfcache restores too)
     window.addEventListener('pageshow', stop);

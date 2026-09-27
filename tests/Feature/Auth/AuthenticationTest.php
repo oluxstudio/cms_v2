@@ -18,10 +18,9 @@ test('users can authenticate using the login screen', function () {
         ->set('loginPassword', 'password')
         ->call('login')
         ->assertHasNoErrors()
-        // A user with no sites or memberships resumes signup at /start;
-        // owners land on the picker and invited members on their dashboard
-        // (see User::landingUrl and TeamRbacTest).
-        ->assertRedirect(route('start'));
+        // Every sign-in lands on the select-site page (User::landingUrl);
+        // the picker resumes a mid-wizard signup itself.
+        ->assertRedirect(route('home'));
 
     $this->assertAuthenticated();
 });

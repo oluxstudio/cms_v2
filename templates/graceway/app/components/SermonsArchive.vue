@@ -126,8 +126,8 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
     <section class="sm-series">
       <div class="container">
         <div class="section-head"><h2 data-olx-field="headline">{{ oluxCms.t('Headline', oluxFb['Headline']) }}</h2></div>
-        <div class="sm-series-strip">
-          <button
+        <div class="sm-series-strip" data-olx-panel="sermon-series">
+          <button data-olx-item
             v-for="sr in allSeries" :key="sr.slug" type="button"
             class="sm-series-card" :class="{ active: series === sr.slug }"
             @click="series = series === sr.slug ? '' : sr.slug"
@@ -161,8 +161,8 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
           <p data-olx-field="textC" v-else>{{ oluxCms.t('Text C', oluxFb['Text C']) }}</p>
         </div>
 
-        <div v-else class="sermon-grid">
-          <NuxtLink v-for="s in shown" :key="s.slug" class="sermon-card" :to="`/sermons/${s.slug}`">
+        <div v-else class="sermon-grid" data-olx-panel="sermons">
+          <NuxtLink data-olx-item v-for="s in shown" :key="s.slug" class="sermon-card" :to="`/sermons/${s.slug}`">
             <div class="sermon-thumb">
               <img :src="sermonThumb(s)" :alt="s.title" loading="lazy">
               <span v-if="sermonSeriesOf(s)" class="series-badge">{{ sermonSeriesOf(s)!.name }}</span>
@@ -193,9 +193,9 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
       <aside class="sm-side">
         <!-- watch live -->
         <div class="sms-card sms-live">
-          <h3>{{ sermonsArchive.live.title }}</h3>
+          <h3 data-olx-field="liveTitle">{{ oluxCms.t('Live Title', sermonsArchive.live.title) }}</h3>
           <p>{{ sermonsArchive.live.text }}</p>
-          <NuxtLink class="btn" :to="sermonsArchive.live.cta.to">{{ sermonsArchive.live.cta.label }}</NuxtLink>
+          <NuxtLink class="btn" :to="oluxCms.t('Live Cta To', sermonsArchive.live.cta.to)" data-olx-field="liveCtaLabel">{{ oluxCms.t('Live Cta Label', sermonsArchive.live.cta.label) }}</NuxtLink>
         </div>
 
         <!-- recent messages -->
@@ -232,8 +232,8 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
 
         <!-- take it with you -->
         <div class="sms-card">
-          <h3>{{ sermonsArchive.takeAway.title }}</h3>
-          <p>{{ sermonsArchive.takeAway.text }}</p>
+          <h3 data-olx-field="takeAwayTitle">{{ oluxCms.t('Take Away Title', sermonsArchive.takeAway.title) }}</h3>
+          <p data-olx-field="takeAwayText">{{ oluxCms.t('Take Away Text', sermonsArchive.takeAway.text) }}</p>
           <div class="sms-links">
             <NuxtLink v-for="l in sermonsArchive.takeAway.links" :key="l.label" class="btn ghost" :to="l.to">{{ l.label }}</NuxtLink>
           </div>

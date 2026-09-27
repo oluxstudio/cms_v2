@@ -17,6 +17,7 @@ export interface OutreachProgramme {
 }
 
 // Single source of truth for outreach programmes.
+/** @olux-collection Outreach Programmes */
 const programmes: OutreachProgramme[] = [
   {
     slug: 'food-pantry', name: 'Food Pantry', short: 'Weekly groceries for families going through a hard stretch.',
@@ -66,4 +67,8 @@ const programmes: OutreachProgramme[] = [
   },
 ]
 
-export const useOutreach = () => programmes
+// CMS-first: the "Outreach Programmes" collection feeds /community-care.
+export const useOutreach = (): OutreachProgramme[] => {
+  const rows = (useCms().items('outreachProgrammes', []) as any[]).filter(p => p.slug && p.name)
+  return rows.length ? rows.map(p => ({ ...programmes.find(a => a.slug === p.slug), ...p }) as OutreachProgramme) : programmes
+}

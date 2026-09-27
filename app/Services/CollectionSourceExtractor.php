@@ -43,6 +43,7 @@ class CollectionSourceExtractor
                         $collections[$name] = $this->definition($name, $rows, basename($file));
                     }
                 }
+
                 continue;
             }
 
@@ -57,7 +58,129 @@ class CollectionSourceExtractor
             }
         }
 
+        // UNMARKED data-source arrays the publisher can auto-wire become
+        // collections too — zero authoring for the common cases.
+        foreach ($this->autoCandidates($root) as $cand) {
+            if (! isset($collections[$cand['name']])) {
+                $collections[$cand['name']] = $cand['definition'];
+            }
+        }
+
         return array_values($collections);
+    }
+
+    /**
+     * Auto-detectable data sources: content-shaped arrays (≥3 uniform object
+     * rows) that the rewriter can SAFELY wire to the CMS at publish —
+     *   · a const inside a component's <script setup> (per-instance scope), or
+     *   · a composable array exposed via a trivial `export const useX = () => rows`
+     *     accessor (call-time scope).
+     * Files that already touch useCms are the author's own wiring — skipped.
+     *
+     * @return array<int,array{name:string,slug:string,file:string,const:string,kind:string,accessor:?string,definition:array}>
+     */
+    public function autoCandidates(string $root): array
+    {
+        $out = [];
+        $taken = [];
+        $scan = array_merge(
+            array_map(fn ($f) => ['kind' => 'component', 'file' => $f], File::glob("$root/app/components/*.vue") ?: []),
+            array_map(fn ($f) => ['kind' => 'composable', 'file' => $f], File::glob("$root/app/composables/*.{ts,js}", GLOB_BRACE) ?: []),
+        );
+        foreach ($scan as $entry) {
+            $file = $entry['file'];
+            $code = (string) File::get($file);
+            if (str_contains($code, 'useCms') || str_contains($code, '@olux-collection')) {
+                continue;
+            }
+            $section = $entry['kind'] === 'component'
+                ? (preg_match('#<script[^>]*setup[^>]*>(.*?)</script>#s', $code, $sm) ? $sm[1] : '')
+                : $code;
+            if ($section === '' || ! preg_match_all('#(?<=\n)(?:export )?const (\w+)\s*(?::[^=\n]+)?=\s*\[#', $section, $m, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+            foreach ($m as $hit) {
+                $const = $hit[1][0];
+                $offset = strpos($section, '[', $hit[0][1] + strlen($hit[0][0]) - 1);
+                $rows = $this->parseArray($section, $offset);
+                if (! $rows || count($rows) < 3) {
+                    continue;
+                }
+                // Content-shaped: uniform object rows with ≥2 keys and at
+                // least one substantial text-ish value.
+                $keys = array_keys($rows[0]);
+                if (count($keys) < 2) {
+                    continue;
+                }
+                $uniform = collect($rows)->every(fn ($r) => count(array_intersect(array_keys($r), $keys)) >= max(1, count($keys) - 2));
+                $texty = collect($rows)->contains(fn ($r) => collect($r)->contains(fn ($v) => is_string($v) && mb_strlen($v) >= 15));
+                if (! $uniform || ! $texty) {
+                    continue;
+                }
+                $accessor = null;
+                if ($entry['kind'] === 'composable') {
+                    if (! preg_match('#export const (use\w+)\s*=\s*\(\)\s*=>\s*'.$const.'\b#', $code, $am)) {
+                        continue; // no trivial accessor — cannot wire safely
+                    }
+                    $accessor = $am[1];
+                }
+                $name = Str::headline($const);
+                if (isset($taken[$name])) {
+                    continue;
+                }
+                $taken[$name] = true;
+                $def = $this->definition($name, $rows, basename($file));
+                $def['description'] = 'Data source auto-detected from '.basename($file).' — edits here render on the site.';
+                $out[] = [
+                    'name' => $name,
+                    'slug' => Str::camel($name),
+                    'file' => $file,
+                    'const' => $const,
+                    'kind' => $entry['kind'],
+                    'accessor' => $accessor,
+                    'definition' => $def,
+                ];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Which collection slug (kebab) feeds this source file? Priority:
+     * explicit `@olux-source <slug>` marker, direct items('slug') call, then
+     * a use* accessor resolved through the app's composables.
+     */
+    public function sourceSlugForFile(string $appDir, string $file): ?string
+    {
+        return $this->sourceSlugsForFile($appDir, $file)[0] ?? null;
+    }
+
+    /** All candidate collection slugs feeding a source file, best-first. */
+    public function sourceSlugsForFile(string $appDir, string $file): array
+    {
+        $code = (string) File::get($file);
+        $out = [];
+        if (preg_match('#@olux-source\s+([\w-]+)#', $code, $m)) {
+            $out[] = $m[1];
+        }
+        if (preg_match_all("#items\(['\"]([\w-]+)['\"]#", $code, $m)) {
+            foreach ($m[1] as $s) {
+                $out[] = Str::kebab($s);
+            }
+        }
+        foreach (File::glob("$appDir/app/composables/*.{ts,js}", GLOB_BRACE) ?: [] as $comp) {
+            $c = (string) File::get($comp);
+            $parts = preg_split('#export (?:const|function) (use\w+)#', $c, -1, PREG_SPLIT_DELIM_CAPTURE);
+            for ($i = 1; $i < count($parts) - 1; $i += 2) {
+                if (str_contains($code, $parts[$i].'(')
+                    && preg_match("#items\(['\"]([\w-]+)['\"]#", $parts[$i + 1], $m)) {
+                    $out[] = Str::kebab($m[1]);
+                }
+            }
+        }
+
+        return array_values(array_unique($out));
     }
 
     /** Balanced-bracket slice from '[' at $offset, JS-literal → decoded rows. */
@@ -85,7 +208,42 @@ class CollectionSourceExtractor
         // quotes, drop trailing commas. Rows using template literals or
         // computed values won't decode — the author should keep seeds literal.
         $js = $this->stripComments($js);
-        $js = preg_replace_callback("#'((?:[^'\\\\]|\\\\.)*)'#s", fn ($q) => json_encode(stripcslashes($q[1]), JSON_UNESCAPED_SLASHES), (string) $js);
+        // Single-quoted strings → JSON strings, STRING-AWARE: a regex here
+        // would pair an apostrophe inside a double-quoted string ("someone's")
+        // with the next real quote and shred the row.
+        $out = '';
+        for ($i = 0, $len = strlen((string) $js); $i < $len; $i++) {
+            $ch = $js[$i];
+            if ($ch === '"' || $ch === '`') {
+                $q = $ch;
+                $out .= '"';
+                for ($i++; $i < $len && $js[$i] !== $q; $i++) {
+                    if ($js[$i] === '\\') {
+                        $out .= $js[$i].($js[$i + 1] ?? '');
+                        $i++;
+
+                        continue;
+                    }
+                    $out .= $js[$i] === '"' ? '\\"' : $js[$i];
+                }
+                $out .= '"';
+            } elseif ($ch === "'") {
+                $buf = '';
+                for ($i++; $i < $len && $js[$i] !== "'"; $i++) {
+                    if ($js[$i] === '\\') {
+                        $buf .= stripcslashes($js[$i].($js[$i + 1] ?? ''));
+                        $i++;
+
+                        continue;
+                    }
+                    $buf .= $js[$i];
+                }
+                $out .= json_encode($buf, JSON_UNESCAPED_SLASHES);
+            } else {
+                $out .= $ch;
+            }
+        }
+        $js = $out;
         $js = preg_replace('#([{,]\s*)([A-Za-z_]\w*)\s*:#', '$1"$2":', (string) $js);
         $js = preg_replace('#,\s*([}\]])#', '$1', (string) $js);
 
@@ -166,6 +324,24 @@ class CollectionSourceExtractor
 
         $fields = [];
         foreach (array_keys($keys) as $key) {
+            // Nested values get STRUCTURED types so editors render real
+            // sub-editors instead of raw JSON.
+            $samples = collect($rows)->pluck($key)->filter(fn ($v) => is_array($v));
+            if ($samples->isNotEmpty()) {
+                $first = $samples->first();
+                if (array_is_list($first)) {
+                    $subKeys = is_array($first[0] ?? null) ? array_keys($first[0]) : [];
+                    $fields[] = $subKeys === []
+                        ? ['key' => $key, 'label' => Str::headline($key), 'type' => 'list']
+                        : ['key' => $key, 'label' => Str::headline($key), 'type' => 'rows',
+                            'fields' => array_map(fn ($k) => ['key' => $k, 'label' => Str::headline($k), 'type' => 'text'], $subKeys)];
+                } else {
+                    $fields[] = ['key' => $key, 'label' => Str::headline($key), 'type' => 'group',
+                        'fields' => array_map(fn ($k) => ['key' => $k, 'label' => Str::headline($k), 'type' => 'text'], array_keys($first))];
+                }
+
+                continue;
+            }
             $values = collect($rows)->pluck($key)->filter(fn ($v) => is_scalar($v))->map(fn ($v) => (string) $v);
             $distinct = $values->unique();
             $type = match (true) {

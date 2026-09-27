@@ -3,6 +3,7 @@ const oluxCms = useOluxContent('media-ministry')
 const oluxFb: Record<string, string> = {}
 // Media & Broadcast ministry page body — all content comes from the global
 // data source (mediaMinistry section); platform stats derive from `socials`.
+// @olux-source media-roles
 const { mediaMinistry: mm, socials } = useSiteContent()
 const livePlatforms = socials.filter(s => s.available)
 const liveCount = livePlatforms.length
@@ -27,7 +28,7 @@ const sendForm = async (e: Event) => {
       <div class="container">
         <div class="study-top">
           <div class="study-copy">
-            <span class="ct-chip">{{ mm.intro.chip }}</span>
+            <span class="ct-chip" data-olx-field="introChip">{{ oluxCms.t('Intro Chip', mm.intro.chip) }}</span>
             <h2 class="mega">
               <template v-for="(line, i) in contentLines(mm.intro.title)" :key="i">
                 <br v-if="i">{{ line }}
@@ -40,7 +41,7 @@ const sendForm = async (e: Event) => {
           </div>
           <div class="study-photo">
             <span class="study-arch" aria-hidden="true"></span>
-            <img :src="mm.intro.img.src" :alt="mm.intro.img.alt">
+            <img :src="oluxCms.t('Intro Img Src', mm.intro.img.src)" data-olx-field="introImgSrc" :alt="oluxCms.t('Intro Img Alt', mm.intro.img.alt)">
             <span v-for="(chip, i) in mm.intro.chips" :key="chip.label" class="study-chip" :class="`c${i + 1}`">{{ chip.icon }} {{ chip.label }} <b>{{ chip.value }}</b></span>
           </div>
         </div>
@@ -55,12 +56,12 @@ const sendForm = async (e: Event) => {
     <section class="mm-roles">
       <div class="mm-inner">
         <div class="section-head center">
-          <p class="eyebrow">{{ mm.rolesEyebrow }}</p>
-          <h2>{{ mm.rolesTitle }}</h2>
+          <p class="eyebrow" data-olx-field="rolesEyebrow">{{ oluxCms.t('Roles Eyebrow', mm.rolesEyebrow) }}</p>
+          <h2 data-olx-field="rolesTitle">{{ oluxCms.t('Roles Title', mm.rolesTitle) }}</h2>
           <p>{{ liveCount }} platform{{ liveCount === 1 ? '' : 's' }} live every Sunday — these are the hands that make it happen.</p>
         </div>
-        <div class="mm-role-grid">
-          <article v-for="r in mm.roles" :key="r.title" class="mm-role">
+        <div class="mm-role-grid" data-olx-panel="media-roles">
+          <article data-olx-item v-for="r in mm.roles" :key="r.title" class="mm-role">
             <span class="mm-role-icon">{{ r.icon }}</span>
             <h3>{{ r.title }}</h3>
             <p>{{ r.text }}</p>
@@ -72,8 +73,8 @@ const sendForm = async (e: Event) => {
     <!-- behind-the-scenes gallery strip -->
     <section class="mm-gallery">
       <div class="mm-inner">
-        <div class="mm-gallery-row">
-          <figure v-for="g in mm.gallery" :key="g.img">
+        <div class="mm-gallery-row" data-olx-panel="media-gallery-items">
+          <figure data-olx-item v-for="g in mm.gallery" :key="g.img">
             <img :src="g.img" :alt="g.title" loading="lazy">
             <figcaption>{{ g.title }}</figcaption>
           </figure>
@@ -88,7 +89,7 @@ const sendForm = async (e: Event) => {
       <aside class="mm-side">
         <!-- watch & listen quick links -->
         <div class="mms-card">
-          <h3>{{ mm.sidebar.watchTitle }}</h3>
+          <h3 data-olx-field="sidebarWatchTitle">{{ oluxCms.t('Sidebar Watch Title', mm.sidebar.watchTitle) }}</h3>
           <NuxtLink v-for="l in mm.sidebar.watchLinks" :key="l.label" class="mms-row" :to="l.to">
             <span class="icon">{{ l.icon }}</span>
             <b>{{ l.label }}</b>
@@ -97,19 +98,19 @@ const sendForm = async (e: Event) => {
 
         <!-- live platforms, from the socials data source -->
         <div class="mms-card mms-live">
-          <h3>{{ mm.sidebar.liveTitle }}</h3>
+          <h3 data-olx-field="sidebarLiveTitle">{{ oluxCms.t('Sidebar Live Title', mm.sidebar.liveTitle) }}</h3>
           <div class="mms-platforms">
             <a
               v-for="s in livePlatforms" :key="s.key" :href="s.href"
               target="_blank" rel="noopener" :title="s.name" :style="{ background: s.color }"
             ><svg viewBox="0 0 24 24" fill="currentColor"><path :d="s.icon"/></svg></a>
           </div>
-          <p>{{ mm.sidebar.liveNote }}</p>
+          <p data-olx-field="sidebarLiveNote">{{ oluxCms.t('Sidebar Live Note', mm.sidebar.liveNote) }}</p>
         </div>
 
         <!-- latest sermons the team published -->
         <div class="mms-card">
-          <h3>{{ mm.sidebar.latestTitle }}</h3>
+          <h3 data-olx-field="sidebarLatestTitle">{{ oluxCms.t('Sidebar Latest Title', mm.sidebar.latestTitle) }}</h3>
           <NuxtLink v-for="sm in latestSermons" :key="sm.slug" class="mms-row mms-sermon" :to="`/sermons/${sm.slug}`">
             <img :src="sermonThumb(sm)" :alt="sm.title">
             <span>

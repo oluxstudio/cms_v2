@@ -112,6 +112,8 @@ test('an invited member logging in lands on the invited site dashboard, not the 
         ->set('inviteEmail', $email)->call('sendInvite');
 
     $member = User::where('email', $email)->first();
+    // Team member accounts (invited) land on their site's dashboard;
+    // owners land on the select-site picker.
     expect($member->landingUrl())->toBe(url("/{$site->name}/dashboard"));
 
     // /start refuses to wizard them.
@@ -157,7 +159,7 @@ test('viewer role can open permitted pages but is blocked elsewhere', function (
 
     $this->actingAs($member)->get("/{$site->name}/pages")->assertOk();
     $this->actingAs($member)->get("/{$site->name}/team")->assertForbidden();
-    $this->actingAs($member)->get("/{$site->name}/marketplace")->assertForbidden();
+    $this->actingAs($member)->get("/{$site->name}/addons")->assertForbidden();
 });
 
 test('editing a roles permissions changes what its members can access', function () {

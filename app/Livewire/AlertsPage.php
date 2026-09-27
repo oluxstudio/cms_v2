@@ -16,7 +16,7 @@ class AlertsPage extends Component
     #[Url(as: 'cat')]
     public string $filter = 'all';   // all | unread | type:* | level:*
 
-    public ?int $expanded = null;
+    public ?string $expanded = null; // alert ids are ULIDs
 
     #[Computed]
     public function site(): Site

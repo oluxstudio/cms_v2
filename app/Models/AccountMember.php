@@ -30,4 +30,10 @@ class AccountMember extends Model
     {
         return $this->belongsTo(Role::class);
     }
+
+    /** The one site this membership is limited to (null = every site the account owns). */
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
 }

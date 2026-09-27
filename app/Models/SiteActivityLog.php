@@ -105,6 +105,9 @@ class SiteActivityLog extends Model
             'cancelled' => ['Cancelled',   '#fef2f2', '#dc2626'],
             'no_show' => ['No-show',     '#fffbeb', '#d97706'],
             'sent' => ['Sent',        '#eff6ff', '#2563eb'],
+            'started' => ['Started',     '#fffbeb', '#d97706'],
+            'reopened' => ['Reopened',    '#fffbeb', '#d97706'],
+            'milestone' => ['Milestone',   '#f5f3ff', '#7c3aed'],
             default => [ucfirst($this->action), '#f9fafb', '#6b7280'],
         };
     }

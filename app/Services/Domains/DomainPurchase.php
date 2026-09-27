@@ -2,10 +2,12 @@
 
 namespace App\Services\Domains;
 
+use App\Jobs\BuildTemplateShell;
 use App\Models\DomainOrder;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\PlatformBilling;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Stripe\Checkout\Session;
@@ -122,12 +124,19 @@ class DomainPurchase
         ]];
         $params = [
             'mode' => 'payment',
-            'customer_email' => $sub->stripe_customer_id ? null : $user->email,
-            'customer' => $sub->stripe_customer_id,
+            // Ad-hoc price_data has no product tax code — opt this session out of
+            // Stripe Managed Payments (on by default), which would require one.
+            'managed_payments' => ['enabled' => false],
             'metadata' => ['kind' => 'domain', 'order_id' => $order->id, 'user_id' => $user->id, 'back' => $backUrl],
             'success_url' => route('site.domain.success', $site).'?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => $backUrl,
         ];
+        // Stripe rejects sending BOTH customer and customer_email — even a null one.
+        if ($sub->stripe_customer_id) {
+            $params['customer'] = $sub->stripe_customer_id;
+        } else {
+            $params['customer_email'] = $user->email;
+        }
         if ($buyPlan) {
             $tier = config("plans.tiers.{$plan}");
             $params['mode'] = 'subscription';
@@ -150,11 +159,56 @@ class DomainPurchase
         return $session->url;
     }
 
+    /**
+     * Start a RENEWAL for a domain this site already owns. Returns a URL to
+     * send the buyer to (Stripe Checkout, or the back URL when billing is
+     * not configured and the renewal happened instantly).
+     */
+    public function startRenewal(User $user, DomainOrder $registered, string $backUrl): string
+    {
+        abort_unless($registered->status === 'registered', 422, 'Only a registered domain can be renewed.');
+        $price = $this->priceFor($registered->domain);
+        abort_if($price === null, 422, 'That domain extension is not offered.');
+
+        $order = DomainOrder::create([
+            'user_id' => $user->id, 'site_id' => $registered->site_id,
+            'domain' => $registered->domain, 'type' => 'renew',
+            'years' => (int) config('domains.years', 1), 'price_cents' => $price,
+            'status' => 'pending',
+        ]);
+
+        if (! $this->billing->configured()) {
+            $this->fulfil($order);
+
+            return $backUrl;
+        }
+
+        $session = $this->billing->client()->checkout->sessions->create([
+            'mode' => 'payment',
+            'managed_payments' => ['enabled' => false],
+            'customer_email' => $user->email,
+            'metadata' => ['kind' => 'domain', 'order_id' => $order->id, 'user_id' => $user->id, 'back' => $backUrl],
+            'success_url' => route('site.domain.success', $registered->site).'?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => $backUrl,
+            'line_items' => [[
+                'price_data' => [
+                    'currency' => 'gbp',
+                    'product_data' => ['name' => "Renew {$registered->domain} ({$order->years} year)"],
+                    'unit_amount' => $price,
+                ],
+                'quantity' => 1,
+            ]],
+        ]);
+        $order->update(['stripe_session_id' => $session->id]);
+
+        return $session->url;
+    }
+
     /** Success-return: verify the session server-side, then fulfil. Returns the back URL. */
     public function fulfilFromSession(User $user, string $sessionId): ?string
     {
         $session = $this->billing->client()->checkout->sessions->retrieve($sessionId);
-        if (! $session || (int) ($session->metadata->user_id ?? 0) !== $user->id) {
+        if (! $session || (string) ($session->metadata->user_id ?? '') !== (string) $user->id) {
             return null;
         }
         if (! in_array($session->payment_status, ['paid', 'no_payment_required'], true)) {
@@ -202,6 +256,28 @@ class DomainPurchase
         $user = $order->user;
         $site = $order->site;
 
+        // ── Renewal: extend at the registrar, roll the expiry forward. ──
+        if ($order->type === 'renew') {
+            try {
+                $this->registrar->renew($order->domain, $order->years);
+            } catch (Throwable $e) {
+                report($e);
+                $order->update(['status' => 'failed', 'error' => Str::limit($e->getMessage(), 1000)]);
+
+                return;
+            }
+
+            $base = DomainOrder::where('domain', $order->domain)->where('status', 'registered')
+                ->max('expires_at');
+            $expires = ($base ? Carbon::parse($base) : now())->addYears($order->years);
+            $order->update(['status' => 'registered', 'expires_at' => $expires, 'error' => null]);
+            // The canonical expiry lives on the ORIGINAL registration row too.
+            DomainOrder::where('domain', $order->domain)->where('type', 'register')
+                ->where('status', 'registered')->update(['expires_at' => $expires]);
+
+            return;
+        }
+
         if ($order->plan) {
             $this->billing->activate($user, $order->plan, $session);
         }
@@ -232,6 +308,14 @@ class DomainPurchase
             'domain_verified_at' => now(),
             'live' => true,
         ]);
+
+        // Hosting space: make sure the template shell exists so the new domain
+        // serves the real site, not the holding page. Never fails the order.
+        try {
+            BuildTemplateShell::ensure($site->fresh());
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     /** @return array<string,string> */

@@ -93,8 +93,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <p v-if="reserved[featured.id]" class="ev-booked">✓ You reserved {{ reserved[featured.id] }} {{ reserved[featured.id] === 1 ? 'seat' : 'seats' }}</p>
 
       <!-- remaining events: paginated grid -->
-      <div class="events-grid">
-        <div v-for="e in shown" :key="e.id" class="ev-cell">
+      <div class="events-grid" data-olx-panel="events">
+        <div data-olx-item v-for="e in shown" :key="e.id" class="ev-cell">
           <EventCard v-bind="e" reservable :cta="ctaFor(e)" @select="openReserve(e)" />
           <p v-if="reserved[e.id]" class="ev-booked">✓ You reserved {{ reserved[e.id] }} {{ reserved[e.id] === 1 ? 'seat' : 'seats' }}</p>
         </div>

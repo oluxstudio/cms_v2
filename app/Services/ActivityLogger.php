@@ -116,7 +116,7 @@ class ActivityLogger
             [
                 'entity_id' => $response->id,
                 'description' => "{$who} submitted the form",
-                'url' => "/forms/{$form->id}/responses",
+                'url' => "/forms/response/{$response->id}",
                 'icon' => 'response',
                 'meta' => [
                     'form_id' => $form->id,
@@ -158,6 +158,30 @@ class ActivityLogger
                 'meta' => ['priority' => $todo->priority],
             ]
         );
+    }
+
+    public static function todoStarted(Todo $todo): void
+    {
+        static::log($todo->site_id, 'todo', 'started', "Task \"{$todo->title}\" was started", [
+            'entity_id' => $todo->id, 'url' => '/tasks', 'meta' => ['priority' => $todo->priority],
+        ]);
+    }
+
+    public static function todoReopened(Todo $todo): void
+    {
+        static::log($todo->site_id, 'todo', 'reopened', "Task \"{$todo->title}\" was reopened", [
+            'entity_id' => $todo->id, 'url' => '/tasks', 'meta' => ['priority' => $todo->priority],
+        ]);
+    }
+
+    /** A checklist step ticked off — the task reached {pct}% done. */
+    public static function todoMilestone(Todo $todo, string $step, int $pct): void
+    {
+        static::log($todo->site_id, 'todo', 'milestone', "Milestone on \"{$todo->title}\": \"{$step}\" done", [
+            'entity_id' => $todo->id, 'url' => '/tasks',
+            'description' => "The task is now {$pct}% complete.",
+            'meta' => ['progress' => $pct],
+        ]);
     }
 
     public static function mediaUploaded(Media $media): void

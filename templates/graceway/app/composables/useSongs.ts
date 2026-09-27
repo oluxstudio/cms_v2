@@ -7,6 +7,7 @@ export interface Song {
 
 // "What we're singing" — the current season's set list.
 // The worship leader rotates this list; links let the congregation listen midweek.
+/** @olux-collection Songs */
 const fallback: Song[] = [
   { title: 'Goodness of God', artist: 'Bethel Music', url: 'https://www.youtube.com/results?search_query=goodness+of+god' },
   { title: 'Way Maker', artist: 'Sinach', url: 'https://www.youtube.com/results?search_query=way+maker+sinach' },

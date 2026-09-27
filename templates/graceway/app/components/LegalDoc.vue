@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const oluxCms = useOluxContent('legal-doc')
 const oluxFb: Record<string, string> = {}
+// @olux-source legal-sections — this page's content rows live in that collection
 // Legal document page body — content comes from the global data source,
 // keyed by route (/privacy-policy, /terms, /cookie-policy).
 const route = useRoute()
@@ -11,10 +12,10 @@ const doc = computed(() => legal[route.path.replace(/\/+$/, '')] ?? null)
 <template>
   <!-- no v-if on the root: the CMS pipeline injects its own root v-if on intake -->
   <section class="legal-doc" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
-    <div v-if="doc" class="container">
+    <div v-if="doc" class="container" data-olx-panel="legal-sections">
       <p class="legal-updated">{{ doc.updated }}</p>
       <p class="legal-intro">{{ doc.intro }}</p>
-      <div v-for="s in doc.sections" :key="s.heading" class="legal-section">
+      <div data-olx-item v-for="s in doc.sections" :key="s.heading" class="legal-section">
         <h2>{{ s.heading }}</h2>
         <p>{{ s.body }}</p>
       </div>

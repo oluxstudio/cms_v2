@@ -53,12 +53,14 @@ watch([series, audience, sort], () => { page.value = 1 })
         </div>
       </div>
 
-      <div class="studies-grid">
-        <NuxtLink v-for="s in shown" :key="s.slug" class="study-entry" :to="`/bible-study/studies/${s.slug}`">
+      <div class="studies-grid" data-olx-panel="bible-studies">
+        <NuxtLink data-olx-item v-for="s in shown" :key="s.slug" class="study-entry" :to="`/bible-study/studies/${s.slug}`">
           <div class="chips">
             <span class="chip series">{{ s.series }}</span>
             <span class="chip">{{ s.audience }}</span>
+            <!-- media availability only — playback lives on the study page -->
             <span v-if="s.videoUrl" class="chip video">▶ Video</span>
+            <span v-else-if="s.audioUrl" class="chip video">🎧 Audio</span>
           </div>
           <h3>{{ s.title }}</h3>
           <p class="passage">📖 {{ s.passage }}<template v-if="s.week"> · {{ s.week }}</template></p>
@@ -75,3 +77,8 @@ watch([series, audience, sort], () => { page.value = 1 })
     </div>
   </section>
 </template>
+
+<style scoped>
+.study-player { border-radius: 14px 14px 0 0; }
+.study-entry-link { display: block; color: inherit; }
+</style>

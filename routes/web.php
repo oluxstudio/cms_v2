@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\DomainCheckController;
+use App\Http\Controllers\Api\MarketplaceApiController;
+use App\Http\Controllers\Api\SiteDesignController;
 use App\Http\Controllers\BlockKitController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ConnectPreviewController;
@@ -18,6 +21,8 @@ use App\Models\Site;
 use App\Payments\SitePaymentOnboarding;
 use App\Services\Domains\DomainPurchase;
 use App\Services\PlatformBilling;
+use App\Services\TemplateCommerce;
+use App\Services\TemplateScaffolder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -159,13 +164,13 @@ Route::middleware('feature:estimator')->group(function () {
         if ($site->templatePreviewUrl()) {
             if (! $site->pages()->where('url', '/estimate')->exists()) {
                 try {
-                    app(\App\Services\TemplateScaffolder::class)->applyPages($site, [[
+                    app(TemplateScaffolder::class)->applyPages($site, [[
                         'name' => 'Estimate',
                         'url' => '/estimate',
                         'keywords' => 'estimate, quote',
                         'blocks' => [['type' => 'app:'.$site->renderTemplateKey().':quote', 'name' => 'Quote', 'nodes' => []]],
                     ]]);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     report($e);
                 }
             }
@@ -293,6 +298,19 @@ Route::middleware('auth')->group(function () {
         return redirect($back ?: route('account.subscription'));
     })->name('account.subscription.success');
 
+    // Marketplace JSON API (account-scoped, session auth)
+    Route::get('/api/templates', [MarketplaceApiController::class, 'index'])->name('api.templates');
+    Route::get('/api/library', [MarketplaceApiController::class, 'library'])->name('api.library');
+    Route::post('/api/templates/{template}/library', [MarketplaceApiController::class, 'addToLibrary'])->name('api.templates.library');
+    Route::post('/api/templates/{template}/checkout', [MarketplaceApiController::class, 'checkout'])->name('api.templates.checkout');
+    Route::post('/api/sites/{siteName}/design/apply', [SiteDesignController::class, 'apply'])->name('api.design.apply');
+    Route::post('/api/sites/{siteName}/design/revert', [SiteDesignController::class, 'revert'])->name('api.design.revert');
+
+    // "Find a domain" availability lookup (Openprovider) — availability + status
+    // only; retail pricing comes in a later phase.
+    Route::get('/api/domains/check', DomainCheckController::class)
+        ->middleware('throttle:domain-check')->name('api.domains.check');
+
     // Domain purchase: Stripe success return (fulfilment is idempotent with the webhook).
     Route::get('/{site}/domain/success', function (Request $request, Site $site) {
         abort_unless($site->allows($request->user(), 'publish.manage'), 403);
@@ -303,7 +321,7 @@ Route::middleware('auth')->group(function () {
             report($e);
         }
 
-        return redirect()->route('site.publish', $site->id);
+        return redirect()->route('site.publish', $site->name);
     })->name('site.domain.success');
 
     // ── BlockKit: the jigsaw block tree — ONE mutation API, two clients
@@ -410,7 +428,25 @@ Route::middleware('auth')->group(function () {
     // My Designs: the site's saved templates — switch the active look here.
     Route::get('/{siteID}/designs', [SiteController::class, 'designsPage'])->middleware('perm:builder.manage')->name('site.designs');
     Route::redirect('/{siteID}/templates', '/{siteID}/designs')->name('site.templates');
-    Route::get('/{siteID}/marketplace', [SiteController::class, 'marketplace'])->middleware('perm:addons.manage')->name('site.marketplace');
+    Route::get('/{siteID}/design', [SiteController::class, 'design'])->middleware('perm:addons.manage')->name('site.design');
+    Route::get('/{siteID}/addons', [SiteController::class, 'marketplace'])->middleware('perm:addons.manage')->name('site.marketplace');
+    // ── Templates store (site context): browse, detail, checkout return ──
+    Route::get('/{siteID}/marketplace', [SiteController::class, 'templatesStore'])->name('marketplace');
+    Route::get('/{siteID}/marketplace/templates/{slug}', [SiteController::class, 'templatesStoreDetail'])->name('marketplace.template');
+    Route::get('/{siteID}/marketplace/templates/{slug}/success', function (Request $request, string $siteID, string $slug) {
+        try {
+            $session = app(PlatformBilling::class)->client()
+                ->checkout->sessions->retrieve((string) $request->query('session_id'));
+            if (($session->metadata->user_id ?? '') === (string) $request->user()->id
+                && in_array($session->payment_status, ['paid', 'no_payment_required'], true)) {
+                app(TemplateCommerce::class)->fulfilFromSession($session);
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        return redirect()->route('marketplace.template', [$siteID, $slug])->with('mp-added', true);
+    })->name('marketplace.template.success');
     Route::get('/{siteID}/publish', [SiteController::class, 'publish'])->middleware('perm:publish.manage')->name('site.publish');
     Route::get('/{siteID}/api-docs', [SiteController::class, 'apiDocs'])->name('site.apidocs');
     Route::get('/{siteID}/api-keys', [SiteController::class, 'apiKeys'])->name('site.apikeys');

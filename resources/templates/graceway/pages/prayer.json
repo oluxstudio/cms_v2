@@ -22,6 +22,97 @@
                     "value": "Send Another",
                     "order": 0,
                     "description": "text"
+                },
+                {
+                    "label": "Intro Chip",
+                    "type": "text",
+                    "value": "\u2733 Prayer Watch",
+                    "order": 1,
+                    "description": "copy:prayer.intro.chip"
+                },
+                {
+                    "label": "Intro Title",
+                    "type": "text",
+                    "value": "The engine room of the church",
+                    "order": 2,
+                    "description": "copy:prayer.intro.title"
+                },
+                {
+                    "label": "Intro Img Src",
+                    "type": "image",
+                    "value": "/assets/images/circle-2.jpg",
+                    "order": 3,
+                    "description": "copy:prayer.intro.img.src"
+                },
+                {
+                    "label": "Intro Img Alt",
+                    "type": "text",
+                    "value": "People praying together",
+                    "order": 4,
+                    "description": "copy:prayer.intro.img.alt"
+                },
+                {
+                    "label": "Verse Label",
+                    "type": "text",
+                    "value": "\ud83d\udcd6 Our anchor",
+                    "order": 5,
+                    "description": "copy:prayer.verse.label"
+                },
+                {
+                    "label": "Verse Text",
+                    "type": "text",
+                    "value": "\"Devote yourselves to prayer, being watchful and thankful.\"",
+                    "order": 6,
+                    "description": "copy:prayer.verse.text"
+                },
+                {
+                    "label": "Verse Cite",
+                    "type": "text",
+                    "value": "\u2014 Colossians 4:2",
+                    "order": 7,
+                    "description": "copy:prayer.verse.cite"
+                },
+                {
+                    "label": "Rhythms Eyebrow",
+                    "type": "text",
+                    "value": "When we pray",
+                    "order": 8,
+                    "description": "copy:prayer.rhythmsEyebrow"
+                },
+                {
+                    "label": "Rhythms Title",
+                    "type": "text",
+                    "value": "Rhythms of prayer",
+                    "order": 9,
+                    "description": "copy:prayer.rhythmsTitle"
+                },
+                {
+                    "label": "Form Chip",
+                    "type": "text",
+                    "value": "\u2733 Prayer Request",
+                    "order": 10,
+                    "description": "copy:prayer.form.chip"
+                },
+                {
+                    "label": "Form Title",
+                    "type": "text",
+                    "value": "How can we pray for you?",
+                    "order": 11,
+                    "description": "copy:prayer.form.title"
+                },
+                {
+                    "label": "Form Sub",
+                    "type": "text",
+                    "value": "Every request is read, prayed over by the team, and kept confidential. Leave your name off if you prefer \u2014 God knows it.",
+                    "order": 12,
+                    "description": "copy:prayer.form.sub"
+                },
+                {
+                    "label": "Form Thanks",
+                    "type": "text",
+                    "value": "\ud83d\udd6f Thank you \u2014 your request is with the prayer team. You are not alone in this.",
+                    "order": 13,
+                    "description": "copy:prayer.form.thanks"
                 }
             ]
         },

@@ -59,6 +59,7 @@ class VerifySiteOrigin
             $site->domain ? strtolower($site->domain) : null,
             $site->domain ? strtolower(Str::after($site->domain, 'www.')) : null,
             'localhost', '127.0.0.1',
+            $site->subdomainHost() ? strtolower($site->subdomainHost()) : null,
         ])
             ->merge(collect(config('publishing.platform_hosts', []))->map(fn ($h) => strtolower($h)))
             ->merge(collect(explode(',', (string) $site->getAttr('allowed_origins')))->map(fn ($h) => strtolower(trim($h))))

@@ -10,6 +10,7 @@ export interface StudyGroup {
   leader: string
   img: string
 }
+/** @olux-collection Study Groups */
 const groups: StudyGroup[] = [
   {
     slug: 'weekly-attendees', icon: '🌅', title: 'Weekly study attendees', stat: '40+', statLabel: 'Across all groups',
@@ -33,4 +34,8 @@ const groups: StudyGroup[] = [
   },
 ]
 
-export const useStudyGroups = () => groups
+// CMS-first: the "Study Groups" collection feeds the group pages.
+export const useStudyGroups = (): StudyGroup[] => {
+  const rows = (useCms().items('studyGroups', []) as any[]).filter(g => g.slug && g.title)
+  return rows.length ? rows.map(g => ({ ...groups.find(a => a.slug === g.slug), ...g }) as StudyGroup) : groups
+}

@@ -15,12 +15,91 @@
         {
             "type": "app:graceway:broadcast-channels",
             "name": "Broadcast Channels",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Live broadcast",
+                    "order": 0,
+                    "description": "copy:broadcastChannels.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Worship with us, wherever you are",
+                    "order": 1,
+                    "description": "copy:broadcastChannels.title"
+                },
+                {
+                    "label": "Sub",
+                    "type": "text",
+                    "value": "Every Sunday service streams live. Pick your platform \u2014 follow the profile, or jump straight into the stream.",
+                    "order": 2,
+                    "description": "copy:broadcastChannels.sub"
+                },
+                {
+                    "label": "Join Title",
+                    "type": "text",
+                    "value": "Watched online long enough?",
+                    "order": 3,
+                    "description": "copy:broadcastChannels.join.title"
+                },
+                {
+                    "label": "Join Cta To",
+                    "type": "url",
+                    "value": "/newsletter",
+                    "order": 4,
+                    "description": "copy:broadcastChannels.join.cta.to"
+                },
+                {
+                    "label": "Join Cta Label",
+                    "type": "text",
+                    "value": "Join the Church",
+                    "order": 5,
+                    "description": "copy:broadcastChannels.join.cta.label"
+                }
+            ]
         },
         {
             "type": "app:graceway:sermons",
             "name": "Sermons",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Sermons & blog",
+                    "order": 0,
+                    "description": "copy:sermonsHead.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Latest messages",
+                    "order": 1,
+                    "description": "copy:sermonsHead.title"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Video, audio and written reflections from our preachers \u2014 catch up wherever you are.",
+                    "order": 2,
+                    "description": "copy:sermonsHead.text"
+                },
+                {
+                    "label": "Cta To",
+                    "type": "url",
+                    "value": "/sermons",
+                    "order": 3,
+                    "description": "copy:sermonsHead.cta.to"
+                },
+                {
+                    "label": "Cta Label",
+                    "type": "text",
+                    "value": "View All Sermons",
+                    "order": 4,
+                    "description": "copy:sermonsHead.cta.label"
+                }
+            ]
         },
         {
             "type": "app:graceway:times",

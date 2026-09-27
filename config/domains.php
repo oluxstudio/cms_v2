@@ -11,8 +11,12 @@
 */
 return [
 
-    // fake | resellerclub
+    // fake | resellerclub | openprovider (credentials in config/openprovider.php)
     'driver' => env('DOMAIN_REGISTRAR', 'fake'),
+
+    // Domain Connect (one-click registrar setup) — not integrated yet.
+    // TODO: build the Domain Connect flow, then enable per registrar.
+    'domain_connect' => false,
 
     // Years bought at checkout.
     'years' => 1,

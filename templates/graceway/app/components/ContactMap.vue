@@ -8,12 +8,12 @@ const { contactMap } = useSiteContent()
   <section class="ct-map-sec" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head center">
-        <span class="ct-chip">{{ contactMap.chip }}</span>
-        <h2 data-olx-field="Headline">{{ contactMap.title }}</h2>
+        <span class="ct-chip" data-olx-field="chip">{{ oluxCms.t('Chip', contactMap.chip) }}</span>
+        <h2 data-olx-field="Headline">{{ oluxCms.t('Title', contactMap.title) }}</h2>
       </div>
       <div class="ct-map">
         <iframe
-          :src="contactMap.mapSrc"
+          :src="oluxCms.t('Map Src', contactMap.mapSrc)" data-olx-field="mapSrc"
           :title="contactMap.mapTitle" loading="lazy"
         ></iframe>
       </div>

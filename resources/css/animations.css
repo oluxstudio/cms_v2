@@ -136,6 +136,7 @@ a[href]:active,
     position: fixed;
     inset: 0;
     z-index: 9990;
+    pointer-events: none; /* purely visual — must never trap clicks if it sticks */
     display: flex;
     align-items: center;
     justify-content: center;

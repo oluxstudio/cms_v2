@@ -207,18 +207,17 @@ class User extends Authenticatable
      */
     public function landingUrl(): string
     {
-        $ownsSites = $this->sites()->exists();
-        if (! $ownsSites && $this->memberships()->exists()) {
+        // TEAM MEMBER accounts (created via invitation: own nothing, belong
+        // to sites) go straight to their site's dashboard — the picker only
+        // disambiguates when they belong to several sites.
+        if (! $this->sites()->exists() && $this->memberships()->exists()) {
             $names = $this->memberSiteNames();
 
             return $names->count() === 1 ? url('/'.$names->first().'/dashboard') : route('home');
         }
 
-        $wizard = (array) (($this->onboarding ?? [])['wizard'] ?? []);
-        if ($ownsSites && ($wizard === [] || ! empty($wizard['done']))) {
-            return route('home');
-        }
-
-        return route('start');
+        // SITE OWNER accounts land on the select-site page; the picker
+        // resumes a mid-wizard signup itself and offers "New Site".
+        return route('home');
     }
 }

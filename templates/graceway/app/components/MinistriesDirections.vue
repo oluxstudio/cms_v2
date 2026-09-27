@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(defineProps<{ grid?: boolean }>(), { grid: false })
 
-const directions = [
+const directions__seed = [
   { to: '/community-care', color: 'd-green', img: '/assets/images/event-1.jpg', tag: 'Open to all', title: 'Community Care', meta: 'Serving every Saturday' },
   { to: '/bible-study', color: 'd-orange', img: '/assets/images/circle-2.jpg', tag: 'Beginner friendly', title: 'Bible Study', meta: 'Midweek home groups' },
   { to: '/worship', color: 'd-blue', img: '/assets/images/event-2.jpg', tag: 'Open to all', title: 'Worship & Music', meta: 'Rehearsals every Thursday' },
@@ -9,6 +9,9 @@ const directions = [
   { to: '/kids', color: 'd-orange', img: '/assets/images/event-3.jpg', tag: 'Families', title: 'Kids Church', meta: 'Both Sunday services' },
   { to: '/prayer', color: 'd-blue', img: '/assets/images/bible-study.jpg', tag: 'Early birds', title: 'Prayer Watch', meta: 'Wednesdays 6:00 AM' },
 ]
+// CMS-first (auto-wired at publish): the 'Directions' collection feeds this grid.
+const directions = (() => { const r = useCms().items('directions', []) as any[]; return r.length ? r : directions__seed })()
+
 </script>
 
 <template>
@@ -25,8 +28,8 @@ const directions = [
         </svg>
       </div>
 
-      <div class="directions-row" :class="{ grid }">
-        <NuxtLink v-for="(d, i) in directions" :key="d.title" class="dcard" :class="[d.color, `layout-${i % 2 ? 'b' : 'a'}`]" :to="d.to">
+      <div class="directions-row" :class="{ grid }" data-olx-panel="directions">
+        <NuxtLink data-olx-item v-for="(d, i) in directions" :key="d.title" class="dcard" :class="[d.color, `layout-${i % 2 ? 'b' : 'a'}`]" :to="d.to">
           <span class="dcard-arrow"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <img class="dcard-img" :src="d.img" :alt="d.title">
           <div class="dcard-info">

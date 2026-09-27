@@ -3,6 +3,10 @@
 # then run the full intake pipeline (lint gate → publish → fonts/assets →
 # preview build → refresh applied sites).
 #
+# CONTRACT — ADDITIVE: creates anything new (pages, blocks, fields,
+# collections, forms, products, services) but never overwrites or deletes
+# owner work. Use ./mirror-template when the project must win outright.
+#
 #   ./sync-template graceway              full deploy (~2-3 min, rebuilds shell)
 #   ./sync-template graceway --no-build   content-only update (fast)
 #   ./sync-template graceway --force      deploy despite lint errors
@@ -16,6 +20,10 @@ rsync -a --delete \
   --exclude '.env*' --exclude .mcp.json --exclude scripts --exclude dist \
   --exclude pack --exclude '*Zone.Identifier' \
   "$SRC/" "$HOME/development/olux-studio/backend/storage/app/import-$KEY/"
+
+# Preflight: stray root-owned files (from any root-run build) silently kill
+# the publish/build steps with EACCES — normalise ownership first.
+docker exec backend-cms-app-1 sh -c "chown -R sail:sail /var/www/html/templates /var/www/html/resources/templates /var/www/html/storage/app/import-$KEY 2>/dev/null" || true
 
 docker exec -u sail backend-cms-app-1 php artisan template:deploy "$KEY" \
   --from="/var/www/html/storage/app/import-$KEY" "$@"

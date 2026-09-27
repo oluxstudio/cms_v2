@@ -291,8 +291,20 @@ class TemplateInstaller
             if (empty($def['name'])) {
                 continue;
             }
-            $existing = $site->collections()->where('name', $def['name'])->exists();
+            $existing = $site->collections()->where('name', $def['name'])->first();
             if ($existing) {
+                // Template gained fields → merge them in additively so the
+                // editor renders the new keys (owner fields/order untouched).
+                $have = collect($existing->fields ?? [])->pluck('key')->filter()->all();
+                $missing = collect((array) ($def['fields'] ?? []))
+                    ->map(fn ($f) => ['key' => $f['key'] ?? $f['name'] ?? '', 'name' => $f['key'] ?? $f['name'] ?? '',
+                        'label' => $f['label'] ?? ucfirst((string) ($f['key'] ?? '')), 'type' => $f['type'] ?? 'text'] + array_intersect_key($f, array_flip(['fields', 'options'])))
+                    ->filter(fn ($f) => $f['key'] !== '' && ! in_array($f['key'], $have, true))
+                    ->values()->all();
+                if ($missing !== []) {
+                    $existing->update(['fields' => array_merge((array) $existing->fields, $missing)]);
+                }
+
                 continue;
             }
             $col = $site->collections()->create([
@@ -304,7 +316,7 @@ class TemplateInstaller
                     'name' => $f['key'] ?? $f['name'] ?? '',
                     'label' => $f['label'] ?? ucfirst((string) ($f['key'] ?? '')),
                     'type' => $f['type'] ?? 'text',
-                ])->filter(fn ($f) => $f['key'] !== '')->values()->all(),
+                ] + array_intersect_key($f, array_flip(['fields', 'options'])))->filter(fn ($f) => $f['key'] !== '')->values()->all(),
                 'is_public' => true,
             ]);
             foreach ((array) ($def['items'] ?? []) as $i => $data) {
@@ -347,12 +359,17 @@ class TemplateInstaller
             }
         }
 
-        // Component file → slug (direct items() call wins over accessors).
+        // Component file → slug. Priority: explicit @olux-source marker,
+        // then a direct items() call, then accessor usage.
         $links = [];
         foreach (glob("$appDir/components/*.vue") ?: [] as $file) {
             $code = (string) file_get_contents($file);
             $slug = null;
-            if (preg_match("#items\(['\"]([\w-]+)['\"]#", $code, $m)) {
+            $explicit = false;
+            if (preg_match('#@olux-source\s+([\w-]+)#', $code, $m)) {
+                $slug = $m[1];
+                $explicit = true;
+            } elseif (preg_match("#items\(['\"]([\w-]+)['\"]#", $code, $m)) {
                 $slug = $m[1];
             } else {
                 // Several accessors may appear (useSermons + useSermonSeries):
@@ -367,19 +384,50 @@ class TemplateInstaller
             }
             if ($slug) {
                 $name = Str::headline(preg_replace('#Block$#', '', basename($file, '.vue')));
-                $links[$name] = $slug;
+                $links[$name] = ['slug' => $slug, 'explicit' => $explicit];
             }
         }
         if ($links === []) {
             return;
         }
 
+        // Blocks the CURRENT package declares node-less: every field a legacy
+        // install scaffolded for them is dead — the rewritten component renders
+        // only its collection's rows, never those nodes.
+        $nodeless = [];
+        $packageDir = resource_path('templates/'.$appKey);
+        if (is_dir($packageDir)) {
+            foreach ((new TemplatePackage($packageDir))->pages() as $p) {
+                foreach ((array) ($p['blocks'] ?? []) as $b) {
+                    if ($n = $b['name'] ?? null) {
+                        $nodeless[$n] = ($nodeless[$n] ?? true) && empty($b['nodes']);
+                    }
+                }
+            }
+        }
+
         $collections = $site->collections()->get()->keyBy(fn ($c) => Str::slug($c->slug ?: $c->name));
-        foreach ($links as $name => $slug) {
-            $col = $collections->get(Str::slug($slug));
+        foreach ($links as $name => $link) {
+            // camelCase slugs in code (items('bibleStudies')) → kebab collection slugs
+            $col = $collections->get(Str::slug(Str::kebab($link['slug'])));
             if ($col) {
-                $site->contentComponents()->where('name', $name)
-                    ->whereNull('collection_id')->update(['collection_id' => $col->id]);
+                // An explicit @olux-source marker is author intent — it
+                // ALWAYS wins (never freeze on an old heuristic guess);
+                // heuristic links only fill gaps.
+                $q = $site->contentComponents()->where('name', $name);
+                if (! $link['explicit']) {
+                    $q->whereNull('collection_id');
+                }
+                $q->update(['collection_id' => $col->id]);
+
+                // Explicitly sourced + node-less in the manifest → shed stale
+                // scaffolded fields, so the connect editor opens the collection
+                // grid instead of a dead fields form.
+                if ($link['explicit'] && ($nodeless[$name] ?? false)) {
+                    foreach ($site->contentComponents()->where('name', $name)->get() as $component) {
+                        $component->nodes()->delete();
+                    }
+                }
             }
         }
     }
@@ -390,7 +438,7 @@ class TemplateInstaller
             if (empty($p['name'])) {
                 continue;
             }
-            $site->products()->firstOrCreate(['slug' => $p['slug'] ?? \Illuminate\Support\Str::slug($p['name'])], [
+            $site->products()->firstOrCreate(['slug' => $p['slug'] ?? Str::slug($p['name'])], [
                 'name' => (string) $p['name'],
                 'description' => (string) ($p['description'] ?? ''),
                 'category' => (string) ($p['category'] ?? ''),

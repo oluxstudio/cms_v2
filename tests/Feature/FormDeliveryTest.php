@@ -94,7 +94,7 @@ test('the response deep link opens that response in the forms page and marks it 
     expect($response->read_at)->toBeNull();
 
     Livewire::actingAs($owner)->test(SiteFormsPage::class, ['site' => $site, 'openResponse' => $response->id])
-        ->assertSet('mode', 'responses')
+        ->assertSet('mode', 'detail')
         ->assertSet('activeFormId', $form->id)
         ->assertSet('openId', $response->id);
 

@@ -12,6 +12,7 @@ use App\Services\TemplateCatalog;
 use App\Services\TemplateInstaller;
 use App\Services\TemplatePackageImporter;
 use App\Services\TemplateRatings;
+use App\Support\CuratedTemplates;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -187,7 +188,37 @@ class MarketplacePage extends Component
 
     public function getTemplateCategoriesProperty(): array
     {
-        return app(TemplateCatalog::class)->categories();
+        // Union of catalog, curated and installed categories — the filter
+        // governs the WHOLE templates tab, not just the catalog section.
+        return collect(app(TemplateCatalog::class)->categories())
+            ->merge(collect($this->curated())->pluck('category'))
+            ->merge($this->site->installedTemplates()->pluck('category'))
+            ->filter()->unique()->sort()->values()->all();
+    }
+
+    public function clearTplFilters(): void
+    {
+        $this->tplSearch = '';
+        $this->tplCategory = '';
+    }
+
+    /** Search + category match shared by every templates-tab section. */
+    private function tplMatches(?string $name, ?string $description, ?string $category): bool
+    {
+        $q = mb_strtolower(trim($this->tplSearch));
+        if ($q !== '' && ! str_contains(mb_strtolower($name.' '.$description), $q)) {
+            return false;
+        }
+
+        return $this->tplCategory === '' || strcasecmp((string) $category, $this->tplCategory) === 0;
+    }
+
+    /** Curated (featured) templates, honouring the tab-level filters. */
+    public function getCuratedFilteredProperty(): array
+    {
+        return array_values(array_filter($this->curated(), fn ($c) => $this->tplMatches(
+            $c['name'] ?? '', $c['description'] ?? '', $c['category'] ?? ''
+        )));
     }
 
     /** Template ids already installed on this site (to flag cards). */
@@ -200,6 +231,34 @@ class MarketplacePage extends Component
     public function getInstalledTemplatesProperty()
     {
         return $this->site->installedTemplates()->with('template')->get();
+    }
+
+    /** The design the site is CURRENTLY using (applied), if any. */
+    public function getCurrentTemplateProperty(): ?array
+    {
+        $row = $this->site->installedTemplates()->whereNotNull('applied_at')->latest('applied_at')->first();
+        if ($row) {
+            return [
+                'name' => $row->name, 'description' => (string) $row->description,
+                'category' => (string) $row->category,
+                'thumbnail' => $row->thumbnailUrl()
+                    ?: (($k = $row->builtin_key ?: $this->site->template) && file_exists(public_path("template-thumbnails/{$k}.png"))
+                        ? asset("template-thumbnails/{$k}.png") : null),
+                'gradient' => $row->gradient_class ?: 'from-slate-400 to-slate-600',
+                'appliedAt' => $row->applied_at?->diffForHumans(), 'pages' => $row->pageCount(),
+                'builtin' => $row->isBuiltin(),
+            ];
+        }
+        // Renderer bound without an installed row (legacy sites).
+        if ($this->site->template && ($t = CuratedTemplates::find($this->site->template))) {
+            return [
+                'name' => $t['name'], 'description' => (string) ($t['description'] ?? ''),
+                'category' => (string) ($t['category'] ?? ''), 'thumbnail' => (string) ($t['thumbnail'] ?? ''),
+                'gradient' => 'from-slate-400 to-slate-600', 'appliedAt' => null, 'pages' => null, 'builtin' => true,
+            ];
+        }
+
+        return null;
     }
 
     /** The current user's existing star rating per catalog template id. */
@@ -316,7 +375,7 @@ class MarketplacePage extends Component
                 'Template “'.$tpl->name.'” uploaded from a .zip', [
                     'entity_id' => $tpl->id,
                     'description' => 'Direct upload by '.auth()->user()?->name.' — sanitised, not marketplace-reviewed.',
-                    'url' => '/marketplace',
+                    'url' => '/'.$this->site->name.'/marketplace',
                 ]);
         } catch (\Throwable $e) {
             report($e);

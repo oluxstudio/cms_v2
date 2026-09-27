@@ -22,6 +22,10 @@ class SfcRewriter
     public function rewriteApp(string $appDir, array $manifest): void
     {
         $key = $manifest['key'];
+
+        // Auto-wire unmarked data-source arrays FIRST (pristine sources):
+        // owners then edit those grids as CMS collections with zero authoring.
+        $this->wireAutoCollections($appDir);
         // Chrome components (header/footer) appear on every page — rewrite each
         // component file exactly once or the root guard/bindings duplicate.
         $done = [];
@@ -29,7 +33,7 @@ class SfcRewriter
             foreach ($page['blocks'] as $block) {
                 $file = "$appDir/app/components/{$block['component']}.vue";
                 if (File::exists($file) && ! isset($done[$file])) {
-                    File::put($file, $this->rewriteComponent(File::get($file), $block));
+                    File::put($file, $this->rewriteComponent(File::get($file), $block, "$appDir/app"));
                     $done[$file] = true;
                 }
             }
@@ -92,7 +96,8 @@ class SfcRewriter
         // include every *Block.vue component, keyed by its kebab-cased name.
         foreach (File::glob("$appDir/app/components/*Block.vue") as $file) {
             $component = basename($file, '.vue');
-            $blockKey = \Illuminate\Support\Str::kebab(preg_replace('/Block$/', '', $component));
+            // Same formula as TemplateExtractor::block(): App prefix stripped too.
+            $blockKey = Str::kebab(preg_replace('/^App(?=[A-Z])/', '', preg_replace('/Block$/', '', $component)));
             if ($blockKey === '' || isset($seen[$blockKey])) {
                 continue;
             }
@@ -156,8 +161,82 @@ class SfcRewriter
         return "<script setup lang=\"ts\">{$script}</script>\n\n<template>{$template}</template>\n";
     }
 
+    /**
+     * CMS-wire the auto-detected data-source arrays (see
+     * CollectionSourceExtractor::autoCandidates): the array keeps its name for
+     * every existing usage, but its value becomes "CMS rows if any, else the
+     * authored seed". Composables via their trivial accessor (call-time
+     * scope); component <script setup> consts in place (per-instance scope).
+     */
+    private function wireAutoCollections(string $appDir): void
+    {
+        foreach (app(CollectionSourceExtractor::class)->autoCandidates($appDir) as $cand) {
+            $code = (string) File::get($cand['file']);
+            $slug = $cand['slug'];
+
+            if ($cand['kind'] === 'composable') {
+                $pattern = '#export const '.$cand['accessor'].'\s*=\s*\(\)\s*=>\s*'.$cand['const'].'\b#';
+                $replacement = "// CMS-first (auto-wired at publish): the '{$cand['name']}' collection feeds this; authored rows seed it.\n"
+                    ."export const {$cand['accessor']} = () => {\n"
+                    ."  const rows = useCms().items('{$slug}', []) as any[]\n"
+                    ."  return rows.length ? rows : {$cand['const']}\n"
+                    .'}';
+                $new = preg_replace($pattern, $replacement, $code, 1);
+            } else {
+                // Rename the declaration to *_seed, overlay under the original
+                // name — every later usage in the component stays untouched.
+                $pattern = '#((?:export )?const )'.$cand['const'].'(\s*(?::[^=\n]+)?=\s*\[)#';
+                if (! preg_match($pattern, $code, $m, PREG_OFFSET_CAPTURE)) {
+                    continue;
+                }
+                $declStart = $m[0][1];
+                $bracket = strpos($code, '[', $declStart);
+                $end = $this->balanced($code, $bracket);
+                if ($end === null) {
+                    continue;
+                }
+                $overlay = "\n// CMS-first (auto-wired at publish): the '{$cand['name']}' collection feeds this grid.\n"
+                    ."const {$cand['const']} = (() => { const r = useCms().items('{$slug}', []) as any[]; return r.length ? r : {$cand['const']}__seed })()\n";
+                $new = substr($code, 0, $declStart)
+                    .preg_replace($pattern, '${1}'.$cand['const'].'__seed$2', substr($code, $declStart, $end - $declStart), 1)
+                    .$overlay
+                    .substr($code, $end);
+            }
+            if ($new !== null && $new !== $code) {
+                File::put($cand['file'], $new);
+            }
+        }
+    }
+
+    /** Index just past the bracket matching the one at $open, string-aware. */
+    private function balanced(string $s, int $open): ?int
+    {
+        $depth = 0;
+        $in = null;
+        for ($i = $open, $len = strlen($s); $i < $len; $i++) {
+            $ch = $s[$i];
+            if ($in !== null) {
+                if ($ch === '\\') {
+                    $i++;
+                } elseif ($ch === $in) {
+                    $in = null;
+                }
+            } elseif ($ch === "'" || $ch === '"' || $ch === '`') {
+                $in = $ch;
+            } elseif ($ch === '[' || $ch === '{') {
+                $depth++;
+            } elseif ($ch === ']' || $ch === '}') {
+                if (--$depth === 0) {
+                    return $i + 1;
+                }
+            }
+        }
+
+        return null;
+    }
+
     /** Rewrite one block component's SFC source. */
-    public function rewriteComponent(string $source, array $blockDef): string
+    public function rewriteComponent(string $source, array $blockDef, ?string $appDir = null): string
     {
         $sections = SfcParser::sections($source);
         $template = $sections['template'];
@@ -179,6 +258,21 @@ class SfcRewriter
         }
 
         $newTemplate = $this->rewriteTemplate($template, $fields);
+
+        // Composable-authored copy ({{ donate.title }}) → CMS-first t() calls
+        // + field markers. Labels re-derived with the SAME taken-list order as
+        // TemplateExtractor::block() (fixed labels, then script consts) so
+        // the shipped nodes and these t() lookups always agree. Hand-authored
+        // CMS-native components (they already call useOluxContent) are theirs.
+        if ($appDir !== null && ! str_contains($source, 'useOluxContent')) {
+            $taken = array_keys($fallbacks);
+            foreach (SfcParser::scalarStrings($sections['script'] ?? '') as $var => $v) {
+                $taken[] = Str::headline($var);
+            }
+            $copies = (new ComposableCopyIndex)->componentCopy($appDir, $source, $taken);
+            $newTemplate = $this->rewriteCopy($newTemplate, $copies);
+        }
+
         $newTemplate = $this->addRootHiddenGuard($newTemplate);
 
         $newScript = $this->rewriteScript($sections['script'], $blockDef, $fallbacks);
@@ -195,6 +289,52 @@ class SfcRewriter
     }
 
     // ─────────────────────────────────────────────── template
+
+    /**
+     * Composable-copy rewrites: `{{ donate.title }}` → `{{ oluxCms.t('Title',
+     * donate.title) }}` (fallback = the original expression, so a pristine
+     * render is byte-identical), `:prop="expr"` bindings likewise, and a
+     * data-olx-field marker where the mustache is an element's sole text
+     * (or on src/label-ish bindings) for click/hover editing.
+     */
+    private function rewriteCopy(string $template, array $copies): string
+    {
+        foreach ($copies as $f) {
+            $expr = preg_quote($f['expr'], '/');
+            $label = var_export($f['label'], true);
+            $call = 'oluxCms.t('.$label.', '.$f['expr'].')';
+
+            if ($f['binding']) {
+                // Marker only on src/label-ish props — an <img :src :alt> pair
+                // must not end up with two data-olx-field attributes.
+                $template = preg_replace_callback(
+                    '/:([\w-]+)="'.$expr.'"/',
+                    function ($m) use ($call, $f) {
+                        $marker = in_array(strtolower($m[1]), ['src', 'label'], true)
+                            ? ' data-olx-field="'.$f['fieldKey'].'"'
+                            : '';
+
+                        return ':'.$m[1].'="'.$call.'"'.$marker;
+                    },
+                    $template
+                );
+
+                continue;
+            }
+            // Sole-text hosts get the marker (attrs may span lines).
+            $template = preg_replace_callback(
+                '/<([A-Za-z][\w-]*)((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>(\s*)\{\{\s*'.$expr.'\s*\}\}/',
+                fn ($m) => '<'.$m[1].$m[2]
+                    .(str_contains($m[2], 'data-olx-field') ? '' : ' data-olx-field="'.$f['fieldKey'].'"')
+                    .'>'.$m[3].'{{ '.$call.' }}',
+                $template
+            );
+            // Any remaining inline occurrences still go CMS-first (no marker).
+            $template = preg_replace('/\{\{\s*'.$expr.'\s*\}\}/', '{{ '.$call.' }}', $template);
+        }
+
+        return $template;
+    }
 
     /** Apply span replacements from the end backwards so offsets stay valid. */
     private function rewriteTemplate(string $template, array $fields): string

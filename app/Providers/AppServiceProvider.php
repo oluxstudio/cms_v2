@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Access\Permissions;
+use App\Contracts\DomainRegistrar;
 use App\Models\ApiToken;
 use App\Models\Form;
 use App\Models\FormResponse;
@@ -19,12 +20,16 @@ use App\Observers\TodoObserver;
 use App\Payments\PaymentManager;
 use App\Services\AccountActivity;
 use App\Services\Domains\FakeRegistrar;
+use App\Services\Domains\OpenproviderRegistrar;
 use App\Services\Domains\Registrar;
 use App\Services\Domains\ResellerClubRegistrar;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Instagram\Provider;
@@ -39,8 +44,12 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(Registrar::class, fn () => match (config('domains.driver')) {
             'resellerclub' => new ResellerClubRegistrar,
+            'openprovider' => new OpenproviderRegistrar(config('openprovider')),
             default => new FakeRegistrar,
         });
+
+        // Openprovider reseller seam (Phase 1: availability + cost price).
+        $this->app->singleton(DomainRegistrar::class, fn () => new OpenproviderRegistrar(config('openprovider')));
     }
 
     public function boot(): void
@@ -82,6 +91,13 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
+        // Health flag: a production platform without a DNS target silently breaks
+        // client domain connection — surface it in the logs once a day.
+        if (app()->environment('production') && blank(config('publishing.dns_target'))
+            && Cache::add('dns-target-missing-boot:'.now()->toDateString(), true, now()->addDay())) {
+            Log::warning('PLATFORM_DNS_TARGET is not configured — domain connection is disabled for clients.');
+        }
+
         $this->defineApiRateLimits();
     }
 
@@ -91,6 +107,9 @@ class AppServiceProvider extends ServiceProvider
      */
     private function defineApiRateLimits(): void
     {
+        // Domain availability lookups from the dashboard (per signed-in user).
+        RateLimiter::for('domain-check', fn (Request $request) => Limit::perMinute(20)->by('domain-check:'.($request->user()?->id ?: $request->ip())));
+
         $limiter = RateLimiter::class;
 
         // Baseline for EVERY /api route (overrides the framework's 60/min):

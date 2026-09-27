@@ -9,17 +9,14 @@ const sendForm = async (e: Event) => {
   if (await cmsSubmit(data)) sent.value = true
 }
 
-// social platforms come from the global data source (RSS is broadcast-only)
-const socials = useSiteContent().socials.filter(s => s.key !== 'zoom')
+// authored copy comes from the global data source
+const { contact } = useSiteContent()
 
-// contact details & authored copy come from the global data source
-const { profile, contact } = useSiteContent()
-const info = oluxCms.items('Info', {"Icon":"icon","Label":"label"}, [
-  { icon: '📱', label: 'Phone Number', value: profile.phone, href: profile.phoneHref },
-  { icon: '✉️', label: 'Email Address', value: profile.email, href: `mailto:${profile.email}` },
-  { icon: '🕐', label: 'Office Hours', lines: profile.officeHours.map(o => `${o.days} · ${o.hours}`) },
-  { icon: '📍', label: 'Our Location', value: profile.address },
-], {})
+// info card grids are CMS collections; computed so connect-editor saves
+// re-render in place (useCms data is reactive)
+const info = computed(() => useContactInfo())
+// social platforms (RSS is broadcast-only)
+const socials = computed(() => useSiteContent().socials.filter(s => s.key !== 'zoom'))
 </script>
 
 <template>
@@ -28,25 +25,27 @@ const info = oluxCms.items('Info', {"Icon":"icon","Label":"label"}, [
       <div class="ct-grid">
         <!-- contact information card -->
         <div class="ct-info">
-          <h3>{{ contact.infoTitle }}</h3>
-          <p class="ct-intro">{{ contact.intro }}</p>
-          <div v-for="i in info" :key="i.label" class="ct-row">
-            <span class="icon">{{ i.icon }}</span>
-            <div>
-              <b>{{ i.label }}</b>
-              <a v-if="i.href" :href="i.href">{{ i.value }}</a>
-              <template v-else-if="i.lines">
-                <p v-for="line in i.lines" :key="line">{{ line }}</p>
-              </template>
-              <p v-else>{{ i.value }}</p>
+          <h3 data-olx-field="infoTitle">{{ oluxCms.t('Info Title', contact.infoTitle) }}</h3>
+          <p class="ct-intro" data-olx-field="intro">{{ oluxCms.t('Intro', contact.intro) }}</p>
+          <div data-olx-panel="contact-info">
+            <div data-olx-item v-for="i in info" :key="i.label" class="ct-row">
+              <span class="icon">{{ i.icon }}</span>
+              <div>
+                <b>{{ i.label }}</b>
+                <a v-if="i.href" :href="i.href">{{ i.value }}</a>
+                <template v-else>
+                  <p v-for="line in i.value.split('\n')" :key="line">{{ line }}</p>
+                </template>
+              </div>
             </div>
           </div>
 
           <!-- social media -->
           <div class="ct-social">
-            <b>{{ contact.followLabel }}</b>
-            <div class="ct-social-links">
+            <b data-olx-field="followLabel">{{ oluxCms.t('Follow Label', contact.followLabel) }}</b>
+            <div class="ct-social-links" data-olx-panel="socials">
               <a
+                data-olx-item
                 v-for="s in socials" :key="s.name" :href="s.href"
                 target="_blank" rel="noopener" :aria-label="s.name" :title="s.name"
                 :style="{ '--sc': s.color }"
@@ -59,9 +58,9 @@ const info = oluxCms.items('Info', {"Icon":"icon","Label":"label"}, [
 
         <!-- get in touch form panel -->
         <div class="ct-form-panel">
-          <span class="ct-chip">{{ contact.formChip }}</span>
-          <h2>{{ contact.formTitle }}</h2>
-          <p class="ct-sub">{{ contact.formSub }}</p>
+          <span class="ct-chip" data-olx-field="formChip">{{ oluxCms.t('Form Chip', contact.formChip) }}</span>
+          <h2 data-olx-field="formTitle">{{ oluxCms.t('Form Title', contact.formTitle) }}</h2>
+          <p class="ct-sub" data-olx-field="formSub">{{ oluxCms.t('Form Sub', contact.formSub) }}</p>
 
           <form v-if="!sent" class="ct-form" @submit.prevent="sendForm">
             <div class="row">
@@ -71,7 +70,7 @@ const info = oluxCms.items('Info', {"Icon":"icon","Label":"label"}, [
             <div class="row">
               <input type="tel" name="phone" placeholder="Phone Number">
               <select name="topic" required>
-                <option value="" disabled selected>{{ contact.topicPlaceholder }}</option>
+                <option value="" disabled selected data-olx-field="topicPlaceholder">{{ oluxCms.t('Topic Placeholder', contact.topicPlaceholder) }}</option>
                 <option v-for="t in contact.topics" :key="t">{{ t }}</option>
               </select>
             </div>
@@ -80,8 +79,8 @@ const info = oluxCms.items('Info', {"Icon":"icon","Label":"label"}, [
             <button class="btn ct-send" type="submit" :disabled="sending">{{ sending ? 'Sending…' : 'Send Message' }} <span class="arrow">↗</span></button>
           </form>
           <div v-else class="ct-thanks">
-            <p>{{ contact.thanks }}</p>
-            <button class="btn ghost" type="button" @click="sent = false">{{ contact.sendAnother }}</button>
+            <p data-olx-field="thanks">{{ oluxCms.t('Thanks', contact.thanks) }}</p>
+            <button class="btn ghost" type="button" @click="sent = false" data-olx-field="sendAnother">{{ oluxCms.t('Send Another', contact.sendAnother) }}</button>
           </div>
         </div>
       </div>

@@ -10,17 +10,25 @@
     $counts   = $this->statusCounts;
 @endphp
 
-<div class="main-body p-6">
+@php $ins = $this->insights; @endphp
+<div>
+<x-tri-layout title="Contacts" subtitle="Leads captured from your forms, organised as a pipeline." :site-name="$site->name"
+    :labels="['📊 Funnel', '👥 Contacts', '⚡ Quick access']">
 
-    <x-carousel :labels="['📊 Overview', '👥 Contacts']" :start="1" class="lg:flex-col">
-    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
+    {{-- ── LEFT rail: funnel KPI tiles ── --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile label="Form responses" :value="number_format($ins['totalResponses'])" sub="Total submissions" accent="ink" />
+        <x-tile label="Converted" :value="number_format($ins['converted'])" :sub="$ins['convRate'].'% of responses'" accent="lavender" />
+        <x-tile label="Contacts" :value="number_format($ins['contacts'])" :sub="$ins['qualified'].' qualified+'" accent="cocoa" />
+        <x-tile label="Won" :value="number_format($ins['won'])" :sub="$ins['winRate'].'% win rate'" accent="lime" />
+    </div>
+    </x-slot:rail>
 
-    {{-- Header --}}
+<div>
+    {{-- Header actions --}}
     <div class="flex items-start justify-between mb-5">
-        <div>
-            <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">Contacts</h1>
-            <p class="mt-1 text-sm font-medium text-gray-600 dark:text-gray-300">Leads captured from your forms, organised as a pipeline.</p>
-        </div>
+        <div></div>
         <a href="{{ url($site->name.'/forms') }}"
            class="flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -44,9 +52,7 @@
         </button>
     </div>
 
-    </x-carousel.slide>
 
-    <x-carousel.slide class="lg:w-full pb-24 lg:pb-0 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
     @if($view === 'pipeline')
     {{-- Pipeline filter pills + search --}}
     <div class="flex flex-wrap items-center gap-2 mb-5">
@@ -67,11 +73,7 @@
         </button>
         @endforeach
 
-        <div class="ml-auto relative">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search contacts…"
-                   class="pl-9 pr-4 py-2 w-full sm:w-56 bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] rounded-xl text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-        </div>
+        <x-field.search model="search" placeholder="Search contacts…" class="sm:w-56 ml-auto" />
     </div>
 
     {{-- Contacts table --}}
@@ -140,13 +142,6 @@
     @if($view === 'sources')
     @php $ins = $this->insights; @endphp
 
-    {{-- Funnel KPI cards --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <x-tile label="Form responses" :value="number_format($ins['totalResponses'])" sub="Total submissions" accent="ink" />
-        <x-tile label="Converted" :value="number_format($ins['converted'])" :sub="$ins['convRate'].'% of responses'" accent="lavender" />
-        <x-tile label="Contacts" :value="number_format($ins['contacts'])" :sub="$ins['qualified'].' qualified+'" accent="cocoa" />
-        <x-tile label="Won" :value="number_format($ins['won'])" :sub="$ins['winRate'].'% win rate'" accent="lime" />
-    </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
 
@@ -205,8 +200,8 @@
     </div>
     @endif {{-- /sources --}}
 
-    </x-carousel.slide>
-    </x-carousel>
+</div>
+</x-tri-layout>
 
     {{-- ════════ Detail drawer ════════ --}}
     @if($this->selected)

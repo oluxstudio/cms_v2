@@ -8,10 +8,11 @@
 --}}
 @props(['title' => null, 'subtitle' => null])
 
-<div class="min-h-full flex flex-col">
+<div {{ $attributes->merge(['class' => 'min-h-full flex flex-col']) }}>
     {{-- Mobile: swipe between Overview (stats) and the main content, landing
          on the content. Desktop (lg+): the classic side-by-side layout. --}}
-    <x-carousel :labels="['📊 Overview', '📋 '.($title ?: 'Content')]" :start="1">
+    @php $paneLabels = isset($rightbar) ? ['📊 Overview', '📋 '.($title ?: 'Content'), '📌 More'] : ['📊 Overview', '📋 '.($title ?: 'Content')]; @endphp
+    <x-carousel :labels="$paneLabels" :start="1">
 
         {{-- ── LEFT: statistical overview ── --}}
         <x-carousel.slide class="left-bar lg:!w-[300px] lg:shrink-0 px-5 py-6 pb-24 lg:pb-6 space-y-3.5
@@ -33,5 +34,15 @@
                 {{ $slot }}
             </div>
         </x-carousel.slide>
+
+        {{-- ── RIGHT rail (optional): page-level side panel ── --}}
+        @isset($rightbar)
+        <x-carousel.slide class="right-bar lg:!w-[320px] lg:shrink-0 px-5 py-6 pb-24 lg:pb-6 space-y-4
+                      max-h-full overflow-y-auto
+                      lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto no-scrollbar
+                      lg:border-l border-gray-200/70 dark:border-white/[0.05]">
+            {{ $rightbar }}
+        </x-carousel.slide>
+        @endisset
     </x-carousel>
 </div>

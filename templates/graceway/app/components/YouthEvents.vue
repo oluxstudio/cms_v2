@@ -81,8 +81,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </div>
 
-      <div class="yv-event-grid">
-        <article v-for="e in events" :key="e.id" class="yv-event">
+      <div class="yv-event-grid" data-olx-panel="youth-events">
+        <article data-olx-item v-for="e in events" :key="e.id" class="yv-event">
           <div class="date"><b>{{ e.day }}</b><span>{{ e.month }}</span></div>
           <div class="body">
             <h3>{{ e.title }}</h3>

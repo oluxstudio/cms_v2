@@ -44,7 +44,7 @@
 .dark .olx-adv-lead { border-top-color: rgb(255 255 255 / 0.12); }
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Cantarell', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
     /* Ultra-wide breakpoint: the right rail is only pinned open at ≥4xl;
        below it the rail becomes a toggleable drawer. */
@@ -130,6 +130,23 @@ select:focus[data-flux-control] {
     --primary-2:      var(--secondary);   /* gradient end */
     --primary-strong: var(--tertiary);    /* hover / strong */
     --primary-soft:   #fff3e6;             /* soft tinted surface */
+
+    /* ── Font families (Google Fonts loaded in the layout heads) ──
+       Use as font-family: var(--font-…); theme-independent. */
+    --font-abel:          'Cantarell', 'Abel', sans-serif;
+    --font-afacad:        'Afacad', sans-serif;
+    --font-aladin:        'Aladin', cursive;
+    --font-baumans:       'Baumans', sans-serif;
+    --font-bellota:       'Bellota', cursive;
+    --font-cantarell:     'Cantarell', sans-serif;
+    --font-fjord:         'Fjord One', serif;
+    --font-museomoderno:  'MuseoModerno', sans-serif;
+    --font-textmeone:     'Text Me One', sans-serif;
+
+    /* semantic slots — point these at whichever family the app should use */
+    --font-display:       var(--font-museomoderno); /* headings / hero numbers */
+    --font-body:          var(--font-cantarell);    /* running text */
+    --font-accent:        var(--font-baumans);      /* badges, pills, flourishes */
 }
 .dark {
     --primary:        #38bdf8;  /* sky blue */
@@ -144,6 +161,16 @@ select:focus[data-flux-control] {
     --primary-soft:   #16213f;
 }
 
+/* ── App typography: the whole app rides the font tokens ──
+   body copy = --font-body · headings & big stat values = --font-display ·
+   .font-accent opt-in for badges/pills/flourishes. */
+body { font-family: var(--font-body); }
+h1, h2, h3, h4, h5, h6,
+.font-display { font-family: var(--font-display); }
+.font-accent { font-family: var(--font-accent); }
+/* Form controls inherit the body family (browsers default them to system UI). */
+input, select, textarea, button { font-family: inherit; }
+
 /* App background — a gradient blending the background color into the tertiary. */
 .app-bg {
     /* Isolated stacking context so a z-index:-1 .bg-ambient CHILD paints
@@ -156,7 +183,38 @@ select:focus[data-flux-control] {
         linear-gradient(180deg,
             var(--background) 0%,
             color-mix(in srgb, var(--tertiary) 10%, var(--tertiary)) 100%);
+    /* Long pages: pin the gradient to the viewport so it never restarts/repeats
+       over the scrolled overflow area. */
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 }
+
+/* ── Page-content readability: BLACK, clearer text in the admin (light) ──
+   The muted gray utilities made body copy hard to read; in light mode they
+   are remapped much darker (near-black), and the two smallest named sizes
+   get a gentle lift. Dark mode keeps its own contrast scale. */
+html:not(.dark) .app-bg :is(.text-gray-700, .text-gray-800, .text-gray-900) { color: #0a0a0a; }
+html:not(.dark) .app-bg .text-gray-600 { color: #111111; }
+html:not(.dark) .app-bg .text-gray-500 { color: #1f2937; }
+html:not(.dark) .app-bg .text-gray-400 { color: #374151; }
+.app-bg .text-xs { font-size: 12.5px; }
+.app-bg .text-sm { font-size: 14.5px; }
+
+/* ── Readability floor for EVERY admin form control ─────────────────────
+   Many controls are still hand-rolled with small gray utility classes; this
+   forces clear, very dark 14px text (theme --foreground) app-wide without
+   touching each blade. Checkboxes/radios/ranges/colors keep their own look. */
+.app-bg :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea) {
+    font-size: 14px !important;
+    font-weight: 500;
+    color: var(--foreground) !important;
+}
+.app-bg :is(input, textarea)::placeholder { color: #6b7280 !important; }
+
+/* A visually-hidden input (.sr-only = position:absolute) must be contained by
+   its label — otherwise it resolves against the body and stretches the page
+   with phantom scroll height. */
+label:has(> .sr-only) { position: relative; }
 
 /* ── Reusable lightbox (components/lightbox.blade.php) ────────────────────
    Soft entrance: backdrop fades, panel pops up with a slight overshoot. */
@@ -242,28 +300,46 @@ select:focus[data-flux-control] {
 /* ── x-field.* foundation form components (resources/views/components/field) ──
    Global so they style correctly even when a field first renders inside an
    inert Alpine <template> (tab panes). One design, every page. */
-.bkf-label{display:block;font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;letter-spacing:.01em}
-.dark .bkf-label{color:#9ca3af}
-.bkf-input{display:block;width:100%;font-size:13px;line-height:1.4;border-radius:9px;background:#f9fafb;border:1px solid #e5e7eb;padding:7px 10px;color:#1f2937;transition:border-color .12s, box-shadow .12s}
-.bkf-input:focus{outline:none;border-color:#818cf8;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-.dark .bkf-input{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09);color:#f3f4f6}
-.bkf-hint{font-size:10px;color:#9ca3af;margin-top:3px}
-.bkf-mono{font-family:ui-monospace,monospace;font-size:12px}
+.bkf-label{display:block;font-size:12.5px;font-weight:700;color:color-mix(in srgb, var(--foreground) 88%, transparent);margin-bottom:4px;letter-spacing:.01em}
+.dark .bkf-label{color:color-mix(in srgb, var(--foreground) 78%, transparent)}
+.bkf-input{display:block;width:100%;font-size:14.5px;font-weight:600;line-height:1.45;border-radius:10px;background:#f9fafb;border:1px solid #e5e7eb;padding:8px 11px;color:var(--foreground);transition:border-color .12s, box-shadow .12s}
+.bkf-input::placeholder{color:#6b7280;font-weight:500}
+.bkf-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent)}
+.dark .bkf-input{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09);color:var(--foreground)}
+.bkf-hint{font-size:11px;color:#9ca3af;margin-top:3px}
+.bkf-mono{font-family:ui-monospace,monospace;font-size:13px}
 .bkf-affix{position:relative}
 .bkf-affix .bkf-input{padding-right:34px}
 .bkf-icon{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:26px;height:26px;display:grid;place-items:center;border-radius:7px;border:0;background:transparent;color:#6b7280;cursor:pointer}
-.bkf-icon:hover{background:#eef2ff;color:#4f46e5}
-.dark .bkf-icon:hover{background:rgba(99,102,241,.15);color:#a5b4fc}
-.bkf-check{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#374151;cursor:pointer}
-.dark .bkf-check{color:#e5e7eb}
-.bkf-check input{width:15px;height:15px;border-radius:4px;accent-color:#6366f1}
-.bkf-seg{display:flex;gap:2px;padding:2px;border-radius:9px;background:#f3f4f6;border:1px solid #e5e7eb}
+.bkf-icon:hover{background:var(--primary-soft);color:var(--primary-strong)}
+.dark .bkf-icon:hover{background:color-mix(in srgb, var(--primary) 18%, transparent);color:var(--primary-2)}
+.bkf-check{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--foreground);cursor:pointer}
+.dark .bkf-check{color:var(--foreground)}
+.bkf-check input{width:16px;height:16px;border-radius:5px;accent-color:var(--primary)}
+.bkf-seg{display:flex;gap:2px;padding:2px;border-radius:10px;background:#f3f4f6;border:1px solid #e5e7eb}
 .dark .bkf-seg{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08)}
 .bkf-seg label{flex:1}
 .bkf-seg input{position:absolute;opacity:0;pointer-events:none}
-.bkf-seg span{display:block;text-align:center;font-size:11.5px;font-weight:600;padding:5px 4px;border-radius:7px;color:#6b7280;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bkf-seg input:checked + span{background:#fff;color:#4f46e5;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.dark .bkf-seg input:checked + span{background:rgba(255,255,255,.12);color:#a5b4fc}
+.bkf-seg span{display:block;text-align:center;font-size:12px;font-weight:600;padding:5px 4px;border-radius:8px;color:#6b7280;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkf-seg input:checked + span{background:#fff;color:var(--primary-strong);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.dark .bkf-seg input:checked + span{background:rgba(255,255,255,.12);color:var(--primary-2)}
+
+/* ── Shared field pieces: chips, dropdown panel, search, switch ──
+   One place to restyle; every x-field.* component builds from these. */
+.bkf-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;line-height:1.3;white-space:nowrap}
+.bkf-chip-count{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:11px;font-weight:800}
+.bkf-panel{background:#fff;border:1px solid #eef0f4;border-radius:14px;box-shadow:0 18px 40px -18px rgba(0,0,0,.28);padding:10px}
+.dark .bkf-panel{background:#1d1e2a;border-color:rgba(255,255,255,.08)}
+.bkf-search{position:relative}
+.bkf-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#9ca3af;pointer-events:none}
+.bkf-search .bkf-input{padding-left:34px}
+.bkf-switch{position:relative;display:inline-flex;width:44px;height:24px;flex-shrink:0;border-radius:999px;background:#d1d5db;transition:background .15s;cursor:pointer}
+.dark .bkf-switch{background:rgba(255,255,255,.2)}
+.bkf-switch::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
+input:checked + .bkf-switch{background:var(--primary)}
+input:checked + .bkf-switch::after{transform:translateX(20px)}
+input:disabled + .bkf-switch{opacity:.5;cursor:not-allowed}
+
 .bkf-modal-backdrop{position:fixed;inset:0;z-index:2147483200;background:rgba(15,17,26,.5);backdrop-filter:blur(2px);display:grid;place-items:center;padding:24px}
 .bkf-modal{width:min(560px,94vw);max-height:80vh;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 30px 80px -20px rgba(0,0,0,.45);padding:14px}
 .dark .bkf-modal{background:#171a23;color:#e5e7eb}

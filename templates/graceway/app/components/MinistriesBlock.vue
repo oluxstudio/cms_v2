@@ -1,14 +1,12 @@
 <script setup lang="ts">
-const oluxCms = useOluxContent('ministries')
-const oluxFb: Record<string, string> = {}
 const { ministriesBento: ministries } = useSiteContent()
 </script>
 
 <template>
-  <section class="ministries" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
+  <section class="ministries">
     <div class="container">
-      <div class="ministry-bento">
-        <NuxtLink v-for="m in ministries" :key="m.title" class="mcard" :class="[m.color, m.size]" :to="m.to ?? '/ministries'">
+      <div class="ministry-bento" data-olx-panel="ministry-highlights">
+        <NuxtLink data-olx-item v-for="m in ministries" :key="m.title" class="mcard" :class="[m.color, m.size]" :to="m.to ?? '/ministries'">
           <div class="mcard-top">
             <span class="mcard-tag">{{ m.tag }}</span>
             <span class="mcard-badge">{{ m.icon }}</span>

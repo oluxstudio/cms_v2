@@ -13,8 +13,8 @@
     $navSite = \App\Models\Site::where('name', $siteName)->first();
     // Module tiers (config/modules.php): premium modules wear a PRO badge.
     $tiers = config('modules.tiers', []);
-    $link = fn ($seg, $label, $tierKey = null) => [
-        'href' => url($siteName.'/'.$seg), 'label' => $label, 'seg' => $seg,
+    $link = fn ($seg, $label, $icon = null, $tierKey = null) => [
+        'href' => url($siteName.'/'.$seg), 'label' => $label, 'seg' => $seg, 'icon' => $icon,
         'pro'  => ($tiers[$tierKey ?? $seg] ?? 'basic') === 'premium',
     ];
 
@@ -22,31 +22,36 @@
     // and developer surfaces (Blocks, My Designs,
     // API docs/keys) stay routable for direct access but are not offered here.
     $topLevel = [
-        $link('dashboard', 'Dashboard'),
-        $link('marketplace', 'Marketplace'),
+        $link('dashboard', 'Dashboard', 'dashboard'),
+        $link('connect', 'Edit site', 'pencil'),
+        // Templates store — site-scoped page; the library itself is account-wide.
+        $link('marketplace', 'Templates', 'template'),
     ];
+    // Group order + item order follow day-to-day usage frequency.
+    $groupIcons = ['Content' => 'page-fill', 'Commerce' => 'shop', 'Audience' => 'contacts', 'Site' => 'graph-up'];
     $menus = [
         'Content' => [
-            $link('pages', 'Pages'),
-            $link('posts', 'Posts'),
-            $link('components', 'Components'),
-            $link('collections', 'Collections'),
-            $link('media', 'Assets'),
-            $link('connect', 'Preview'),
+            $link('pages', 'Pages', 'page'),
+            $link('posts', 'Posts', 'posts'),
+            $link('collections', 'Collections', 'collection'),
+            $link('media', 'Assets', 'media'),
+            $link('components', 'Components', 'puzzle'),
         ],
         'Commerce' => [
             // Populated by enabled features below; empty group auto-hides.
         ],
         'Audience' => [
-            $link('contacts', 'Contacts'),
-            $link('forms', 'Forms'),
-            $link('messages', 'Messages'),
-            $link('tasks', 'Tasks'),
-            $link('alerts', 'Alerts'),
+            $link('messages', 'Messages', 'inbox'),
+            $link('forms', 'Forms', 'form'),
+            $link('contacts', 'Contacts', 'contacts'),
+            $link('tasks', 'Tasks', 'check-square'),
+            $link('alerts', 'Alerts', 'bell'),
         ],
         'Site' => [
-            $link('analytics', 'Analytics'),
-            $link('publish', 'Go live'),
+            $link('design', 'Design', 'template'),
+            $link('addons', 'Add-ons', 'puzzle'),
+            $link('analytics', 'Analytics', 'graph-up'),
+            $link('publish', 'Go live', 'rocket'),
         ],
     ];
 
@@ -59,19 +64,22 @@
             }
             $needsPayments = $needsPayments || ($feat['needs_payments'] ?? false);
             foreach ($feat['nav'] ?? [] as $item) {
-                $menus['Commerce'][] = $link($item['seg'], $item['label'], $feat['key']);
+                // Features may pick their menu group (e.g. Polls → Audience);
+                // icons default to the feature's marketplace icon.
+                $group = $item['group'] ?? $feat['group'] ?? 'Commerce';
+                $menus[$group][] = $link($item['seg'], $item['label'], $item['icon'] ?? $feat['icon'] ?? null, $feat['key']);
             }
         }
         // Payments setup only matters once a payment-taking feature is on.
         if ($needsPayments) {
-            $menus['Commerce'][] = $link('payments', 'Payments');
+            $menus['Commerce'][] = $link('payments', 'Payments', 'receipt');
         }
     }
 
     // Owners/admins manage the team + outgoing email (super admins always can).
     if ($navSite && $navSite->canManageTeam(auth()->user())) {
-        $menus['Site'][] = $link('team', 'Team');
-        $menus['Site'][] = $link('emails', 'Emails');
+        $menus['Site'][] = $link('team', 'Team', 'team');
+        $menus['Site'][] = $link('emails', 'Emails', 'envelope');
     }
 
     // RBAC: hide any page the member's role doesn't grant (config/permissions.php
@@ -91,11 +99,11 @@
     @foreach ($topLevel as $item)
         @php $active = $seg === $item['seg']; @endphp
         <a href="{{ $item['href'] }}"
-           class="whitespace-nowrap px-3.5 py-2 rounded-full text-sm font-medium transition-colors
+           class="flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2 rounded-full text-sm font-medium transition-colors
                   {{ $active
                       ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.06]' }}">
-            {{ $item['label'] }} @if($item['pro'] ?? false)<span class="ml-1 align-middle text-[8px] font-extrabold tracking-wider px-1 py-0.5 rounded" style="background:color-mix(in srgb, var(--primary) 18%, transparent); color:var(--primary)">PRO</span>@endif
+            @if($item['icon'] ?? null)<x-dynamic-component :component="'icons.'.$item['icon']" class="w-4 h-4 shrink-0" />@endif {{ $item['label'] }} @if($item['pro'] ?? false)<span class="ml-1 align-middle text-[8px] font-extrabold tracking-wider px-1 py-0.5 rounded" style="background:color-mix(in srgb, var(--primary) 18%, transparent); color:var(--primary)">PRO</span>@endif
         </a>
     @endforeach
 
@@ -109,6 +117,7 @@
                            {{ $groupActive
                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.06]' }}">
+                @if($groupIcons[$menuLabel] ?? null)<x-dynamic-component :component="'icons.'.$groupIcons[$menuLabel]" class="w-4 h-4 shrink-0" />@endif
                 {{ $menuLabel }}
                 <svg class="w-3.5 h-3.5 opacity-60 transition-transform" :class="open ? 'rotate-180' : ''"
                      fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -122,11 +131,11 @@
                 @foreach ($items as $item)
                     @php $active = $seg === $item['seg']; @endphp
                     <a href="{{ $item['href'] }}"
-                       class="block px-3.5 py-2 rounded-xl text-sm font-medium transition-colors
+                       class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors
                               {{ $active
                                   ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                                   : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06]' }}">
-                        {{ $item['label'] }} @if($item['pro'] ?? false)<span class="ml-1 align-middle text-[8px] font-extrabold tracking-wider px-1 py-0.5 rounded" style="background:color-mix(in srgb, var(--primary) 18%, transparent); color:var(--primary)">PRO</span>@endif
+                        @if($item['icon'] ?? null)<x-dynamic-component :component="'icons.'.$item['icon']" class="w-4 h-4 shrink-0" />@endif {{ $item['label'] }} @if($item['pro'] ?? false)<span class="ml-1 align-middle text-[8px] font-extrabold tracking-wider px-1 py-0.5 rounded" style="background:color-mix(in srgb, var(--primary) 18%, transparent); color:var(--primary)">PRO</span>@endif
                     </a>
                 @endforeach
             </div>
@@ -149,11 +158,11 @@
             @foreach ($topLevel as $item)
                 @php $active = $seg === $item['seg']; @endphp
                 <a href="{{ $item['href'] }}"
-                   class="px-3.5 py-2.5 rounded-xl text-sm font-semibold text-center transition-colors
+                   class="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-center transition-colors
                           {{ $active
                               ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                               : 'bg-gray-50 dark:bg-white/[0.04] text-gray-700 dark:text-gray-200' }}">
-                    {{ $item['label'] }}
+                    @if($item['icon'] ?? null)<x-dynamic-component :component="'icons.'.$item['icon']" class="w-4 h-4 shrink-0" />@endif {{ $item['label'] }}
                 </a>
             @endforeach
         </div>
@@ -171,7 +180,7 @@
                     class="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-colors
                            {{ $groupActive ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400' }}
                            hover:bg-gray-100 dark:hover:bg-white/[0.06]">
-                <span class="text-[10px] font-bold uppercase tracking-[.12em]">{{ $menuLabel }}
+                <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.12em]">@if($groupIcons[$menuLabel] ?? null)<x-dynamic-component :component="'icons.'.$groupIcons[$menuLabel]" class="w-3.5 h-3.5 shrink-0" />@endif {{ $menuLabel }}
                     <span class="ml-1 font-semibold text-gray-300 dark:text-gray-500 normal-case tracking-normal">{{ count($items) }}</span>
                 </span>
                 <svg class="w-3.5 h-3.5 opacity-60 transition-transform" :class="grp === @js($menuLabel) ? 'rotate-180' : ''"
@@ -183,11 +192,11 @@
             @foreach ($items as $item)
                 @php $active = $seg === $item['seg']; @endphp
                 <a href="{{ $item['href'] }}"
-                   class="block px-3.5 py-2 rounded-xl text-sm font-medium transition-colors
+                   class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors
                           {{ $active
                               ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06]' }}">
-                    {{ $item['label'] }}
+                    @if($item['icon'] ?? null)<x-dynamic-component :component="'icons.'.$item['icon']" class="w-4 h-4 shrink-0" />@endif {{ $item['label'] }}
                 </a>
             @endforeach
             </div>

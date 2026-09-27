@@ -408,12 +408,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                                 <p class="text-xs text-gray-400 mt-0.5">Add an extra layer of security to your account.</p>
                             </div>
                             <div class="flex items-center gap-3">
-                                <button type="button" wire:click="$toggle('two_factor_enabled')"
-                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
-                                    :class="$wire.two_factor_enabled ? 'bg-indigo-600' : 'bg-gray-200'">
-                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-                                          :class="$wire.two_factor_enabled ? 'translate-x-6' : 'translate-x-1'"></span>
-                                </button>
+                                <x-field.toggle model="two_factor_enabled" live />
                                 <span class="text-xs font-medium" :class="$wire.two_factor_enabled ? 'text-indigo-600' : 'text-gray-400'">
                                     {{ $two_factor_enabled ? 'Enabled' : 'Disabled' }}
                                 </span>
@@ -499,12 +494,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                                         <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $label }}</p>
                                         <p class="text-xs text-gray-400 dark:text-gray-500">{{ $desc }}</p>
                                     </div>
-                                    <button type="button" wire:click="$toggle('{{ $field }}')"
-                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                                        :class="$wire.{{ $field }} ? 'bg-indigo-600' : 'bg-gray-200'">
-                                        <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-                                              :class="$wire.{{ $field }} ? 'translate-x-6' : 'translate-x-1'"></span>
-                                    </button>
+                                    <x-field.toggle model="{{ $field }}" live />
                                 </div>
                                 @endforeach
                             </div>

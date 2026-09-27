@@ -38,7 +38,7 @@ test('the connect page renders for the site owner', function () {
 
     $this->actingAs($user)->get("/{$site->name}/connect")
         ->assertOk()
-        ->assertSee('Client site URL');
+        ->assertSee('Edit mode');
 });
 
 test('setting the client URL builds the edit-mode embed url', function () {
@@ -467,4 +467,94 @@ test('picking an asset applies immediately — no separate save needed', functio
     $lw->call('select', 'collection', $services->id)
         ->call('onMediaPicked', ['scope' => 'connect', 'itemIndex' => 0, 'itemKey' => 'photo'], '@media/new.jpg', '/storage/x/new.jpg');
     expect($item->fresh()->data['photo'])->toBe(url('/storage/x/new.jpg'));
+});
+
+test('preview row clicks match the entry by visible text, not DOM position', function () {
+    [$user, $site, $hero, $services] = previewSite();
+    // Two more entries; the template shows them sorted, so a clicked row's
+    // index rarely equals the CMS order.
+    CollectionItem::create(['collection_id' => $services->id, 'site_id' => $site->id, 'status' => 'published', 'data' => ['title' => 'Beard Sculpting']]);
+    CollectionItem::create(['collection_id' => $services->id, 'site_id' => $site->id, 'status' => 'published', 'data' => ['title' => 'Hot Towel Shave']]);
+
+    // Click reports index 0 (first row on screen) but the text of the THIRD item.
+    Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('onEditSelect', null, 'services', 'collection', 0, 'Hot Towel Shave · Book now')
+        ->assertDispatched('olx-editor-focus', target: 'item', index: 2);
+
+    // No text match (too short / unknown) → the index fallback still works.
+    Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('onEditSelect', null, 'services', 'collection', 1, 'zz')
+        ->assertDispatched('olx-editor-focus', target: 'item', index: 1);
+});
+
+test('a data-olx-panel marker on a component section falls back to the component', function () {
+    [$user, $site, $hero] = previewSite();
+
+    // The author marked a plain component section with data-olx-panel, so the
+    // agent reports kind=collection — no such collection exists, the
+    // component of that name must load instead of nothing.
+    Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('onEditSelect', null, 'hero', 'collection')
+        ->assertSet('selectedId', $hero->id)
+        ->assertSet('edit.type', 'component');
+});
+
+test('a node-less component linked to a collection opens the collection instead', function () {
+    [$user, $site, , $services] = previewSite();
+    // Page-wrapper components (legal doc, archives…) have no nodes of their
+    // own — their content lives in the linked data-source collection.
+    Component::create(['site_id' => $site->id, 'name' => 'Legal Wrap', 'author' => 'api', 'source' => 'api',
+        'collection_id' => $services->id]);
+
+    Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('onEditSelect', null, 'legalWrap', 'component')
+        ->assertSet('edit.type', 'collection')
+        ->assertSet('selectedId', $services->id);
+});
+
+test('the store product grid edits like a collection grid', function () {
+    [$user, $site] = previewSite();
+    $p1 = $site->products()->create(['slug' => 'book-a', 'name' => 'Book A', 'price_cents' => 1000, 'currency' => 'gbp', 'is_active' => true, 'sort' => 0]);
+    $site->products()->create(['slug' => 'book-b', 'name' => 'Book B', 'price_cents' => 2000, 'currency' => 'gbp', 'is_active' => true, 'sort' => 1]);
+
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('onEditSelect', null, 'products', 'collection', null, 'Book B on screen');
+    expect($lw->get('edit.type'))->toBe('collection')
+        ->and($lw->get('edit.products'))->toBeTrue()
+        ->and($lw->get('edit.items'))->toHaveCount(2)
+        ->and($lw->get('edit.items.0.data.price'))->toBe('10.00');
+    // Text match focused the right card (Book B = index 1).
+    $lw->assertDispatched('olx-editor-focus', target: 'item', index: 1);
+
+    // Edit + add + save round-trips into Product models.
+    $lw->set('edit.items.0.data.price', '12.50')
+        ->call('addItem')
+        ->set('edit.items.2.data.name', 'Book C')
+        ->set('edit.items.2.data.price', '5')
+        ->call('saveCollection');
+    expect((int) $p1->fresh()->price_cents)->toBe(1250)
+        ->and($site->products()->where('name', 'Book C')->value('price_cents'))->toBe(500);
+
+    // Remove deletes the Product.
+    $lw->call('removeItem', 1);
+    expect($site->products()->where('slug', 'book-b')->exists())->toBeFalse();
+});
+
+test('removing an item from the panel refreshes the preview immediately', function () {
+    [$user, $site, , $services] = previewSite();
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('select', 'collection', $services->id)
+        ->call('removeItem', 0);
+    expect($services->items()->count())->toBe(0);
+    // Collection-grid changes hard-reload the frame (useSiteContent snapshots
+    // rows at setup, so the in-place refetch can't re-render them).
+    $lw->assertDispatched('olx-reload-frame');
+
+    // Products variant reloads the frame (the store fetches at mount).
+    $site->products()->create(['slug' => 'p1', 'name' => 'P1', 'price_cents' => 100, 'currency' => 'gbp', 'is_active' => true]);
+    Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('onEditSelect', null, 'products', 'collection')
+        ->call('removeItem', 0)
+        ->assertDispatched('olx-reload-frame');
+    expect($site->products()->count())->toBe(0);
 });

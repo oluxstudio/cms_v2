@@ -40,11 +40,7 @@
                class="inline-flex items-center gap-1 mt-0.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Open estimator page ↗</button>
             <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mt-0.5">Create named estimators — each with its own fields, calculator-built formulas and customer email.</p>
         </div>
-        <div class="relative w-full sm:w-auto">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search estimates…"
-                   class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-64">
-        </div>
+        <x-field.search model="search" placeholder="Search estimates…" class="sm:w-64" />
     </div>
 
     @if ($errorMessage)

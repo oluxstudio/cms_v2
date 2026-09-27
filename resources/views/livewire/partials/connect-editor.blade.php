@@ -45,7 +45,7 @@
                                 title="Choose from the asset library">Assets</button>
                     </div>
                 @else
-                    <textarea wire:model="edit.nodes.{{ $i }}.value" rows="2" class="olx-in"></textarea>
+                    @include('livewire.partials.rich-text', ['path' => "edit.nodes.$i.value", 'value' => $node['value'] ?? ''])
                 @endif
             </div>
         @endforeach
@@ -55,8 +55,12 @@
         <div class="mt-4 rounded-xl border border-gray-100 dark:border-white/[0.06] p-2.5">
             <div class="flex items-center justify-between mb-2">
                 <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">📦 Data source — {{ $edit['collection']['name'] }} ({{ $edit['collection']['count'] }})</p>
-                <button wire:click="select('collection', '{{ $edit['collection']['id'] }}')"
-                        class="text-xs font-semibold" style="color:var(--primary)">Manage →</button>
+                <span class="flex items-center gap-2">
+                    <button wire:click="addToLinkedCollection('{{ $edit['collection']['id'] }}')"
+                            class="text-xs font-semibold" style="color:var(--primary)" title="Add a new entry to this list">+ Add</button>
+                    <button wire:click="select('collection', '{{ $edit['collection']['id'] }}')"
+                            class="text-xs font-semibold" style="color:var(--primary)">Manage →</button>
+                </span>
             </div>
             <div class="grid grid-cols-3 gap-1.5">
                 @foreach ($edit['collection']['items'] as $ci)
@@ -107,32 +111,78 @@
         <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Items ({{ count($edit['items']) }})</p>
         <button wire:click="addItem" class="text-xs font-semibold" style="color:var(--primary)">+ Add item</button>
     </div>
-    <div class="mt-1.5 space-y-3" data-items-list>
+    {{-- Entries as collapsible cards: thumbnail + headline closed, full
+         fields open. New/duplicated entries pop open automatically. --}}
+    <div class="mt-1.5 space-y-2" data-items-list>
         @foreach ($edit['items'] as $i => $item)
-            <div data-item-row class="rounded-lg border border-gray-100 dark:border-white/[0.06] p-2">
-                <div class="flex items-center justify-between mb-1">
-                    <span class="text-[11px] text-gray-400">#{{ $i + 1 }}</span>
-                    <span class="flex items-center gap-2">
+            @php
+                $imgKeys = ['img', 'image', 'photo', 'src', 'cover', 'avatar', 'poster'];
+                $thumbKey = collect($edit['schema'])->first(fn ($k) => in_array(strtolower($k), $imgKeys, true));
+                $thumbRaw = $thumbKey ? (string) ($item['data'][$thumbKey] ?? '') : '';
+                $thumb = $thumbRaw !== '' && ! is_array($item['data'][$thumbKey] ?? null)
+                    ? (str_starts_with($thumbRaw, '/assets/') ? \App\Models\Media::resolveRef($site->id, '@media/'.basename($thumbRaw)) : $thumbRaw)
+                    : '';
+                $headKey = collect($edit['schema'])->first(fn ($k) => ! in_array(strtolower($k), $imgKeys, true) && is_string($item['data'][$k] ?? null) && trim((string) $item['data'][$k]) !== '');
+                $headline = $headKey ? \Illuminate\Support\Str::limit((string) $item['data'][$headKey], 46) : 'New entry';
+            @endphp
+            <div data-item-row x-data="{ open: {{ empty($item['id']) ? 'true' : 'false' }} }" @olx-expand="open = true"
+                 class="rounded-xl border border-gray-100 dark:border-white/[0.06] overflow-hidden">
+                {{-- Card header: click to open/close --}}
+                <div class="flex items-center gap-2 px-2 py-1.5 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-white/[0.04]"
+                     @click="open = ! open">
+                    <span class="text-[10px] font-bold text-gray-300 dark:text-gray-500 w-4 shrink-0">{{ $i + 1 }}</span>
+                    @if ($thumb)
+                        <img src="{{ $thumb }}" alt="" class="w-8 h-8 rounded-lg object-cover shrink-0 border border-gray-100 dark:border-white/[0.08]" onerror="this.style.display='none'">
+                    @endif
+                    <span class="flex-1 min-w-0 text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">{{ $headline }}</span>
+                    <span class="flex items-center gap-1 shrink-0" @click.stop>
                         @if ($i > 0)
-                            <button wire:click="moveItem({{ $i }}, -1)" class="text-[12px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Move up">↑</button>
+                            <button wire:click="moveItem({{ $i }}, -1)" class="w-6 h-6 rounded-lg text-[12px] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.08]" title="Move up">↑</button>
                         @endif
                         @if ($i < count($edit['items']) - 1)
-                            <button wire:click="moveItem({{ $i }}, 1)" class="text-[12px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Move down">↓</button>
+                            <button wire:click="moveItem({{ $i }}, 1)" class="w-6 h-6 rounded-lg text-[12px] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.08]" title="Move down">↓</button>
                         @endif
-                        <button wire:click="removeItem({{ $i }})" class="text-[11px] text-rose-500">Remove</button>
+                        <button wire:click="duplicateItem({{ $i }})" class="w-6 h-6 rounded-lg text-[12px] text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/[0.08]" title="Duplicate entry">⧉</button>
+                        <button wire:click="removeItem({{ $i }})" data-confirm="Remove this entry?" class="w-6 h-6 rounded-lg text-[12px] text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10" title="Remove entry">✕</button>
                     </span>
+                    <svg class="w-3 h-3 shrink-0 opacity-50 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </div>
-                @foreach ($edit['schema'] as $key)
-                    <label class="block mb-1">
-                        <span class="text-[11px] text-gray-400">{{ $key }}</span>
-                        <span class="flex items-center gap-1.5">
-                            <input wire:model="edit.items.{{ $i }}.data.{{ $key }}" class="olx-in !mt-0 flex-1 min-w-0">
-                            <button type="button" @click="$dispatch('open-media-picker', { context: { scope: 'connect', itemIndex: {{ $i }}, itemKey: '{{ $key }}' } })"
-                                    class="shrink-0 px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1]"
-                                    title="Choose from the asset library">Assets</button>
-                        </span>
-                    </label>
-                @endforeach
+
+                {{-- Card body: the fields --}}
+                <div x-show="open" x-collapse x-cloak class="px-2 pb-2 pt-1 border-t border-gray-50 dark:border-white/[0.04] space-y-1.5">
+                    @foreach ($edit['schema'] as $key)
+                        @php
+                            $val = $item['data'][$key] ?? '';
+                            $isImg = in_array(strtolower($key), $imgKeys, true);
+                            $isLong = is_string($val) && (mb_strlen($val) > 70 || str_contains($val, "\n"));
+                            $isJson = is_array($val);
+                        @endphp
+                        <label class="block">
+                            <span class="text-[10px] font-bold uppercase tracking-wide text-gray-400">{{ \Illuminate\Support\Str::headline($key) }}</span>
+                            @if ($isJson && \App\Livewire\Concerns\WithNestedFields::nestedEditable($val))
+                                @include('livewire.partials.nested-field', ['path' => "edit.items.$i.data.$key", 'value' => $val, 'fieldKey' => $key])
+                            @elseif ($isJson)
+                                {{-- irregular/deep value — protected raw preview --}}
+                                <span class="block mt-0.5 px-2 py-1.5 rounded-lg text-[11px] font-mono text-gray-400 bg-gray-50 dark:bg-white/[0.04] truncate">{{ \Illuminate\Support\Str::limit(json_encode($val, JSON_UNESCAPED_UNICODE), 60) }}</span>
+                                <a href="{{ url($site->name.'/collections?open='.($edit['id'] ?? '')) }}" target="_blank" class="text-[10px] font-semibold text-indigo-500 hover:underline">Edit this list in Collections ↗</a>
+                            @elseif ($isLong)
+                                @include('livewire.partials.rich-text', ['path' => "edit.items.$i.data.$key", 'value' => $val])
+                            @else
+                                <span class="flex items-center gap-1.5 mt-0.5">
+                                    @if ($isImg && $thumbKey === $key && $thumb)
+                                        <img src="{{ $thumb }}" alt="" class="w-7 h-7 rounded-md object-cover shrink-0" onerror="this.style.display='none'">
+                                    @endif
+                                    <input wire:model.blur="edit.items.{{ $i }}.data.{{ $key }}" class="olx-in !mt-0 flex-1 min-w-0">
+                                    @if ($isImg)
+                                        <button type="button" @click="$dispatch('open-media-picker', { context: { scope: 'connect', itemIndex: {{ $i }}, itemKey: '{{ $key }}' } })"
+                                                class="shrink-0 px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1]"
+                                                title="Choose from the asset library">Assets</button>
+                                    @endif
+                                </span>
+                            @endif
+                        </label>
+                    @endforeach
+                </div>
             </div>
         @endforeach
     </div>

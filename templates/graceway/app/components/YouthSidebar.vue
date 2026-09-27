@@ -8,11 +8,14 @@ const leaders = youthLeaderSlugs
 const firstName = (name: string) => name.replace(/^Rev\. /, '').split(' ')[0]
 
 // "this or that" poll — one vote per visitor, persisted locally
-const options = [
+const options__seed = [
   { id: 'movie', label: '🎬 Movie Night', votes: 23 },
   { id: 'bowling', label: '🎳 Bowling Trip', votes: 31 },
   { id: 'games', label: '🎮 Games Tournament', votes: 17 },
 ]
+// CMS-first (auto-wired at publish): the 'Options' collection feeds this grid.
+const options = (() => { const r = useCms().items('options', []) as any[]; return r.length ? r : options__seed })()
+
 const voted = ref<string | null>(null)
 onMounted(() => { try { voted.value = localStorage.getItem('youth-poll') } catch {} })
 const vote = (id: string) => {
@@ -35,7 +38,7 @@ const pct = (o: typeof options[0]) => Math.round(((o.votes + (voted.value === o.
     <!-- meet the leaders -->
     <div class="ys-widget">
       <p class="ys-label">👋 Meet the leaders</p>
-      <NuxtLink v-for="l in leaders" :key="l.slug" class="ys-leader" :to="`/leadership/${l.slug}`">
+      <NuxtLink data-olx-item data-olx-panel="leadership" v-for="l in leaders" :key="l.slug" class="ys-leader" :to="`/leadership/${l.slug}`">
         <img :src="l.img" :alt="`Photo of ${firstName(l.name)}`">
         <div>
           <b>{{ firstName(l.name) }}</b>

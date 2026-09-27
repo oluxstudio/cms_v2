@@ -3,6 +3,18 @@
 return [
 
     /*
+    | Licence scope: what a library item covers. 'account' = every site the
+    | account owns may use it. Change to 'site' later without a schema change.
+    */
+    'licence_scope' => 'account',
+
+    // The store's category list (templates.category free-text values map here).
+    'categories' => [
+        'Church & charity', 'Hair & beauty', 'Trades', 'Clinics & health',
+        'Business & consulting', 'Food & drink',
+    ],
+
+    /*
     | Filesystem disk used for template assets, thumbnails and rendered previews.
     | Defaults to the local-served "templates" disk; set TEMPLATES_DISK=s3 (and the
     | AWS_* vars) to serve from object storage + CDN at marketplace scale.

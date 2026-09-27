@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** @olux-collection Ministries */
+// (collection marker moved to useSiteContent ministriesOverview — this unused component keeps its fallback only)
 const ministries = [
   {
     icon: '🙌', name: 'Worship & Music',

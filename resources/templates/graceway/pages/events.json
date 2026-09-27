@@ -84,7 +84,43 @@
         {
             "type": "app:graceway:sermons",
             "name": "Sermons",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Eyebrow",
+                    "type": "text",
+                    "value": "Sermons & blog",
+                    "order": 0,
+                    "description": "copy:sermonsHead.eyebrow"
+                },
+                {
+                    "label": "Title",
+                    "type": "text",
+                    "value": "Latest messages",
+                    "order": 1,
+                    "description": "copy:sermonsHead.title"
+                },
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Video, audio and written reflections from our preachers \u2014 catch up wherever you are.",
+                    "order": 2,
+                    "description": "copy:sermonsHead.text"
+                },
+                {
+                    "label": "Cta To",
+                    "type": "url",
+                    "value": "/sermons",
+                    "order": 3,
+                    "description": "copy:sermonsHead.cta.to"
+                },
+                {
+                    "label": "Cta Label",
+                    "type": "text",
+                    "value": "View All Sermons",
+                    "order": 4,
+                    "description": "copy:sermonsHead.cta.label"
+                }
+            ]
         },
         {
             "type": "app:graceway:donate-cta",

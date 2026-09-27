@@ -31,7 +31,7 @@
     </div>
     @endif
 
-    <x-carousel :labels="['💬 Chats', '📨 Conversation']">
+    <x-carousel :labels="['💬 Chats', '📨 Conversation', '⚡ Quick access']">
         {{-- Conversations --}}
         <x-carousel.slide class="lg:!w-[280px] pb-20 lg:pb-0">
         <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-y-auto max-h-full">
@@ -121,6 +121,12 @@
             @error('body')<p class="px-5 pb-2 text-xs text-red-500">{{ $message }}</p>@enderror
             @endif
         </div>
+        </x-carousel.slide>
+
+        {{-- ════ RIGHT: quick access ════ --}}
+        <x-carousel.slide class="lg:!w-[270px] xl:!w-[290px] lg:shrink-0 flex flex-col px-5 pb-24 lg:pb-6 gap-3
+                      max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] no-scrollbar">
+            @include('partials.quick-access', ['siteName' => $this->site->name])
         </x-carousel.slide>
     </x-carousel>
 </div>

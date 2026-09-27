@@ -239,16 +239,41 @@ class Site extends Model
             ->withTimestamps();
     }
 
-    /** The pivot role for a given user, or null if they're not a member. */
+    /**
+     * Everyone who works on this site: the owning account, account-team
+     * members whose membership covers it (site-scoped or account-wide),
+     * and legacy site_user pivot members. Each entry: user + role label.
+     *
+     * @return \Illuminate\Support\Collection<int, array{user: User, role: ?string}>
+     */
+    public function teamUsers(): \Illuminate\Support\Collection
+    {
+        $team = collect();
+
+        if ($this->user) {
+            $team->push(['user' => $this->user, 'role' => 'owner']);
+        }
+
+        AccountMember::with(['user', 'role'])
+            ->where('account_id', $this->user_id)
+            ->where(fn ($q) => $q->whereNull('site_id')->orWhere('site_id', $this->id))
+            ->get()
+            ->each(fn ($m) => $m->user && $team->push(['user' => $m->user, 'role' => $m->role?->name]));
+
+        $this->members()->get()
+            ->each(fn ($u) => $team->push(['user' => $u, 'role' => $u->pivot->role]));
+
+        return $team->unique(fn ($t) => $t['user']->id)->values();
+    }
+
+    /** The role label for a given user on this site, or null if they're not on the team. */
     public function roleFor(?User $user): ?string
     {
         if (! $user) {
             return null;
         }
 
-        $member = $this->members()->where('users.id', $user->id)->first();
-
-        return $member?->pivot->role;
+        return $this->teamUsers()->first(fn ($t) => $t['user']->id === $user->id)['role'] ?? null;
     }
 
     /** Whether the user may manage the team (permission-gated). */

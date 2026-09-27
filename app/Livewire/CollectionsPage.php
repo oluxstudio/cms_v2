@@ -3,17 +3,26 @@
 namespace App\Livewire;
 
 use App\Livewire\Concerns\WithLayoutMode;
+use App\Livewire\Concerns\WithNestedFields;
+use App\Livewire\Concerns\WithVisibilityFields;
 use App\Models\Collection as CollectionModel;
 use App\Models\CollectionItem;
+use App\Models\CollectionItemEvent;
 use App\Models\Component as ComponentModel;
+use App\Models\Media;
 use App\Models\Site;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class CollectionsPage extends Component
 {
-    use \App\Livewire\Concerns\WithVisibilityFields;
+    use WithNestedFields;
+
+    /** Roots the nested-field editor may mutate. */
+    protected array $nestedRoots = ['itemForm.'];
 
     use WithLayoutMode;
+    use WithVisibilityFields;
 
     public Site $site;
 
@@ -42,7 +51,7 @@ class CollectionsPage extends Component
             return null;
         }
 
-        $rows = \App\Models\CollectionItemEvent::where('collection_id', $collection->id)
+        $rows = CollectionItemEvent::where('collection_id', $collection->id)
             ->where('created_at', '>=', now()->subDays(30))
             ->selectRaw('collection_item_id, event, COUNT(*) as n')
             ->groupBy('collection_item_id', 'event')->get();
@@ -188,15 +197,23 @@ class CollectionsPage extends Component
             ->filter(fn ($f) => in_array($f['type'] ?? '', ['json', 'list', 'array'], true))
             ->pluck('key')->all();
         $samples = $item ? collect([$item]) : $collection->items()->latest()->limit(20)->get();
-        $this->itemJsonKeys = collect($keys)->filter(fn ($k) => in_array($k, $declared, true)
-            || $samples->contains(fn ($i) => is_array(data_get($i->data, $k))))->values()->all();
+        // Array values: STRUCTURED editing when the shape is uniform (scalar
+        // list / row list / group); only irregular/deep values fall back to
+        // the raw-JSON textarea.
+        $arrayKeys = collect($keys)->filter(fn ($k) => in_array($k, $declared, true)
+            || $samples->contains(fn ($i) => is_array(data_get($i->data, $k))))->values();
+        $sampleFor = fn ($k) => $item ? data_get($item->data, $k) : $samples->map(fn ($i) => data_get($i->data, $k))->first(fn ($v) => is_array($v));
+        $this->itemJsonKeys = $arrayKeys->reject(fn ($k) => self::nestedEditable($sampleFor($k) ?? []))->values()->all();
 
-        $this->itemForm = collect($keys)->mapWithKeys(function ($k) use ($item) {
+        $this->itemForm = collect($keys)->mapWithKeys(function ($k) use ($item, $arrayKeys) {
             $v = $item ? data_get($item->data, $k, '') : '';
             if (in_array($k, $this->itemJsonKeys, true)) {
                 $v = is_array($v) ? $v : ($v === '' || $v === null ? [] : [$v]);
 
                 return [$k => json_encode($v, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)];
+            }
+            if ($arrayKeys->contains($k)) {
+                return [$k => is_array($v) ? $v : []]; // structured editor binds in place
             }
 
             return [$k => is_array($v) ? json_encode($v, JSON_UNESCAPED_SLASHES) : (string) $v];
@@ -207,13 +224,13 @@ class CollectionsPage extends Component
     /** Asset-library options for url-type fields (photo pickers). */
     public function getMediaUrlOptionsProperty(): array
     {
-        return \App\Models\Media::where('site_id', $this->site->id)
+        return Media::where('site_id', $this->site->id)
             ->where('file_type', 'image')->latest()->limit(200)
             ->get()->map(fn ($m) => ['url' => $m->url, 'name' => $m->name])->all();
     }
 
     /** Asset picked in the media dialog → drop its URL into the item field. */
-    #[\Livewire\Attributes\On('media-picked')]
+    #[On('media-picked')]
     public function onMediaPicked(array $context, string $mediaRef, string $url): void
     {
         if (($context['scope'] ?? '') === 'collection-item' && isset($context['key'])) {
@@ -247,6 +264,9 @@ class CollectionsPage extends Component
                 $raw = trim((string) $v);
 
                 return json_decode($raw === '' ? '[]' : $raw, true);
+            }
+            if (is_array($v)) {
+                return $v; // structured nested value — persisted as-is
             }
 
             return is_string($v) ? trim($v) : $v;

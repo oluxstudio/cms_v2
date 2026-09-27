@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # Push the ORIGINAL project to the CMS and make the applied site match it
-# EXACTLY: full pipeline deploy, then a strict mirror that removes sections
-# deleted in the original, restores block order and template content.
+# EXACTLY: full pipeline deploy, then a strict mirror.
+#
+# CONTRACT — AUTHORITATIVE: the project is the source of truth. Pages,
+# blocks, node schemas, values, collection schemas+items, form definitions,
+# products and booking services all converge on the project; template-absent
+# leftovers (including owner custom fields on template things) are removed.
+# Owner-created pages/collections/forms/products outside the template are
+# untouched. Nothing is ever left frozen.
 #
 #   ./mirror-template graceway                 deploy + strict mirror
 #   ./mirror-template graceway --keep-content  mirror structure only

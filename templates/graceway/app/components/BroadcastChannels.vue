@@ -16,9 +16,9 @@ const channels = broadcastChannels.channels.map((c) => {
   <section class="bcx" v-if="!oluxCms.hidden()" :style="oluxCms.rootStyle.value" :class="oluxCms.rootClass.value">
     <div class="container">
       <div class="section-head center">
-        <p class="eyebrow">{{ broadcastChannels.eyebrow }}</p>
-        <h2>{{ broadcastChannels.title }}</h2>
-        <p class="bcx-sub">{{ broadcastChannels.sub }}</p>
+        <p class="eyebrow" data-olx-field="eyebrow">{{ oluxCms.t('Eyebrow', broadcastChannels.eyebrow) }}</p>
+        <h2 data-olx-field="title">{{ oluxCms.t('Title', broadcastChannels.title) }}</h2>
+        <p class="bcx-sub" data-olx-field="sub">{{ oluxCms.t('Sub', broadcastChannels.sub) }}</p>
       </div>
 
       <!-- platform pills -->
@@ -44,10 +44,10 @@ const channels = broadcastChannels.channels.map((c) => {
       <!-- join the church CTA -->
       <div class="bcx-join">
         <div>
-          <h2>{{ broadcastChannels.join.title }}</h2>
+          <h2 data-olx-field="joinTitle">{{ oluxCms.t('Join Title', broadcastChannels.join.title) }}</h2>
           <p>{{ broadcastChannels.join.text }}</p>
         </div>
-        <NuxtLink class="btn bcx-join-btn" :to="broadcastChannels.join.cta.to">{{ broadcastChannels.join.cta.label }} <span class="arrow">↗</span></NuxtLink>
+        <NuxtLink class="btn bcx-join-btn" :to="oluxCms.t('Join Cta To', broadcastChannels.join.cta.to)" data-olx-field="joinCtaLabel">{{ oluxCms.t('Join Cta Label', broadcastChannels.join.cta.label) }} <span class="arrow">↗</span></NuxtLink>
       </div>
     </div>
   </section>

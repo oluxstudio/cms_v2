@@ -22,18 +22,9 @@
             </div>
         </div>
 
-        <div>
-            <label class="block text-[11px] font-bold text-gray-500 mb-1.5">Only on these days <span class="font-normal text-gray-400">(none = every day)</span></label>
-            <div class="flex flex-wrap gap-1.5">
-                @foreach ([1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 7 => 'Sun'] as $d => $label)
-                <label class="cursor-pointer">
-                    <input wire:model.live="visDays" type="checkbox" value="{{ $d }}" class="peer sr-only">
-                    <span class="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border border-gray-200 dark:border-white/[0.08] text-gray-500
-                                 peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">{{ $label }}</span>
-                </label>
-                @endforeach
-            </div>
-        </div>
+        <x-field.multiselect label="Only on these days" model="visDays" placeholder="Every day"
+            :options="[1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday']"
+            :searchable="false" :shown="3" hint="Leave empty to show every day." />
 
         <div class="grid sm:grid-cols-2 gap-3">
             <div>

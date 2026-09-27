@@ -55,13 +55,13 @@ const give = async () => {
 
         <!-- give online -->
         <div class="ct-form-panel giving-panel">
-          <span class="ct-chip">{{ giving.chip }}</span>
-          <h2 data-olx-field="Headline">{{ giving.title }}</h2>
-          <p class="ct-sub">{{ giving.sub }}</p>
+          <span class="ct-chip" data-olx-field="chip">{{ oluxCms.t('Chip', giving.chip) }}</span>
+          <h2 data-olx-field="Headline">{{ oluxCms.t('Title', giving.title) }}</h2>
+          <p class="ct-sub" data-olx-field="sub">{{ oluxCms.t('Sub', giving.sub) }}</p>
 
           <div v-if="thanks" class="ct-thanks giving-thanks">
-            <h3>{{ giving.thanksTitle }}</h3>
-            <p>{{ giving.thanksText }}</p>
+            <h3 data-olx-field="thanksTitle">{{ oluxCms.t('Thanks Title', giving.thanksTitle) }}</h3>
+            <p data-olx-field="thanksText">{{ oluxCms.t('Thanks Text', giving.thanksText) }}</p>
           </div>
 
           <form v-else class="ct-form" @submit.prevent="give">
@@ -79,18 +79,18 @@ const give = async () => {
             <button class="btn ct-send" type="submit" :disabled="sending">
               {{ sending ? 'Preparing secure checkout…' : `Give £${chosen ?? 0} →` }}
             </button>
-            <p class="giving-fine">{{ giving.fine }}</p>
+            <p class="giving-fine" data-olx-field="fine">{{ oluxCms.t('Fine', giving.fine) }}</p>
           </form>
         </div>
 
         <!-- other ways to give -->
-        <div class="giving-ways">
-          <h2>{{ giving.waysTitle }}</h2>
-          <div v-for="w in giving.ways" :key="w.title" class="giving-way"><div class="icon">{{ w.icon }}</div><div>
+        <div class="giving-ways" data-olx-panel="giving-ways">
+          <h2 data-olx-field="waysTitle">{{ oluxCms.t('Ways Title', giving.waysTitle) }}</h2>
+          <div data-olx-item v-for="w in giving.ways" :key="w.title" class="giving-way"><div class="icon">{{ w.icon }}</div><div>
             <h3>{{ w.title }}</h3>
             <p><template v-for="(line, li) in contentLines(w.text)" :key="li"><br v-if="li">{{ line }}</template></p>
           </div></div>
-          <blockquote class="giving-verse">{{ giving.verse.text }} <cite>{{ giving.verse.cite }}</cite></blockquote>
+          <blockquote class="giving-verse" data-olx-field="verseText">{{ oluxCms.t('Verse Text', giving.verse.text) }} <cite data-olx-field="verseCite">{{ oluxCms.t('Verse Cite', giving.verse.cite) }}</cite></blockquote>
         </div>
 
       </div>

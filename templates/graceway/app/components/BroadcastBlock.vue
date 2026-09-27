@@ -33,7 +33,7 @@ const band = sizes.map(n => socials.slice(cursor, cursor += n))
     <div class="container">
       <div class="broadcast-grid">
         <div class="broadcast-copy">
-          <p class="eyebrow">{{ broadcast.eyebrow }}</p>
+          <p class="eyebrow" data-olx-field="eyebrow">{{ oluxCms.t('Eyebrow', broadcast.eyebrow) }}</p>
           <h2 class="mega">
             <template v-for="(line, i) in contentLines(broadcast.title)" :key="i">
               <br v-if="i">{{ line }}

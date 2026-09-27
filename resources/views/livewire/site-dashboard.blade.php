@@ -26,9 +26,7 @@
 
         <div class="hidden md:flex items-center gap-2">
             <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ $siteTitle }}</p>
-            <a href="{{ $site->templatePreviewUrl() }}" target="_blank" rel="noopener"
-               title="Your site exactly as visitors see it"
-               class="text-xs font-semibold text-indigo-400 hover:text-indigo-500 whitespace-nowrap">Live preview ↗</a>
+            <x-preview-button :href="$site->templatePreviewUrl()" small />
         </div>
 
         <div class="flex items-center gap-2">
@@ -183,14 +181,23 @@
             @endphp
 
             @forelse ($activityRuns as $run)
-            @php $groupLabel = $run['label']; $groupItems = collect($run['items']); $groupCount = $groupItems->count(); @endphp
-            {{-- ONE tile per group: latest entry shown, the rest expand inside. --}}
+            @php
+                $groupLabel = $run['label'];
+                $groupItems = collect($run['items']);
+                $groupCount = $groupItems->count();
+                // The FIRST tile previews up to 5 entries while collapsed;
+                // the tiles below it stay compact with just their latest one.
+                $preview = $loop->first ? 5 : 1;
+            @endphp
+            {{-- ONE tile per group: latest entries shown, the rest expand inside. --}}
             <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl shadow-sm border border-gray-100/80 dark:border-white/[0.05] mb-3 overflow-hidden hover:shadow-md transition-shadow"
                  x-data="{ open: false }">
                 <div class="flex items-center gap-2 px-5 pt-3.5">
                     <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">{{ $groupLabel }}</p>
                     @if ($groupCount > 1)
                         <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d9f068;color:#2b3110">{{ $groupCount }}</span>
+                    @endif
+                    @if ($groupCount > $preview)
                         <button @click="open = ! open"
                                 class="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
                             <span x-text="open ? 'Collapse' : 'Show all {{ $groupCount }}'"></span>
@@ -202,12 +209,14 @@
 
                 {{-- Entries — newest always enters at the TOP; expanding reveals
                      the older ones beneath it, joined by the vertical timeline rail. --}}
-                <div :class="open ? 'activity-timeline' : ''">
-                    @include('partials.dashboard-activity-item', ['act' => $groupItems->first()])
+                <div :class="{{ min($groupCount, $preview) > 1 ? 'true' : 'open' }} ? 'activity-timeline' : ''">
+                    @foreach ($groupItems->take($preview) as $act)
+                        @include('partials.dashboard-activity-item')
+                    @endforeach
 
-                    @if ($groupCount > 1)
+                    @if ($groupCount > $preview)
                     <div x-show="open" x-cloak x-transition.opacity.duration.150ms>
-                        @foreach ($groupItems->skip(1) as $act)
+                        @foreach ($groupItems->skip($preview) as $act)
                             @include('partials.dashboard-activity-item')
                         @endforeach
                     </div>

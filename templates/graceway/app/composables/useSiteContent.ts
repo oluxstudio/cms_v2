@@ -26,11 +26,9 @@ export type Profile = {
   copyright: string
 }
 
-export type Service = {
-  label: string
-  day: string
-  time: string
-}
+// service days & times now live in their own collection composable
+export type { Service } from './useServices'
+import type { Service } from './useServices'
 
 export type ChurchEvent = {
   id: string
@@ -451,7 +449,8 @@ export type SiteContent = {
 /** split an authored `\n` string into lines for <br>-joined rendering */
 export const contentLines = (text: string) => text.split('\n')
 
-const profile: Profile = {
+/** @olux-collection Site Profile */
+const siteProfileRows: Profile[] = [{
   name: 'Christ Apostolic Church, Blackburn',
   shortName: 'CAC Blackburn',
   logo: { lead: 'CAC', bold: 'Blackburn' },
@@ -466,15 +465,8 @@ const profile: Profile = {
     { days: 'Mon – Fri', hours: '9:00 AM – 4:00 PM' },
   ],
   copyright: '© 2026 Christ Apostolic Church, Blackburn. All rights reserved.',
-}
-
-/** @olux-collection Services */
-const services: Service[] = [
-  { label: 'Sunday Worship', day: 'Sunday', time: '10:00 AM' },
-  { label: 'Wednesday Prayer', day: 'Wednesday', time: '7:00 PM' },
-  { label: 'Bible Study', day: 'Friday', time: '9:00 PM' },
-  { label: 'Youth Gathering', day: 'Friday', time: '6:30 PM' },
-]
+}]
+const profile: Profile = siteProfileRows[0]
 
 // social media platforms — `available: false` renders grayed out wherever shown
 /** @olux-collection Socials */
@@ -508,6 +500,7 @@ const events: ChurchEvent[] = [
 
 // ministries — `title` is the official name everywhere; `altName` is the
 // friendlier alias compact spots (About sidebar) display instead
+/** @olux-collection Ministry Highlights */
 const ministriesBento: MinistryCard[] = [
 //   { size: 'small', color: 'm-red', tag: 'Worship', icon: '🙏', title: 'Sunday Worship', altName: 'Worship Service', text: 'Gather every Sunday for heartfelt music, honest teaching and open arms.', members: '400+', meets: 'Sundays' },
 
@@ -522,21 +515,290 @@ const ministriesBento: MinistryCard[] = [
 const shortTime = (t: string) => t.replace(':00 ', ' ')
 const asBool = (v: any) => typeof v === 'boolean' ? v : v === 'true' || v === '1' || v === 1
 
+// ── CMS data-source seeds: each marked array becomes an editable collection ──
+/** @olux-collection About Story */
+const aboutStory = [
+      { title: 'How we began', text: 'CAC Blackburn started in 1992 as a handful of families meeting in a living room on Riverside Avenue. What began with shared meals and simple prayer has grown into a church family of over four hundred — but the heart is unchanged: honest worship, open doors, and a seat at the table for everyone.' },
+      { title: 'What we believe', text: 'We believe faith grows best in community. We hold to the historic Christian faith — the Bible as our guide, grace as our foundation, and love as our practice. "Let all that you do be done in love" (1 Corinthians 16:14) is more than a verse on our wall; it shapes how we worship, serve and disagree well.' },
+      { title: 'Where we’re going', text: 'Our vision is a church for the whole community — students, families and neighbours alike. Through food drives, home groups, youth programs and city partnerships, we want Blackburn to be measurably better because this church is here.' },
+    ]
+
+/** @olux-collection About Pillars */
+const aboutPillars = [
+      { chip: 'Mission Statement', title: 'Why we exist', text: 'To make Jesus known in Blackburn by loving God wholeheartedly, loving people unconditionally, and serving our city practically — one meal, one prayer, and one open door at a time.' },
+      { chip: 'Our Vision', title: 'What we see ahead', text: 'A church family in every neighbourhood of Blackburn — where every generation worships together, every home has a group to belong to, and the city is measurably better because this church is here.' },
+      { chip: 'Our Pledge', title: 'What you can count on', text: 'We pledge to keep our doors open to everyone, to handle every gift with integrity and transparency, to protect and nurture our children and youth, and to speak the truth in love — always.' },
+    ]
+
+/** @olux-collection About Photos */
+const aboutPhotos = [
+      { img: '/assets/images/gallery-1.jpg', title: 'Sunday worship' },
+      { img: '/assets/images/gallery-2.jpg', title: 'Community outreach' },
+      { img: '/assets/images/gallery-3.jpg', title: 'Home groups' },
+      { img: '/assets/images/gallery-4.jpg', title: 'Youth night' },
+    ]
+
+/** @olux-collection Ministries */
+const ministriesOverviewRows = [
+    {
+      to: '/media-ministry',
+      img: '/assets/images/event-3.jpg',
+      tag: 'Media & Broadcast',
+      title: 'Carry the service beyond the walls',
+      text: 'Cameras, sound desks and livestreams — the Media Team broadcasts every Sunday service to YouTube, Facebook and beyond, and keeps the podcast and sermon archive flowing. No experience needed; we train you at the desk.',
+      facts: [
+        { label: 'Leader', value: 'Samuel Reyes' },
+        { label: 'Meets', value: 'Sundays — Media Desk, 8:30 AM call' },
+        { label: 'Who', value: 'Teens & adults, training provided' },
+      ],
+    },
+    {
+      to: '/worship',
+      img: '/assets/images/event-2.jpg',
+      tag: 'Worship & Music',
+      title: 'Worship that lifts the whole room',
+      text: 'Choir, band and production teams lead the congregation every Sunday with heartfelt music and honest praise. Whether you sing, play an instrument or love the tech booth, there is a seat for you.',
+      facts: [
+        { label: 'Leader', value: 'Grace Lindqvist' },
+        { label: 'Meets', value: 'Rehearsals — Thursdays 7:00 PM' },
+        { label: 'Who', value: 'All ages & skill levels' },
+      ],
+    },
+    {
+      to: '/youth',
+      img: '/assets/images/circle-3.jpg',
+      tag: 'Youth Ministry',
+      title: 'Big questions, real friendships',
+      text: 'Teens gather for games, honest conversation and Bible study. A place to ask big questions, find mentors who listen, and build friendships that last well beyond Friday night.',
+      facts: [
+        { label: 'Leader', value: 'Samuel Reyes' },
+        { label: 'Meets', value: 'Fridays 6:30 PM — Youth Hall' },
+        { label: 'Who', value: 'Teens 13–19' },
+      ],
+    },
+    {
+      to: '/bible-study',
+      img: '/assets/images/circle-2.jpg',
+      tag: 'Bible Study',
+      title: 'Around the Word, around the table',
+      text: 'Midweek home groups across the city — share a meal, study scripture and do life together in a circle small enough to know your name. Twelve-plus groups meet citywide every week.',
+      facts: [
+        { label: 'Leaders', value: 'Ruth & Peter Alonso' },
+        { label: 'Meets', value: 'Weeknights — homes citywide' },
+        { label: 'Who', value: 'Beginner friendly' },
+      ],
+    },
+    {
+      to: '/prayer',
+      img: '/assets/images/bible-study.jpg',
+      tag: 'Prayer Watch',
+      title: 'The engine room of the church',
+      text: 'Intercessors who pray for the church, the city and every request left in our prayer box. Join the early morning watch in the chapel or pray with us from home.',
+      facts: [
+        { label: 'Leader', value: 'Esther Mwangi' },
+        { label: 'Meets', value: 'Wednesdays 6:00 AM — Chapel' },
+        { label: 'Who', value: 'Early birds welcome' },
+      ],
+    },
+    {
+      to: '/community-care',
+      img: '/assets/images/event-1.jpg',
+      tag: 'Community Care',
+      title: 'Practical love for our city',
+      text: 'From the neighbourhood food pantry to shelter support and mission trips abroad, we serve practical needs and share hope beyond our walls — every single week.',
+      facts: [
+        { label: 'Leader', value: 'Rev. Daniel Okafor' },
+        { label: 'Meets', value: 'Food pantry — Saturdays 9:00 AM' },
+        { label: 'Who', value: 'Open to all' },
+      ],
+    },
+  ]
+
+/** @olux-collection Prayer Rhythms */
+const prayerRhythms = [
+      { icon: '🌅', title: 'Morning Watch', when: 'Wednesdays 6:00 AM', where: 'The Chapel', text: 'Start the day in stillness — an hour of worship, scripture and intercession before the city wakes.' },
+      { icon: '🙏', title: 'Pre-Service Prayer', when: 'Sundays 8:15 AM', where: 'Main Hall', text: 'We cover every service in prayer before the doors open. All welcome, no experience needed.' },
+      { icon: '🕯', title: 'Night Vigil', when: 'First Friday · 10 PM', where: 'Main Hall', text: 'A monthly night of extended worship and prayer for the church, the city and the nations.' },
+      { icon: '🏠', title: 'Pray From Home', when: 'Anytime', where: 'Weekly prayer list', text: 'Receive the weekly prayer list by email and stand with us from wherever you are.' },
+    ]
+
+/** @olux-collection Broadcast Channels */
+const broadcastChannelRows = [
+      { key: 'youtube', handle: '@cacblackburn', color: '#d1242f', followers: '12.4k subscribers', live: true,
+        watch: 'https://youtube.com/@cacblackburn/live',
+        blurb: 'Full Sunday services, sermon replays and worship nights in HD.' },
+      { key: 'facebook', handle: 'CAC Blackburn', color: '#1d5fd1', followers: '8.9k followers', live: true,
+        watch: 'https://facebook.com/cacblackburn/live',
+        blurb: 'Live services with real-time chat, event updates and photo albums.' },
+      { key: 'instagram', handle: '@cacblackburn', color: '#c13584', followers: '6.2k followers', live: false,
+        watch: 'https://instagram.com/cacblackburn',
+        blurb: 'Daily encouragement, behind-the-scenes moments and reels from Sunday.' },
+      { key: 'tiktok', handle: '@cacblackburn', color: '#14181d', followers: 'Coming soon', live: false,
+        watch: 'https://tiktok.com/@cacblackburn/live',
+        blurb: 'Short worship clips and testimonies — launching this season.' },
+    ]
+
+/** @olux-collection Worship History */
+const worshipHistory = [
+      { img: '/assets/images/event-2.jpg', text: 'Sunday recap uploaded', sub: 'By the media team', when: 'Just now' },
+      { img: '/assets/images/gallery-5.jpg', text: 'New song added', sub: 'Firm Foundation', when: '1 hr ago' },
+      { img: '/assets/images/gallery-9.jpg', text: 'Choir set recorded', sub: 'Live from 11 AM', when: '2 hrs ago' },
+      { img: '/assets/images/event-3.jpg', text: 'Worship night announced', sub: 'First Friday', when: '5 hrs ago' },
+    ]
+
+/** @olux-collection Youth Events */
+const youthEventRows = [
+      { id: 'lockin', day: '26', month: 'Sep', date: '2026-09-26T18:30:00', title: 'All-Night Lock-In', text: 'Games, films, pizza and a 2 AM worship moment. Bring a sleeping bag!', spots: 18 },
+      { id: 'camp', day: '17', month: 'Oct', date: '2026-10-17T09:00:00', title: 'Autumn Youth Camp', text: 'A weekend away in the hills — campfires, big questions, no phones (mostly).', spots: 31 },
+      { id: 'serve', day: '07', month: 'Nov', date: '2026-11-07T09:00:00', title: 'City Serve Day', text: 'Food bank shift in the morning, milkshakes after. Serve your city with your crew.', spots: 12 },
+    ]
+
+/** @olux-collection Care Impact */
+const careImpact = [
+      { value: '4,800+', label: 'meals shared this year' },
+      { value: '120', label: 'families helped monthly' },
+      { value: '85', label: 'volunteers involved' },
+      { value: '2', label: 'partner churches abroad' },
+    ]
+
+/** @olux-collection Care Involvement */
+const careInvolve = [
+      { icon: '🙋', title: 'Volunteer', text: "An hour a week changes someone's whole week. Every programme has a role that fits you.", cta: { label: 'Sign Up', to: '/contact' } },
+      { icon: '💝', title: 'Give', text: 'Fund the pantry shelves, the flasks and the school fees. Every gift stays with the work.', cta: { label: 'Donate', to: '/contact' } },
+      { icon: '🙏', title: 'Pray', text: 'Join the Wednesday Morning Watch as we pray for our town by name, street by street.', cta: { label: 'Prayer Watch', to: '/prayer' } },
+    ]
+
+/** @olux-collection Media Roles */
+const mediaRoles = [
+      { icon: '📹', title: 'Camera Operators', text: 'Frame the service from the floor and the balcony — steady hands, good eyes, full training given.' },
+      { icon: '🎚', title: 'Sound & Audio', text: 'Mix the room and the stream — mics, monitors and the broadcast feed from the sound desk.' },
+      { icon: '🖥', title: 'Stream Directors', text: 'Cut between cameras, run titles and keep the livestream healthy across every platform.' },
+      { icon: '📸', title: 'Photography', text: 'Capture services, events and baptisms for the galleries, socials and the weekly newsletter.' },
+      { icon: '🎙', title: 'Podcast & Editing', text: 'Trim, master and publish the sermon podcast and audio archive every week.' },
+      { icon: '📱', title: 'Social Clips', text: 'Cut the moments that travel — shorts and reels that bring the message to new feeds.' },
+    ]
+
+/** @olux-collection Media Gallery Items */
+const mediaGalleryRows = [
+      { img: '/assets/images/gallery-9.jpg', title: 'At the sound desk' },
+      { img: '/assets/images/gallery-5.jpg', title: 'Sunday livestream' },
+      { img: '/assets/images/gallery-7.jpg', title: 'Recording the choir' },
+      { img: '/assets/images/gallery-10.jpg', title: 'Behind the cameras' },
+    ]
+
+/** @olux-collection Faqs */
+const joinFaqs = [
+      { q: 'Do I have to be baptised to join?', a: 'No — everyone is welcome to belong and take part from day one. Baptism and formal membership are steps we\'ll walk with you when you\'re ready, never a condition for a seat at the table.' },
+      { q: 'What should I expect on a first visit?', a: 'About 90 minutes of music, a message and a warm welcome. Kids have their own program during both services, parking is free, and nobody will single you out or ask you to stand up.' },
+      { q: 'Is there anything for my children?', a: 'Yes — Kids Church runs during both Sunday services for nursery through grade 6, with trained and vetted leaders. Teens have their own Friday-night youth ministry.' },
+      { q: 'How is the church funded?', a: 'Entirely by the voluntary giving of members and friends. Giving is never expected of guests, and our finances are reviewed and reported to the congregation annually.' },
+    ]
+
+/** @olux-collection Join Perks */
+const joinPerks = [
+  { text: 'A personal welcome from our pastoral team' },
+  { text: 'Weekly newsletter with sermons, events and prayer points' },
+  { text: 'An invitation to the next newcomers\' lunch' },
+  { text: 'Help finding a small group or ministry that fits you' },
+]
+
+/** @olux-collection About Facts */
+const aboutFacts = [
+      { icon: '⛪', label: 'Founded', value: '1992 — over thirty years serving Blackburn' },
+      { icon: '👥', label: 'Our Family', value: '400+ members across all generations' },
+      { icon: '📍', label: 'Where We Gather', value: '121 Wallstreet street' },
+      { icon: '🕐', label: 'Sunday Services', value: '9:00 AM & 11:00 AM · Midweek Wed 7 PM' },
+    ]
+
+/** @olux-collection Join Steps */
+const joinSteps = [
+      { n: '01', title: 'Plan a visit', text: 'Come to any Sunday service — 9:00 AM & 11:00 AM. No dress code, no pressure; just come as you are and say hello at the welcome desk.' },
+      { n: '02', title: 'Newcomers\' lunch', text: 'Once a month the pastors host lunch for new faces. Hear the story of the church, ask anything, and meet others who are new too.' },
+      { n: '03', title: 'Membership class', text: 'A relaxed two-session class on what we believe, how the church is led, and what belonging here means. Runs every other month.' },
+      { n: '04', title: 'Find your place', text: 'Join a home group and a ministry that fits your gifts — from worship and kids to community care. This is where church becomes family.' },
+    ]
+
+/** @olux-collection Giving Ways */
+const givingWays = [
+      { icon: '🏦', title: 'Bank transfer', text: 'CAC Blackburn · Sort 20-45-45 · Account 1234 5678\nReference: your name or "Tithe".' },
+      { icon: '🧺', title: 'In person', text: 'The offering basket at any Sunday service, or the giving box by the welcome desk.' },
+      { icon: '📝', title: 'Gift Aid', text: 'UK taxpayer? A Gift Aid declaration adds 25p to every £1 at no cost to you — ask at the office.' },
+    ]
+
+/** @olux-collection Worship Times */
+const worshipTimes = [
+      { label: 'Sunday services', value: '9:00 AM & 11:00 AM' },
+      { label: 'Worship night', value: 'First Friday, 7:00 PM' },
+      { label: 'Team rehearsal', value: 'Thursdays, 7:00 PM' },
+    ]
+
+/** @olux-collection Ministry Pages */
+const ministryPages = [
+  { path: '/kids',
+      img: '/assets/images/circle-3.jpg', alt: 'Kids ministry',
+      text: 'A safe, joyful world from nursery to grade six — stories, songs and play while parents worship.',
+      meets: 'Both Sunday services — Kids Wing', leader: 'Ruth Alonso'
+  },
+  { path: '/prayer',
+      img: '/assets/images/circle-2.jpg', alt: 'Prayer ministry',
+      text: 'Intercessors praying for the church, the city and every request received — join the Wednesday 6 AM watch or pray from home.',
+      meets: 'Wednesdays 6:00 AM — The Chapel', leader: 'Esther Mwangi'
+  },
+  { path: '/media-ministry',
+      img: '/assets/images/event-3.jpg', alt: 'Media & broadcast ministry',
+      text: 'The Media Team runs cameras, sound and livestreams so every service reaches those worshipping from home — and keeps the sermon archive and podcast up to date. Training provided at the desk.',
+      meets: 'Sundays 8:30 AM — Media Desk', leader: 'Samuel Reyes'
+  },
+]
+
+/** @olux-collection Legal Sections */
+const legalSections = [
+  { page: 'privacy', heading: '1. Information we collect', body: 'We may collect your name, email address, phone number and any message you send us through our contact, prayer, giving or membership forms. We also collect basic, anonymous usage data (such as pages visited) to help us improve the site.' },
+  { page: 'privacy', heading: '2. How we use your information', body: 'We use your information to respond to your enquiries, welcome you to the church, process donations, send newsletters you have signed up for, and keep appropriate records of church membership. We never sell your data.' },
+  { page: 'privacy', heading: '3. Legal basis', body: 'We process personal data on the basis of your consent, our legitimate interest in running the church and its ministries, and, where applicable, legal obligations (for example Gift Aid records).' },
+  { page: 'privacy', heading: '4. Sharing your information', body: 'Your data is only shared with trusted service providers that help us operate (such as our payment processor and email provider), and only as far as needed. We may disclose information where the law requires it.' },
+  { page: 'privacy', heading: '5. Data retention', body: 'We keep personal information only as long as necessary for the purposes above, or as required by law, after which it is securely deleted.' },
+  { page: 'privacy', heading: '6. Your rights', body: 'You may request access to, correction of, or deletion of your personal data at any time, and you may withdraw consent to communications. Contact us at hello@cacblackburn.org to exercise any of these rights.' },
+  { page: 'privacy', heading: '7. Contact', body: 'Questions about this policy can be sent to hello@cacblackburn.org or by post to 121 Wallstreet street, NY York, USA.' },
+  { page: 'terms', heading: '1. Use of this website', body: 'The site is provided for personal, non-commercial use to learn about our church, services, events and ministries. You agree not to misuse the site, attempt to gain unauthorised access, or use it in any unlawful way.' },
+  { page: 'terms', heading: '2. Content and accuracy', body: 'We do our best to keep service times, events and other information accurate and up to date, but details can change. Content is provided "as is" without warranties of any kind.' },
+  { page: 'terms', heading: '3. Intellectual property', body: 'Unless stated otherwise, the content on this site (text, images, logos and media) belongs to the church or its licensors. You may share links to our pages, but please ask before reproducing content elsewhere.' },
+  { page: 'terms', heading: '4. Donations and payments', body: 'Online donations and event payments are processed securely by our payment provider. Gifts are voluntary and, except where required by law, non-refundable. Receipts are issued by email where an address is provided.' },
+  { page: 'terms', heading: '5. Third-party links', body: 'Our site may link to external websites (such as social media platforms). We are not responsible for the content or privacy practices of those sites.' },
+  { page: 'terms', heading: '6. Limitation of liability', body: 'To the fullest extent permitted by law, we are not liable for any loss or damage arising from your use of, or inability to use, this website.' },
+  { page: 'terms', heading: '7. Changes to these terms', body: 'We may update these Terms from time to time. Continued use of the site after changes are posted means you accept the updated Terms.' },
+  { page: 'terms', heading: '8. Contact', body: 'Questions about these Terms can be sent to hello@cacblackburn.org.' },
+  { page: 'cookie', heading: '1. What are cookies?', body: 'Cookies are small text files stored on your device when you visit a website. They help the site work properly and remember your preferences between visits.' },
+  { page: 'cookie', heading: '2. Cookies we use', body: 'Essential cookies: needed for the site to function (for example remembering an event reservation in progress). Preference cookies: remember choices you make, such as forms you have already submitted. We do not use advertising cookies.' },
+  { page: 'cookie', heading: '3. Third-party cookies', body: 'Some embedded content — such as maps, videos or our payment provider checkout — may set their own cookies. These are controlled by those providers and subject to their own policies.' },
+  { page: 'cookie', heading: '4. Managing cookies', body: 'You can control or delete cookies through your browser settings. Blocking essential cookies may stop parts of the site (such as forms and reservations) from working correctly.' },
+  { page: 'cookie', heading: '5. Contact', body: 'Questions about this policy can be sent to hello@cacblackburn.org.' },
+]
+
 export const useSiteContent = (): SiteContent => {
   // ── CMS-first overlays: the Services/Socials/Site Profile collections
   // (seeded from the authored rows below) override at runtime; the authored
   // rows carry the pristine template and any CMS-unreachable render. ──
   const { items } = useCms()
-  const cmsServices = (items('services', []) as any[]).filter(s => s.label && s.time)
-  const mergedServices: Service[] = cmsServices.length ? cmsServices.map(s => ({ day: '', ...s })) : services
+  // Generic collection overlay: owner-edited CMS rows win; the authored rows
+  // below seed each collection and carry any CMS-unreachable render.
+  const cms = <T>(slug: string, fallback: T[]): T[] => {
+    const rows = items(slug, []) as any[]
+    return rows.length ? (rows as T[]) : fallback
+  }
+  const legalRows = items('legalSections', []) as any[]
+  const legalFor = (page: string, fb: { heading: string; body: string }[]) => {
+    const rows = legalRows.filter(r => r.page === page)
+    return rows.length ? rows : fb
+  }
+  const mergedServices: Service[] = useServices()
   // AUTHORED-FIRST (for now): the array above is the source of truth for the
   // social pills — order, presence and flags. To hand control back to the CMS
   // "Socials" collection, swap mergedSocials for the commented overlay below.
-  const mergedSocials: SocialMedia[] = socials
-  // const cmsSocials = (items('socials', []) as any[]).filter(s => s.key)
-  // const mergedSocials: SocialMedia[] = cmsSocials.length
-  //   ? cmsSocials.map(s => ({ ...socials.find(a => a.key === s.key), ...s, available: asBool(s.available) } as SocialMedia))
-  //   : socials
+  const cmsSocials = (items('socials', []) as any[]).filter(s => s.key)
+  const mergedSocials: SocialMedia[] = cmsSocials.length
+    ? cmsSocials.map(s => ({ ...socials.find(a => a.key === s.key), ...s, available: asBool(s.available) } as SocialMedia))
+    : socials
   const profileRow = (items('siteProfile', []) as any[])[0]
   const mergedProfile: Profile = profileRow
     ? {
@@ -680,7 +942,7 @@ export const useSiteContent = (): SiteContent => {
     cta: { label: 'View All Members', to: '/about#leadership' },
   },
   donate: {
-    title: 'Give generously, change lives',
+    title: 'Give generously, change lives, and support the work of the church',
     text: 'Your giving keeps our doors open, our pantry stocked, and our outreach on the streets. Every gift, of any size, makes a difference in our city.',
     cta: { label: 'Give Online', to: '/donate' },
   },
@@ -705,20 +967,8 @@ export const useSiteContent = (): SiteContent => {
     },
     rolesEyebrow: 'Serve on the team',
     rolesTitle: 'Find your station',
-    roles: [
-      { icon: '📹', title: 'Camera Operators', text: 'Frame the service from the floor and the balcony — steady hands, good eyes, full training given.' },
-      { icon: '🎚', title: 'Sound & Audio', text: 'Mix the room and the stream — mics, monitors and the broadcast feed from the sound desk.' },
-      { icon: '🖥', title: 'Stream Directors', text: 'Cut between cameras, run titles and keep the livestream healthy across every platform.' },
-      { icon: '📸', title: 'Photography', text: 'Capture services, events and baptisms for the galleries, socials and the weekly newsletter.' },
-      { icon: '🎙', title: 'Podcast & Editing', text: 'Trim, master and publish the sermon podcast and audio archive every week.' },
-      { icon: '📱', title: 'Social Clips', text: 'Cut the moments that travel — shorts and reels that bring the message to new feeds.' },
-    ],
-    gallery: [
-      { img: '/assets/images/gallery-9.jpg', title: 'At the sound desk' },
-      { img: '/assets/images/gallery-5.jpg', title: 'Sunday livestream' },
-      { img: '/assets/images/gallery-7.jpg', title: 'Recording the choir' },
-      { img: '/assets/images/gallery-10.jpg', title: 'Behind the cameras' },
-    ],
+roles: cms('mediaRoles', mediaRoles),
+gallery: cms('mediaGalleryItems', mediaGalleryRows),
     join: {
       chip: '✳ Join the Media Team',
       title: 'Learn the desk with us',
@@ -744,107 +994,21 @@ export const useSiteContent = (): SiteContent => {
     chip: '✳ Our Story',
     title: 'A church for the whole community',
     intro: "For over thirty years, CAC Blackburn has been a gathering place for families, students and neighbours. Here is who we are, what we believe, and where we're headed.",
-    story: [
-      { title: 'How we began', text: 'CAC Blackburn started in 1992 as a handful of families meeting in a living room on Riverside Avenue. What began with shared meals and simple prayer has grown into a church family of over four hundred — but the heart is unchanged: honest worship, open doors, and a seat at the table for everyone.' },
-      { title: 'What we believe', text: 'We believe faith grows best in community. We hold to the historic Christian faith — the Bible as our guide, grace as our foundation, and love as our practice. "Let all that you do be done in love" (1 Corinthians 16:14) is more than a verse on our wall; it shapes how we worship, serve and disagree well.' },
-      { title: 'Where we’re going', text: 'Our vision is a church for the whole community — students, families and neighbours alike. Through food drives, home groups, youth programs and city partnerships, we want Blackburn to be measurably better because this church is here.' },
-    ],
-    facts: [
+story: cms('aboutStory', aboutStory),
+facts: cms('aboutFacts', [
       { icon: '⛪', label: 'Founded', value: '1992 — over thirty years serving Blackburn' },
       { icon: '👥', label: 'Our Family', value: '400+ members across all generations' },
       { icon: '📍', label: 'Where We Gather', value: profile.address },
       { icon: '🕐', label: 'Sunday Services', value: `${sundayTimesLong} · Midweek Wed 7 PM` },
-    ],
-    pillars: [
-      { chip: 'Mission Statement', title: 'Why we exist', text: 'To make Jesus known in Blackburn by loving God wholeheartedly, loving people unconditionally, and serving our city practically — one meal, one prayer, and one open door at a time.' },
-      { chip: 'Our Vision', title: 'What we see ahead', text: 'A church family in every neighbourhood of Blackburn — where every generation worships together, every home has a group to belong to, and the city is measurably better because this church is here.' },
-      { chip: 'Our Pledge', title: 'What you can count on', text: 'We pledge to keep our doors open to everyone, to handle every gift with integrity and transparency, to protect and nurture our children and youth, and to speak the truth in love — always.' },
-    ],
+    ]),
+pillars: cms('aboutPillars', aboutPillars),
     sideMission: { title: 'Our Mission', text: 'Loving God, loving people, serving the city' },
     // derived from ministriesBento — sidebar shows each ministry's altName
-    sideMinistries: ministriesBento.map(m => ({ icon: m.icon, title: m.altName ?? m.title, meets: m.meets })),
-    photos: [
-      { img: '/assets/images/gallery-1.jpg', title: 'Sunday worship' },
-      { img: '/assets/images/gallery-2.jpg', title: 'Community outreach' },
-      { img: '/assets/images/gallery-3.jpg', title: 'Home groups' },
-      { img: '/assets/images/gallery-4.jpg', title: 'Youth night' },
-    ],
+    sideMinistries: cms('ministryHighlights', ministriesBento).map(m => ({ icon: m.icon, title: m.altName ?? m.title, meets: m.meets })),
+photos: cms('aboutPhotos', aboutPhotos),
   },
-  ministriesBento,
-  ministriesOverview: [
-    {
-      to: '/media-ministry',
-      img: '/assets/images/event-3.jpg',
-      tag: 'Media & Broadcast',
-      title: 'Carry the service beyond the walls',
-      text: 'Cameras, sound desks and livestreams — the Media Team broadcasts every Sunday service to YouTube, Facebook and beyond, and keeps the podcast and sermon archive flowing. No experience needed; we train you at the desk.',
-      facts: [
-        { label: 'Leader', value: 'Samuel Reyes' },
-        { label: 'Meets', value: 'Sundays — Media Desk, 8:30 AM call' },
-        { label: 'Who', value: 'Teens & adults, training provided' },
-      ],
-    },
-    {
-      to: '/worship',
-      img: '/assets/images/event-2.jpg',
-      tag: 'Worship & Music',
-      title: 'Worship that lifts the whole room',
-      text: 'Choir, band and production teams lead the congregation every Sunday with heartfelt music and honest praise. Whether you sing, play an instrument or love the tech booth, there is a seat for you.',
-      facts: [
-        { label: 'Leader', value: 'Grace Lindqvist' },
-        { label: 'Meets', value: 'Rehearsals — Thursdays 7:00 PM' },
-        { label: 'Who', value: 'All ages & skill levels' },
-      ],
-    },
-    {
-      to: '/youth',
-      img: '/assets/images/circle-3.jpg',
-      tag: 'Youth Ministry',
-      title: 'Big questions, real friendships',
-      text: 'Teens gather for games, honest conversation and Bible study. A place to ask big questions, find mentors who listen, and build friendships that last well beyond Friday night.',
-      facts: [
-        { label: 'Leader', value: 'Samuel Reyes' },
-        { label: 'Meets', value: 'Fridays 6:30 PM — Youth Hall' },
-        { label: 'Who', value: 'Teens 13–19' },
-      ],
-    },
-    {
-      to: '/bible-study',
-      img: '/assets/images/circle-2.jpg',
-      tag: 'Bible Study',
-      title: 'Around the Word, around the table',
-      text: 'Midweek home groups across the city — share a meal, study scripture and do life together in a circle small enough to know your name. Twelve-plus groups meet citywide every week.',
-      facts: [
-        { label: 'Leaders', value: 'Ruth & Peter Alonso' },
-        { label: 'Meets', value: 'Weeknights — homes citywide' },
-        { label: 'Who', value: 'Beginner friendly' },
-      ],
-    },
-    {
-      to: '/prayer',
-      img: '/assets/images/bible-study.jpg',
-      tag: 'Prayer Watch',
-      title: 'The engine room of the church',
-      text: 'Intercessors who pray for the church, the city and every request left in our prayer box. Join the early morning watch in the chapel or pray with us from home.',
-      facts: [
-        { label: 'Leader', value: 'Esther Mwangi' },
-        { label: 'Meets', value: 'Wednesdays 6:00 AM — Chapel' },
-        { label: 'Who', value: 'Early birds welcome' },
-      ],
-    },
-    {
-      to: '/community-care',
-      img: '/assets/images/event-1.jpg',
-      tag: 'Community Care',
-      title: 'Practical love for our city',
-      text: 'From the neighbourhood food pantry to shelter support and mission trips abroad, we serve practical needs and share hope beyond our walls — every single week.',
-      facts: [
-        { label: 'Leader', value: 'Rev. Daniel Okafor' },
-        { label: 'Meets', value: 'Food pantry — Saturdays 9:00 AM' },
-        { label: 'Who', value: 'Open to all' },
-      ],
-    },
-  ],
+  ministriesBento: cms('ministryHighlights', ministriesBento),
+ministriesOverview: cms('ministries', ministriesOverviewRows),
   contactMap: {
     chip: '✳ Our Location',
     title: 'Visit us for Sunday services and in-person meetings',
@@ -872,49 +1036,28 @@ export const useSiteContent = (): SiteContent => {
     thanksText: 'Your gift has been received. A receipt is on its way to your inbox — and our team prays over every gift on Wednesday mornings.',
     fine: '🔒 Payments handled by Stripe. We never see your card details.',
     waysTitle: 'Other ways to give',
-    ways: [
+ways: cms('givingWays', [
       { icon: '🏦', title: 'Bank transfer', text: `${profile.shortName} · Sort 20-45-45 · Account 1234 5678\nReference: your name or "Tithe".` },
       { icon: '🧺', title: 'In person', text: 'The offering basket at any Sunday service, or the giving box by the welcome desk.' },
       { icon: '📝', title: 'Gift Aid', text: 'UK taxpayer? A Gift Aid declaration adds 25p to every £1 at no cost to you — ask at the office.' },
-    ],
+    ]),
     verse: {
       text: '"Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver."',
       cite: '— 2 Corinthians 9:7',
     },
   },
-  ministryDetail: {
-    '/kids': {
-      img: '/assets/images/circle-3.jpg', alt: 'Kids ministry',
-      text: 'A safe, joyful world from nursery to grade six — stories, songs and play while parents worship.',
-      meets: 'Both Sunday services — Kids Wing', leader: 'Ruth Alonso',
-    },
-    '/prayer': {
-      img: '/assets/images/circle-2.jpg', alt: 'Prayer ministry',
-      text: 'Intercessors praying for the church, the city and every request received — join the Wednesday 6 AM watch or pray from home.',
-      meets: 'Wednesdays 6:00 AM — The Chapel', leader: 'Esther Mwangi',
-    },
-    '/media-ministry': {
-      img: '/assets/images/event-3.jpg', alt: 'Media & broadcast ministry',
-      text: 'The Media Team runs cameras, sound and livestreams so every service reaches those worshipping from home — and keeps the sermon archive and podcast up to date. Training provided at the desk.',
-      meets: 'Sundays 8:30 AM — Media Desk', leader: 'Samuel Reyes',
-    },
-  },
+  ministryDetail: Object.fromEntries(cms('ministryPages', ministryPages).map(r => [(r as any).path, r])),
   join: {
     stepsEyebrow: 'Your journey',
     stepsTitle: 'Four simple steps to belonging',
-    steps: [
+steps: cms('joinSteps', [
       { n: '01', title: 'Plan a visit', text: `Come to any Sunday service — ${sundayTimesLong}. No dress code, no pressure; just come as you are and say hello at the welcome desk.` },
       { n: '02', title: 'Newcomers\' lunch', text: 'Once a month the pastors host lunch for new faces. Hear the story of the church, ask anything, and meet others who are new too.' },
       { n: '03', title: 'Membership class', text: 'A relaxed two-session class on what we believe, how the church is led, and what belonging here means. Runs every other month.' },
       { n: '04', title: 'Find your place', text: 'Join a home group and a ministry that fits your gifts — from worship and kids to community care. This is where church becomes family.' },
-    ],
+    ]),
     perksTitle: 'What happens when you join?',
-    perks: [
-      'A personal welcome from our pastoral team',
-      'Weekly newsletter with sermons, events and prayer points',
-      'An invitation to the next newcomers\' lunch',
-      'Help finding a small group or ministry that fits you',
-    ],
+perks: cms('joinPerks', joinPerks).map(r => (r as any).text ?? r),
     note: {
       title: 'No forms required to visit.',
       text: "This form just helps us welcome you well — you're free to simply show up on Sunday.",
@@ -928,12 +1071,7 @@ export const useSiteContent = (): SiteContent => {
     thanks: "🎉 Welcome to the family! Look out for a welcome email this week — and we'd love to see you on Sunday.",
     faqEyebrow: 'Good to know',
     faqTitle: 'Questions people ask',
-    faqs: [
-      { q: 'Do I have to be baptised to join?', a: 'No — everyone is welcome to belong and take part from day one. Baptism and formal membership are steps we\'ll walk with you when you\'re ready, never a condition for a seat at the table.' },
-      { q: 'What should I expect on a first visit?', a: 'About 90 minutes of music, a message and a warm welcome. Kids have their own program during both services, parking is free, and nobody will single you out or ask you to stand up.' },
-      { q: 'Is there anything for my children?', a: 'Yes — Kids Church runs during both Sunday services for nursery through grade 6, with trained and vetted leaders. Teens have their own Friday-night youth ministry.' },
-      { q: 'How is the church funded?', a: 'Entirely by the voluntary giving of members and friends. Giving is never expected of guests, and our finances are reviewed and reported to the congregation annually.' },
-    ],
+faqs: cms('faqs', joinFaqs),
   },
   prayer: {
     intro: {
@@ -957,12 +1095,7 @@ export const useSiteContent = (): SiteContent => {
     },
     rhythmsEyebrow: 'When we pray',
     rhythmsTitle: 'Rhythms of prayer',
-    rhythms: [
-      { icon: '🌅', title: 'Morning Watch', when: 'Wednesdays 6:00 AM', where: 'The Chapel', text: 'Start the day in stillness — an hour of worship, scripture and intercession before the city wakes.' },
-      { icon: '🙏', title: 'Pre-Service Prayer', when: 'Sundays 8:15 AM', where: 'Main Hall', text: 'We cover every service in prayer before the doors open. All welcome, no experience needed.' },
-      { icon: '🕯', title: 'Night Vigil', when: 'First Friday · 10 PM', where: 'Main Hall', text: 'A monthly night of extended worship and prayer for the church, the city and the nations.' },
-      { icon: '🏠', title: 'Pray From Home', when: 'Anytime', where: 'Weekly prayer list', text: 'Receive the weekly prayer list by email and stand with us from wherever you are.' },
-    ],
+rhythms: cms('prayerRhythms', prayerRhythms),
     form: {
       chip: '✳ Prayer Request',
       title: 'How can we pray for you?',
@@ -1017,20 +1150,7 @@ export const useSiteContent = (): SiteContent => {
     eyebrow: 'Live broadcast',
     title: 'Worship with us, wherever you are',
     sub: 'Every Sunday service streams live. Pick your platform — follow the profile, or jump straight into the stream.',
-    channels: [
-      { key: 'youtube', handle: '@cacblackburn', color: '#d1242f', followers: '12.4k subscribers', live: true,
-        watch: 'https://youtube.com/@cacblackburn/live',
-        blurb: 'Full Sunday services, sermon replays and worship nights in HD.' },
-      { key: 'facebook', handle: 'CAC Blackburn', color: '#1d5fd1', followers: '8.9k followers', live: true,
-        watch: 'https://facebook.com/cacblackburn/live',
-        blurb: 'Live services with real-time chat, event updates and photo albums.' },
-      { key: 'instagram', handle: '@cacblackburn', color: '#c13584', followers: '6.2k followers', live: false,
-        watch: 'https://instagram.com/cacblackburn',
-        blurb: 'Daily encouragement, behind-the-scenes moments and reels from Sunday.' },
-      { key: 'tiktok', handle: '@cacblackburn', color: '#14181d', followers: 'Coming soon', live: false,
-        watch: 'https://tiktok.com/@cacblackburn/live',
-        blurb: 'Short worship clips and testimonies — launching this season.' },
-    ],
+channels: cms('broadcastChannels', broadcastChannelRows).map(c => ({ ...c, live: asBool(c.live) })),
     join: {
       title: 'Watched online long enough?',
       text: `You're always welcome in the room. Plan a visit, meet the family, and make ${profile.shortName} your church home.`,
@@ -1041,18 +1161,13 @@ export const useSiteContent = (): SiteContent => {
     songsLabel: "🎵 What we're singing",
     ccli: 'Reproduced under CCLI licence #000000.',
     historyLabel: '🕘 History',
-    history: [
-      { img: '/assets/images/event-2.jpg', text: 'Sunday recap uploaded', sub: 'By the media team', when: 'Just now' },
-      { img: '/assets/images/gallery-5.jpg', text: 'New song added', sub: 'Firm Foundation', when: '1 hr ago' },
-      { img: '/assets/images/gallery-9.jpg', text: 'Choir set recorded', sub: 'Live from 11 AM', when: '2 hrs ago' },
-      { img: '/assets/images/event-3.jpg', text: 'Worship night announced', sub: 'First Friday', when: '5 hrs ago' },
-    ],
+history: cms('worshipHistory', worshipHistory),
     timesLabel: '🗓 When we gather',
-    times: [
+times: cms('worshipTimes', [
       { label: 'Sunday services', value: sundayTimesLong },
       { label: 'Worship night', value: 'First Friday, 7:00 PM' },
       { label: 'Team rehearsal', value: 'Thursdays, 7:00 PM' },
-    ],
+    ]),
     serveLabel: '🎚 Serve with us',
     serveNote: 'Vocals, instruments, sound desk or media — all skill levels, we train you.',
     serveCta: { label: 'Join the Worship Team', to: '/contact' },
@@ -1061,11 +1176,7 @@ export const useSiteContent = (): SiteContent => {
     eyebrow: "What's coming up",
     title: "Don't miss the next one",
     countdownLabel: '🔥 All-Night Lock-In starts in',
-    events: [
-      { id: 'lockin', day: '26', month: 'Sep', date: '2026-09-26T18:30:00', title: 'All-Night Lock-In', text: 'Games, films, pizza and a 2 AM worship moment. Bring a sleeping bag!', spots: 18 },
-      { id: 'camp', day: '17', month: 'Oct', date: '2026-10-17T09:00:00', title: 'Autumn Youth Camp', text: 'A weekend away in the hills — campfires, big questions, no phones (mostly).', spots: 31 },
-      { id: 'serve', day: '07', month: 'Nov', date: '2026-11-07T09:00:00', title: 'City Serve Day', text: 'Food bank shift in the morning, milkshakes after. Serve your city with your crew.', spots: 12 },
-    ],
+events: cms('youthEvents', youthEventRows),
   },
   youthHighlights: {
     eyebrow: 'Highlights',
@@ -1084,12 +1195,7 @@ export const useSiteContent = (): SiteContent => {
     helpPost: 'Food parcels, a warm room, and someone to talk to — no appointment, no judgement.',
     programmesEyebrow: 'What we do',
     programmesTitle: 'Our outreach programmes',
-    impact: [
-      { value: '4,800+', label: 'meals shared this year' },
-      { value: '120', label: 'families helped monthly' },
-      { value: '85', label: 'volunteers involved' },
-      { value: '2', label: 'partner churches abroad' },
-    ],
+impact: cms('careImpact', careImpact),
     story: {
       img: '/assets/images/circle-2.jpg',
       alt: 'A neighbour helped by the food pantry',
@@ -1098,11 +1204,7 @@ export const useSiteContent = (): SiteContent => {
     },
     involveEyebrow: 'Get involved',
     involveTitle: 'Three ways to help this week',
-    involve: [
-      { icon: '🙋', title: 'Volunteer', text: "An hour a week changes someone's whole week. Every programme has a role that fits you.", cta: { label: 'Sign Up', to: '/contact' } },
-      { icon: '💝', title: 'Give', text: 'Fund the pantry shelves, the flasks and the school fees. Every gift stays with the work.', cta: { label: 'Donate', to: '/contact' } },
-      { icon: '🙏', title: 'Pray', text: 'Join the Wednesday Morning Watch as we pray for our town by name, street by street.', cta: { label: 'Prayer Watch', to: '/prayer' } },
-    ],
+involve: cms('careInvolvement', careInvolve),
   },
   sermonsArchive: {
     live: {
@@ -1124,7 +1226,7 @@ export const useSiteContent = (): SiteContent => {
       title: 'Privacy Policy',
       updated: 'Last updated: 19 September 2026',
       intro: `This Privacy Policy explains how ${profile.name} ("we", "us") collects, uses and protects your personal information when you visit our website or take part in church life.`,
-      sections: [
+      sections: legalFor('privacy', [
         { heading: '1. Information we collect', body: 'We may collect your name, email address, phone number and any message you send us through our contact, prayer, giving or membership forms. We also collect basic, anonymous usage data (such as pages visited) to help us improve the site.' },
         { heading: '2. How we use your information', body: 'We use your information to respond to your enquiries, welcome you to the church, process donations, send newsletters you have signed up for, and keep appropriate records of church membership. We never sell your data.' },
         { heading: '3. Legal basis', body: 'We process personal data on the basis of your consent, our legitimate interest in running the church and its ministries, and, where applicable, legal obligations (for example Gift Aid records).' },
@@ -1132,13 +1234,13 @@ export const useSiteContent = (): SiteContent => {
         { heading: '5. Data retention', body: 'We keep personal information only as long as necessary for the purposes above, or as required by law, after which it is securely deleted.' },
         { heading: '6. Your rights', body: `You may request access to, correction of, or deletion of your personal data at any time, and you may withdraw consent to communications. Contact us at ${profile.email} to exercise any of these rights.` },
         { heading: '7. Contact', body: `Questions about this policy can be sent to ${profile.email} or by post to ${profile.address}, ${profile.city}.` },
-      ],
+      ]),
     },
     '/terms': {
       title: 'Terms & Conditions of Use',
       updated: 'Last updated: 19 September 2026',
       intro: `These Terms govern your use of the ${profile.name} website. By using the site you agree to them.`,
-      sections: [
+      sections: legalFor('terms', [
         { heading: '1. Use of this website', body: 'The site is provided for personal, non-commercial use to learn about our church, services, events and ministries. You agree not to misuse the site, attempt to gain unauthorised access, or use it in any unlawful way.' },
         { heading: '2. Content and accuracy', body: 'We do our best to keep service times, events and other information accurate and up to date, but details can change. Content is provided "as is" without warranties of any kind.' },
         { heading: '3. Intellectual property', body: 'Unless stated otherwise, the content on this site (text, images, logos and media) belongs to the church or its licensors. You may share links to our pages, but please ask before reproducing content elsewhere.' },
@@ -1147,19 +1249,19 @@ export const useSiteContent = (): SiteContent => {
         { heading: '6. Limitation of liability', body: 'To the fullest extent permitted by law, we are not liable for any loss or damage arising from your use of, or inability to use, this website.' },
         { heading: '7. Changes to these terms', body: 'We may update these Terms from time to time. Continued use of the site after changes are posted means you accept the updated Terms.' },
         { heading: '8. Contact', body: `Questions about these Terms can be sent to ${profile.email}.` },
-      ],
+      ]),
     },
     '/cookie-policy': {
       title: 'Cookie Policy',
       updated: 'Last updated: 19 September 2026',
       intro: `This Cookie Policy explains how the ${profile.name} website uses cookies and similar technologies.`,
-      sections: [
+      sections: legalFor('cookie', [
         { heading: '1. What are cookies?', body: 'Cookies are small text files stored on your device when you visit a website. They help the site work properly and remember your preferences between visits.' },
         { heading: '2. Cookies we use', body: 'Essential cookies: needed for the site to function (for example remembering an event reservation in progress). Preference cookies: remember choices you make, such as forms you have already submitted. We do not use advertising cookies.' },
         { heading: '3. Third-party cookies', body: 'Some embedded content — such as maps, videos or our payment provider checkout — may set their own cookies. These are controlled by those providers and subject to their own policies.' },
         { heading: '4. Managing cookies', body: 'You can control or delete cookies through your browser settings. Blocking essential cookies may stop parts of the site (such as forms and reservations) from working correctly.' },
         { heading: '5. Contact', body: `Questions about this policy can be sent to ${profile.email}.` },
-      ],
+      ]),
     },
   },
 }

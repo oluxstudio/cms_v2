@@ -1,43 +1,64 @@
-<x-page-layout title="Marketplace" subtitle="Add or remove features for this site.">
-    @php
-        $mpAll = \App\Features\FeatureRegistry::all();
-        $mpEnabled = collect($mpAll)->filter(fn ($f) => $site->hasFeature($f['key']))->count();
-    @endphp
-    <x-slot:stats>
-        <x-stat-tile label="Available apps" :value="count($mpAll)" color="#6366f1"
-            icon="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-        <x-stat-tile label="Enabled" :value="$mpEnabled" :sub="count($mpAll).' total'" color="#10b981"
-            :bar="count($mpAll) ? round($mpEnabled / count($mpAll) * 100) : 0"
-            icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        <x-stat-tile label="Payments" :value="$site->paymentsEnabled() ? 'On' : (($site->paymentSettings?->isConfigured()) ? 'Off (keys saved)' : 'Not connected')"
-            :color="$site->paymentsEnabled() ? '#10b981' : '#f59e0b'"
-            icon="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </x-slot:stats>
+@php
+    $mpAll = \App\Features\FeatureRegistry::all();
+    $mpEnabled = collect($mpAll)->filter(fn ($f) => $site->hasFeature($f['key']))->count();
+    $mpPay = collect($this->features)->filter(fn ($f) => ($f['needs_payments'] ?? false) && $f['enabled'])->count();
+@endphp
+<x-tri-layout title="Add-ons" :subtitle="'Add or remove features for '.ucwords(str_replace('-', ' ', $site->name)).'.'" :site-name="$site->name"
+    :labels="['📊 Overview', '🧩 Add-ons', 'ℹ️ Summary']">
 
-<div
-     x-data="{ mtab:'features', toast:'', toastType:'success' }"
-     x-init="
+    <x-slot:header>
+        <div class="flex items-center gap-1 p-1 rounded-full bg-gray-100 dark:bg-white/[0.05]">
+            <a href="{{ url($site->name.'/design') }}" class="px-4 py-1.5 rounded-full text-sm font-semibold text-gray-500 dark:text-gray-400">Design</a>
+            <span class="px-4 py-1.5 rounded-full text-sm font-semibold bg-white dark:bg-[#1d1e2a] text-gray-900 dark:text-white shadow-sm">Add-ons</span>
+            <a href="{{ url($site->name.'/publish') }}" class="px-4 py-1.5 rounded-full text-sm font-semibold text-gray-500 dark:text-gray-400">Domain</a>
+        </div>
+    </x-slot:header>
+
+    {{-- ══ LEFT rail: page stats ══ --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 gap-3">
+        <x-tile accent="ink" wide :value="$mpEnabled.' of '.count($mpAll)" label="Features enabled"
+                icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                :sub="$mpEnabled ? 'powering this site' : 'switch some on below'" />
+        <x-tile accent="lime" :value="count($mpAll)" label="Available apps"
+                icon="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+                sub="in the catalogue" />
+        <x-tile accent="lavender" :value="$site->paymentsEnabled() ? 'On' : ($site->paymentSettings?->isConfigured() ? 'Off' : 'Not set up')" label="Payments"
+                icon="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                :sub="$mpPay ? $mpPay.' add-on'.($mpPay === 1 ? '' : 's').' take money' : 'no paid add-ons on'" />
+        <x-tile accent="sky" :value="collect($mpAll)->where('tier', 'premium')->count()" label="Premium apps"
+                icon="M11.48 3.5a.562.562 0 011.04 0l2.125 5.11a.563.563 0 00.475.345l5.518.442c.5.04.7.663.32.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557L3.04 10.385a.562.562 0 01.32-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
+                sub="on higher plans" />
+    </div>
+    </x-slot:rail>
+
+{{-- ══ CENTER: the add-ons themselves ══ --}}
+<div class="max-w-[52rem] mx-auto"
+    x-data="{ view: localStorage.getItem('mp-view') || 'grid', toast:'', toastType:'success' }"
+    x-init="
+        $watch('view', v => localStorage.setItem('mp-view', v));
         $watch('$wire.successMessage', v => { if(v){ toast=v; toastType='success'; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } });
         $watch('$wire.errorMessage',   v => { if(v){ toast=v; toastType='error';   setTimeout(()=>{ toast=''; $wire.errorMessage='';   }, 5000) } });
-     ">
+    ">
 
-    {{-- Header --}}
-    <div class="flex items-start justify-between mb-6">
-        <div>
-            <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">Marketplace</h1>
-            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">Add or remove features for <span class="font-medium text-gray-600 dark:text-gray-300">{{ ucwords(str_replace('-', ' ', $site->name)) }}</span>.</p>
-        </div>
-        @if($this->needsPayments)
-        <a href="{{ url($site->name.'/payments') }}"
-                class="flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl border transition-colors
-                       {{ $site->stripeReady()
-                            ? 'border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
-                            : 'border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10' }}">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-            {{ $site->paymentsEnabled() ? 'Payments on' : ($site->paymentSettings?->isConfigured() ? 'Payments off' : 'Connect Stripe') }}
-        </a>
-        @endif
-    </div>
+    <style>
+        /* List view: media-led cards become horizontal rows; feature cards
+           stay stacked, just full-width. */
+        .mp-list > div:has(> .h-28), .mp-list > div:has(> .h-36),
+        .mp-list > div:has(> [class*="aspect-"]) { flex-direction: row !important; align-items: stretch; }
+        .mp-list > div > div:first-child.h-28,
+        .mp-list > div > div:first-child.h-36,
+        .mp-list > div > div:first-child[class*="aspect-"] {
+            width: 200px; min-height: 110px; height: auto !important;
+            aspect-ratio: auto !important; flex-shrink: 0;
+        }
+        .mp-list > div > div:last-child { flex: 1; min-width: 0; }
+        @media (max-width: 640px) {
+            .mp-list > div > div:first-child.h-28,
+            .mp-list > div > div:first-child.h-36,
+            .mp-list > div > div:first-child[class*="aspect-"] { width: 120px; }
+        }
+    </style>
 
     @unless($canManage)
     <div class="mb-5 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-sm text-amber-700 dark:text-amber-400">
@@ -47,31 +68,41 @@
 
     {{-- Payments-needed banner --}}
     @if($this->needsPayments && ! $site->stripeReady())
-    <div class="mb-5 px-4 py-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-sm text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+    <div class="mb-5 px-4 py-3 rounded-xl bg-white dark:bg-[#1d1e2a] border text-sm flex items-center gap-2"
+         style="border-color:color-mix(in srgb, var(--primary) 35%, transparent); color:var(--primary)">
         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        A payment-enabled feature is on, but this site isn't accepting payments yet — <a href="{{ url($site->name.'/payments') }}" class="font-bold underline">open the Payments page</a> to start taking money.
+        <span class="text-gray-700 dark:text-gray-200">A payment-enabled feature is on, but this site isn't accepting payments yet — <a href="{{ url($site->name.'/payments') }}" class="font-bold underline" style="color:var(--primary)">open the Payments page</a> to start taking money.</span>
     </div>
     @endif
 
-    {{-- Tabs: Features · Templates --}}
-    <div class="flex items-center gap-1 mb-5 p-1 rounded-xl bg-gray-100 dark:bg-white/[0.05] w-max">
-        <button @click="mtab='features'" :class="mtab==='features' ? 'bg-white dark:bg-white/[0.12] text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-gray-500 dark:text-gray-400'"
-                class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors">Features</button>
-        <button @click="mtab='templates'" :class="mtab==='templates' ? 'bg-white dark:bg-white/[0.12] text-indigo-600 dark:text-indigo-300 shadow-sm' : 'text-gray-500 dark:text-gray-400'"
-                class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors">Templates</button>
-    </div>
-
-    {{-- ════════ FEATURES ════════ --}}
-    <div x-show="mtab==='features'">
     @if (session('mp-message'))
         <p class="mb-4 px-4 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-sm font-semibold text-emerald-700 dark:text-emerald-400">{{ session('mp-message') }}</p>
     @endif
+
+    {{-- toolbar: grid/list toggle --}}
+    <div class="flex items-center justify-between mb-4">
+        <p class="text-[12.5px] text-gray-500 dark:text-gray-400">{{ count($mpAll) }} apps · {{ $mpEnabled }} enabled</p>
+        <div class="flex items-center gap-1 p-1 rounded-xl bg-gray-100 dark:bg-white/[0.05]">
+            <button @click="view='grid'" title="Grid view" aria-label="Grid view"
+                    :class="view==='grid' ? 'bg-white dark:bg-[#1d1e2a] shadow-sm' : ''"
+                    class="px-2.5 py-1.5 rounded-lg transition-colors text-gray-600 dark:text-gray-300">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+            </button>
+            <button @click="view='list'" title="List view" aria-label="List view"
+                    :class="view==='list' ? 'bg-white dark:bg-[#1d1e2a] shadow-sm' : ''"
+                    class="px-2.5 py-1.5 rounded-lg transition-colors text-gray-600 dark:text-gray-300">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </div>
+    </div>
+
     {{-- Feature cards --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div :class="view==='list' ? 'mp-list flex flex-col gap-3' : 'grid grid-cols-1 sm:grid-cols-2 gap-4'">
         @foreach($this->features as $f)
         <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] p-5 shadow-sm flex flex-col">
             <div class="flex items-start justify-between mb-3">
-                <div class="w-11 h-11 rounded-xl flex items-center justify-center {{ $f['enabled'] ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400' }}">
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center {{ $f['enabled'] ? 'text-white' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400' }}"
+                     @if($f['enabled']) style="background:var(--primary);color:var(--on-primary)" @endif>
                     <x-dynamic-component :component="'icons.'.$f['icon']" class="w-5 h-5" />
                 </div>
                 <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full {{ $f['enabled'] ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400' }}">
@@ -86,13 +117,13 @@
             @endif
 
             @if(($f['tier'] ?? 'basic') === 'premium')
-                <span class="inline-flex items-center text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded mb-1"
+                <span class="inline-flex items-center text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded mb-1 mt-2 w-max"
                       style="background:color-mix(in srgb, var(--primary) 18%, transparent); color:var(--primary)">PREMIUM</span>
             @else
-                <span class="inline-flex items-center text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded mb-1 bg-gray-100 dark:bg-white/[0.06] text-gray-500">BASIC</span>
+                <span class="inline-flex items-center text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded mb-1 mt-2 w-max bg-gray-100 dark:bg-white/[0.06] text-gray-500">BASIC</span>
             @endif
             @if(($f['needs_payments'] ?? false))
-            <p class="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
+            <p class="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 dark:text-gray-500">
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                 Requires Stripe
             </p>
@@ -100,23 +131,23 @@
 
             <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50 dark:border-white/[0.04]">
                 {{-- Toggle --}}
-                <button wire:click="toggle('{{ $f['key'] }}')" @disabled(! $canManage)
-                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40
-                               {{ $f['enabled'] ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-white/[0.1]' }}">
-                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform {{ $f['enabled'] ? 'translate-x-6' : 'translate-x-1' }}"></span>
-                </button>
+                <label class="relative inline-flex items-center {{ $canManage ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                    <input type="checkbox" class="sr-only" @checked($f['enabled']) @disabled(! $canManage)
+                           wire:click="toggle('{{ $f['key'] }}')">
+                    <span class="bkf-switch"></span>
+                </label>
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ $f['enabled'] ? 'On' : 'Off' }}</span>
 
                 <span class="ml-auto flex items-center gap-2.5">
                     @if ($f['enabled'])
                         @foreach ($f['nav'] ?? [] as $navItem)
                             <a href="{{ url($site->name.'/'.$navItem['seg']) }}" wire:navigate
-                               class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">{{ $navItem['label'] }} →</a>
+                               class="text-xs font-semibold hover:underline" style="color:var(--primary)">{{ $navItem['label'] }} →</a>
                         @endforeach
                     @endif
                     @if(!empty($f['settings']))
                     <button wire:click="openSettings('{{ $f['key'] }}')"
-                            class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-indigo-600 hover:underline">
+                            class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:underline">
                         Settings
                     </button>
                     @endif
@@ -125,189 +156,6 @@
         </div>
         @endforeach
     </div>
-    </div>{{-- /features tab --}}
-
-    {{-- ════════ TEMPLATES ════════ --}}
-    <div x-show="mtab==='templates'" x-cloak class="space-y-8">
-
-        {{-- Template-app submissions (moderators): staging folder → review → publish --}}
-        @if(auth()->user() && in_array(auth()->user()->email, (array) config('templates.moderators'), true))
-            <div class="rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#1e1f2b] p-5">
-                <livewire:template-submissions />
-            </div>
-        @endif
-
-        {{-- Upload a template package --}}
-        <div class="rounded-2xl border border-dashed border-gray-300 dark:border-white/[0.12] bg-gray-50/60 dark:bg-white/[0.02] p-5">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h3 class="text-sm font-bold text-gray-900 dark:text-white">Upload a template</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">A <code class="text-[11px]">.zip</code> containing <code class="text-[11px]">template.json</code>, an optional <code class="text-[11px]">thumbnail.png</code> and an <code class="text-[11px]">assets/</code> folder. Installs to this site only —
-                        <a href="{{ route('my.templates') }}" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">publish to the marketplace →</a></p>
-                </div>
-                <form wire:submit="uploadTemplate" class="flex items-center gap-2">
-                    <input type="file" wire:model="templateZip" accept=".zip"
-                           class="text-xs text-gray-600 dark:text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 file:cursor-pointer" @disabled(!$canManage)>
-                    <button type="submit" wire:loading.attr="disabled" wire:target="uploadTemplate,templateZip"
-                            class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold" @disabled(!$canManage)>
-                        <span wire:loading.remove wire:target="uploadTemplate">Upload</span>
-                        <span wire:loading wire:target="uploadTemplate">Importing…</span>
-                    </button>
-                </form>
-            </div>
-            <p wire:loading wire:target="templateZip" class="text-[11px] text-gray-400 mt-2">Uploading file…</p>
-            @error('templateZip') <p class="text-[11px] text-rose-500 mt-2">{{ $message }}</p> @enderror
-            @if($templateError) <p class="text-[11px] text-rose-500 mt-2">{{ $templateError }}</p> @endif
-        </div>
-
-        {{-- Installed on this site --}}
-        <div>
-            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Installed on this site</h3>
-            @if($this->installedTemplates->isEmpty())
-                <p class="text-sm text-gray-400">No templates installed yet — install one below or upload a <code>.zip</code>.</p>
-            @else
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                @foreach($this->installedTemplates as $it)
-                <div wire:key="inst-{{ $it->id }}" class="rounded-2xl border border-gray-200 dark:border-white/[0.07] bg-white dark:bg-[#1d1e2a] overflow-hidden flex flex-col">
-                    <div class="h-28 bg-gradient-to-br {{ $it->gradient_class ?: 'from-slate-400 to-slate-600' }} relative overflow-hidden">
-                        @if($it->thumbnailUrl())
-                            <img src="{{ $it->thumbnailUrl() }}" alt="{{ $it->name }}" loading="lazy" class="absolute inset-0 w-full h-full object-cover object-top">
-                        @endif
-                        <span class="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style="background:rgba(0,0,0,.45);color:#fff">{{ $it->isBuiltin() ? 'Built-in' : 'Custom' }}</span>
-                    </div>
-                    <div class="p-4 flex flex-col flex-1">
-                        <h4 class="text-sm font-bold text-gray-900 dark:text-white">{{ $it->name }}</h4>
-                        <p class="text-xs text-gray-400 mt-1 line-clamp-2 flex-1">{{ $it->description }}</p>
-                        @if($it->template_id)
-                            @php $myStars = $this->myRatings[$it->template_id] ?? 0; @endphp
-                            <div class="flex items-center gap-0.5 mt-2" title="Rate this template">
-                                @for($s = 1; $s <= 5; $s++)
-                                    <button type="button" wire:click="rateTemplate({{ $it->template_id }}, {{ $s }})"
-                                            class="text-sm leading-none {{ $s <= $myStars ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600 hover:text-amber-300' }}">★</button>
-                                @endfor
-                                <span class="text-[10px] text-gray-400 ml-1">{{ $myStars ? 'Your rating' : 'Rate' }}</span>
-                            </div>
-                        @endif
-                        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.05]">
-                            <span class="text-[10px] text-gray-400">{{ $it->pageCount() }} {{ Str::plural('page', $it->pageCount()) }}</span>
-                            <button wire:click="uninstallTemplate('{{ $it->id }}')" data-confirm="Remove this template from the site?" @disabled(!$canManage)
-                                    class="text-xs font-semibold text-rose-500 hover:underline disabled:opacity-40">Remove</button>
-                        </div>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-            @endif
-        </div>
-
-        {{-- Curated, first-party template APPS — preview == published site, exactly --}}
-        @if(count($this->curated))
-        <div class="mb-8">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Featured templates</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                @foreach($this->curated as $c)
-                <div wire:key="cur-{{ $c['key'] }}" class="rounded-2xl border border-gray-200 dark:border-white/[0.07] bg-white dark:bg-[#1d1e2a] overflow-hidden flex flex-col">
-                    <div class="aspect-[15/16] bg-center bg-cover"
-                         style="background-color: {{ $c['accent'] }};{{ $c['thumbnail'] ? 'background-image:url(\''.$c['thumbnail'].'\');' : '' }}"></div>
-                    <div class="p-4 flex flex-col flex-1">
-                        <div class="flex items-center justify-between">
-                            <h4 class="font-bold text-gray-900 dark:text-white">{{ $c['name'] }}</h4>
-                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background: {{ $c['accent'] }}22; color: {{ $c['accent'] }};">{{ $c['category'] }}</span>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-1 line-clamp-2 flex-1">{{ $c['description'] ?: 'A first-party template — the preview is exactly what publishes.' }}</p>
-                        <div class="flex items-center gap-2 mt-4">
-                            <a href="{{ $c['previewUrl'] }}" target="_blank" rel="noopener"
-                               class="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12C4 7 8 4 12 4s8 3 9.5 8c-1.5 5-5.5 8-9.5 8s-8-3-9.5-8z"/></svg>
-                                Live preview
-                            </a>
-                            <button type="button" wire:click="useCurated('{{ $c['key'] }}')" wire:loading.attr="disabled"
-                                class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">
-                                {{ $c['installed'] ? 'Use again' : 'Use this template' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
-
-        {{-- Available to install — DB catalog (search · filter · paginate) --}}
-        <div>
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Browse templates</h3>
-                <div class="flex flex-wrap items-center gap-2">
-                    <div class="relative w-full sm:w-auto">
-                        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <input wire:model.live.debounce.350ms="tplSearch" type="text" placeholder="Search templates…"
-                               class="w-48 pl-8 pr-3 py-1.5 text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
-                    </div>
-                    <select wire:model.live="tplCategory" class="text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 px-2 py-1.5">
-                        <option value="">All categories</option>
-                        @foreach($this->templateCategories as $cat)<option value="{{ $cat }}">{{ $cat }}</option>@endforeach
-                    </select>
-                    <select wire:model.live="tplPrice" class="text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 px-2 py-1.5">
-                        <option value="">Any price</option><option value="free">Free</option><option value="paid">Paid</option>
-                    </select>
-                    <select wire:model.live="tplSort" class="text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 px-2 py-1.5">
-                        <option value="popular">Popular</option><option value="new">Newest</option>
-                        <option value="rating">Top rated</option>
-                        <option value="price-low">Price ↑</option><option value="price-high">Price ↓</option>
-                    </select>
-                </div>
-            </div>
-
-            @php $installedIds = $this->installedTemplateIds; @endphp
-            @if($this->templates->isEmpty())
-                <p class="text-sm text-gray-400 py-8 text-center">No templates match your filters.</p>
-            @else
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                @foreach($this->templates as $tpl)
-                <div wire:key="cat-{{ $tpl->id }}" class="rounded-2xl border border-gray-200 dark:border-white/[0.07] bg-white dark:bg-[#1d1e2a] overflow-hidden flex flex-col">
-                    <div class="h-28 bg-gradient-to-br {{ $tpl->gradient_class ?: 'from-slate-400 to-slate-600' }} relative overflow-hidden">
-                        @if($tpl->thumbnail_url)
-                            <img src="{{ $tpl->thumbnail_url }}" alt="{{ $tpl->name }}" loading="lazy" class="absolute inset-0 w-full h-full object-cover object-top">
-                        @endif
-                        <span class="absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style="background:rgba(0,0,0,.45);color:#fff">{{ $tpl->category }}</span>
-                        <span class="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full {{ $tpl->isFree() ? 'bg-emerald-500 text-white' : 'bg-gray-900/80 text-white' }}">{{ $tpl->priceLabel() }}</span>
-                    </div>
-                    <div class="p-4 flex flex-col flex-1">
-                        <h4 class="text-sm font-bold text-gray-900 dark:text-white">{{ $tpl->name }}</h4>
-                        @if($tpl->rating_count)
-                            @php $rs = (int) round($tpl->rating_avg); @endphp
-                            <div class="flex items-center gap-1 mt-0.5">
-                                <span class="text-amber-400 text-xs leading-none">{{ str_repeat('★', $rs).str_repeat('☆', 5 - $rs) }}</span>
-                                <span class="text-[10px] text-gray-400">{{ number_format($tpl->rating_avg, 1) }} ({{ $tpl->rating_count }})</span>
-                            </div>
-                        @endif
-                        <p class="text-xs text-gray-400 mt-1 line-clamp-2 flex-1">{{ $tpl->description }}</p>
-                        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.05]">
-                            <a href="{{ url('nuxt-preview/') }}?template={{ urlencode($tpl->slug) }}" target="_blank" rel="noopener"
-                               class="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12C4 7 8 4 12 4s8 3 9.5 8c-1.5 5-5.5 8-9.5 8s-8-3-9.5-8z"/></svg>
-                                Live preview
-                            </a>
-                            @if(in_array($tpl->id, $installedIds, true))
-                                <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                    Installed
-                                </span>
-                            @else
-                                <button wire:click="installFromCatalog('{{ $tpl->id }}')" @disabled(!$canManage)
-                                        class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-semibold">
-                                    {{ $tpl->isFree() ? 'Install' : 'Get '.$tpl->priceLabel() }}
-                                </button>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-            <div class="mt-5">{{ $this->templates->links() }}</div>
-            @endif
-        </div>
-    </div>{{-- /templates tab --}}
 
     {{-- ════════ Feature settings drawer ════════ --}}
     @if($settingsKey)
@@ -328,27 +176,27 @@
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{{ $field['label'] ?? $name }}</label>
                     @switch($field['type'] ?? 'text')
                         @case('select')
-                            <select wire:model="form.{{ $name }}" class="w-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-900 dark:text-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <select wire:model="form.{{ $name }}" class="bkf-input w-full rounded-xl px-4 py-2.5 text-sm">
                                 @foreach($field['options'] as $opt)
                                 <option value="{{ $opt }}">{{ strtoupper($opt) }}</option>
                                 @endforeach
                             </select>
                             @break
                         @case('number')
-                            <input wire:model="form.{{ $name }}" type="number" class="w-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-900 dark:text-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input wire:model="form.{{ $name }}" type="number" class="bkf-input w-full rounded-xl px-4 py-2.5 text-sm">
                             @break
                         @case('textarea')
-                            <textarea wire:model="form.{{ $name }}" rows="3" class="w-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-900 dark:text-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                            <textarea wire:model="form.{{ $name }}" rows="3" class="bkf-input w-full rounded-xl px-4 py-2.5 text-sm resize-none"></textarea>
                             @break
                         @default
-                            <input wire:model="form.{{ $name }}" type="text" class="w-full border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#22232f] text-gray-900 dark:text-gray-100 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input wire:model="form.{{ $name }}" type="text" class="bkf-input w-full rounded-xl px-4 py-2.5 text-sm">
                     @endswitch
                 </div>
                 @endforeach
 
                 <div class="flex gap-2 pt-2">
-                    <button type="submit" @disabled(! $canManage) class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors">Save settings</button>
-                    <button type="button" wire:click="closeSettings" class="px-4 py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">Cancel</button>
+                    <button type="submit" @disabled(! $canManage) class="fx flex-1 py-2.5 disabled:opacity-40 text-sm font-semibold rounded-xl" style="background:var(--primary);color:var(--on-primary)">Save settings</button>
+                    <button type="button" wire:click="closeSettings" class="px-4 py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300 rounded-xl bg-white dark:bg-[#1d1e2a] hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">Cancel</button>
                 </div>
             </form>
         </div>
@@ -365,4 +213,78 @@
         <svg x-show="toastType==='error'" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         <span x-text="toast"></span>
     </div>
-</x-page-layout>
+</div>
+
+    {{-- ══ RIGHT rail: page summary + related ══ --}}
+    <x-slot:quick>
+        {{-- What's on for this site --}}
+        <div class="rounded-2xl bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm p-4 mb-4">
+            <h3 class="text-sm font-extrabold text-gray-900 dark:text-white mb-2">On for this site</h3>
+            @php $onList = collect($this->features)->filter(fn ($f) => $f['enabled'])->values(); @endphp
+            @forelse ($onList as $f)
+                <div class="flex items-center gap-2.5 py-1.5 {{ $loop->last ? '' : 'border-b border-gray-50 dark:border-white/[0.04]' }}">
+                    <span class="w-4 h-4 rounded-full grid place-items-center bg-emerald-500 shrink-0">
+                        <svg class="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </span>
+                    <span class="min-w-0 flex-1 text-[12.5px] font-bold text-gray-800 dark:text-gray-100 truncate">{{ $f['name'] }}</span>
+                    @if(($f['needs_payments'] ?? false))<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.08] text-gray-500">£</span>@endif
+                </div>
+            @empty
+                <p class="text-[11px] text-gray-400 py-2">Nothing enabled yet — switch on your first add-on from the list.</p>
+            @endforelse
+            @if($this->needsPayments)
+                <a href="{{ url($site->name.'/payments') }}" wire:navigate class="fx block mt-2 text-[12px] font-bold hover:underline" style="color:var(--primary)">
+                    {{ $site->paymentsEnabled() ? 'Payments on — manage →' : ($site->paymentSettings?->isConfigured() ? 'Payments off — turn on →' : 'Connect Stripe →') }}
+                </a>
+            @endif
+        </div>
+
+        {{-- Current template --}}
+        <div class="rounded-2xl bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm p-4 mb-4">
+            <h3 class="text-sm font-extrabold text-gray-900 dark:text-white mb-2">Current template</h3>
+            @if($cur = $this->currentTemplate)
+                <div class="rounded-xl overflow-hidden bg-gradient-to-br {{ $cur['gradient'] }} aspect-[16/9] relative mb-3">
+                    @if($cur['thumbnail'])
+                        <img src="{{ $cur['thumbnail'] }}" alt="{{ $cur['name'] }}" loading="lazy" class="absolute inset-0 w-full h-full object-cover object-top">
+                    @endif
+                    <span class="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider text-white" style="background:var(--primary)">In use</span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h4 class="text-sm font-bold text-gray-900 dark:text-white">{{ $cur['name'] }}</h4>
+                    @if($cur['category'])<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.08] text-gray-500 dark:text-gray-300">{{ $cur['category'] }}</span>@endif
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1">
+                    @if($cur['appliedAt'])Applied {{ $cur['appliedAt'] }}@endif
+                    @if($cur['pages']) · {{ $cur['pages'] }} {{ Str::plural('page', $cur['pages']) }}@endif
+                </p>
+                <div class="flex items-center gap-2 mt-3">
+                    <a href="{{ url($site->name.'/connect') }}" wire:navigate
+                       class="fx px-3 py-1.5 rounded-xl text-white text-xs font-semibold" style="background:var(--primary);color:var(--on-primary)">Edit site →</a>
+                    @if($site->templatePreviewUrl())
+                        <x-preview-button :href="$site->templatePreviewUrl()" label="Preview" small />
+                    @endif
+                </div>
+            @else
+                <p class="text-xs text-gray-400 rounded-xl border border-dashed border-gray-200 dark:border-white/[0.08] px-3 py-5 text-center">No template applied yet.</p>
+            @endif
+        </div>
+
+        {{-- Related --}}
+        <div class="rounded-2xl bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm p-4">
+            <h3 class="text-sm font-extrabold text-gray-900 dark:text-white mb-2">Related</h3>
+            @foreach ([
+                ['Design', 'the template this site runs on', $site->name.'/design'],
+                ['Payments', 'Stripe & taking money', $site->name.'/payments'],
+                ['Go live', 'domain & serving status', $site->name.'/publish'],
+            ] as [$rl, $rd, $ru])
+                <a href="{{ url($ru) }}" class="fx flex items-center gap-2.5 py-2 {{ $loop->last ? '' : 'border-b border-gray-50 dark:border-white/[0.04]' }}">
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[12px] font-bold text-gray-800 dark:text-gray-100">{{ $rl }}</span>
+                        <span class="block text-[10px] text-gray-400 truncate">{{ $rd }}</span>
+                    </span>
+                    <svg class="w-3.5 h-3.5 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            @endforeach
+        </div>
+    </x-slot:quick>
+</x-tri-layout>

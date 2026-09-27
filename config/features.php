@@ -14,6 +14,31 @@
 
 return [
 
+    'bookings' => [
+        'key' => 'bookings',
+        'tier' => 'basic',
+        'intents' => ['book', 'booking', 'bookings', 'appointment', 'appointments', 'schedule', 'scheduling', 'reservation', 'reserve', 'calendar', 'slot', 'consultation', 'hotel', 'room', 'stay', 'accommodation', 'seat', 'seats', 'departure', 'trip', 'transport', 'bus', 'ride'],
+        'frontend_block' => 'booking',
+        'name' => 'Bookings & Reservations',
+        'description' => 'One booking engine, three kinds: appointment slots (salon/mechanic), stays (rooms/houses, per-night) and trips (transport departures with seats). Optional Stripe payment per service.',
+        'icon' => 'calendar',
+        'needs_payments' => false,
+        'nav' => [
+            ['label' => 'Bookings', 'seg' => 'bookings'],
+        ],
+        'settings' => [
+            'days' => ['type' => 'text',   'label' => 'Open days (comma-separated: mon,tue,…)', 'default' => 'mon,tue,wed,thu,fri'],
+            'open_time' => ['type' => 'text',   'label' => 'Opening time (HH:MM, 24h)',             'default' => '09:00'],
+            'close_time' => ['type' => 'text',   'label' => 'Closing time (HH:MM, 24h)',             'default' => '17:00'],
+            'slot_minutes' => ['type' => 'number', 'label' => 'Slot length (minutes)',                 'default' => 30],
+            'lead_hours' => ['type' => 'number', 'label' => 'Minimum notice before a booking (hours)', 'default' => 12],
+            'horizon_days' => ['type' => 'number', 'label' => 'How many days ahead can be booked',     'default' => 30],
+            'remind_visitor' => ['type' => 'toggle', 'label' => 'Email customers a reminder ~24h before their booking', 'default' => true],
+            'review_requests' => ['type' => 'toggle', 'label' => 'Email a review request after the appointment (needs a review link in Site settings)', 'default' => true],
+            'rebook_weeks' => ['type' => 'number', 'label' => 'Rebooking prompt: email customers N weeks after their last visit (0 = off)', 'default' => 5],
+        ],
+    ],
+
     'store' => [
         'key' => 'store',
         'tier' => 'basic',
@@ -25,7 +50,7 @@ return [
         'needs_payments' => true,
         'nav' => [
             ['label' => 'Store',  'seg' => 'store'],
-            ['label' => 'Orders', 'seg' => 'orders'],
+            ['label' => 'Orders', 'seg' => 'orders', 'icon' => 'box'],
         ],
         'settings' => [
             'currency' => ['type' => 'select', 'label' => 'Currency', 'options' => ['usd', 'eur', 'gbp', 'cad', 'aud'], 'default' => 'usd'],
@@ -91,31 +116,6 @@ return [
         ],
     ],
 
-    'bookings' => [
-        'key' => 'bookings',
-        'tier' => 'basic',
-        'intents' => ['book', 'booking', 'bookings', 'appointment', 'appointments', 'schedule', 'scheduling', 'reservation', 'reserve', 'calendar', 'slot', 'consultation', 'hotel', 'room', 'stay', 'accommodation', 'seat', 'seats', 'departure', 'trip', 'transport', 'bus', 'ride'],
-        'frontend_block' => 'booking',
-        'name' => 'Bookings & Reservations',
-        'description' => 'One booking engine, three kinds: appointment slots (salon/mechanic), stays (rooms/houses, per-night) and trips (transport departures with seats). Optional Stripe payment per service.',
-        'icon' => 'calendar',
-        'needs_payments' => false,
-        'nav' => [
-            ['label' => 'Bookings', 'seg' => 'bookings'],
-        ],
-        'settings' => [
-            'days' => ['type' => 'text',   'label' => 'Open days (comma-separated: mon,tue,…)', 'default' => 'mon,tue,wed,thu,fri'],
-            'open_time' => ['type' => 'text',   'label' => 'Opening time (HH:MM, 24h)',             'default' => '09:00'],
-            'close_time' => ['type' => 'text',   'label' => 'Closing time (HH:MM, 24h)',             'default' => '17:00'],
-            'slot_minutes' => ['type' => 'number', 'label' => 'Slot length (minutes)',                 'default' => 30],
-            'lead_hours' => ['type' => 'number', 'label' => 'Minimum notice before a booking (hours)', 'default' => 12],
-            'horizon_days' => ['type' => 'number', 'label' => 'How many days ahead can be booked',     'default' => 30],
-            'remind_visitor' => ['type' => 'toggle', 'label' => 'Email customers a reminder ~24h before their booking', 'default' => true],
-            'review_requests' => ['type' => 'toggle', 'label' => 'Email a review request after the appointment (needs a review link in Site settings)', 'default' => true],
-            'rebook_weeks' => ['type' => 'number', 'label' => 'Rebooking prompt: email customers N weeks after their last visit (0 = off)', 'default' => 5],
-        ],
-    ],
-
     'polls' => [
         'key' => 'polls',
         'name' => 'Polls',
@@ -124,7 +124,7 @@ return [
         'description' => 'Quick polls for your website: one question, up to 12 options, one deduplicated vote per visitor. Results update live in the admin.',
         'needs_payments' => false,
         'nav' => [
-            ['label' => 'Polls', 'seg' => 'polls'],
+            ['label' => 'Polls', 'seg' => 'polls', 'group' => 'Audience'],
         ],
         'settings' => [],
     ],

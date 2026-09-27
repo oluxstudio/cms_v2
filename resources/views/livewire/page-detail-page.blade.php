@@ -16,8 +16,7 @@
             {{ $page->is_published ? 'Live' : 'Draft' }}
         </span>
         @if($preview = $site->previewUrl($page->url))
-            <a href="{{ $preview }}" target="_blank"
-               class="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] text-xs font-semibold text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 bg-white/60 dark:bg-white/[0.04]">↗ View page</a>
+            <x-preview-button :href="$preview" label="View page" small />
         @endif
         {{-- Tab toggle: the section tabs stay tucked away until asked for --}}
         <button type="button" @click="tabsOpen = ! tabsOpen" :aria-expanded="tabsOpen" aria-label="Show page sections"

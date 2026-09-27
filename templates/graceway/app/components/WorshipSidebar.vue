@@ -25,8 +25,8 @@ const times = ws.times
     <!-- what we're singing -->
     <div class="ys-widget ys-verse">
       <p class="ys-label">{{ ws.songsLabel }}</p>
-      <ol class="ws-songs">
-        <li v-for="(s, i) in songs" :key="s.title">
+      <ol class="ws-songs" data-olx-panel="songs">
+        <li data-olx-item v-for="(s, i) in songs" :key="s.title">
           <span class="num">{{ i + 1 }}</span>
           <span class="info"><b>{{ s.title }}</b><small>{{ s.artist }}</small></span>
           <a :href="s.url" target="_blank" rel="noopener" aria-label="Listen">▶</a>
@@ -60,7 +60,7 @@ const times = ws.times
         <p class="ys-label">{{ ws.historyLabel }}</p>
         <NuxtLink to="/sermons" class="ws-seeall">See all</NuxtLink>
       </div>
-      <div v-for="h in history" :key="h.text" class="ws-history">
+      <div data-olx-item v-for="h in history" :key="h.text" class="ws-history">
         <img :src="h.img" alt="">
         <span><b>{{ h.text }}</b><small>{{ h.sub }}</small></span>
         <em>{{ h.when }}</em>
@@ -70,8 +70,8 @@ const times = ws.times
     <!-- service & rehearsal times -->
     <div class="ys-widget">
       <p class="ys-label">{{ ws.timesLabel }}</p>
-      <ul class="ws-times">
-        <li v-for="t in times" :key="t.label"><b>{{ t.label }}</b><span>{{ t.value }}</span></li>
+      <ul class="ws-times" data-olx-panel="worship-times">
+        <li data-olx-item v-for="t in times" :key="t.label"><b>{{ t.label }}</b><span>{{ t.value }}</span></li>
       </ul>
     </div>
 

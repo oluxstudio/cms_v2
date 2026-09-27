@@ -15,7 +15,71 @@
         {
             "type": "app:graceway:media-ministry",
             "name": "Media Ministry",
-            "nodes": []
+            "nodes": [
+                {
+                    "label": "Intro Chip",
+                    "type": "text",
+                    "value": "\ud83c\udfa5 Media & Broadcast",
+                    "order": 0,
+                    "description": "copy:mm.intro.chip"
+                },
+                {
+                    "label": "Intro Img Src",
+                    "type": "image",
+                    "value": "/assets/images/event-3.jpg",
+                    "order": 1,
+                    "description": "copy:mm.intro.img.src"
+                },
+                {
+                    "label": "Intro Img Alt",
+                    "type": "text",
+                    "value": "Media team filming a service",
+                    "order": 2,
+                    "description": "copy:mm.intro.img.alt"
+                },
+                {
+                    "label": "Roles Eyebrow",
+                    "type": "text",
+                    "value": "Serve on the team",
+                    "order": 3,
+                    "description": "copy:mm.rolesEyebrow"
+                },
+                {
+                    "label": "Roles Title",
+                    "type": "text",
+                    "value": "Find your station",
+                    "order": 4,
+                    "description": "copy:mm.rolesTitle"
+                },
+                {
+                    "label": "Sidebar Watch Title",
+                    "type": "text",
+                    "value": "Watch & Listen",
+                    "order": 5,
+                    "description": "copy:mm.sidebar.watchTitle"
+                },
+                {
+                    "label": "Sidebar Live Title",
+                    "type": "text",
+                    "value": "Live on",
+                    "order": 6,
+                    "description": "copy:mm.sidebar.liveTitle"
+                },
+                {
+                    "label": "Sidebar Live Note",
+                    "type": "text",
+                    "value": "Streaming every Sunday service.",
+                    "order": 7,
+                    "description": "copy:mm.sidebar.liveNote"
+                },
+                {
+                    "label": "Sidebar Latest Title",
+                    "type": "text",
+                    "value": "Latest messages",
+                    "order": 8,
+                    "description": "copy:mm.sidebar.latestTitle"
+                }
+            ]
         },
         {
             "type": "app:graceway:donate-cta",

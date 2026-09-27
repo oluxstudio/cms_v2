@@ -74,8 +74,11 @@ class SiteTeamPage extends Component
 
     public function getMembersProperty()
     {
+        // Only memberships that cover THIS site (account-wide or scoped to it) —
+        // people limited to the account's other sites don't belong on this list.
         return AccountMember::with(['user', 'role'])
             ->where('account_id', $this->accountId)
+            ->where(fn ($q) => $q->whereNull('site_id')->orWhere('site_id', $this->site->id))
             ->get()
             ->sortBy(fn ($m) => mb_strtolower($m->user->name ?? ''))
             ->values();
@@ -102,6 +105,26 @@ class SiteTeamPage extends Component
         $role = Role::where('account_id', $this->accountId)->findOrFail($roleId);
         $member->update(['role_id' => $role->id]);
         $this->dispatch('toast', level: 'success', title: 'Role updated', message: ($member->user->name ?? 'Member').' is now '.$role->name.'.');
+    }
+
+    /** Which of the account's sites a membership covers: 'all' or one site's id. */
+    public function updateMemberScope(string $memberId, string $scope): void
+    {
+        $this->guard();
+        $member = AccountMember::where('account_id', $this->accountId)->findOrFail($memberId);
+        $siteId = null;
+        if ($scope !== 'all') {
+            $siteId = Site::where('user_id', $this->accountId)->findOrFail($scope)->id;
+        }
+        $member->update(['site_id' => $siteId]);
+        $label = $siteId ? Site::find($siteId)->name : 'all sites';
+        $this->dispatch('toast', level: 'success', title: 'Access updated', message: ($member->user->name ?? 'Member').' now has access to '.$label.'.');
+    }
+
+    /** The account's sites, for the member scope picker. */
+    public function getAccountSitesProperty()
+    {
+        return Site::where('user_id', $this->accountId)->orderBy('name')->get(['id', 'name']);
     }
 
     public function removeMember(string $memberId): void

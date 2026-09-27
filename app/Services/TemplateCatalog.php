@@ -28,6 +28,15 @@ class TemplateCatalog
         if ($category = (string) ($filters['category'] ?? '')) {
             $q->where('category', $category);
         }
+        if (! empty($filters['categories']) && is_array($filters['categories'])) {
+            $q->whereIn('category', $filters['categories']);
+        }
+        if (! empty($filters['creators']) && is_array($filters['creators'])) {
+            $q->whereIn('creator_id', $filters['creators']);
+        }
+        foreach ((array) ($filters['tags'] ?? []) as $tag) {
+            $q->whereJsonContains('tags', $tag);
+        }
         if (($filters['price'] ?? '') === 'free') {
             $q->where('price_cents', 0);
         } elseif (($filters['price'] ?? '') === 'paid') {
@@ -35,14 +44,15 @@ class TemplateCatalog
         }
 
         match ($sort) {
-            'new' => $q->orderByDesc('published_at')->orderByDesc('id'),
+            'new', 'newest' => $q->orderByDesc('published_at')->orderByDesc('id'),
+            'price_asc' => $q->orderBy('price_cents')->orderByDesc('id'),
             'price-low' => $q->orderBy('price_cents')->orderByDesc('id'),
             'price-high' => $q->orderByDesc('price_cents')->orderByDesc('id'),
             'rating' => $q->orderByDesc('rating_avg')->orderByDesc('rating_count'),
             default => $q->orderByDesc('installs_count')->orderByDesc('id'),
         };
 
-        return $q->paginate($perPage);
+        return $q->with('creator')->paginate($perPage);
     }
 
     /** Distinct published categories (cached briefly). */
