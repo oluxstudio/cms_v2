@@ -145,7 +145,7 @@ select:focus[data-flux-control] {
 
     /* semantic slots — point these at whichever family the app should use */
     --font-display:       var(--font-museomoderno); /* headings / hero numbers */
-    --font-body:          var(--font-cantarell);    /* running text */
+    --font-body:          var(--font-abel);    /* running text */
     --font-accent:        var(--font-baumans);      /* badges, pills, flourishes */
 }
 .dark {

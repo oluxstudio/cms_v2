@@ -66,9 +66,14 @@
     {{-- ── Sticky footer: primary Save + collapsible checkpoints ── --}}
     @if ($mode === 'edit' || $versions->isNotEmpty())
     <div class="h-32 lg:hidden"></div> {{-- clearance so content scrolls past the fixed bar --}}
+    {{-- Mobile: the bar is position:fixed, so it would float over EVERY
+         carousel pane — show it only while the Edit pane (index 2) is active.
+         Desktop (and the embedded sheet, where no carousel `pane` exists)
+         always shows it. --}}
     <div class="fixed inset-x-0 bottom-0 z-[46] lg:sticky lg:bottom-0 lg:inset-x-auto lg:z-10 lg:-mx-4 lg:-mb-4 lg:mt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] px-4 py-3 border-t border-gray-100 dark:border-white/[0.08] bg-white dark:bg-[#1d1e2a] space-y-2"
          style="box-shadow: inset 0 -3px 0 var(--primary)"
-         x-data="{ checkpoints: false }">
+         x-data="{ checkpoints: false }"
+         x-show="window.innerWidth >= 1024 || $data.pane === undefined || $data.pane === 2">
         @if ($versions->isNotEmpty())
             <button type="button" @click="checkpoints = ! checkpoints" :aria-expanded="checkpoints"
                     class="w-full flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white">

@@ -1256,7 +1256,7 @@ class ConnectReviewPage extends LivewireComponent
             return;
         }
         CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->update(['data' => $d]);
-        $this->refreshPreview('Item updated');
+        $this->refreshPreview('Item updated', silent: true);
     }
 
     /** From a component's data-source card: jump to the collection AND start a new entry. */
@@ -1427,7 +1427,7 @@ class ConnectReviewPage extends LivewireComponent
      * the rest republish after the response so the editor stays snappy.
      * No iframe reload needed: connect.js re-applies content in place.
      */
-    private function refreshPreview(string $what = 'Saved', bool $reloadFrame = true): void
+    private function refreshPreview(string $what = 'Saved', bool $reloadFrame = true, bool $silent = false): void
     {
         // Renderer mode: the shell reads /api/sites/{name}/content once at
         // boot — reload the iframe so the fresh edit shows. Live-app-derived
@@ -1446,14 +1446,18 @@ class ConnectReviewPage extends LivewireComponent
             // edits stay in-place (reactive through useOluxContent).
             if ($reloadFrame && ($this->edit['type'] ?? null) === 'collection') {
                 $this->dispatch('olx-reload-frame');
-                $this->dispatch('toast', level: 'success', title: $what, message: 'The preview is reloading with your changes.');
+                if (! $silent) {
+                    $this->dispatch('toast', level: 'success', title: $what, message: 'The preview is reloading with your changes.');
+                }
 
                 return;
             }
             // In-place: the shell re-fetches content and Vue re-renders —
             // no iframe reload, the preview never flashes.
             $this->dispatch('olx-refresh-frame');
-            $this->dispatch('toast', level: 'success', title: $what, message: 'Saved — the preview updates in place.');
+            if (! $silent) {
+                $this->dispatch('toast', level: 'success', title: $what, message: 'Saved — the preview updates in place.');
+            }
 
             return;
         }
@@ -1471,8 +1475,10 @@ class ConnectReviewPage extends LivewireComponent
                 }
             })->afterResponse();
         }
-        $this->dispatch('toast', level: 'success', title: $what,
-            message: 'The preview updates in place in a moment.');
+        if (! $silent) {
+            $this->dispatch('toast', level: 'success', title: $what,
+                message: 'The preview updates in place in a moment.');
+        }
     }
 
     /** Publish page.json for every live page (so client sites pick up edits). */

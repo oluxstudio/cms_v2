@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\DomainCheckController;
 use App\Http\Controllers\Api\MarketplaceApiController;
 use App\Http\Controllers\Api\SiteDesignController;
 use App\Http\Controllers\BlockKitController;
+use App\Http\Controllers\Internal\EdgeRoutesController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ConnectPreviewController;
 use App\Http\Controllers\DonateController;
@@ -45,6 +46,9 @@ Route::get('/connect.js', function () {
 
 // ── Auth routes first (must be before the /{siteID} catch-all)
 require __DIR__.'/auth.php';
+
+// Edge proxy feed (Traefik HTTP provider) — token-guarded.
+Route::get('/internal/edge/routes', EdgeRoutesController::class)->name('internal.edge.routes');
 
 // Marketplace Stripe Connect webhook (signature-verified, CSRF-exempt; public).
 Route::post('/stripe/templates/webhook', [TemplateCommerceController::class, 'webhook'])->name('templates.webhook');

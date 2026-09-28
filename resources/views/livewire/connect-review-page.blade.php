@@ -3,6 +3,8 @@
      header delta and gave the whole window a scrollbar. --}}
 <div class="lg:h-full lg:overflow-hidden flex flex-col" wire:key="site-preview"
      data-olx-origin="{{ $clientOrigin }}"
+     x-init="document.body.classList.add('olx-edit-fullscreen')"
+     x-on:livewire:navigating.window="document.body.classList.remove('olx-edit-fullscreen')"
      x-data="{
         device: window.innerWidth <= 640 ? 'mobile' : (window.innerWidth <= 1024 ? 'tablet' : 'desktop'),
         zoom: 100,
@@ -127,6 +129,21 @@
           element on :active — a bare @click here made the WHOLE page scale
           down like a pushed button on every click. --}}
      @click.window="const row = $event.target.closest?.('[data-item-row]'); if (row && $event.target.closest('#olx-inspector')) { document.querySelectorAll('[data-item-row].olx-active').forEach(r => r !== row && r.classList.remove('olx-active')); row.classList.add('olx-active'); }">
+{{-- Mobile: the edit page is FULL SCREEN — the app header, breadcrumb bar and
+     notice banners hide so the preview + editor own the whole viewport. --}}
+<style>
+@media (max-width: 1023.98px) {
+    body.olx-edit-fullscreen header.shrink-0 { display: none; }
+    body.olx-edit-fullscreen div:has(> nav[aria-label="Breadcrumb"]) { display: none; }
+    body.olx-edit-fullscreen #MainBody div.bg-amber-50 { display: none; }
+    body.olx-edit-fullscreen { height: 100dvh; overflow: hidden; }
+    body.olx-edit-fullscreen div.flex-1.min-h-0.flex.overflow-hidden { height: 100%; }
+    body.olx-edit-fullscreen #MainBody { height: 100%; overflow: hidden; }
+    body.olx-edit-fullscreen #MainBody .h-full > div[x-show] { height: 100%; }
+    body.olx-edit-fullscreen [wire\:key="site-preview"] { height: 100%; overflow: hidden; }
+}
+</style>
+
     @assets
     <script>
         // Mini rich-text editor behaviour (used by partials/rich-text.blade.php).
@@ -234,6 +251,12 @@
 
     {{-- Toolbar — hidden on mobile when embedded in the page Content tab --}}
     <div class="{{ $embedded ? 'hidden lg:flex' : 'flex' }} items-center gap-3 mb-3 flex-wrap">
+        {{-- Mobile exit: the page is full screen (app chrome hidden) — this
+             is the only way back to the rest of the admin. --}}
+        <a href="{{ url($site->name.'/dashboard') }}" wire:navigate aria-label="Exit edit mode"
+           class="lg:hidden shrink-0 w-9 h-9 grid place-items-center rounded-full bg-white dark:bg-white/[0.08] border border-gray-200 dark:border-white/[0.1] text-gray-600 dark:text-gray-200 shadow-sm">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        </a>
         <h1 class="text-lg font-extrabold text-gray-900 dark:text-white">Edit mode</h1>
         @if ($livePreviewUrl)
             <x-preview-button :href="$livePreviewUrl" small title="Open this page exactly as visitors see it — no edit chrome" />
@@ -252,10 +275,11 @@
             @endunless
         @endif
 
-        <span class="text-xs text-gray-400">Click a component in the live preview to edit it.</span>
+        <span class="hidden lg:inline text-xs text-gray-400">Click a component in the live preview to edit it.</span>
 
-        {{-- Device preview: resizes the iframe to phone / tablet / full width --}}
-        <div class="flex items-center gap-1 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] p-1 shadow-sm">
+        {{-- Device preview: resizes the iframe to phone / tablet / full width.
+             Pointless on a phone (the preview is already phone-width) — desktop only. --}}
+        <div class="hidden lg:flex items-center gap-1 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] p-1 shadow-sm">
             @foreach ([
                 'mobile' => ['Mobile', 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
                 'tablet' => ['Tablet', 'M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'],
@@ -271,8 +295,8 @@
             @endforeach
         </div>
 
-        {{-- Zoom: scale the preview down to see more of the page at once --}}
-        <div class="flex items-center gap-1 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] p-1 shadow-sm" title="Preview zoom">
+        {{-- Zoom: scale the preview down to see more of the page at once (desktop only) --}}
+        <div class="hidden lg:flex items-center gap-1 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] p-1 shadow-sm" title="Preview zoom">
             @foreach ([100, 75, 50, 25] as $z)
                 <button type="button" @click="zoom = {{ $z }}"
                         class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors"
@@ -282,11 +306,11 @@
         </div>
 
         @unless($embedded)
-        <div class="ml-auto flex items-center gap-2">
+        <!-- <div class="ml-auto flex items-center gap-2">
             <button wire:click="publish" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.1]">Publish page.json</button>
             <a href="{{ route('site.connect.export', ['siteID' => $site->name]) }}"
                class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.1]">Download export</a>
-        </div>
+        </div> -->
         @endunless
         @if ($flash)
             <span class="w-full text-xs font-semibold" style="color:var(--primary)">{{ $flash }}</span>
@@ -375,7 +399,7 @@
         <x-carousel :labels="['📄 Pages', '🖥 Preview', '✏️ Edit']" :start="1">
 
         {{-- ════ LEFT: pages ════ --}}
-        <x-carousel.slide class="lg:!w-[220px] lg:shrink-0 pb-24 lg:pb-2 max-h-full overflow-y-auto lg:h-full lg:max-h-full lg:overflow-y-auto no-scrollbar">
+        <x-carousel.slide class="lg:!w-[270px] lg:shrink-0 pb-24 lg:pb-2 max-h-full overflow-y-auto lg:h-full lg:max-h-full lg:overflow-y-auto no-scrollbar">
             {{-- The card scrolls its own list (auto overflow) so the long
                  pages + detail-pages index never stretches the layout --}}
             <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] p-2">
@@ -420,12 +444,12 @@
         </x-carousel.slide>
 
         {{-- ════ MIDDLE: live preview ════ --}}
-        <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-2 max-h-full overflow-y-auto lg:h-full lg:max-h-full lg:overflow-hidden no-scrollbar">
-            <div class="h-[70vh] lg:h-full flex flex-col">
+        <x-carousel.slide class="lg:flex-1 lg:min-w-0 h-full pb-0 lg:pb-2 max-h-full overflow-hidden lg:h-full lg:max-h-full lg:overflow-hidden no-scrollbar">
+            <div class="h-full flex flex-col">
             {{-- Live client site (edit mode); width follows the device toggle.
                  flex-1 + min-h-0: fill the fixed-height wrapper — without it
                  the frame collapses to a strip. --}}
-            <div class="flex-1 min-h-0 rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden"
+            <div class="flex-1 min-h-0 rounded-none border-0 lg:rounded-2xl lg:border lg:border-gray-100 dark:lg:border-white/[0.06] overflow-hidden"
                  :class="device === 'desktop' ? 'bg-white' : 'bg-gray-100 dark:bg-black/30'">
                 <div class="h-full w-full bg-white overflow-hidden"
                      x-init="const sync = () => { cw = $el.clientWidth; ch = $el.clientHeight }; new ResizeObserver(sync).observe($el); sync()">
@@ -444,7 +468,7 @@
              stuck underneath them. --}}
         {{-- olx-scroll (not no-scrollbar): the edit panel is a long form —
              a visible slim scrollbar shows where you are and what's left. --}}
-        <x-carousel.slide class="lg:!w-[380px] lg:shrink-0 pb-44 lg:pb-2 max-h-full overflow-y-auto lg:h-full lg:max-h-full lg:overflow-y-auto olx-scroll">
+        <x-carousel.slide class="lg:!w-[410px] lg:shrink-0 pb-44 lg:pb-2 max-h-full overflow-y-auto lg:h-full lg:max-h-full lg:overflow-y-auto olx-scroll">
             {{-- NO fixed height / flex sizing on this card: capping it made the
                  content child overflow past the white background (unclipped
                  cards floating on the page). The loader "fills" via min-h. --}}

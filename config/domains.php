@@ -35,6 +35,12 @@ return [
     // Where a bought domain's A record points. Falls back to publishing.dns_target.
     'dns_target' => env('DOMAIN_DNS_TARGET', env('PLATFORM_DNS_TARGET', '')),
 
+    // Edge proxy (Traefik HTTP provider) feed of custom-domain routers:
+    // GET /internal/edge/routes with header X-Edge-Token. Empty token = off.
+    'edge_token' => env('EDGE_CONFIG_TOKEN', ''),
+    'edge_service' => env('EDGE_SERVICE', 'cms@docker'),
+    'edge_cert_resolver' => env('EDGE_CERT_RESOLVER', 'le'),
+
     // Registrant contact defaults (the client's name/email are merged in).
     'registrant' => [
         'company' => env('DOMAIN_REGISTRANT_COMPANY', env('APP_NAME', 'Olux')),
