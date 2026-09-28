@@ -114,8 +114,14 @@ done
 
 # ── 5. Verify production ────────────────────────────────────────────────────
 say "Verifying production"
-code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$PROD_URL/login")
-[ "$code" = "200" ] || fail "$PROD_URL/login answered $code"
+# The new app container isn't routed by Traefik until its health check passes.
+code=000
+for _ in $(seq 1 12); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$PROD_URL/login")
+    [ "$code" = "200" ] && break
+    sleep 10
+done
+[ "$code" = "200" ] || fail "$PROD_URL/login answered $code after 2 minutes"
 ok "$PROD_URL is up ($code)"
 
 unhealthy=$($SSH "docker ps --filter name=cms_v2 --format '{{.Names}} {{.Status}}' | grep -v '(healthy)' | grep -vE 'redis|mysql'" || true)
