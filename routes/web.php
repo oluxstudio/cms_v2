@@ -1,14 +1,15 @@
 <?php
 
+use App\Features\FeatureRegistry;
 use App\Http\Controllers\Api\DomainCheckController;
 use App\Http\Controllers\Api\MarketplaceApiController;
 use App\Http\Controllers\Api\SiteDesignController;
 use App\Http\Controllers\BlockKitController;
-use App\Http\Controllers\Internal\EdgeRoutesController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ConnectPreviewController;
 use App\Http\Controllers\DonateController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\Internal\EdgeRoutesController;
 use App\Http\Controllers\PublicInvoiceController;
 use App\Http\Controllers\PublicOrderController;
 use App\Http\Controllers\PublicPageController;
@@ -18,12 +19,20 @@ use App\Http\Controllers\StoreFrontController;
 use App\Http\Controllers\TemplateCommerceController;
 use App\Http\Controllers\TemplateRepoWebhookController;
 use App\Http\Middleware\ServeLiveSite;
+use App\Models\Announcement;
 use App\Models\Site;
+use App\Models\User;
 use App\Payments\SitePaymentOnboarding;
+use App\Services\AccountActivity;
+use App\Services\Announcements;
 use App\Services\Domains\DomainPurchase;
+use App\Services\Impersonation;
 use App\Services\PlatformBilling;
 use App\Services\TemplateCommerce;
 use App\Services\TemplateScaffolder;
+use App\Support\Onboarding;
+use App\Support\PlanCatalog;
+use App\Support\TemplatePaths;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -136,6 +145,15 @@ Route::get('nuxt-preview/{key}/{any?}', function (string $key) {
         'Cache-Control' => 'no-cache, must-revalidate', // never pin a stale app shell
     ]);
 })->where('any', '.*')->name('nuxt-preview.fallback');
+
+// Same for client-uploaded template shells, served from the storage volume.
+Route::get('storage/template-shells/{key}/{any?}', function (string $key) {
+    abort_unless(TemplatePaths::isUpload($key) && preg_match('/^[a-z0-9-]+$/', $key), 404);
+    $index = TemplatePaths::shellDir($key).'/index.html';
+    abort_unless(File::exists($index), 404);
+
+    return response()->file($index, ['X-Olux-Fallback' => '1', 'Cache-Control' => 'no-cache, must-revalidate']);
+})->where('any', '.*')->name('template-shell.fallback');
 
 // ── Public feature pages (MUST be before the public.page catch-all) ──────────
 // Store. Static segments declared before the /{slug} param so they win.
@@ -270,9 +288,18 @@ Route::middleware('auth')->group(function () {
 
     // In-app "How it works" guide (create a site → content → leads → bookings → live).
     Route::get('/how-it-works', function () {
-        $site = auth()->user()->sites()->latest('id')->first();
+        $user = auth()->user();
+        $sub = $user->currentSubscription();
 
-        return view('how-it-works', ['site' => $site]);
+        return view('how-it-works', [
+            'site' => $user->sites()->latest('id')->first(),
+            'siteCount' => $user->sites()->count(),
+            'sub' => $sub,
+            'tiers' => PlanCatalog::publicTiers($sub->plan),
+            'steps' => Onboarding::steps($user),
+            'progress' => Onboarding::progress($user),
+            'addons' => collect(FeatureRegistry::all())->reject(fn ($f) => ! empty($f['hidden'])),
+        ]);
     })->name('how-it-works');
 
     // Account subscription — the 5-tier plan page (trial → paid upgrades).
@@ -281,10 +308,47 @@ Route::middleware('auth')->group(function () {
     // Platform admin (super admins only). The 'super' middleware requires a
     // fresh authenticator-app (TOTP) check; the verify page itself sits
     // outside it, gated inline, so enrollment/challenge is reachable.
+    Route::post('/impersonate/stop', function () {
+        $clientId = auth()->id();
+        $admin = app(Impersonation::class)->stop();
+
+        return $admin ? redirect()->route('admin.account', $clientId) : redirect('/');
+    })->name('impersonate.stop');
+    Route::post('/announcements/{announcement}/dismiss', function (Announcement $announcement) {
+        app(Announcements::class)->dismiss($announcement, auth()->user());
+
+        return request()->expectsJson() ? response()->noContent() : back();
+    })->name('announcements.dismiss');
     Route::view('/admin/verify', 'admin-verify')->name('admin.verify');
     Route::middleware('super')->group(function () {
         Route::view('/admin', 'platform-dashboard')->name('admin.dashboard');
         Route::view('/admin/accounts', 'platform-accounts')->name('admin.accounts');
+        Route::view('/admin/templates', 'platform-templates')->name('admin.templates');
+        Route::view('/admin/plans', 'platform-plans')->name('admin.plans');
+        Route::view('/admin/sales', 'platform-sales')->name('admin.sales');
+        Route::view('/admin/domains', 'platform-domains')->name('admin.domains');
+        Route::view('/admin/operations', 'platform-operations')->name('admin.operations');
+        Route::view('/admin/ai', 'platform-ai')->name('admin.ai');
+        Route::view('/admin/addons', 'platform-addons')->name('admin.addons');
+        Route::view('/admin/announcements', 'platform-announcements')->name('admin.announcements');
+        Route::post('/admin/impersonate/{user}', function (string $user) {
+            $target = User::findOrFail($user);
+            try {
+                app(Impersonation::class)->start(auth()->user(), $target);
+            } catch (RuntimeException $e) {
+                return back()->with('status', $e->getMessage());
+            }
+
+            return redirect()->route('home');
+        })->name('admin.impersonate');
+        Route::get('/admin/backups/{file}', function (string $file) {
+            abort_unless(preg_match('/^[\w.-]+\.sql\.gz$/', $file), 404);
+            $path = storage_path('app/backups/'.$file);
+            abort_unless(is_file($path), 404);
+            AccountActivity::record(auth()->id(), 'backup.download', 'Downloaded a database backup', ['category' => 'Security', 'meta' => ['file' => $file]]);
+
+            return response()->download($path);
+        })->name('admin.backups.download');
         Route::get('/admin/accounts/{user}', function (string $user) {
             return view('platform-account', ['userId' => $user]);
         })->name('admin.account');
@@ -454,6 +518,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/publish', [SiteController::class, 'publish'])->middleware('perm:publish.manage')->name('site.publish');
     Route::get('/{siteID}/api-docs', [SiteController::class, 'apiDocs'])->name('site.apidocs');
     Route::get('/{siteID}/api-keys', [SiteController::class, 'apiKeys'])->name('site.apikeys');
+    Route::get('/{siteID}/properties', [SiteController::class, 'properties'])->middleware('perm:properties.manage')->name('site.properties');
     Route::get('/{siteID}/emails', [SiteController::class, 'emails'])->middleware('perm:forms.view')->name('site.emails');
     Route::get('/{siteID}/team', [SiteController::class, 'team'])->middleware('perm:team.manage')->name('site.team');
     Route::get('/{siteID}/contacts', [SiteController::class, 'contacts'])->middleware('perm:contacts.view')->name('site.contacts');

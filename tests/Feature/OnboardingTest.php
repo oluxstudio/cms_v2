@@ -3,8 +3,9 @@
 use App\Livewire\OnboardingChecklist;
 use App\Livewire\SiteComponent;
 use App\Livewire\WelcomeOnboarding;
+use App\Models\AccountMember;
 use App\Models\Component;
-use App\Models\Form;
+use App\Models\ContentVersion;
 use App\Models\Site;
 use App\Models\User;
 use App\Support\Onboarding;
@@ -50,24 +51,53 @@ test('skipping records skipped + welcomed_at', function () {
         ->and($user->onboarding['skipped'])->toBeTrue();
 });
 
-test('checklist step detection tracks real data', function () {
+test('checklist steps are detected from real data, from site to live', function () {
     $user = onboardingUser();
 
-    // No site → only 5 undone steps.
-    $steps = collect(Onboarding::steps($user))->keyBy('key');
-    expect($steps['create_site']['done'])->toBeFalse()
-        ->and($steps['capture_leads']['done'])->toBeFalse();
-    expect(Onboarding::progress($user))->toMatchArray(['done' => 0, 'total' => 5, 'complete' => false]);
+    expect(collect(Onboarding::steps($user))->pluck('key')->all())
+        ->toBe(['create_site', 'choose_template', 'update_content', 'get_domain', 'go_live'])
+        ->and(Onboarding::progress($user))->toMatchArray(['done' => 0, 'total' => 5, 'complete' => false]);
 
-    // Create a site + a form → two steps flip.
-    $site = Site::create(['user_id' => $user->id, 'name' => 'ob-'.uniqid(), 'domain' => 'ob.test', 'owner' => $user->name, 'description' => 't']);
+    $site = Site::create(['user_id' => $user->id, 'name' => 'ob-'.uniqid(), 'domain' => 'ob-'.uniqid().'.test', 'owner' => $user->name, 'description' => 't']);
     $site->members()->syncWithoutDetaching([$user->id => ['role' => 'owner']]);
-    Form::create(['site_id' => $site->id, 'name' => 'contact', 'fields' => [['key' => 'email', 'type' => 'email']], 'is_active' => true]);
+    $done = fn () => collect(Onboarding::steps($user->fresh()))->mapWithKeys(fn ($s) => [$s['key'] => $s['done']])->all();
 
-    $steps = collect(Onboarding::steps($user->fresh()))->keyBy('key');
-    expect($steps['create_site']['done'])->toBeTrue()
-        ->and($steps['capture_leads']['done'])->toBeTrue()
-        ->and($steps['add_content']['done'])->toBeFalse();
+    expect($done())->toMatchArray(['create_site' => true, 'choose_template' => false, 'update_content' => false, 'get_domain' => false, 'go_live' => false]);
+
+    $site->update(['template' => 'graceway']);
+    expect($done()['choose_template'])->toBeTrue();
+
+    ContentVersion::create(['site_id' => $site->id, 'subject_type' => 'component', 'subject_id' => '1', 'payload' => [], 'label' => 'edit']);
+    expect($done()['update_content'])->toBeTrue();
+
+    $site->update(['domain_verified_at' => now()]);
+    expect($done()['get_domain'])->toBeTrue();
+
+    $site->update(['live' => true]);
+    expect($done()['go_live'])->toBeTrue()
+        ->and(Onboarding::progress($user->fresh())['complete'])->toBeTrue();
+});
+
+test('the intro pack shows once: the owner\'s first visit, then never again', function () {
+    $user = onboardingUser();
+
+    // First visit (and the rest of that session): shown.
+    Livewire::actingAs($user)->test(OnboardingChecklist::class)->assertSet('open', true);
+    Livewire::actingAs($user->fresh())->test(OnboardingChecklist::class)->assertSet('open', true);
+
+    // A later session: gone for good.
+    session()->forget(OnboardingChecklist::SESSION_KEY);
+    Livewire::actingAs($user->fresh())->test(OnboardingChecklist::class)->assertSet('open', false);
+    expect(($user->fresh()->onboarding ?? [])['intro_shown_at'] ?? null)->not->toBeNull();
+});
+
+test('invited teammates never get the owner intro pack', function () {
+    $owner = onboardingUser();
+    $mate = User::factory()->create();
+    AccountMember::create(['account_id' => $owner->id, 'user_id' => $mate->id]);
+
+    expect($mate->isAccountOwner())->toBeFalse();
+    Livewire::actingAs($mate)->test(OnboardingChecklist::class)->assertSet('open', false);
 });
 
 test('the checklist hides for a dismissed user and can be dismissed', function () {
@@ -116,9 +146,8 @@ test('creating a site with sample content populates it and advances the checklis
     $col = $site->collections()->where('name', 'Testimonials')->first();
     expect($col->components()->count())->toBe(3);
 
-    // Checklist reflects it.
+    // Checklist reflects it: the site exists; the pages haven't been edited yet.
     $steps = collect(Onboarding::steps($user->fresh()))->keyBy('key');
     expect($steps['create_site']['done'])->toBeTrue()
-        ->and($steps['add_content']['done'])->toBeTrue()
-        ->and($steps['capture_leads']['done'])->toBeTrue();
+        ->and($steps['update_content']['done'])->toBeFalse();
 });

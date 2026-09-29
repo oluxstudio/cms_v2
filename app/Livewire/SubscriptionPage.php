@@ -2,7 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Services\AiQuota;
 use App\Services\PlatformBilling;
+use App\Support\PlanCatalog;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -84,9 +86,18 @@ class SubscriptionPage extends Component
 
     public function render()
     {
-        $sub = Auth::user()->currentSubscription();
-        $tiers = collect(config('plans.tiers'))->sortBy('order');
+        $user = Auth::user();
+        $sub = $user->currentSubscription();
+        $tiers = PlanCatalog::publicTiers($sub->plan);
+        $quota = app(AiQuota::class);
 
-        return view('livewire.subscription-page', ['sub' => $sub, 'tiers' => $tiers]);
+        return view('livewire.subscription-page', [
+            'sub' => $sub,
+            'tiers' => $tiers,
+            'siteCount' => $user->sites()->count(),
+            'storageUsed' => $sub->storageUsedBytes(),
+            'aiUsed' => $quota->usedThisMonth($user),
+            'aiLimit' => $quota->limitFor($user),
+        ]);
     }
 }

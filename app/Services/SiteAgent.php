@@ -30,6 +30,13 @@ class SiteAgent
 
     public static function configured(): bool
     {
+        // Switched off on admin › AI usage = unavailable, whatever the keys.
+        return config('services.llm.enabled', true) && static::hasCredentials();
+    }
+
+    /** Are the selected driver's credentials/endpoint set? */
+    public static function hasCredentials(): bool
+    {
         $driver = config('services.llm.driver', 'anthropic');
 
         return match ($driver) {
@@ -151,6 +158,10 @@ class SiteAgent
     {
         // Answer cache — only ever consulted for history-free questions (follow-ups
         // like "make it blue" depend on context and must never be served stale).
+        if (app(AiQuota::class)->exceeded($site)) {
+            return ['ok' => false, 'text' => app(AiQuota::class)->message(), 'built' => false, 'page' => null, 'tools' => []];
+        }
+
         $cacheKey = $history === [] ? self::answerCacheKey($site->id, $prompt) : null;
         if ($cacheKey && is_array($hit = Cache::get($cacheKey))) {
             return ['ok' => true, 'text' => (string) $hit['text'], 'built' => false, 'page' => null, 'tools' => [], 'cached' => true];
@@ -201,7 +212,7 @@ class SiteAgent
             return ['ok' => false, 'text' => $this->friendlyError($e), 'built' => false, 'page' => null, 'tools' => $executed];
         }
 
-        // Per-tenant AI spend accounting (streamed drivers report 0 tokens for now).
+        // Per-tenant AI spend accounting (drives admin › AI usage and plan caps).
         try {
             AiUsage::create([
                 'site_id' => $site->id,
@@ -346,13 +357,13 @@ class SiteAgent
 
         // The ~45KB static instruction set is identical every turn — memoize the
         // concatenation (byte-identical output keeps the provider prompt cache hot).
-        $joined = Cache::remember('ai_instruction_set:v1', 3600, function () use ($parts): string {
+        $joined = Cache::remember('ai_instruction_set:v2:'.md5((string) config('app.name')), 3600, function () use ($parts): string {
             $chunks = [];
             foreach ($parts as $path) {
                 if (! is_file($path)) {
                     return ''; // sentinel: incomplete set → caller falls back
                 }
-                $chunks[] = trim((string) file_get_contents($path));
+                $chunks[] = str_replace('{app_name}', (string) config('app.name'), trim((string) file_get_contents($path)));
             }
 
             return implode("\n\n---\n\n", $chunks);
@@ -372,8 +383,10 @@ class SiteAgent
 
     private function fallbackPrompt(Site $site, string $role, string $features): string
     {
+        $appName = (string) config('app.name');
+
         return <<<TXT
-        You are the in-app AI assistant for Olux CMS. You help the user operate ONE selected site
+        You are the in-app AI assistant for {$appName}. You help the user operate ONE selected site
         through its CMS/CRM using the tools provided.
 
         ## Domain model

@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureSitePermission;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\HoneypotGuard;
+use App\Http\Middleware\ImpersonationGuard;
 use App\Http\Middleware\ResolveTokenSite;
 use App\Http\Middleware\ServeLiveSite;
 use App\Http\Middleware\VerifySiteOrigin;
@@ -29,6 +30,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Custom-domain serving: resolve the Host header to a live Site and
         // serve its renderer — must run globally, before any routing.
         $middleware->prepend(ServeLiveSite::class);
+
+        // Super admin "view as client": 60-minute limit, no admin area meanwhile.
+        $middleware->web(append: [ImpersonationGuard::class]);
 
         // Per-site feature gate: ->middleware('feature:store')
         $middleware->alias([

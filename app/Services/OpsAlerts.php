@@ -19,6 +19,15 @@ class OpsAlerts
     /** Alert types this service owns (the dashboard filters on these). */
     public const TYPES = ['invoice_overdue', 'estimate_stale', 'booking_pending'];
 
+    /** The add-on each alert type belongs to. */
+    public const FEATURE_OF = ['invoice_overdue' => 'invoices', 'estimate_stale' => 'estimator', 'booking_pending' => 'bookings'];
+
+    /** Alert types whose add-on is currently switched on for the site. */
+    public static function activeTypes(Site $site): array
+    {
+        return array_values(array_filter(self::TYPES, fn ($t) => $site->hasFeature(self::FEATURE_OF[$t])));
+    }
+
     public static function sweep(Site $site): void
     {
         $logger = app(TaskLogger::class);

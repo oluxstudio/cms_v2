@@ -2,6 +2,7 @@
 
 namespace App\Templates;
 
+use App\Support\TemplatePaths;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -56,6 +57,26 @@ class TemplateAppRegistry
                     'dir' => $dir,
                     'manifest' => $manifest,
                     'thumbnail' => static::thumbnailUrl($key, $manifest),
+                ];
+            }
+        }
+
+        // Client-uploaded apps on the persistent volume (keys "u-…").
+        $uploads = TemplatePaths::uploadsRoot();
+        if (File::isDirectory($uploads)) {
+            foreach (File::directories($uploads) as $dir) {
+                $key = basename($dir);
+                if (! TemplatePaths::isUpload($key) || ! File::exists("{$dir}/app/package.json")) {
+                    continue;
+                }
+                $mf = TemplatePaths::packageDir($key).'/template.json';
+                $manifest = File::exists($mf) ? (json_decode(File::get($mf), true) ?: []) : [];
+                $out[$key] = [
+                    'key' => $key,
+                    'name' => (string) ($manifest['name'] ?? Str::headline($key)),
+                    'dir' => "{$dir}/app",
+                    'manifest' => $manifest,
+                    'thumbnail' => isset($manifest['thumbnail']) ? (string) $manifest['thumbnail'] : null,
                 ];
             }
         }

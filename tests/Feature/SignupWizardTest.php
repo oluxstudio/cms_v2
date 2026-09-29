@@ -6,6 +6,7 @@ use App\Mail\VerificationCode;
 use App\Models\Service;
 use App\Models\Site;
 use App\Models\User;
+use App\Support\SiteSetupTask;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
@@ -60,11 +61,12 @@ it('walks account → business → verify → done, provisioning the salon bluep
     expect($site->pages()->count())->toBeGreaterThan(1);
 
     // The setup checklist lands in the site's Todos panel.
-    $todo = $site->todos()->first();
+    $todo = $site->todos()->where('system_key', SiteSetupTask::KEY)->first();
     expect($todo)->not->toBeNull()
+        ->and($site->todos()->count())->toBe(1)
+        ->and($todo->title)->toBe("Finish setting up Jane's Barbers")
         ->and($todo->assigned_user_id)->toBe($user->id)
-        ->and($todo->items->pluck('label')->all())->toBe(SignupWizard::SETUP_ITEMS)
-        ->and($todo->items->pluck('label')->implode(' '))->toContain('domain name')->toContain('template')->toContain('colour theme');
+        ->and($todo->items->pluck('key')->all())->toBe(array_keys(SiteSetupTask::STEPS));
 
     // Building the site sends the code; capture it from the queued mailable.
     $code = null;

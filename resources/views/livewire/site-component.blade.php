@@ -8,7 +8,7 @@
 <div class="px-10 py-8">
 
     {{-- ── Header ── --}}
-    <p class="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-1">Olux CMS</p>
+    <p class="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-1">{{ config('app.name') }}</p>
     <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
     <hr class="mt-5 mb-6 border-gray-200">
 
@@ -25,8 +25,14 @@
             </button>
         @endforeach
 
+        <button type="button" wire:click="$dispatch('show-intro')" @click="window.scrollTo({ top: 0, behavior: 'smooth' })"
+                class="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium border-2 bg-white text-gray-800"
+                style="border-color:var(--primary)">
+            <svg class="w-4 h-4" style="color:var(--primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Show introduction
+        </button>
         <button wire:click="$set('showCreate', true)"
-                class="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium text-white cursor-pointer"
+                class="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium text-white cursor-pointer"
                 style="background:var(--primary)">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>

@@ -48,6 +48,7 @@
             $link('alerts', 'Alerts', 'bell'),
         ],
         'Site' => [
+            $link('properties', 'Properties', 'sliders'),
             $link('design', 'Design', 'template'),
             $link('addons', 'Add-ons', 'puzzle'),
             $link('analytics', 'Analytics', 'graph-up'),

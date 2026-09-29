@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Olux CMS' }}</title>
+    <title>{{ $title ?? config('app.name') }}</title>
     {{-- Theme init: runs synchronously before render to prevent FOUC --}}
     <script>
     (function(){
@@ -40,6 +40,8 @@
           } else { el.classList.remove('dark'); }
       ">
 
+    <x-impersonation-bar />
+
     {{-- ════════════════ TOP BAR (no sidebar) ════════════════ --}}
     @auth
     <header class="sticky top-0 z-40 h-16 border-b border-gray-100 dark:border-gray-800 flex items-center gap-4 px-6 bg-white dark:bg-gray-900"
@@ -50,7 +52,7 @@
             <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--primary)">
                 <x-app-logo-icon class="w-4 h-4 fill-current text-white" />
             </div>
-            <span class="text-gray-900 dark:text-white font-bold text-base tracking-tight hidden sm:block">Olux CMS</span>
+            <span class="text-gray-900 dark:text-white font-bold text-base tracking-tight hidden sm:block">{{ config('app.name') }}</span>
         </a>
 
         {{-- Site menu (opt-in): pages like /settings show the SAME grouped
@@ -158,7 +160,8 @@
     @endauth
 
     {{-- ════════════════ MAIN CONTENT ════════════════ --}}
-    <main class="max-w-7xl mx-auto">
+    <main class="{{ $attributes->get('wide') ? 'w-full' : 'max-w-7xl mx-auto' }}">
+        <x-announcement-banner class="mx-4 mt-3" />
         {{ $slot }}
     </main>
 

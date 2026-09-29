@@ -50,7 +50,7 @@ class OrderConfirmed extends Mailable implements ShouldQueue
 
         return new Content(view: 'emails.branded', with: [
             'site' => $this->site,
-            'logo' => (string) $this->site->getAttr('email.logo', ''),
+            'logo' => $this->site->brandLogo(),
             'sections' => EmailTemplate::renderSections($tpl, $this->ctx()),
             'dynamic' => ['order_lines' => [
                 'items' => $o->items->map(fn ($it) => [

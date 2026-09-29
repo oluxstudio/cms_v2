@@ -51,7 +51,8 @@ class TasksPage extends Component
 
     public string $items = '';
 
-    // ── detail drawer ──
+    // ── detail drawer ── (?task={id} opens a task directly, e.g. from the dashboard)
+    #[Url(as: 'task')]
     public ?string $openId = null;
 
     public string $comment = '';

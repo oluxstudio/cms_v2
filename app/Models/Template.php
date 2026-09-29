@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Money;
+use App\Support\TemplatePaths;
 use App\Templates\TemplateContract;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
@@ -73,11 +74,11 @@ class Template extends Model
     public function previewUrl(?string $siteName = null): ?string
     {
         $key = $this->builtin_key ?: $this->slug;
-        if (! $key || ! is_file(public_path("nuxt-preview/{$key}/index.html"))) {
+        if (! $key || ! TemplatePaths::hasShell($key)) {
             return null;
         }
 
-        return url("nuxt-preview/{$key}/").'?'.http_build_query(array_filter(['site' => $siteName, 'template' => $key]));
+        return TemplatePaths::shellUrl($key).'?'.http_build_query(array_filter(['site' => $siteName, 'template' => $key]));
     }
 
     /** Resolve the latest published version to a TemplateContract for applying. */

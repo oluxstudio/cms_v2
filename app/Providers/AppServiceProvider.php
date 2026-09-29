@@ -23,6 +23,9 @@ use App\Services\Domains\FakeRegistrar;
 use App\Services\Domains\OpenproviderRegistrar;
 use App\Services\Domains\Registrar;
 use App\Services\Domains\ResellerClubRegistrar;
+use App\Services\Impersonation;
+use App\Support\ConfigOverlay;
+use App\Support\PlanCatalog;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -54,6 +57,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Admin-edited membership plans overlay config/plans.php.
+        PlanCatalog::apply();
+        // Admin-edited platform settings (add-ons, TLD prices, AI, fees…).
+        ConfigOverlay::apply();
+
         Page::observe(PageObserver::class);
         Form::observe(FormObserver::class);
         FormResponse::observe(FormResponseObserver::class);
@@ -76,7 +84,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Account audit trail: record every login (form + social).
         Event::listen(function (Login $event) {
-            if ($event->user instanceof User) {
+            // Starting/stopping "view as" is recorded by Impersonation itself.
+            if ($event->user instanceof User && ! Impersonation::$quiet) {
                 AccountActivity::loggedIn($event->user);
             }
         });

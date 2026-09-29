@@ -79,6 +79,12 @@ class User extends Authenticatable
     }
 
     /** Merge keys into the onboarding JSON and persist. */
+    /** Owns an account (as opposed to being an invited teammate on someone else's). */
+    public function isAccountOwner(): bool
+    {
+        return $this->sites()->exists() || ! $this->memberships()->exists();
+    }
+
     public function setOnboarding(array $merge): void
     {
         $this->update(['onboarding' => array_merge($this->onboarding ?? [], $merge)]);

@@ -178,13 +178,13 @@
                     <div class="min-w-0 flex-1">
                         <p class="flex items-center gap-2 flex-wrap">
                             <span class="text-sm font-extrabold text-gray-900 dark:text-white">{{ $row->template->name }}</span>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold {{ $row->entitlement->source === 'purchase' ? 'bg-[#1c1d29] text-white dark:bg-white dark:text-gray-900' : 'bg-emerald-100 text-emerald-700' }}">{{ $row->entitlement->source === 'purchase' ? 'Purchased' : 'Free' }}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold {{ $row->entitlement->source === 'purchase' ? 'bg-[#1c1d29] text-white dark:bg-white dark:text-gray-900' : ($row->entitlement->source === 'upload' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700') }}">{{ match ($row->entitlement->source) { 'purchase' => 'Purchased', 'upload' => 'Uploaded', default => 'Free' } }}</span>
                             @if ($row->update_available)<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-700">Update available</span>@endif
                         </p>
                         <p class="text-[12px] text-gray-400 mt-0.5">by {{ $row->template->creator?->name ?? 'Olux Studio' }} · {{ $row->used_on->isNotEmpty() ? 'Used on: '.$row->used_on->implode(', ') : 'Not used yet' }}</p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
-                        <a href="{{ route('marketplace.template', [$site->name, $row->template->slug]) }}" class="fx min-h-[38px] px-3.5 leading-[38px] rounded-xl text-[12.5px] font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] text-gray-700 dark:text-gray-200">Preview</a>
+                        <a href="{{ $row->template->status === 'private' ? ($row->template->previewUrl($site->name) ?? '#') : route('marketplace.template', [$site->name, $row->template->slug]) }}" @if ($row->template->status === 'private') target="_blank" rel="noopener" @endif class="fx min-h-[38px] px-3.5 leading-[38px] rounded-xl text-[12.5px] font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] text-gray-700 dark:text-gray-200">Preview</a>
                         <div class="relative">
                             <button @click="picking = ! picking" class="fx min-h-[38px] px-4 rounded-xl text-[12.5px] font-bold" style="background:var(--primary);color:var(--on-primary)">Use on a site</button>
                             <div x-show="picking" x-cloak @click.outside="picking = false" class="bkf-panel absolute right-0 top-full mt-2 z-30 w-56">

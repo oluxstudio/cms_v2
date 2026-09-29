@@ -1,7 +1,7 @@
 ---
 name: cms-operator
 description: >-
-  Operate a single selected site inside Olux CMS by doing CRUD over its pages, components, and
+  Operate a single selected site inside {app_name} by doing CRUD over its pages, components, and
   component node values. Use this whenever the user asks to create/rename/publish a page, add or
   edit a component, change visible content (headings, text, prices, links, colours, images),
   build forms, apply a template, or toggle a site feature — i.e. almost every site-editing prompt.

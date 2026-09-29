@@ -1,127 +1,196 @@
 <div>
 @if ($open)
-    <div class="mb-6 overflow-hidden rounded-3xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] shadow-sm">
+    @php
+        $slides = ['Welcome', 'Your 5 steps', 'Plans', 'What’s next'];
+        $firstUndone = collect($steps)->firstWhere('done', false);
+        $pct = $progress['total'] ? (int) round($progress['done'] / $progress['total'] * 100) : 0;
+        $paid = collect($tiers)->filter(fn ($t) => ($t['price_cents'] ?? 0) > 0);
+        $from = $paid->min('price_cents');
+        $pillPrimary = 'inline-flex items-center gap-2 min-h-[44px] px-6 rounded-full text-[14px] font-bold shadow-md shadow-black/10 transition-transform hover:-translate-y-0.5';
+        $pillOutline = 'inline-flex items-center gap-2 min-h-[44px] px-6 rounded-full text-[14px] font-bold border-2 bg-white dark:bg-[#1d1e2a] text-gray-900 dark:text-white transition-transform hover:-translate-y-0.5';
+        $counter = 'font-display text-[28px] leading-none font-extrabold';
+    @endphp
+    <div id="olux-intro" class="relative my-5 overflow-hidden rounded-[2rem] border border-gray-100 dark:border-white/[0.06] shadow-sm bg-white dark:bg-[#1d1e2a]"
+         style="background-image: radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 38%), radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--secondary) 14%, transparent), transparent 40%)"
+         x-data="{ i: 0, dir: 1, n: {{ count($slides) }}, x0: null, go(k) { k = Math.max(0, Math.min(this.n - 1, k)); if (k !== this.i) { this.dir = k > this.i ? 1 : -1; this.i = k } } }"
+         x-init="$wire.$on('intro-reopened', () => { i = 0; $el.scrollIntoView({ behavior: 'smooth', block: 'start' }) })"
+         @keydown.arrow-right.window="if (! $event.target.closest('input,textarea,select')) go(i + 1)"
+         @keydown.arrow-left.window="if (! $event.target.closest('input,textarea,select')) go(i - 1)"
+         role="region" aria-roledescription="carousel" aria-label="Welcome to Olux">
 
-        {{-- Hero: friendly greeting + what Olux is + plan card --}}
-        <div class="relative px-6 pt-6 pb-5 sm:px-8 sm:pt-8"
-             style="background:linear-gradient(120deg,var(--primary),var(--primary-2));">
-            <button wire:click="dismiss"
-                    class="absolute top-4 right-4 text-[11px] font-semibold text-white/70 hover:text-white">
-                {{ $progress['complete'] ? 'Done' : 'Dismiss' }}
-            </button>
-
-            <div class="grid lg:grid-cols-[1fr_auto] gap-5 items-start">
-                {{-- Greeting --}}
-                <div class="max-w-xl">
-                    <p class="text-[11px] font-bold uppercase tracking-[.14em] text-white/70">
-                        {{ $progress['complete'] ? 'You’re all set' : 'Welcome to Olux' }}
-                    </p>
-                    <h2 class="mt-1 text-2xl sm:text-[26px] font-extrabold text-white leading-tight">
-                        @if ($progress['complete'])
-                            Nice work{{ $firstName ? ', '.$firstName : '' }} 🎉
-                        @else
-                            Hi {{ $firstName ?: 'there' }} 👋 Let’s get you set up
-                        @endif
-                    </h2>
-                    <p class="mt-2 text-sm text-white/80 leading-relaxed">
-                        Olux is your <strong class="text-white">website builder</strong> and
-                        <strong class="text-white">CRM</strong> in one — build a site, capture every
-                        lead and booking into your contacts, and grow from a single dashboard.
-                    </p>
-
-                    <div class="mt-4 flex flex-wrap gap-2.5">
-                        <a href="{{ route('how-it-works') }}" wire:navigate
-                           class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl bg-white text-gray-900 shadow-sm hover:-translate-y-0.5 transition-transform">
-                            ▶ Take the 2-min tour
-                        </a>
-                        <a href="{{ route('account.subscription') }}"
-                           class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl bg-white/15 text-white ring-1 ring-inset ring-white/30 hover:bg-white/25 transition-colors">
-                            See plans
-                        </a>
-                    </div>
-                </div>
-
-                {{-- Plan / trial card --}}
-                @if ($plan)
-                    <div class="w-full lg:w-64 rounded-2xl bg-white/12 ring-1 ring-inset ring-white/25 p-4 backdrop-blur-sm">
-                        <p class="text-[11px] font-bold uppercase tracking-wider text-white/60">Your plan</p>
-                        <p class="mt-0.5 text-lg font-extrabold text-white">{{ $plan['tier'] }}</p>
-
-                        @if ($plan['on_trial'] && ! $plan['expired'])
-                            <div class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-amber-700">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                {{ $plan['days_left'] }} day{{ $plan['days_left'] == 1 ? '' : 's' }} left on trial
-                            </div>
-                            <p class="mt-2 text-[12px] text-white/75 leading-relaxed">
-                                Enjoying it? Pick a plan to keep every feature after your trial.
-                            </p>
-                        @elseif ($plan['expired'])
-                            <div class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-rose-600">
-                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                                Trial ended
-                            </div>
-                            <p class="mt-2 text-[12px] text-white/75 leading-relaxed">
-                                Upgrade to unlock your sites again.
-                            </p>
-                        @else
-                            <p class="mt-2 text-[12px] text-white/75 leading-relaxed">
-                                You’re on {{ $plan['tier'] }}. Manage or change it any time.
-                            </p>
-                        @endif
-
-                        <a href="{{ route('account.subscription') }}"
-                           class="mt-3 block text-center text-sm font-bold px-3 py-2 rounded-xl bg-white text-gray-900 hover:-translate-y-0.5 transition-transform">
-                            {{ $plan['expired'] ? 'Upgrade now' : ($plan['on_trial'] ? 'Choose a plan' : 'Manage plan') }}
-                        </a>
-                    </div>
-                @endif
-            </div>
+        {{-- Floating nav pill (like a site header): brand · slides · hide --}}
+        <div class="flex justify-center px-4 pt-5">
+            <nav class="flex items-center gap-1 sm:gap-2 max-w-full overflow-x-auto no-scrollbar rounded-2xl px-3 py-2 shadow-md shadow-black/5 bg-white/90 dark:bg-white/[0.06] backdrop-blur" aria-label="Introduction">
+                <span class="font-display text-[17px] font-extrabold text-gray-900 dark:text-white pr-2 shrink-0">Olux<span style="color:var(--primary)">.</span></span>
+                @foreach ($slides as $k => $label)
+                    <button type="button" @click="go({{ $k }})" :aria-current="i === {{ $k }} ? 'step' : null"
+                            class="shrink-0 px-2.5 py-1 text-[13px] font-semibold transition-colors border-b-2"
+                            :class="i === {{ $k }} ? 'border-current' : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'"
+                            :style="i === {{ $k }} ? 'color:var(--primary)' : ''">{{ $label }}</button>
+                @endforeach
+                <button wire:click="dismiss" title="Reopen any time with “Show introduction” above your sites"
+                        class="shrink-0 ml-1 px-4 py-1.5 rounded-full text-[12.5px] font-bold shadow-sm" style="background:var(--primary);color:var(--on-primary)">
+                    {{ $progress['complete'] ? 'Done ✓' : 'Hide' }}
+                </button>
+            </nav>
         </div>
 
-        {{-- Checklist body --}}
-        <div class="p-5 sm:p-6">
-            <div class="flex items-center justify-between gap-3 mb-3">
+        {{-- Slides --}}
+        <div class="relative grid px-6 sm:px-10 pt-6 pb-4 overflow-hidden"
+             @touchstart.passive="x0 = $event.touches[0].clientX"
+             @touchend.passive="if (x0 !== null) { const d = $event.changedTouches[0].clientX - x0; if (Math.abs(d) > 50) go(i + (d < 0 ? 1 : -1)); x0 = null }">
+
+            {{-- 1 · Welcome hero: text left, illustration right --}}
+            <section style="grid-area: 1 / 1" :aria-hidden="i !== 0" :inert="i !== 0" class="transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none" :class="i === 0 ? 'opacity-100 translate-x-0' : ((0 < i) ? 'opacity-0 -translate-x-8 pointer-events-none' : 'opacity-0 translate-x-8 pointer-events-none')" aria-label="Welcome"><div class="grid md:grid-cols-2 gap-6 items-center h-full">
                 <div>
-                    <h3 class="text-sm font-extrabold text-gray-900 dark:text-white">Get started</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">A few quick steps to your first result.</p>
-                </div>
-                <span class="text-xs font-semibold text-gray-500 shrink-0">{{ $progress['done'] }}/{{ $progress['total'] }} done</span>
-            </div>
-
-            {{-- Progress bar --}}
-            <div class="h-2 rounded-full bg-gray-100 dark:bg-white/[0.06] overflow-hidden mb-4">
-                <div class="h-full rounded-full transition-all"
-                     style="width: {{ $progress['total'] ? round($progress['done'] / $progress['total'] * 100) : 0 }}%;background:linear-gradient(90deg,var(--primary),var(--primary-2))"></div>
-            </div>
-
-            {{-- Steps --}}
-            <div class="space-y-2">
-                @foreach ($steps as $step)
-                    <div class="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-white/[0.06] px-3 py-2.5 transition-colors hover:border-gray-200 dark:hover:border-white/[0.12]">
-                        <span class="shrink-0 w-6 h-6 rounded-full grid place-items-center text-sm font-bold {{ $step['done'] ? '' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-400' }}"
-                              @if ($step['done']) style="background:#d9f068;color:#2b3110" @endif>
-                            {!! $step['done'] ? '&#10003;' : '' !!}
-                        </span>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold {{ $step['done'] ? 'text-gray-400 line-through' : 'text-gray-800 dark:text-gray-200' }}">{{ $step['label'] }}</p>
-                            @unless ($step['done'])<p class="text-xs text-gray-400 truncate">{{ $step['description'] }}</p>@endunless
-                        </div>
-                        @unless ($step['done'])
-                            @if ($step['key'] === 'create_site')
-                                <button wire:click="openCreate" class="shrink-0 text-xs font-semibold text-white px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700">{{ $step['cta_label'] }}</button>
-                            @elseif ($step['cta_url'])
-                                <a href="{{ $step['cta_url'] }}" wire:navigate class="shrink-0 text-xs font-semibold text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">{{ $step['cta_label'] }}</a>
-                            @else
-                                <span class="shrink-0 text-[11px] text-gray-300 dark:text-gray-600">Create a site first</span>
-                            @endif
-                        @endunless
+                    <div class="flex items-center gap-2" aria-hidden="true">
+                        @foreach (['#ec4899', 'var(--primary)', '#6366f1', '#10b981'] as $c)
+                            <span class="w-8 h-8 rounded-lg shadow-sm" style="background: {{ $c }}"></span>
+                        @endforeach
                     </div>
+                    <h2 class="mt-4 font-display text-[30px] sm:text-[40px] leading-[1.1] font-extrabold text-gray-900 dark:text-white">
+                        Hi {{ $firstName ?: 'there' }}, welcome to <span style="color:var(--primary)">Olux Desk</span>
+                    </h2>
+                    <p class="mt-3 text-[15px] text-gray-600 dark:text-gray-300 leading-relaxed max-w-lg">
+                        Your website builder and CRM in one: pick a design, make it yours by clicking on it,
+                        capture every enquiry and booking in your contacts, and go live on your own domain.
+                    </p>
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <button type="button" @click="go(1)" class="{{ $pillPrimary }}" style="background:var(--primary);color:var(--on-primary)">
+                            Start setup <span aria-hidden="true">→</span>
+                        </button>
+                        <a href="{{ route('how-it-works') }}" wire:navigate class="{{ $pillOutline }}" style="border-color:var(--primary)">
+                            Getting started guide
+                        </a>
+                    </div>
+                </div>
+                <x-intro-art variant="welcome" class="w-full max-w-[26rem] mx-auto" />
+            </div></section>
+
+            {{-- 2 · Your 5 steps: illustration left, text right (like an "About me") --}}
+            <section style="grid-area: 1 / 1" :aria-hidden="i !== 1" :inert="i !== 1" class="transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none" :class="i === 1 ? 'opacity-100 translate-x-0' : ((1 < i) ? 'opacity-0 -translate-x-8 pointer-events-none' : 'opacity-0 translate-x-8 pointer-events-none')" aria-label="Your 5 steps"><div class="grid md:grid-cols-2 gap-6 items-center h-full">
+                <x-intro-art variant="steps" class="w-full max-w-[24rem] mx-auto hidden md:block" />
+                <div>
+                    <h2 class="font-display text-[30px] sm:text-[38px] leading-tight font-extrabold text-gray-900 dark:text-white">
+                        Your 5 <span style="color:var(--primary)">steps</span>
+                    </h2>
+                    <div class="mt-3 grid grid-cols-3 gap-2 max-w-sm">
+                        <div><p class="{{ $counter }}" style="color:var(--primary)">5</p><p class="text-[12px] text-gray-600 dark:text-gray-400">Steps</p></div>
+                        <div><p class="{{ $counter }}" style="color:var(--primary)">{{ $progress['done'] }}</p><p class="text-[12px] text-gray-600 dark:text-gray-400">Done</p></div>
+                        <div><p class="{{ $counter }}" style="color:var(--primary)">{{ $pct }}%</p><p class="text-[12px] text-gray-600 dark:text-gray-400">Complete</p></div>
+                    </div>
+                    <div class="mt-4 space-y-1.5">
+                        @foreach ($steps as $n => $step)
+                            <div class="flex items-center gap-3 rounded-2xl px-3 py-2 {{ $step['done'] ? '' : 'bg-white/80 dark:bg-white/[0.04] shadow-sm' }}">
+                                <span class="shrink-0 w-7 h-7 rounded-full grid place-items-center text-[12.5px] font-bold {{ $step['done'] ? '' : 'text-white' }}"
+                                      style="{{ $step['done'] ? 'background:#16a34a;color:#fff' : 'background:var(--foreground);color:var(--background)' }}">{!! $step['done'] ? '&#10003;' : $n + 1 !!}</span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-[14px] font-bold {{ $step['done'] ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white' }}">{{ $step['label'] }}</span>
+                                    @unless ($step['done'])<span class="block text-[12px] text-gray-500 dark:text-gray-400 truncate">{{ $step['description'] }}</span>@endunless
+                                </span>
+                                @unless ($step['done'])
+                                    @if ($step['key'] === 'create_site')
+                                        <button wire:click="openCreate" class="shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-bold" style="background:var(--primary);color:var(--on-primary)">{{ $step['cta_label'] }}</button>
+                                    @elseif ($step['cta_url'])
+                                        <a href="{{ $step['cta_url'] }}" wire:navigate class="shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-bold border-2 bg-white dark:bg-[#1d1e2a]" style="border-color:var(--primary);color:var(--primary)">{{ $step['cta_label'] }}</a>
+                                    @else
+                                        <span class="shrink-0 text-[11px] text-gray-400">after step 1</span>
+                                    @endif
+                                @endunless
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div></section>
+
+            {{-- 3 · Plans: text left, illustration right --}}
+            <section style="grid-area: 1 / 1" :aria-hidden="i !== 2" :inert="i !== 2" class="transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none" :class="i === 2 ? 'opacity-100 translate-x-0' : ((2 < i) ? 'opacity-0 -translate-x-8 pointer-events-none' : 'opacity-0 translate-x-8 pointer-events-none')" aria-label="Plans"><div class="grid md:grid-cols-2 gap-6 items-center h-full">
+                <div>
+                    <h2 class="font-display text-[30px] sm:text-[38px] leading-tight font-extrabold text-gray-900 dark:text-white">
+                        Pick your <span style="color:var(--primary)">plan</span>
+                    </h2>
+                    <p class="mt-2 text-[14.5px] text-gray-600 dark:text-gray-300 leading-relaxed max-w-xl">
+                        @if ($plan && $plan['on_trial'] && ! $plan['expired'])
+                            You're on the free trial with everything switched on. Choose a plan before it ends; nothing you build is lost.
+                        @elseif ($plan && $plan['expired'])
+                            Your trial has ended. Choose a plan to unlock your sites again.
+                        @else
+                            You're on {{ $plan['tier'] ?? 'a plan' }}. Change it any time.
+                        @endif
+                    </p>
+                    <div class="mt-3 grid grid-cols-3 gap-2 max-w-xl">
+                        @if ($plan && $plan['on_trial'] && ! $plan['expired'])
+                            <div><p class="{{ $counter }}" style="color:var(--primary)">{{ $plan['days_left'] }}</p><p class="text-[12px] text-gray-600 dark:text-gray-400">Trial days left</p></div>
+                        @else
+                            <div><p class="{{ $counter }} truncate" style="color:var(--primary)">{{ $plan['tier'] ?? '—' }}</p><p class="text-[12px] text-gray-600 dark:text-gray-400">Your plan</p></div>
+                        @endif
+                        <div><p class="{{ $counter }}" style="color:var(--primary)">{{ $tiers->count() }}</p><p class="text-[12px] text-gray-600 dark:text-gray-400">Plans</p></div>
+                        <div><p class="{{ $counter }}" style="color:var(--primary)">{{ $from ? \App\Support\Money::format((int) $from, 'gbp') : 'Free' }}</p><p class="text-[12px] text-gray-600 dark:text-gray-400">From / month</p></div>
+                    </div>
+                    <div class="mt-4 rounded-2xl bg-white/80 dark:bg-white/[0.04] shadow-sm px-4 py-1.5 max-w-md">
+                        @foreach ($tiers as $key => $t)
+                            <div class="flex items-center gap-2.5 py-1.5 {{ $loop->last ? '' : 'border-b border-gray-100 dark:border-white/[0.06]' }}">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {{ $t['color'] ?? 'var(--primary)' }}"></span>
+                                <span class="min-w-0 flex-1 text-[13.5px] font-bold text-gray-900 dark:text-white truncate">
+                                    {{ $t['name'] ?? $key }}
+                                    @if ($key === $planKey)<span class="ml-1 text-[10px] font-extrabold px-1.5 py-0.5 rounded-full" style="background:var(--primary);color:var(--on-primary)">yours</span>@endif
+                                </span>
+                                <span class="text-[13.5px] font-extrabold text-gray-900 dark:text-white">{{ ($t['price_cents'] ?? 0) ? \App\Support\Money::format((int) $t['price_cents'], 'gbp') : 'Free' }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-3">
+                        <a href="{{ route('account.subscription') }}" class="{{ $pillPrimary }}" style="background:var(--primary);color:var(--on-primary)">
+                            {{ ($plan['expired'] ?? false) ? 'Upgrade now' : (($plan['on_trial'] ?? false) ? 'Choose a plan' : 'Manage plan') }}
+                        </a>
+                        <a href="{{ route('how-it-works') }}#plans" wire:navigate class="{{ $pillOutline }}" style="border-color:var(--primary)">Compare plans</a>
+                    </div>
+                </div>
+                <x-intro-art variant="plans" class="w-full max-w-[24rem] mx-auto hidden md:block" />
+            </div></section>
+
+            {{-- 4 · What's next (like a "Get in touch" section) --}}
+            <section style="grid-area: 1 / 1" :aria-hidden="i !== 3" :inert="i !== 3" class="transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none" :class="i === 3 ? 'opacity-100 translate-x-0' : ((3 < i) ? 'opacity-0 -translate-x-8 pointer-events-none' : 'opacity-0 translate-x-8 pointer-events-none')" aria-label="What’s next"><div class="h-full flex flex-col justify-center">
+                <div class="text-center">
+                    <h2 class="font-display text-[28px] sm:text-[34px] font-extrabold text-gray-900 dark:text-white">What's <span style="color:var(--primary)">next</span></h2>
+                    <p class="text-[14.5px] text-gray-600 dark:text-gray-300">Pick up where you left off, or read the full guide.</p>
+                </div>
+                <div class="mt-4 grid md:grid-cols-2 gap-6 items-center">
+                    <x-intro-art variant="help" class="w-full max-w-[22rem] mx-auto hidden md:block" />
+                    <div class="rounded-3xl bg-white dark:bg-white/[0.04] shadow-lg shadow-black/5 p-5 space-y-3">
+                        <div class="rounded-2xl p-4" style="background:var(--primary-soft)">
+                            <p class="text-[12px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">{{ $firstUndone ? 'Your next step' : 'All done' }}</p>
+                            <p class="text-[16px] font-extrabold text-gray-900 dark:text-white">{{ $firstUndone['label'] ?? 'Your site is live 🎉' }}</p>
+                            <p class="text-[13px] text-gray-600 dark:text-gray-300 mt-0.5">{{ $firstUndone['description'] ?? 'Keep an eye on new contacts and bookings from your dashboard.' }}</p>
+                        </div>
+                        @if ($firstUndone && $firstUndone['key'] === 'create_site')
+                            <button wire:click="openCreate" class="w-full min-h-[46px] rounded-full text-[14px] font-bold shadow-md" style="background:linear-gradient(90deg,var(--primary),var(--secondary));color:var(--on-primary)">{{ $firstUndone['cta_label'] }}</button>
+                        @elseif ($firstUndone && $firstUndone['cta_url'])
+                            <a href="{{ $firstUndone['cta_url'] }}" wire:navigate class="flex items-center justify-center w-full min-h-[46px] rounded-full text-[14px] font-bold shadow-md" style="background:linear-gradient(90deg,var(--primary),var(--secondary));color:var(--on-primary)">{{ $firstUndone['cta_label'] }}</a>
+                        @endif
+                        <a href="{{ route('how-it-works') }}" wire:navigate class="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 dark:border-white/[0.08] px-4 py-3">
+                            <span>
+                                <span class="block text-[14px] font-bold text-gray-900 dark:text-white">Getting started guide</span>
+                                <span class="block text-[12px] text-gray-500 dark:text-gray-400">Every step in detail, plans, add-ons and answers.</span>
+                            </span>
+                            <span aria-hidden="true" style="color:var(--primary)">→</span>
+                        </a>
+                        <p class="text-[12.5px] text-gray-600 dark:text-gray-300">Questions? Write to <b>{{ config('mail.from.address') }}</b> and a real person will help.</p>
+                    </div>
+                </div>
+            </div></section>
+        </div>
+
+        {{-- Back · dots · Next --}}
+        <div class="flex items-center justify-between gap-3 px-6 sm:px-10 pb-6">
+            <button type="button" @click="go(i - 1)" :disabled="i === 0" class="{{ $pillOutline }} !min-h-[40px] !px-4 disabled:opacity-30" style="border-color:color-mix(in srgb, var(--primary) 50%, transparent)">← Back</button>
+            <div class="flex items-center gap-1.5" aria-hidden="true">
+                @foreach ($slides as $k => $label)
+                    <button type="button" tabindex="-1" @click="go({{ $k }})" class="h-2 rounded-full transition-all" :class="i === {{ $k }} ? 'w-7' : 'w-2 bg-gray-300 dark:bg-white/20'" :style="i === {{ $k }} ? 'background:var(--primary)' : ''"></button>
                 @endforeach
             </div>
-
-            <p class="text-xs text-gray-400 mt-4">
-                New to Olux? <a href="{{ route('how-it-works') }}" wire:navigate class="font-semibold" style="color:var(--primary)">See how it works →</a>
-            </p>
+            <button type="button" x-show="i < n - 1" @click="go(i + 1)" class="{{ $pillPrimary }} !min-h-[40px] !px-5" style="background:var(--primary);color:var(--on-primary)">Next →</button>
+            <button type="button" x-show="i === n - 1" x-cloak wire:click="dismiss" class="{{ $pillPrimary }} !min-h-[40px] !px-5" style="background:var(--primary);color:var(--on-primary)">Got it</button>
         </div>
     </div>
 @endif

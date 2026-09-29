@@ -1,4 +1,3 @@
-<x-layouts.home>
-    <x-slot:title>Platform dashboard — Olux</x-slot>
+<x-layouts.admin title="Platform dashboard — Olux">
     <livewire:platform-dashboard />
-</x-layouts.home>
+</x-layouts.admin>

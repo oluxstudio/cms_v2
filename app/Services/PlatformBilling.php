@@ -112,6 +112,11 @@ class PlatformBilling
             }
         }
 
+        if ($event->type === 'charge.refunded') {
+            // Template sales on the platform account (domains/plans are refunded by hand).
+            app(TemplateCommerce::class)->refundByPaymentIntent((string) ($event->data->object->payment_intent ?? ''));
+        }
+
         if ($event->type === 'customer.subscription.deleted') {
             $stripeSub = $event->data->object;
             AccountSubscription::where('stripe_subscription_id', $stripeSub->id)

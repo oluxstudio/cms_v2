@@ -10,15 +10,17 @@ use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Invoice;
 use App\Models\Media;
+use App\Models\Message;
 use App\Models\Order;
 use App\Models\Page;
 use App\Models\Product;
 use App\Models\Site;
 use App\Models\SiteActivityLog;
 use App\Models\Todo;
+use App\Models\Visit;
 use App\Services\OpsAlerts;
 use App\Services\VerticalStats;
-use App\Support\SiteChecklist;
+use App\Support\SiteSetupTask;
 use Livewire\Component;
 
 class SiteDashboard extends Component
@@ -37,6 +39,11 @@ class SiteDashboard extends Component
 
     public int $contactsCount = 0;
 
+    /** Unique visitors / page views over the last 7 days, and the 7 before. */
+    public array $traffic = ['visitors' => 0, 'visitors_prev' => 0, 'views' => 0];
+
+    public int $openTasksCount = 0;
+
     // ── Ops hub ──────────────────────────────────────────────────────
 
     /** Today's + tomorrow's bookings: time, customer, service, balance owed. */
@@ -50,9 +57,6 @@ class SiteDashboard extends Component
 
     public int $outstandingCents = 0;
 
-    /** New (uncontacted) leads. */
-    public array $newContacts = [];
-
     public array $recentEstimates = [];
 
     /** This-week ops metrics: bookings, revenue collected, new leads. */
@@ -61,7 +65,15 @@ class SiteDashboard extends Component
     /** Vertical widget pack (salon pulse / jobs & quotes) — [] when no business_type. */
     public array $verticalStats = [];
 
-    /** Go-live checklist (auto-detected) + its progress. */
+    /** Left-rail attention tiles: unread team messages and alerts for the viewer. */
+    public int $unreadMessages = 0;
+
+    public int $unreadAlerts = 0;
+
+    /** The site's "Set up your site" task, shown as the checklist. */
+    public ?string $setupTaskId = null;
+
+    /** Setup checklist rows (from the setup task) + its progress. */
     public array $checklist = [];
 
     public array $checklistProgress = ['done' => 0, 'total' => 0, 'complete' => true, 'pct' => 100];
@@ -73,8 +85,6 @@ class SiteDashboard extends Component
      * @var list<array{label:string,value:int,seg:string,bg:string,fg:string,icon:string,hint:string}>
      */
     public array $commerceTiles = [];
-
-    public array $recentResponses = [];
 
     public array $recentContacts = [];
 
@@ -106,8 +116,13 @@ class SiteDashboard extends Component
         $this->mediaCount = Media::where('site_id', $site->id)->count();
         $this->contactsCount = $site->contacts()->count();
 
+        $this->traffic = $this->traffic($site);
+        $this->unreadMessages = Message::unreadCountFor($site, auth()->user());
+        $this->unreadAlerts = Alert::visibleTo($site, auth()->user())->whereNull('read_at')->count();
         $this->commerceTiles = $this->commerceTiles($site);
-        $this->loadOps($site);
+        $this->loadOps($site); // syncs the setup task first, so it's counted below
+        $this->openTasksCount = Todo::where('site_id', $site->id)
+            ->whereIn('status', ['open', 'todo', 'pending', 'in_progress', 'backlog'])->count();
 
         $this->team = $site->members()
             ->get(['users.id', 'name'])
@@ -122,13 +137,6 @@ class SiteDashboard extends Component
 
         $formIds = Form::where('site_id', $site->id)->pluck('id');
         $this->responsesCount = FormResponse::whereIn('form_id', $formIds)->count();
-
-        $this->recentResponses = FormResponse::whereIn('form_id', $formIds)
-            ->with('form:id,name')
-            ->latest()
-            ->limit(4)
-            ->get()
-            ->toArray();
 
         // ── Activity feed (site_activity_logs) ───────────────────────────
         $this->recentActivities = SiteActivityLog::where('site_id', $site->id)
@@ -164,8 +172,8 @@ class SiteDashboard extends Component
             ->toArray();
 
         // ── Pending tasks (right rail quick view) ───────────────────────
-        $this->pendingTasks = Todo::where('site_id', $site->id)
-            ->whereIn('status', ['todo', 'pending', 'in_progress', 'backlog'])
+        $this->pendingTasks = Todo::where('site_id', $site->id)->whereNull('system_key')
+            ->whereIn('status', ['open', 'todo', 'pending', 'in_progress', 'backlog'])
             ->with(['assignee:id,name', 'items'])
             ->orderByRaw("FIELD(priority, 'high', 'normal', 'low') ASC")
             ->orderBy('due_at')
@@ -233,10 +241,6 @@ class SiteDashboard extends Component
                 ->whereIn('status', ['paid', 'fulfilled'])->where('created_at', '>=', $weekAgo)->sum('total_cents');
         }
 
-        $this->newContacts = Contact::where('site_id', $site->id)->where('status', 'new')
-            ->latest()->limit(5)->get(['id', 'name', 'email', 'created_at'])
-            ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name ?: $c->email, 'ago' => $c->created_at->diffForHumans(null, true)])
-            ->toArray();
         $this->weekStats['leads'] = Contact::where('site_id', $site->id)->where('created_at', '>=', $weekAgo)->count();
 
         if ($site->hasFeature('estimator')) {
@@ -247,13 +251,30 @@ class SiteDashboard extends Component
         }
 
         $this->actionItems = Alert::visibleTo($site, auth()->user())
-            ->whereNull('read_at')->whereIn('type', OpsAlerts::TYPES)
+            ->whereNull('read_at')->whereIn('type', OpsAlerts::activeTypes($site))
             ->latest()->limit(6)->get(['id', 'level', 'type', 'title', 'body', 'link'])
             ->toArray();
 
         $this->verticalStats = VerticalStats::for($site) ?? [];
-        $this->checklist = SiteChecklist::steps($site);
-        $this->checklistProgress = SiteChecklist::progress($site);
+        $setup = SiteSetupTask::sync($site);
+        $this->setupTaskId = $setup?->id;
+        $this->checklist = $setup ? SiteSetupTask::rows($site, $setup) : [];
+        $done = count(array_filter($this->checklist, fn ($s) => $s['done']));
+        $total = count($this->checklist);
+        $this->checklistProgress = ['done' => $done, 'total' => $total, 'complete' => $done === $total,
+            'pct' => $total ? (int) round($done / $total * 100) : 100];
+    }
+
+    private function traffic(Site $site): array
+    {
+        $visits = fn () => Visit::where('site_id', $site->id)->where('is_bot', false);
+
+        return [
+            'visitors' => $visits()->where('created_at', '>=', now()->subDays(7))->distinct()->count('visitor_hash'),
+            'visitors_prev' => $visits()->whereBetween('created_at', [now()->subDays(14), now()->subDays(7)])
+                ->distinct()->count('visitor_hash'),
+            'views' => $visits()->where('created_at', '>=', now()->subDays(7))->count(),
+        ];
     }
 
     /** Quick links are personal — keyed per user on the site's attributes. */

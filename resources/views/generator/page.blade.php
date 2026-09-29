@@ -302,7 +302,7 @@ footer{background:var(--dark);padding:2rem 0}
   <div class="container">
     <div class="footer-inner">
       <span class="footer-name">{{ $site->name }}@if($site->domain) · {{ $site->domain }}@endif</span>
-      <span class="footer-badge">Generated with Olux CMS</span>
+      <span class="footer-badge">Generated with {{ config('app.name') }}</span>
     </div>
   </div>
 </footer>

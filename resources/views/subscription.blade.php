@@ -1,4 +1,4 @@
-<x-layouts.home>
-    <x-slot:title>Subscription — Olux</x-slot>
+<x-layouts.page>
+    <x-slot:title>Subscription — {{ config('app.name') }}</x-slot>
     <livewire:subscription-page />
-</x-layouts.home>
+</x-layouts.page>

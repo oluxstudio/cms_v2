@@ -83,6 +83,17 @@ return [
         'rag_min_score' => (float) env('LLM_RAG_MIN_SCORE', 0.35),
         // Conversation turns re-sent verbatim each ask.
         'history_turns' => (int) env('LLM_HISTORY_TURNS', 6),
+        // Master switch (admin › AI usage). Off = the assistant shows as unavailable.
+        'enabled' => true,
+        // Estimated cost for the admin page: USD per 1M tokens [input, output].
+        // Editable on admin › AI usage; unknown models count as 0.
+        'prices' => [
+            'deepseek-chat' => [0.27, 1.10],
+            'deepseek-reasoner' => [0.55, 2.19],
+            'claude-opus-4-8' => [15.00, 75.00],
+            'claude-sonnet-5' => [3.00, 15.00],
+            'claude-haiku-4-5-20251001' => [1.00, 5.00],
+        ],
     ],
 
     // DeepSeek cloud API — fast, cheap (~$0.14/1M tokens), strong tool-calling.

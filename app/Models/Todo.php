@@ -14,7 +14,7 @@ class Todo extends Model
     use HasUlids;
 
     protected $fillable = [
-        'site_id', 'user_id', 'assigned_user_id', 'title', 'description',
+        'site_id', 'system_key', 'user_id', 'assigned_user_id', 'title', 'description',
         'status', 'priority', 'starts_at', 'due_at', 'completed_at', 'sort',
     ];
 

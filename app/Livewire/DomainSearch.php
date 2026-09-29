@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\DomainOrder;
 use App\Models\Site;
 use App\Services\Domains\DomainPurchase;
+use App\Support\PlanCatalog;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -134,8 +135,8 @@ class DomainSearch extends Component
 
     public function render()
     {
-        $tiers = collect(config('plans.tiers'))->except('trial')->sortBy('order');
         $sub = Auth::user()->currentSubscription();
+        $tiers = PlanCatalog::publicTiers($sub->plan)->except('trial');
 
         return view('livewire.domain-search', [
             'tiers' => $tiers->map(fn ($t, $k) => $t + ['key' => $k, 'price_cents' => $sub->priceFor($k)]),

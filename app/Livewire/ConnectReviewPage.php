@@ -18,6 +18,7 @@ use App\Services\CollectionSourceExtractor;
 use App\Services\ContentVersioner;
 use App\Services\SiteConnect\AssetImporter;
 use App\Services\SiteConnect\PageJsonPublisher;
+use App\Support\TemplatePaths;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -391,7 +392,7 @@ class ConnectReviewPage extends LivewireComponent
      */
     public function getDynamicPagesProperty(): array
     {
-        $appDir = base_path('templates/'.$this->site->template);
+        $appDir = TemplatePaths::appDir((string) $this->site->template);
         if (! $this->site->template || ! is_dir("$appDir/app/pages")) {
             return [];
         }

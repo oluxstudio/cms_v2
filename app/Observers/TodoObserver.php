@@ -9,6 +9,9 @@ class TodoObserver
 {
     public function created(Todo $todo): void
     {
+        if ($todo->system_key !== null) {
+            return; // platform-created (e.g. the setup task) — not someone's action
+        }
         ActivityLogger::todoCreated($todo);
     }
 

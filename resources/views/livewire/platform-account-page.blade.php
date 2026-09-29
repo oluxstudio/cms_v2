@@ -8,49 +8,50 @@
     $storageUsed = $sub->storageUsedBytes();
     $storageMb = $sub->storageLimitMb();
 @endphp
-<div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+<x-tri-layout :title="$user->name" :subtitle="$user->email"
+    :labels="['📊 Numbers', '👤 Account', 'ℹ️ Summary']" quick-width="lg:!w-[320px] xl:!w-[340px]">
 
-    <a href="{{ route('admin.dashboard') }}" wire:navigate class="text-xs font-semibold text-gray-400 hover:text-indigo-500">← Platform dashboard</a>
-
-    {{-- ── Account header ── --}}
-    <div class="mt-3 bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm p-6">
-        <div class="flex flex-wrap items-center gap-4">
-            <x-avatar :src="$user->avatar" :initials="strtoupper(substr($user->name, 0, 1))" size="w-14 h-14" textSize="text-xl font-bold" />
-            <div class="min-w-0 flex-1">
-                <h1 class="text-xl font-extrabold text-gray-900 dark:text-white truncate">{{ $user->name }}
-                    @if ($user->isSuper())<span class="ml-1 text-[10px] font-bold uppercase text-indigo-400 align-middle">admin</span>@endif
-                </h1>
-                <p class="text-sm text-gray-400 truncate">{{ $user->email }}</p>
-            </div>
+    <x-slot:header>
+        <div class="flex items-center gap-2">
             <span class="px-3 py-1.5 rounded-full text-xs font-bold text-white" style="background: {{ $tier['color'] }}">{{ $sub->badgeLabel() }}</span>
             <a href="{{ route('admin.accounts', ['q' => $user->email]) }}" wire:navigate
-               class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600">
+               class="fx px-3.5 py-1.5 rounded-xl text-xs font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200">
                 Manage pricing
             </a>
+            @unless ($user->isSuper() || $user->is(auth()->user()))
+                <form method="POST" action="{{ route('admin.impersonate', $user->id) }}">
+                    @csrf
+                    <button type="submit" data-confirm="View the app as {{ $user->name }}? You'll act as them for up to 60 minutes; this is recorded in their activity."
+                            class="fx px-3.5 py-1.5 rounded-xl text-xs font-bold" style="background:var(--primary);color:var(--on-primary)">
+                        View as this client
+                    </button>
+                </form>
+            @endunless
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 text-center">
-            @foreach ([
-                ['Joined', $user->created_at->format('M j, Y')],
-                ['Last seen', $lastSeen ? $lastSeen->diffForHumans() : '—'],
-                ['Sites', $sub->sitesUsage()],
-                ['Storage', $fmtBytes($storageUsed).($storageMb ? ' / '.$storageMb.' MB' : '')],
-            ] as [$label, $value])
-                <div class="rounded-xl bg-gray-50 dark:bg-white/[0.03] px-3 py-2.5">
-                    <p class="text-sm font-extrabold text-gray-900 dark:text-white truncate">{{ $value }}</p>
-                    <p class="text-[10px] text-gray-400 mt-0.5">{{ $label }}</p>
-                </div>
-            @endforeach
-        </div>
-        @if ($tokens->isNotEmpty())
-            <p class="mt-3 text-[11px] text-gray-400">
-                {{ $tokens->count() }} API {{ Str::plural('token', $tokens->count()) }}
-                @if ($tokens->first()?->last_used_at) · last used {{ $tokens->first()->last_used_at->diffForHumans() }} @endif
-            </p>
-        @endif
+    </x-slot:header>
+
+    {{-- ══ LEFT rail: this account's numbers ══ --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 gap-3">
+        <x-tile accent="ink" wide :value="$sub->badgeLabel()" label="Plan" :sub="'joined '.$user->created_at->format('j M Y')"
+                style="background:var(--primary);color:var(--on-primary);--tile-icon:var(--on-primary)"
+                icon="M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8c1.3 0 2.4.5 2.8 1.3M12 8V7m0 10v-1m0 1c-1.3 0-2.4-.5-2.8-1.3M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <x-tile accent="sky" :value="$sub->sitesUsage()" label="Sites" :sub="$sites->where('live', true)->count().' live'"
+                icon="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9m-9 9a9 9 0 019-9" />
+        <x-tile accent="lavender" :value="$fmtBytes($storageUsed)" label="Storage" :sub="$storageMb ? 'of '.$storageMb.' MB' : 'no limit'"
+                icon="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7z" />
+        <x-tile accent="lime" :value="$lastSeen ? $lastSeen->diffForHumans(short: true) : '—'" label="Last seen" sub="activity"
+                icon="M13 10V3L4 14h7v7l9-11h-7z" />
+        <x-tile accent="cocoa" :value="$tokens->count()" label="API tokens"
+                :sub="$tokens->first()?->last_used_at ? 'used '.$tokens->first()->last_used_at->diffForHumans(short: true) : 'none used'"
+                icon="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
     </div>
+    </x-slot:rail>
+
+<div class="max-w-[52rem] mx-auto">
 
     {{-- ── Sites ── --}}
-    <h2 class="mt-6 mb-2 text-sm font-bold text-gray-900 dark:text-white">Sites ({{ $sites->count() }})</h2>
+    <h2 class="mb-2 text-sm font-bold text-gray-900 dark:text-white">Sites ({{ $sites->count() }})</h2>
     @if ($sites->isEmpty() && $memberSites->isEmpty())
         <p class="text-sm text-gray-400">No sites yet.</p>
     @else
@@ -66,7 +67,7 @@
                         </span>
                     </div>
                     <p class="text-[11px] text-gray-400 mt-1.5">{{ $s->pages_count }} pages · {{ $s->media_count }} media · created {{ $s->created_at->format('M j, Y') }}</p>
-                    @if ($s->domain)<p class="text-[11px] text-indigo-400 truncate mt-0.5">{{ $s->domain }}</p>@endif
+                    @if ($s->domain)<p class="text-[11px] truncate mt-0.5" style="color:var(--primary)">{{ $s->domain }}</p>@endif
                 </a>
             @endforeach
             @foreach ($memberSites as $s)
@@ -198,6 +199,22 @@
     </div>
 </div>
 
+    <x-slot:quick>
+        <div class="rounded-[1.75rem] bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm p-5">
+            <h3 class="text-[15px] font-bold text-gray-900 dark:text-white mb-1">Related</h3>
+            @foreach ([['All accounts', 'search, plans & pricing', route('admin.accounts')], ['Dashboard', 'platform numbers', route('admin.dashboard')], ['Templates', 'catalog, uploads & review', route('admin.templates')]] as [$rl, $rd, $ru])
+                <a href="{{ $ru }}" wire:navigate class="flex items-center gap-2.5 py-2 {{ $loop->last ? '' : 'border-b border-gray-50 dark:border-white/[0.04]' }}">
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[13px] font-bold text-gray-800 dark:text-gray-100">{{ $rl }}</span>
+                        <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ $rd }}</span>
+                    </span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            @endforeach
+        </div>
+    </x-slot:quick>
+</x-tri-layout>
+
 @script
 <script>
 (function () {
@@ -211,7 +228,7 @@
         series: [{ name: 'Visits', data: c.visits }],
         xaxis: { categories: c.labels, tickAmount: 6, labels: { style: { colors: sub, fontSize: '10px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
         yaxis: { labels: { style: { colors: sub, fontSize: '10px' } } },
-        stroke: { curve: 'smooth', width: 2 }, colors: ['#6366f1'],
+        stroke: { curve: 'smooth', width: 2 }, colors: [getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#f97316'],
         fill: { type: 'gradient', gradient: { opacityFrom: 0.3, opacityTo: 0.03 } },
         dataLabels: { enabled: false },
         grid: { borderColor: isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)' },

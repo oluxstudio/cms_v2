@@ -33,7 +33,7 @@ test('a task can be created, assigned with a due date and subtasks, and the assi
         ->call('create')->assertHasNoErrors()
         ->assertSee('Photograph the salon')->assertSee($mate->name)->assertSee('left');
 
-    $task = Todo::where('site_id', $site->id)->first();
+    $task = Todo::where('site_id', $site->id)->whereNull('system_key')->first(); // not the built-in setup task
     expect($task->assigned_user_id)->toBe($mate->id)
         ->and($task->items()->count())->toBe(2)
         ->and($task->due_at)->not->toBeNull();
@@ -47,7 +47,7 @@ test('subtasks move the task through in progress to done, and tabs count each st
     $site->todos()->create(['user_id' => $owner->id, 'title' => 'Late', 'status' => 'open', 'priority' => 'normal', 'due_at' => now()->subDay()]);
 
     $c = Livewire::actingAs($owner)->test(TasksPage::class, ['siteId' => $site->id]);
-    expect($c->instance()->counts())->toMatchArray(['all' => 2, 'open' => 2, 'overdue' => 1]);
+    expect($c->instance()->counts())->toMatchArray(['all' => 3, 'open' => 3, 'overdue' => 1]); // + the site's setup task
 
     $c->call('toggleItem', $a->id);
     expect($task->fresh()->status)->toBe('in_progress');

@@ -6,6 +6,7 @@ use App\Livewire\Concerns\InteractsWithCuratedTemplates;
 use App\Models\Site;
 use App\Models\SiteTemplate;
 use App\Services\TemplateInstaller;
+use App\Support\TemplatePaths;
 use App\Templates\TemplateAppRegistry;
 use App\Templates\TemplateContract;
 use Illuminate\Support\Str;
@@ -139,8 +140,7 @@ class SiteTemplatesPage extends Component
         // preview is EXACTLY what publishes — markup, colours, hover, animations);
         // otherwise the generic renderer. The app fetches demo content via ?template=id.
         $appKey = $this->appKeyFor($it);
-        $base = $appKey === TemplateAppRegistry::BLANK ? 'nuxt-preview/' : "nuxt-preview/{$appKey}/";
-        $previewUrl = url($base).'?template='.urlencode((string) $it->id);
+        $previewUrl = TemplatePaths::shellUrl($appKey).'?template='.urlencode((string) $it->id);
 
         $this->dispatch('open-preview', url: $previewUrl);
     }

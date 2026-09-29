@@ -45,6 +45,26 @@ return [
     'staging_path' => env('TEMPLATE_STAGING_PATH', '/var/www/templates-staging'),
 
     /*
+    | Client uploads from a site's Design page: private Nuxt apps, stored on
+    | the persistent volume. `builder`:
+    |   local   — run npm in this container (dev, where node is installed)
+    |   sandbox — hand the app to the isolated template-builder container,
+    |             which has no secrets, no database and no app storage
+    |             (uploaded apps run arbitrary code while they build).
+    */
+    // Creator payouts: a sale becomes payable this many days after purchase
+    // (most refunds land first).
+    'payout_hold_days' => (int) env('TEMPLATE_PAYOUT_HOLD_DAYS', 7),
+
+    'uploads' => [
+        'path' => env('TEMPLATE_UPLOADS_PATH', storage_path('app/user-templates')),
+        'builder' => env('TEMPLATE_BUILDER', 'local'),
+        'sandbox_path' => env('TEMPLATE_SANDBOX_PATH', '/builds'),
+        'build_timeout' => (int) env('TEMPLATE_BUILD_TIMEOUT', 1200),
+        'max_zip_kb' => 61440,
+    ],
+
+    /*
     | UGC upload limits (security hardening for the .zip import path).
     */
     // Zip-of-Nuxt-APP intake (Submissions upload / template:import) — a
@@ -56,6 +76,11 @@ return [
         'allowed_ext' => ['vue', 'ts', 'js', 'mjs', 'json', 'css', 'scss', 'md', 'txt',
             'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'otf', 'eot'],
         'denied_dirs' => ['node_modules', '.nuxt', '.output', '.git', '.github'],
+        // Harmless project metadata: skipped (never unpacked) instead of
+        // failing the upload. Anything else unexpected is still rejected.
+        'ignored_names' => ['.gitignore', '.gitattributes', '.editorconfig', '.prettierrc', '.prettierignore',
+            '.eslintrc', '.eslintignore', '.nvmrc', '.node-version', '.DS_Store', 'Thumbs.db', 'LICENSE', 'README'],
+        'ignored_dirs' => ['__MACOSX', '.vscode', '.idea'],
     ],
 
     // Repo-first intake: PAT for private https clones + push-webhook secret.

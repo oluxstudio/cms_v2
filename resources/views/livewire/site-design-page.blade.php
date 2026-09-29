@@ -2,6 +2,7 @@
     $currentTpl = $applied?->template;
     $currentName = $currentTpl?->name ?? $applied?->name ?? ($curatedFallback['name'] ?? null);
     $currentThumb = $currentTpl?->thumbnail_url ?? ($curatedFallback['thumbnail'] ?? null);
+    $currentBy = $currentTpl?->source === 'upload' ? 'you (uploaded)' : ($currentTpl?->creator?->name ?? 'Olux Studio');
 @endphp
 <x-tri-layout title="Design" :subtitle="'How '.$site->name.' looks — its template, changed safely with a restore point.'" :site-name="$site->name"
     :labels="['📊 Overview', '🎨 Design', 'ℹ️ Summary']">
@@ -19,7 +20,7 @@
     <div class="grid grid-cols-2 gap-3">
         <x-tile accent="ink" wide :value="$currentName ?? 'None'" label="Current template"
                 icon="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM4 10h16"
-                :sub="$currentName ? ('by '.($currentTpl?->creator?->name ?? 'Olux Studio')) : 'pick one to begin'" />
+                :sub="$currentName ? 'by '.$currentBy : 'pick one to begin'" />
         <x-tile accent="lime" :value="$libraryTemplates->count()" label="In your library"
                 icon="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5z"
                 sub="usable on this site" />
@@ -46,7 +47,7 @@
                     <p class="text-[11px] font-bold uppercase tracking-wide text-gray-400">Current template</p>
                     <h2 class="text-lg font-extrabold text-gray-900 dark:text-white">{{ $currentName }}</h2>
                     <p class="text-[12.5px] text-gray-500 dark:text-gray-400">
-                        by {{ $currentTpl?->creator?->name ?? 'Olux Studio' }}
+                        by {{ $currentBy }}
                         · {{ $applied?->templateVersion?->version ?? 'current version' }}
                         @if ($applied?->applied_at) · applied {{ $applied->applied_at->diffForHumans() }} @endif
                     </p>
@@ -64,6 +65,97 @@
                 <p class="text-[13px] text-gray-500 dark:text-gray-400 mt-1">Pick one from your library — your pages and content stay yours.</p>
                 <button wire:click="openPicker" class="fx mt-4 min-h-[48px] px-6 rounded-xl text-[14px] font-bold shadow-sm" style="background:var(--primary);color:var(--on-primary)">Choose a template</button>
             </div>
+        @endif
+    </div>
+
+    {{-- Upload your own design: a zipped Nuxt app becomes a private library template --}}
+    @php $uploading = $uploads->contains(fn ($u) => $u->inProgress()); @endphp
+    <div class="mt-4 bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm p-5"
+         @if ($uploading) wire:poll.5s @endif>
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-extrabold text-gray-900 dark:text-white">Upload your own design</h2>
+                <p class="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+                    Upload a zipped Nuxt app. We connect its pages and text to the editor, build it, and add it to your library.
+                    It stays private to your account.
+                </p>
+            </div>
+        </div>
+
+        <form wire:submit="uploadApp" class="mt-4 grid gap-3 sm:grid-cols-[1fr_14rem_auto] sm:items-end">
+            <label class="block min-w-0">
+                <span class="bkf-label">Nuxt app (.zip, up to 60 MB)</span>
+                <input type="file" wire:model="appZip" accept=".zip,application/zip"
+                       class="bkf-input w-full file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-[12.5px] file:font-bold file:bg-gray-100 dark:file:bg-white/[0.08] file:text-gray-700 dark:file:text-gray-200">
+            </label>
+            <label class="block">
+                <span class="bkf-label">Name (optional)</span>
+                <input type="text" wire:model="uploadName" maxlength="60" placeholder="e.g. Spring refresh" class="bkf-input w-full">
+            </label>
+            <button type="submit" wire:loading.attr="disabled" wire:target="appZip,uploadApp"
+                    class="fx min-h-[44px] px-5 rounded-xl text-[14px] font-bold shadow-sm disabled:opacity-50" style="background:var(--primary);color:var(--on-primary)">
+                <span wire:loading.remove wire:target="appZip,uploadApp">Upload</span>
+                <span wire:loading wire:target="appZip">Sending…</span>
+                <span wire:loading wire:target="uploadApp">Starting…</span>
+            </button>
+        </form>
+        @error('appZip')<p class="mt-2 text-[12.5px] font-semibold text-rose-600">{{ $message }}</p>@enderror
+        @error('uploadName')<p class="mt-2 text-[12.5px] font-semibold text-rose-600">{{ $message }}</p>@enderror
+
+        <details class="mt-3 text-[12.5px] text-gray-600 dark:text-gray-300">
+            <summary class="cursor-pointer font-bold text-gray-700 dark:text-gray-200">What the zip should contain</summary>
+            <ul class="mt-2 ml-4 list-disc space-y-1">
+                <li>A Nuxt 3 or 4 app: <code>package.json</code>, <code>nuxt.config.ts</code> and a <code>pages</code> folder (or <code>app/pages</code>).</li>
+                <li>Page sections as components, so each becomes an editable block.</li>
+                <li>Images and fonts in <code>public</code>. Leave out <code>node_modules</code>, <code>.nuxt</code> and <code>.output</code>.</li>
+            </ul>
+        </details>
+
+        @if ($uploads->isNotEmpty())
+        <div class="mt-4 border-t border-gray-100 dark:border-white/[0.06] pt-3 space-y-2" aria-live="polite">
+            @foreach ($uploads as $u)
+                @php
+                    [$pillBg, $pillFg, $pillText] = match ($u->status) {
+                        'ready' => ['#dcfce7', '#15803d', 'Ready'],
+                        'failed' => ['#ffe4e6', '#be123c', 'Failed'],
+                        default => ['#e0f2fe', '#0369a1', 'In progress'],
+                    };
+                @endphp
+                <div class="rounded-xl border border-gray-100 dark:border-white/[0.06] px-3.5 py-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[13.5px] font-bold text-gray-900 dark:text-white truncate max-w-[16rem]">{{ $u->name ?: $u->original_filename ?: 'Upload' }}</span>
+                        <span class="text-[10.5px] font-extrabold px-2 py-0.5 rounded-full" style="background:{{ $pillBg }};color:{{ $pillFg }}">{{ $pillText }}</span>
+                        <span class="text-[11px] text-gray-400">{{ $u->created_at->diffForHumans() }}</span>
+                        <span class="ml-auto flex items-center gap-2">
+                            @if ($u->status === 'ready' && $u->template)
+                                @if ($preview = $u->template->previewUrl($site->name))
+                                    <x-preview-button :href="$preview" label="Preview" small />
+                                @endif
+                                <button wire:click="applyUpload('{{ $u->id }}')" wire:loading.attr="disabled"
+                                        class="fx min-h-[36px] px-3.5 rounded-xl text-[12.5px] font-bold" style="background:var(--primary);color:var(--on-primary)">Use on this site</button>
+                            @elseif ($u->status === 'failed')
+                                <button wire:click="dismissUpload('{{ $u->id }}')" class="fx min-h-[36px] px-3 rounded-xl text-[12.5px] font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#1d1e2a] text-gray-600 dark:text-gray-300">Dismiss</button>
+                            @endif
+                        </span>
+                    </div>
+                    @if ($u->inProgress())
+                        <p class="mt-1.5 flex items-center gap-2 text-[12.5px] text-gray-600 dark:text-gray-300">
+                            <svg class="animate-spin w-3.5 h-3.5" style="color:var(--primary)" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                            {{ $u->step ?: 'Working' }}…
+                        </p>
+                    @elseif ($u->status === 'failed')
+                        <p class="mt-1.5 text-[12.5px] text-rose-600 dark:text-rose-400">{{ $u->error }}</p>
+                    @elseif ($u->warnings)
+                        <p class="mt-1.5 text-[12px] text-gray-500 dark:text-gray-400">
+                            Added to your library{{ $u->lint_score !== null ? ' · quality '.$u->lint_score.'/100' : '' }}.
+                            Worth a look: {{ collect($u->warnings)->take(2)->implode(' · ') }}
+                        </p>
+                    @else
+                        <p class="mt-1.5 text-[12px] text-gray-500 dark:text-gray-400">Added to your library.</p>
+                    @endif
+                </div>
+            @endforeach
+        </div>
         @endif
     </div>
 </div>
@@ -149,9 +241,8 @@
 
             <div class="flex flex-wrap items-center justify-end gap-2 mt-4">
                 @php
-                    // TODO: real "preview with my content" (render this site's data in the
-                    // chosen template without saving). Opens the template's live preview for now.
-                    $selPreview = $selected ? ($selected->live_preview_url ?: (is_file(public_path('nuxt-preview/'.($selected->builtin_key ?: $selected->slug).'/index.html')) ? url('nuxt-preview/'.($selected->builtin_key ?: $selected->slug).'/') : null)) : null;
+                    // The template's shell with ?site= renders THIS site's content in it.
+                    $selPreview = $selected ? ($selected->live_preview_url ?: $selected->previewUrl($site->name)) : null;
                 @endphp
                 <a @if ($selPreview) href="{{ $selPreview }}" target="_blank" rel="noopener" @endif
                    class="fx min-h-[44px] px-4 leading-[44px] rounded-xl text-[13px] font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] text-gray-700 dark:text-gray-200 {{ $selPreview ? '' : 'opacity-40 pointer-events-none' }}">

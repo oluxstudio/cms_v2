@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\TemplateSubmission;
+use App\Support\TemplatePaths;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -32,7 +33,7 @@ class SubmissionPublisher
             throw new \RuntimeException("Submission “{$submission->key}” has no extraction manifest — scan it first.");
         }
 
-        $appDir = base_path("templates/{$submission->key}");
+        $appDir = TemplatePaths::appDir($submission->key);
         $this->copyApp($submission->stagingPath(), $appDir);
 
         // Fonts ship WITH the template: Google-CDN links become self-hosted
@@ -145,7 +146,7 @@ class SubmissionPublisher
 
         // 6. Scaffold package: pages JSON for every manifest page + template.json
         //    + the default LAYOUT every page is based on.
-        $pkg = resource_path("templates/{$key}");
+        $pkg = TemplatePaths::packageDir($key);
         if (! File::exists("$pkg/template.json")) {
             $missing[] = 'package template.json';
         }
@@ -268,7 +269,7 @@ class SubmissionPublisher
     {
         $this->manifestName = $manifest['name'] ?? null;
         $key = $manifest['key'];
-        $dir = resource_path("templates/{$key}");
+        $dir = TemplatePaths::packageDir($key);
 
         // Curated keys hand-added to the previous manifest (forms the installer
         // creates, booking services/availability) survive republishes — the

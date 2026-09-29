@@ -17,6 +17,8 @@ use App\Models\Order;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Site;
+use App\Models\Template;
+use App\Models\TemplateUpload;
 use App\Models\User;
 use App\Models\Visit;
 use Illuminate\Support\Facades\Auth;
@@ -148,7 +150,37 @@ class PlatformDashboard extends Component
             ->mapWithKeys(fn ($u) => [$u->name => (int) $visitsByAccount[$u->id]])
             ->sortDesc()->all();
 
+        // ── Growth: signups for the last 6 months + change vs last month.
+        $months = collect(range(5, 0))->map(fn ($m) => now()->startOfMonth()->subMonths($m));
+        $monthRows = User::where('created_at', '>=', $months->first())
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, count(*) as n")->groupBy('ym')->pluck('n', 'ym');
+        $growth = $months->map(fn ($m) => ['label' => $m->format('M'), 'count' => (int) ($monthRows[$m->format('Y-m')] ?? 0)])->values();
+        $prevMonth = $growth[4]['count'] ?? 0;
+        $growthPct = $prevMonth > 0 ? (int) round(($stats['accounts_new'] - $prevMonth) / $prevMonth * 100) : null;
+
+        // ── Site health for the gauge: live · built but offline · no pages yet.
+        $sitesWithPages = Site::has('pages')->count();
+        $siteHealth = [
+            'live' => $stats['sites_live'],
+            'offline' => max(0, $sitesWithPages - $stats['sites_live']),
+            'empty' => max(0, $stats['sites'] - $sitesWithPages),
+            'pct' => $stats['sites'] ? (int) round($stats['sites_live'] / $stats['sites'] * 100) : 0,
+            'domains' => Site::whereNotNull('domain_verified_at')->count(),
+        ];
+
+        // ── Templates needing attention (dashboard call-to-action card).
+        $templateStats = [
+            'published' => Template::where('status', 'published')->count(),
+            'in_review' => Template::where('status', 'in_review')->count(),
+            'building' => TemplateUpload::whereIn('status', [TemplateUpload::QUEUED, TemplateUpload::SCANNING, TemplateUpload::BUILDING])->count(),
+            'failed_7d' => TemplateUpload::where('status', TemplateUpload::FAILED)->where('updated_at', '>=', now()->subDays(7))->count(),
+        ];
+
         return view('livewire.platform-dashboard', [
+            'growth' => $growth,
+            'growthPct' => $growthPct,
+            'siteHealth' => $siteHealth,
+            'templateStats' => $templateStats,
             'stats' => $stats,
             'plans' => $plans,
             'planMax' => $planMax,

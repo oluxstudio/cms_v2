@@ -21,8 +21,8 @@ class VerticalStats
         $pack = BlueprintRegistry::types()[$type]['blueprint'] ?? null;
 
         return match ($pack) {
-            'salon' => self::salon($site),
-            'trades' => self::trades($site),
+            'salon' => $site->hasFeature('bookings') ? self::salon($site) : null,
+            'trades' => $site->hasFeature('estimator') ? self::trades($site) : null,
             default => null,
         };
     }
@@ -117,7 +117,7 @@ class VerticalStats
             ],
             'list_title' => 'Pipeline',
             'list' => array_values(array_filter([
-                ['title' => 'Jobs this week', 'sub' => $jobsThisWeek.' confirmed', 'href' => '/'.$site->name.'/bookings'],
+                $site->hasFeature('bookings') ? ['title' => 'Jobs this week', 'sub' => $jobsThisWeek.' confirmed', 'href' => '/'.$site->name.'/bookings'] : null,
                 $median !== null ? ['title' => 'Lead response speed', 'sub' => "median {$median}h to first reply (30 days)", 'href' => '/'.$site->name.'/contacts'] : null,
                 ['title' => 'Quotes new / sent / won / lost', 'sub' => $cnt('new').' / '.$cnt('contacted').' / '.$cnt('won').' / '.$cnt('lost'), 'href' => '/'.$site->name.'/estimates'],
             ])),

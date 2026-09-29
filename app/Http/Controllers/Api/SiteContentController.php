@@ -12,6 +12,7 @@ use App\Models\Post;
 use App\Models\Site;
 use App\Services\BlockTreeService;
 use App\Support\RichText;
+use App\Support\SiteProperties;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -93,6 +94,9 @@ class SiteContentController extends Controller
             'theme' => is_array($site->theme) ? $site->theme : [],
             // EVERY site attribute (EAV) — templates read their config here.
             'attributes' => $site->attrMap(),
+            // Business identity from the Properties page: name, logo, contact
+            // numbers/emails and admin-named variables (key => value).
+            'properties' => SiteProperties::payload($site),
             // Favicon from the site's Assets library (owner-replaceable) —
             // templates swap their baked icon for this at runtime.
             'favicon' => ($fav = $site->media()

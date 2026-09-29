@@ -434,7 +434,8 @@ test('preview item controls work on collections embedded inside a component', fu
     // + Add: resolved via componentKey + field path (the marker is the component).
     $lw->call('inlineItemAdd', null, 'hero', 'hero', 'gallery');
     expect($gallery->items()->count())->toBe(2)
-        ->and($gallery->items()->orderByDesc('id')->first()->data['caption'])->toBe('New photo');
+        // ULIDs made in the same millisecond don't sort by time — check the set, not "newest".
+        ->and($gallery->items()->get()->pluck('data.caption')->sort()->values()->all())->toBe(['First', 'New photo']);
 
     // Inline text edit: kind arrives as 'component' but itemId wins.
     $lw->call('inlineFieldEdit', null, 'hero', 'component', 'caption', 'Edited inline', $item->id);

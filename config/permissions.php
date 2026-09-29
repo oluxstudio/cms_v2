@@ -55,6 +55,7 @@ return [
             'builder.manage' => 'Use the site builder',
             'addons.manage' => 'Enable / configure add-ons',
             'publish.manage' => 'Put the site live / manage domain',
+            'properties.manage' => 'Edit site properties (name, logo, contacts, variables)',
             'team.manage' => 'Manage team & roles',
         ],
     ],
@@ -87,6 +88,7 @@ return [
         'payments' => 'addons.manage',
         'designs' => 'builder.manage',
         'publish' => 'publish.manage',
+        'properties' => 'properties.manage',
         'team' => 'team.manage',
     ],
 

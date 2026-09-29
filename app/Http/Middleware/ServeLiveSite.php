@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
 class ServeLiveSite
 {
     /** Path prefixes a live domain still needs from the backend itself. */
-    private const PASS_THROUGH = ['api/*', 'preview/*', 'nuxt-preview/*', 'livewire/*', 'stripe/*', 'internal/*', 'up'];
+    private const PASS_THROUGH = ['api/*', 'preview/*', 'nuxt-preview/*', 'livewire/*', 'stripe/*', 'internal/*', 'storage/*', 'up'];
 
     public function handle(Request $request, Closure $next): Response
     {

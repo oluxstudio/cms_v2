@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Template;
+use App\Models\TemplateCreator;
 use App\Models\TemplateVersion;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +29,7 @@ class TemplatePublisher
     /** Whether a user may approve/reject submissions. */
     public function isModerator(?User $user): bool
     {
-        return $user && in_array($user->email, (array) config('templates.moderators'), true);
+        return $user && ($user->isSuper() || in_array($user->email, (array) config('templates.moderators'), true));
     }
 
     /**
@@ -89,7 +90,10 @@ class TemplatePublisher
                 ]);
 
                 $version = $this->makeVersion($template, '1.0.0', $manifest, $pages, $shots);
-                $template->update(['latest_version_id' => $version->id]);
+                $template->update([
+                    'latest_version_id' => $version->id,
+                    'creator_id' => $this->creatorProfileFor($creator)->id,
+                ]);
 
                 return $template;
             });
@@ -99,6 +103,26 @@ class TemplatePublisher
     }
 
     /** Add a new version to an existing template (re-uploads require re-review). */
+    /** The public creator profile shown on a user's templates (created on first publish). */
+    public function creatorProfileFor(User $user): TemplateCreator
+    {
+        return TemplateCreator::firstOrCreate(
+            ['user_id' => $user->id],
+            ['name' => $user->name, 'slug' => $this->uniqueCreatorSlug($user->name)],
+        );
+    }
+
+    private function uniqueCreatorSlug(string $name): string
+    {
+        $base = Str::slug($name) ?: 'creator';
+        $slug = $base;
+        for ($i = 2; TemplateCreator::where('slug', $slug)->exists(); $i++) {
+            $slug = "{$base}-{$i}";
+        }
+
+        return $slug;
+    }
+
     public function newVersion(Template $template, string $zipPath): TemplateVersion
     {
         $zip = new ZipArchive;

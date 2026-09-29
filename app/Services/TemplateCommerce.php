@@ -142,6 +142,12 @@ class TemplateCommerce
             return null;
         }
 
+        // Creator-published templates earn their creator a share (paid out
+        // from /admin/sales); Olux Studio's own templates are all platform revenue.
+        $price = (int) $template->price_cents;
+        $creatorId = $this->creatorUserId($template);
+        $fee = $creatorId ? $this->feeCents($price) : $price;
+
         $purchase = TemplatePurchase::firstOrCreate(
             ['stripe_checkout_session_id' => $session->id],
             [
@@ -149,12 +155,13 @@ class TemplateCommerce
                 'template_id' => $template->id,
                 'template_version_id' => $template->latest_version_id,
                 'user_id' => $user->id,
-                'price_cents' => (int) $template->price_cents,
+                'creator_user_id' => $creatorId,
+                'price_cents' => $price,
                 'currency' => $template->currency ?: 'gbp',
-                'platform_fee_cents' => (int) $template->price_cents, // 100% platform revenue
-                'creator_amount_cents' => 0,
+                'platform_fee_cents' => $fee,
+                'creator_amount_cents' => $price - $fee,
                 'stripe_payment_intent_id' => (string) ($session->payment_intent ?? ''),
-                'status' => 'completed',
+                'status' => 'paid',
                 'purchased_at' => now(),
             ],
         );
@@ -167,6 +174,38 @@ class TemplateCommerce
                 'stripe_session_id' => $session->id, 'purchased_at' => now(),
             ],
         );
+    }
+
+    /** The user who earns from sales of this template, or null when the platform owns it. */
+    public function creatorUserId(Template $template): ?string
+    {
+        if ($template->source !== 'custom' || ! $template->user_id) {
+            return null;
+        }
+        $owner = User::find($template->user_id);
+
+        return $owner && ! $owner->isSuper() ? $owner->id : null;
+    }
+
+    /**
+     * A platform-checkout template sale was refunded in Stripe: mark it,
+     * take the template back out of the buyer's library. If the creator was
+     * already paid for it, the next payout claws their share back.
+     */
+    public function refundByPaymentIntent(string $paymentIntentId): ?TemplatePurchase
+    {
+        if ($paymentIntentId === '') {
+            return null;
+        }
+        $purchase = TemplatePurchase::where('stripe_payment_intent_id', $paymentIntentId)
+            ->where('status', 'paid')->first();
+        if (! $purchase) {
+            return null;
+        }
+        $purchase->update(['status' => 'refunded', 'refunded_at' => now()]);
+        $this->revokeForPurchase($purchase);
+
+        return $purchase;
     }
 
     /** Platform fee (cents) for a price, from config('services.stripe_platform.fee_percent'). */

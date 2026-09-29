@@ -5,12 +5,11 @@ namespace App\Livewire;
 use App\Jobs\BuildTemplateShell;
 use App\Models\DomainOrder;
 use App\Models\Site;
+use App\Services\Domains\DomainVerifier;
 use App\Services\TaskLogger;
 use App\Support\GoLiveChecklist;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Livewire\Component;
 
 /**
@@ -191,13 +190,7 @@ class GoLivePage extends Component
     /** Per-site TXT ownership token, generated once and kept. */
     public function verifyToken(): string
     {
-        $token = (string) $this->site->getAttr('domain.verify_token', '');
-        if ($token === '') {
-            $token = 'olux-'.Str::random(24);
-            $this->site->setAttr('domain.verify_token', $token);
-        }
-
-        return $token;
+        return app(DomainVerifier::class)->verifyToken($this->site);
     }
 
     private function ensureVerifyToken(): void
@@ -238,21 +231,11 @@ class GoLivePage extends Component
             return; // client-safe copy shown by the blade; admins alerted
         }
 
-        // 1 · Records found — A/CNAME pointing at the platform.
-        $found = [];
-        foreach ((array) @dns_get_record($domain, DNS_A) as $r) {
-            $found[] = $r['ip'] ?? '';
-        }
-        foreach ((array) @dns_get_record($domain, DNS_CNAME) as $r) {
-            $found[] = rtrim($r['target'] ?? '', '.');
-        }
-        $this->dnsFound = array_values(array_filter($found));
+        $r = app(DomainVerifier::class)->check($this->site, $target);
+        $this->dnsFound = $r['found'];
+        $recordsOk = $r['records'];
 
-        $accept = [strtolower($target)];
-        if (! filter_var($target, FILTER_VALIDATE_IP)) {
-            $accept = array_merge($accept, array_map('strtolower', (array) @gethostbynamel($target) ?: []));
-        }
-        $recordsOk = (bool) array_intersect(array_map('strtolower', $this->dnsFound), $accept);
+        // 1 · Records found — A/CNAME pointing at the platform.
         $this->checks['records'] = $recordsOk
             ? ['state' => 'done', 'hint' => null]
             : ['state' => 'working', 'hint' => $this->dnsFound
@@ -260,31 +243,18 @@ class GoLivePage extends Component
                 : 'No records seen yet — they can take a while to appear'];
 
         // 2 · Confirming you own it — TXT _olux-verify carries our token.
-        $token = $this->verifyToken();
-        $txts = collect((array) @dns_get_record('_olux-verify.'.$domain, DNS_TXT))
-            ->pluck('txt')->filter()->all();
-        $ownershipOk = in_array($token, $txts, true);
-        $this->checks['ownership'] = $ownershipOk
+        $this->checks['ownership'] = $r['ownership']
             ? ['state' => 'done', 'hint' => null]
             : ['state' => $recordsOk ? 'working' : 'waiting', 'hint' => $recordsOk ? 'Add the TXT record from step 2' : null];
 
         // 3 · Secure padlock — HTTPS answers on the domain.
-        $sslOk = false;
-        if ($recordsOk) {
-            try {
-                $sslOk = Http::timeout(4)->get('https://'.$domain)->successful();
-            } catch (\Throwable) {
-                $sslOk = false;
-            }
-        }
-        $this->checks['ssl'] = $sslOk
+        $this->checks['ssl'] = $r['ssl']
             ? ['state' => 'done', 'hint' => null]
             : ['state' => $recordsOk ? 'working' : 'waiting', 'hint' => $recordsOk ? 'Certificates are issued automatically — usually minutes' : null];
 
         $this->lastCheckedAt = now()->toIso8601String();
 
-        if ($recordsOk && $ownershipOk && ! $this->site->domain_verified_at) {
-            $this->site->update(['domain_verified_at' => now()]);
+        if ($r['verified_now']) {
             $this->dispatch('toast', level: 'success', title: 'Domain verified', message: $domain.' points at this platform.');
         }
     }

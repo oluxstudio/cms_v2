@@ -93,6 +93,13 @@ class MarketplacePage extends Component
             return;
         }
 
+        // Delisted on admin › Add-ons: can't be newly switched on.
+        if ($feature['hidden'] ?? false) {
+            $this->errorMessage = $feature['name'].' is not available right now.';
+
+            return;
+        }
+
         // Premium features require a plan that unlocks them (config/plans.php).
         if (($feature['tier'] ?? 'basic') === 'premium' && ! $this->site->user->currentSubscription()->allowsPremium()) {
             $this->dispatch('upgrade-required',

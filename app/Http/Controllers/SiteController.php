@@ -60,6 +60,11 @@ class SiteController extends Controller
         return view('api-keys', compact('site'));
     }
 
+    public function properties($siteID)
+    {
+        return view('site-properties', ['site' => $this->findSiteBySlug($siteID)]);
+    }
+
     public function emails($siteID)
     {
         $site = $this->findSiteBySlug($siteID);

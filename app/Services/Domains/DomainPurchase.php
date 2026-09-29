@@ -37,7 +37,10 @@ class DomainPurchase
 
     public function priceFor(string $domain): ?int
     {
-        foreach (config('domains.tlds') as $tld => $cfg) {
+        // Longest suffix first, so "x.co.uk" never matches ".uk".
+        $tlds = (array) config('domains.tlds');
+        uksort($tlds, fn ($a, $b) => strlen($b) <=> strlen($a));
+        foreach ($tlds as $tld => $cfg) {
             if (Str::endsWith($domain, '.'.$tld)) {
                 return (int) $cfg['price_cents'];
             }

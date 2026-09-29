@@ -41,7 +41,7 @@
     {{-- top row: icon square + trend/status pill --}}
     <span class="flex items-center justify-between gap-2">
         <span class="shrink-0 w-10 h-10 rounded-xl grid place-items-center"
-              style="{{ $featured ? 'background:rgba(255,255,255,.14);color:var(--primary)' : "background:{$iconBg};color:{$iconFg}" }}">
+              style="{{ $featured ? 'background:rgba(255,255,255,.14);color:var(--tile-icon, var(--primary))' : "background:{$iconBg};color:{$iconFg}" }}">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}"/></svg>
         </span>
         @if ($sub !== null && $sub !== '')

@@ -1,7 +1,7 @@
 {{-- The login/register card shell (dark studio theme) with the hero panel fixed
      LEFT and the slot on the right — used by /start so the signup steps that
      come after email verification look like the register panel they follow. --}}
-@props(['tagline' => 'Join thousands of creators<br>building with Olux CMS.'])
+@props(['tagline' => 'Join thousands of creators<br>building with '.e(config('app.name')).'.'])
 <div class="auth-screen min-h-screen flex items-center justify-center p-4">
     <div class="auth-card w-full max-w-[65rem] rounded-3xl shadow-2xl overflow-hidden relative md:flex">
 
@@ -41,7 +41,7 @@
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(120deg,var(--primary),var(--primary-2))">
                     <x-app-logo-icon class="w-4 h-4 fill-current text-white" />
                 </div>
-                <span class="font-bold text-lg auth-logo-text">Olux CMS<span style="color:var(--primary)">.</span></span>
+                <span class="font-bold text-lg auth-logo-text">{{ config('app.name') }}<span style="color:var(--primary)">.</span></span>
             </div>
             {{ $slot }}
         </div>

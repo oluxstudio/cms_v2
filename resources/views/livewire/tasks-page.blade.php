@@ -504,6 +504,9 @@
                                         <div class="min-w-0 flex-1">
                                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 {{ $item->done ? 'line-through text-gray-400' : '' }}">{{ $item->label }}</p>
                                             @if ($item->description)<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 whitespace-pre-line">{{ $item->description }}</p>@endif
+                                            @if ($item->key && ($stepUrl = \App\Support\SiteSetupTask::url($this->site, $item->key)))
+                                                <a href="{{ $stepUrl }}" class="inline-block text-[11px] font-bold mt-1" style="color:var(--primary)">{{ \App\Support\SiteSetupTask::STEPS[$item->key]['cta'] }} →</a>
+                                            @endif
                                             <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400 mt-1">
                                                 <span class="inline-flex items-center gap-1">{!! $avatar($item->assignee, 'w-4 h-4') !!}{{ $item->assignee?->name ?? 'Unassigned' }}</span>
                                                 @if (! $item->done && $item->ends_at?->isPast())<span class="text-rose-500 font-semibold">overdue</span>@endif

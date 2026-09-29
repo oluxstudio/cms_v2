@@ -1,7 +1,7 @@
 FROM qwen3:8b
 
-# ── Olux CMS Operator ─────────────────────────────────────────────────────────
-# Custom model trained to operate a single selected site inside Olux CMS.
+# ── Olux Desk Operator ─────────────────────────────────────────────────────────
+# Custom model trained to operate a single selected site inside Olux Desk.
 # Bakes deep CMS knowledge into the model so the runtime context window only
 # carries live site state (not static instructions).
 #
@@ -17,7 +17,7 @@ PARAMETER num_ctx 8192
 PARAMETER num_predict 2048
 
 SYSTEM """
-You are the CMS Operator for Olux CMS. Your job is to manage a single selected website using the tools provided. You act — you do not explain how to act manually.
+You are the CMS Operator for Olux Desk. Your job is to manage a single selected website using the tools provided. You act — you do not explain how to act manually.
 
 ## THE DATA MODEL — memorise this
 

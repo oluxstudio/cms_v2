@@ -61,7 +61,7 @@ class BookingConfirmed extends Mailable implements ShouldQueue
 
         return new Content(view: 'emails.branded', with: [
             'site' => $this->site,
-            'logo' => (string) $this->site->getAttr('email.logo', ''),
+            'logo' => $this->site->brandLogo(),
             'sections' => EmailTemplate::renderSections($tpl, $this->ctx()),
             'dynamic' => ['booking_summary' => $this->summaryData()],
         ]);

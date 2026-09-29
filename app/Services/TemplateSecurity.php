@@ -70,6 +70,19 @@ class TemplateSecurity
      * Validate a zipped Nuxt TEMPLATE APP (source code, not a split-file
      * package): app-profile limits, denied build/vcs dirs, no symlinks.
      */
+    /** Project metadata that is skipped rather than rejected (see limits_app.ignored_*). */
+    public static function ignorable(string $name): bool
+    {
+        $lim = config('templates.limits_app');
+        foreach ((array) ($lim['ignored_dirs'] ?? []) as $dir) {
+            if (preg_match('#(^|/)'.preg_quote($dir, '#').'/#', $name)) {
+                return true;
+            }
+        }
+
+        return in_array(basename($name), (array) ($lim['ignored_names'] ?? []), true);
+    }
+
     public function inspectAppZip(ZipArchive $zip): void
     {
         $lim = config('templates.limits_app');
@@ -90,6 +103,12 @@ class TemplateSecurity
                 continue;
             }
             $this->assertSafeEntryName($name);
+            if (self::ignorable($name)) {
+                continue;
+            }
+            if (preg_match('#(^|/)\.env(\.|$)#', $name)) {
+                throw new RuntimeException("Remove {$name} from the zip — environment files can contain passwords and are never needed.");
+            }
 
             foreach ($denied as $dir) {
                 if (preg_match('#(^|/)'.preg_quote($dir, '#').'(/|$)#', $name)) {

@@ -2,7 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Support\Fx;
+use App\Support\NuxtShell;
+use App\Support\TemplatePaths;
 use App\Templates\TemplateAppRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -58,7 +59,9 @@ class BuildNuxtPreview extends Command
         // FOUNDATION: the effects engine is defined ONCE in App\Support\Fx —
         // regenerate the app's bk-fx plugin from it so editing Fx.php takes
         // effect everywhere (canvas, exporter AND every built renderer).
-        $this->writeFxPlugin($appDir);
+        if (NuxtShell::writeFxPlugin($appDir)) {
+            $this->line('  · bk-fx plugin regenerated from App\\Support\\Fx');
+        }
 
         // The built-in "blank" app keeps the root path for backward compatibility;
         // every other template builds under its own sub-path. Staging submissions
@@ -67,8 +70,8 @@ class BuildNuxtPreview extends Command
             $base = "/nuxt-preview/_staging/{$key}/";
             $dest = public_path("nuxt-preview/_staging/{$key}");
         } else {
-            $base = $key === TemplateAppRegistry::BLANK ? '/nuxt-preview/' : "/nuxt-preview/{$key}/";
-            $dest = $key === TemplateAppRegistry::BLANK ? public_path('nuxt-preview') : public_path("nuxt-preview/{$key}");
+            $base = TemplatePaths::shellBase($key);
+            $dest = TemplatePaths::shellDir($key);
         }
 
         $this->info("Building template '{$key}' from {$appDir} → {$base}");
@@ -103,7 +106,11 @@ class BuildNuxtPreview extends Command
         File::deleteDirectory($staging);
         File::ensureDirectoryExists(dirname($staging));
         File::copyDirectory($output, $staging);
-        $this->rewriteAssetPaths($staging, $base);
+        $r = NuxtShell::rebase($staging, $base);
+        if ($r['stamp']) {
+            $this->info('  · Asset paths rebased ('.implode(', ', $r['dirs']).') in '.$r['rewritten'].' file(s)');
+            $this->info("  · Stylesheet links cache-busted ({$r['stamp']}) in {$r['stamped']} file(s)");
+        }
 
         if ($key === TemplateAppRegistry::BLANK && ! $explicitDir) {
             // The blank build lives at the nuxt-preview ROOT, which also holds
@@ -171,63 +178,6 @@ class BuildNuxtPreview extends Command
      * the built text files (HTML head links, JS chunks incl. v-for template
      * literals, CSS) to the preview base. Exported site builds are untouched.
      */
-    private function rewriteAssetPaths(string $dest, string $base): void
-    {
-        if ($base === '/') {
-            return; // served at root — absolute paths already resolve
-        }
-        $prefix = rtrim($base, '/');
-        // Every asset-ish top-level dir the build ships gets rebased — not just
-        // /assets/ (fonts, videos, audio, media… are referenced root-absolute too).
-        $assetDirs = collect(File::directories($dest))->map(fn ($d) => basename($d))
-            ->intersect(['assets', 'fonts', 'videos', 'video', 'audio', 'media', 'images', 'img', 'files', 'downloads'])
-            ->values()->all() ?: ['assets'];
-        $rewritten = 0;
-        foreach (File::allFiles($dest) as $file) {
-            if (! in_array($file->getExtension(), ['html', 'js', 'mjs', 'css', 'json'], true)) {
-                continue;
-            }
-            $src = File::get($file->getPathname());
-            // Nuxt ≥3.8 wraps static asset srcs in a base-aware helper —
-            // `x(`/assets/…`)` — which prepends NUXT_APP_BASE_URL at runtime.
-            // Rewriting those too would double the prefix, so shield them.
-            $new = $src;
-            foreach ($assetDirs as $d) {
-                $sentinel = "\x00OLX_BASE_AWARE\x00";
-                $new = str_replace('(`/'.$d.'/', $sentinel, $new);
-                $new = str_replace(
-                    ['"/'.$d.'/', "'/".$d.'/', '`/'.$d.'/', 'url(/'.$d.'/', '(/'.$d.'/'],
-                    ['"'.$prefix.'/'.$d.'/', "'".$prefix.'/'.$d.'/', '`'.$prefix.'/'.$d.'/', 'url('.$prefix.'/'.$d.'/', '('.$prefix.'/'.$d.'/'],
-                    $new
-                );
-                $new = str_replace($sentinel, '(`/'.$d.'/', $new);
-            }
-            if ($new !== $src) {
-                File::put($file->getPathname(), $new);
-                $rewritten++;
-            }
-        }
-        $this->info('  · Asset paths rebased ('.implode(', ', $assetDirs).') in '.$rewritten.' file(s)');
-
-        // Cache-bust the hand-authored stylesheets: they keep a stable URL
-        // across deploys and are served without Cache-Control, so browsers
-        // hold stale copies (new colour classes "missing" in production).
-        $stamp = 'v'.time();
-        $stamped = 0;
-        foreach (File::allFiles($dest) as $file) {
-            if (! in_array($file->getExtension(), ['html', 'js', 'mjs', 'json'], true)) {
-                continue;
-            }
-            $code = File::get($file->getPathname());
-            $new = preg_replace('#(/assets/(?:stylesheets|fonts)/[\w.-]+\.css)(?!\?)#', '$1?'.$stamp, $code);
-            if ($new !== null && $new !== $code) {
-                File::put($file->getPathname(), $new);
-                $stamped++;
-            }
-        }
-        $this->info("  · Stylesheet links cache-busted ({$stamp}) in {$stamped} file(s)");
-    }
-
     /** Run a process, streaming output; returns true on success. */
     private function runProcess(array $cmd, string $cwd, array $env = []): bool
     {
@@ -241,47 +191,5 @@ class BuildNuxtPreview extends Command
         }
 
         return true;
-    }
-
-    /**
-     * Generate app/plugins/bk-fx.client.ts from App\Support\Fx — ONE effects
-     * definition for every surface. Skips apps without an app/plugins dir.
-     */
-    private function writeFxPlugin(string $appDir): void
-    {
-        $pluginsDir = "{$appDir}/app/plugins";
-        if (! File::isDirectory("{$appDir}/app")) {
-            return;
-        }
-        File::ensureDirectoryExists($pluginsDir);
-
-        $css = Fx::css();
-        $js = Fx::js();
-
-        $content = <<<TS
-/**
- * GENERATED from App\Support\Fx by nuxt:preview-build — do not edit here.
- * The effects engine (enter/leave animations, click FX, parallax) is defined
- * ONCE in app/Support/Fx.php; editing it updates every surface on rebuild.
- */
-export default defineNuxtPlugin(() => {
-  if (typeof window === 'undefined') return
-  const style = document.createElement('style');
-  style.textContent = FX_CSS;
-  document.head.appendChild(style);
-  FX_JS
-})
-
-const FX_CSS = `{$css}`
-
-function FX_JS_PLACEHOLDER() {}
-TS;
-        // Inject the JS body (an IIFE) in place of the FX_JS marker, and the
-        // css via template literal above (backticks inside are not used by Fx).
-        $content = str_replace("  FX_JS\n", $js."\n", $content);
-        $content = str_replace('function FX_JS_PLACEHOLDER() {}', '', $content);
-
-        File::put("{$pluginsDir}/bk-fx.client.ts", $content);
-        $this->line('  · bk-fx plugin regenerated from App\Support\Fx');
     }
 }

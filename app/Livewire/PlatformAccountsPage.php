@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\AccountSubscription;
 use App\Models\Media;
 use App\Models\Site;
 use App\Models\User;
@@ -146,6 +147,16 @@ class PlatformAccountsPage extends Component
             ->when($this->sort === 'visits', fn ($q) => $q->orderByDesc('visits_30d'))
             ->paginate(15);
 
-        return view('livewire.platform-accounts-page', ['accounts' => $accounts]);
+        $subs = AccountSubscription::query();
+        $summary = [
+            'accounts' => User::count(),
+            'new_month' => User::where('created_at', '>=', now()->startOfMonth())->count(),
+            'paying' => (clone $subs)->where('status', 'active')->count(),
+            'trialing' => (clone $subs)->where('status', 'trialing')->count(),
+            'custom' => (clone $subs)->whereNotNull('price_overrides')->count(),
+            'plans' => (clone $subs)->selectRaw('plan, count(*) as n')->groupBy('plan')->pluck('n', 'plan'),
+        ];
+
+        return view('livewire.platform-accounts-page', ['accounts' => $accounts, 'summary' => $summary]);
     }
 }

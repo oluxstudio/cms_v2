@@ -8,6 +8,7 @@ use App\Services\AccountActivity;
 use App\Services\Blueprints\BlueprintRegistry;
 use App\Services\SignupVerification;
 use App\Services\TemplateInstaller;
+use App\Support\SiteSetupTask;
 use App\Support\TemplateCards;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
@@ -253,31 +254,14 @@ class SignupWizard extends Component
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
-    /** The post-signup checklist in the site's Tasks panel: what to finish inside the CMS. */
+    /** The site's setup task (SiteSetupTask), named for the business and handed to the new owner. */
     private function createSetupTodo(Site $site, User $user): void
     {
-        $todo = $site->todos()->create([
-            'user_id' => $user->id,
-            'assigned_user_id' => $user->id,
+        SiteSetupTask::sync($site)?->update([
             'title' => 'Finish setting up '.$this->business,
-            'description' => 'Everything your new site still needs — work through these from the dashboard.',
-            'priority' => 'high',
-            'status' => 'open',
+            'assigned_user_id' => $user->id,
         ]);
-        foreach (self::SETUP_ITEMS as $i => $label) {
-            $todo->items()->create(['label' => $label, 'sort' => $i + 1]);
-        }
     }
-
-    /** Checklist items added to every new site (order matters). */
-    public const SETUP_ITEMS = [
-        'Set your domain name — buy one or connect one you own (Go live page)',
-        'Pick a template for your site',
-        'Review the colour theme, logo and fonts',
-        'Choose the features your site needs (bookings, store, invoices, forms…)',
-        'Add your services, prices and opening hours',
-        'Pick a plan before your free trial ends',
-    ];
 
     /** Social providers with credentials configured — shown as one-click signup. */
     public function socialProviders(): array

@@ -36,6 +36,7 @@ services:
     env_file: .env
     volumes:
       - app_storage:/app/storage
+      - template_builds:/builds   # hand-off folder to the sandboxed builder
     depends_on:
       mysql:
         condition: service_healthy
@@ -67,6 +68,25 @@ services:
       retries: 3
       start_period: 20s
 
+  # Sandboxed builder for client-uploaded Nuxt templates. Uploaded apps run
+  # arbitrary code while they build, so this container gets NO env file, NO
+  # database and NO app storage — only the template_builds hand-off volume.
+  # Capped so a heavy build can't starve the live site on this small box.
+  template-builder:
+    image: node:22-bookworm-slim
+    restart: unless-stopped
+    user: node
+    working_dir: /builds
+    command: ['sh', '/opt/builder/build-loop.sh']
+    environment:
+      NODE_OPTIONS: --max-old-space-size=900
+      BUILD_TIMEOUT: '1200'
+    volumes:
+      - template_builds:/builds
+      - ./docker/template-builder:/opt/builder:ro
+    mem_limit: 1200m
+    cpus: 0.75
+
   mysql:
     image: mysql:8.0
     restart: unless-stopped
@@ -96,5 +116,6 @@ volumes:
   caddy_data:
   caddy_config:
   app_storage:
+  template_builds:
   mysql_data:
   redis_data:

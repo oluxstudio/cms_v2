@@ -76,7 +76,7 @@ class TemplateStager
 
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $name = $zip->getNameIndex($i);
-                if ($name === false || str_ends_with($name, '/')) {
+                if ($name === false || str_ends_with($name, '/') || TemplateSecurity::ignorable($name)) {
                     continue;
                 }
                 $rel = $prefix !== null ? Str::after($name, $prefix) : $name;
@@ -186,7 +186,7 @@ class TemplateStager
         $rootFiles = false;
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
-            if ($name === false) {
+            if ($name === false || TemplateSecurity::ignorable($name)) {
                 continue;
             }
             if (! str_contains(rtrim($name, '/'), '/')) {

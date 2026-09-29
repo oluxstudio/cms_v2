@@ -474,7 +474,7 @@ class SiteFormsPage extends Component
         $channels = config('form_channels.channels', []);
         $tplLabels = collect($this->fbTemplate['sections'] ?? [])->mapWithKeys(fn ($s) => [$s['key'] => EmailTemplate::label($s['key'])])->all();
         $editableKeys = EmailTemplate::EDITABLE;
-        $siteLogo = (string) $this->site->getAttr('email.logo', '');
+        $siteLogo = $this->site->brandLogo();
 
         return view('livewire.site-forms-page', compact('forms', 'activeForm', 'responses', 'recentResponses', 'channels', 'tplLabels', 'editableKeys', 'siteLogo'));
     }

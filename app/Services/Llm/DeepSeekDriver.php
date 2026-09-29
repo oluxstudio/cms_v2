@@ -3,7 +3,7 @@
 namespace App\Services\Llm;
 
 use App\Contracts\LlmDriverInterface;
-use OpenAI\Client;
+use OpenAI\Contracts\ClientContract;
 
 /**
  * LLM driver for the DeepSeek cloud API (api.deepseek.com) (OpenAI-compatible API).
@@ -24,7 +24,7 @@ use OpenAI\Client;
 class DeepSeekDriver implements LlmDriverInterface
 {
     public function __construct(
-        private readonly Client $client,
+        private readonly ClientContract $client,
         private readonly string $model,
     ) {}
 
@@ -46,9 +46,13 @@ class DeepSeekDriver implements LlmDriverInterface
 
         $finalText = '';
         $toolsCalledAll = [];
+        $tokensIn = 0;
+        $tokensOut = 0;
 
         for ($i = 0; $i < 16; $i++) {
-            [$finishReason, $content, $toolCalls] = $this->streamChat($apiMessages, $openAiTools);
+            [$finishReason, $content, $toolCalls, $usageIn, $usageOut] = $this->streamChat($apiMessages, $openAiTools);
+            $tokensIn += $usageIn;
+            $tokensOut += $usageOut;
 
             // ── Tool call turn ─────────────────────────────────────────────
             if ($finishReason === 'tool_calls' && ! empty($toolCalls)) {
@@ -113,7 +117,7 @@ class DeepSeekDriver implements LlmDriverInterface
             break;
         }
 
-        return new LlmResult(trim($finalText) ?: 'Done.', 0, 0, count($toolsCalledAll));
+        return new LlmResult(trim($finalText) ?: 'Done.', $tokensIn, $tokensOut, count($toolsCalledAll));
     }
 
     // ── Streaming helper ───────────────────────────────────────────────────
@@ -121,7 +125,7 @@ class DeepSeekDriver implements LlmDriverInterface
     /**
      * Send a streaming chat request and accumulate the result.
      *
-     * Returns [finish_reason, accumulated_text, tool_calls_array].
+     * Returns [finish_reason, accumulated_text, tool_calls_array, input_tokens, output_tokens].
      * Tool calls are assembled from streaming deltas (index-keyed).
      */
     private function streamChat(array $messages, array $tools): array
@@ -131,13 +135,21 @@ class DeepSeekDriver implements LlmDriverInterface
             'messages' => $messages,
             'tools' => $tools,
             'max_tokens' => (int) config('services.llm.max_tokens', 1024),
+            // Token counts arrive in a final chunk — needed for AI usage caps and costs.
+            'stream_options' => ['include_usage' => true],
         ]);
 
         $text = '';
+        $usageIn = 0;
+        $usageOut = 0;
         $finishReason = 'stop';
         $toolMap = []; // index => ['id','function'=>['name','arguments']]
 
         foreach ($stream as $response) {
+            if ($response->usage !== null) {
+                $usageIn = (int) $response->usage->promptTokens;
+                $usageOut = (int) ($response->usage->completionTokens ?? 0);
+            }
             $choice = $response->choices[0] ?? null;
             if (! $choice) {
                 continue;
@@ -176,7 +188,7 @@ class DeepSeekDriver implements LlmDriverInterface
 
         $toolCalls = array_values($toolMap);
 
-        return [$finishReason, $text, $toolCalls];
+        return [$finishReason, $text, $toolCalls, $usageIn, $usageOut];
     }
 
     public function prefersCompactPrompt(): bool

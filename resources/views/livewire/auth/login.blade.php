@@ -176,7 +176,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
                     <x-app-logo-icon class="w-4 h-4 fill-current text-white" />
                 </div>
                 <span class="font-bold text-lg auth-logo-text">
-                    Olux CMS<span style="color:var(--primary)">.</span>
+                    {{ config('app.name') }}<span style="color:var(--primary)">.</span>
                 </span>
             </div>
 
@@ -446,7 +446,7 @@ new #[Layout('components.layouts.bare')] class extends Component {
                         Build, manage, and publish<br>beautiful sites with ease.
                     </p>
                     <p class="text-white text-base font-semibold leading-snug" x-show="mode === 'register'" x-cloak>
-                        Join thousands of creators<br>building with Olux CMS.
+                        Join thousands of creators<br>building with {{ config('app.name') }}.
                     </p>
                     <p class="text-white/40 text-xs mt-2">Your complete website studio.</p>
                 </div>

@@ -11,12 +11,13 @@ class TemplatePurchase extends Model
     use HasUlids;
 
     protected $fillable = [
-        'uuid', 'template_id', 'template_version_id', 'user_id',
+        'uuid', 'template_id', 'template_version_id', 'user_id', 'creator_user_id',
         'price_cents', 'currency', 'platform_fee_cents', 'creator_amount_cents',
         'stripe_checkout_session_id', 'stripe_payment_intent_id', 'status', 'purchased_at',
+        'payout_id', 'clawback_payout_id', 'refunded_at',
     ];
 
-    protected $casts = ['purchased_at' => 'datetime'];
+    protected $casts = ['purchased_at' => 'datetime', 'refunded_at' => 'datetime'];
 
     public function template(): BelongsTo
     {
@@ -26,5 +27,15 @@ class TemplatePurchase extends Model
     public function buyer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creator_user_id');
+    }
+
+    public function payout(): BelongsTo
+    {
+        return $this->belongsTo(CreatorPayout::class, 'payout_id');
     }
 }

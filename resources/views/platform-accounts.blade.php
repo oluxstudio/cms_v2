@@ -1,4 +1,3 @@
-<x-layouts.home>
-    <x-slot:title>Client accounts — Olux</x-slot>
+<x-layouts.admin title="Client accounts — Olux admin">
     <livewire:platform-accounts-page />
-</x-layouts.home>
+</x-layouts.admin>

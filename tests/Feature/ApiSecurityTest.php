@@ -119,5 +119,7 @@ test('public module submissions land pending by default and published with auto_
     $collection->update(['auto_publish' => true]);
     $this->postJson("/api/sites/{$site->name}/modules/testimonials/items", ['quote' => 'Instant!'])
         ->assertCreated();
-    expect($collection->items()->latest('id')->first()->status)->toBe('published');
+    // ULIDs made in the same millisecond don't sort by time, so count rather than take "latest".
+    expect($collection->items()->where('status', 'published')->count())->toBe(1)
+        ->and($collection->items()->where('status', 'pending')->count())->toBe(1);
 });

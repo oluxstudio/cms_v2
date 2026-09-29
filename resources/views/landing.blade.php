@@ -20,7 +20,7 @@
     @vite('resources/css/app.css')
     @php
         use App\Support\Money;
-        $tiers = collect(config('plans.tiers'))->sortBy('order');
+        $tiers = \App\Support\PlanCatalog::publicTiers();
     @endphp
     <style>
     /* Theme pair for buttons — UNLAYERED on purpose: these names also exist in

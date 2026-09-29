@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Page;
 use App\Models\Site;
+use App\Services\AiQuota;
 use App\Services\BlockAgent;
 use App\Services\SiteAgent;
 use Livewire\Attributes\On;
@@ -80,6 +81,13 @@ class BlockAssistant extends Component
 
         if (! SiteAgent::configured()) {
             $this->messages[] = ['role' => 'assistant', 'text' => 'No AI model is configured — set DEEPSEEK_API_KEY (or another LLM driver) in the environment.'];
+            $this->busy = false;
+
+            return;
+        }
+
+        if (app(AiQuota::class)->exceeded($site)) {
+            $this->messages[] = ['role' => 'assistant', 'text' => app(AiQuota::class)->message()];
             $this->busy = false;
 
             return;

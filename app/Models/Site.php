@@ -5,6 +5,9 @@ namespace App\Models;
 use App\Features\FeatureRegistry;
 use App\Payments\PaymentGateway;
 use App\Payments\PaymentManager;
+use App\Support\SiteProperties;
+use App\Support\SiteSetupTask;
+use App\Support\TemplatePaths;
 use App\Templates\TemplateAppRegistry;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -71,22 +74,21 @@ class Site extends Model
         // A package template (e.g. user "save as template") renders with the
         // app named in its manifest, not with its own key.
         if ($key !== TemplateAppRegistry::BLANK && ! TemplateAppRegistry::exists($key)) {
-            $manifest = resource_path("templates/{$key}/template.json");
+            $manifest = TemplatePaths::packageDir($key).'/template.json';
             $renderer = is_file($manifest) ? (json_decode((string) file_get_contents($manifest), true)['renderer'] ?? null) : null;
             $key = ($renderer && TemplateAppRegistry::exists($renderer)) ? $renderer : TemplateAppRegistry::BLANK;
         }
 
         // Preview through the site's ACTIVE renderer; fall back to the generic
         // block renderer whenever the keyed shell hasn't been built.
-        $dir = $key === TemplateAppRegistry::BLANK ? 'nuxt-preview' : "nuxt-preview/{$key}";
-        $index = public_path("{$dir}/index.html");
-        if (! is_file($index)) {
-            $dir = 'nuxt-preview';
-            $index = public_path("{$dir}/index.html");
+        if (! TemplatePaths::hasShell($key)) {
+            $key = TemplateAppRegistry::BLANK;
         }
+        $index = TemplatePaths::shellDir($key).'/index.html';
         if (! is_file($index)) {
             return null;
         }
+        $dir = trim(TemplatePaths::shellBase($key), '/');
 
         $query = http_build_query(array_filter([
             'site' => $this->name,
@@ -110,9 +112,9 @@ class Site extends Model
     public function templatePreviewUrl(?string $pageUrl = null): ?string
     {
         $found = $this->liveShell();
-        if ($found && $this->renderTemplateKey() !== TemplateAppRegistry::BLANK && str_contains($found[1], '/nuxt-preview/')) {
+        if ($found && $this->renderTemplateKey() !== TemplateAppRegistry::BLANK) {
             [$index, $base] = $found;
-            if (trim($base, '/') !== 'nuxt-preview') {
+            if ($base !== TemplatePaths::shellBase(TemplateAppRegistry::BLANK)) {
                 $base = trim($base, '/');
                 $page = trim((string) $pageUrl, '/');
 
@@ -207,9 +209,8 @@ class Site extends Model
     {
         $key = $this->renderTemplateKey();
         foreach (array_unique([$key, TemplateAppRegistry::BLANK]) as $candidate) {
-            $dir = $candidate === TemplateAppRegistry::BLANK ? 'nuxt-preview' : "nuxt-preview/{$candidate}";
-            if (is_file(public_path("{$dir}/index.html"))) {
-                return [public_path("{$dir}/index.html"), "/{$dir}/"];
+            if (TemplatePaths::hasShell($candidate)) {
+                return [TemplatePaths::shellDir($candidate).'/index.html', TemplatePaths::shellBase($candidate)];
             }
         }
 
@@ -377,6 +378,18 @@ class Site extends Model
     public function forgetAttr(string $key): int
     {
         return $this->siteAttributes()->where('key', $key)->delete();
+    }
+
+    protected static function booted(): void
+    {
+        // Every new site starts with its "Set up your site" task.
+        static::created(fn (Site $site) => SiteSetupTask::sync($site));
+    }
+
+    /** Logo for branded output: the email-specific one, else the site's property logo. */
+    public function brandLogo(): string
+    {
+        return (string) ($this->getAttr('email.logo') ?: $this->getAttr(SiteProperties::LOGO, ''));
     }
 
     /** All attributes as a flat [key => value] array. */

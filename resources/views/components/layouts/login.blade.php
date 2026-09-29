@@ -18,7 +18,7 @@
             <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:#1e2235">
                 <x-app-logo-icon class="w-4 h-4 fill-current text-white" />
             </div>
-            <span class="font-bold text-lg" style="color:#1e2235">Olux CMS<span style="color:var(--primary)">.</span></span>
+            <span class="font-bold text-lg" style="color:#1e2235">{{ config('app.name') }}<span style="color:var(--primary)">.</span></span>
         </div>
 
         <h1 class="text-[28px] font-bold mb-1" style="color:#111827">Welcome Back</h1>

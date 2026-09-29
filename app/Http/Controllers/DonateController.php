@@ -7,6 +7,7 @@ use App\Payments\CheckoutLine;
 use App\Payments\CheckoutRequest;
 use App\Payments\PaymentManager;
 use App\Payments\WebhookEventKind;
+use App\Services\TemplateScaffolder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -30,7 +31,7 @@ class DonateController extends Controller
         if ($site->templatePreviewUrl()) {
             if (! $site->pages()->where('url', '/donate')->exists()) {
                 try {
-                    app(\App\Services\TemplateScaffolder::class)->applyPages($site, [[
+                    app(TemplateScaffolder::class)->applyPages($site, [[
                         'name' => 'Donate',
                         'url' => '/donate',
                         'keywords' => 'donate, support',

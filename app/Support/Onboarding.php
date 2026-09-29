@@ -2,15 +2,15 @@
 
 namespace App\Support;
 
-use App\Models\Collection;
-use App\Models\Component;
-use App\Models\Form;
+use App\Models\ContentVersion;
+use App\Models\DomainOrder;
+use App\Models\SiteTemplate;
 use App\Models\User;
 
 /**
- * The onboarding checklist: value-focused steps whose completion is DETECTED
- * from the user's real data (no manual ticking). One definition, reused by the
- * checklist widget.
+ * The get-started checklist: the five steps from sign-up to a live site,
+ * each DETECTED from the account's real data (no manual ticking). One
+ * definition, used by the first-login intro pack and the getting started guide.
  */
 class Onboarding
 {
@@ -19,65 +19,64 @@ class Onboarding
      */
     public static function steps(User $user): array
     {
-        $siteIds = $user->sites()->pluck('id');
-        $site = $user->sites()->latest('id')->first();
+        $sites = $user->sites()->latest('id')->get();
+        $siteIds = $sites->pluck('id');
+        $site = $sites->first();
         $to = fn (string $path) => $site ? url($site->name.'/'.$path) : null;
-
         $hasSite = $siteIds->isNotEmpty();
 
-        $hasContent = $hasSite && (
-            Component::whereIn('site_id', $siteIds)->exists()
-            || Collection::whereIn('site_id', $siteIds)->whereHas('components')->exists()
+        $hasTemplate = $hasSite && (
+            SiteTemplate::whereIn('site_id', $siteIds)->whereNotNull('applied_at')->exists()
+            || $sites->contains(fn ($s) => filled($s->template) && $s->template !== 'blank')
         );
-
-        $hasForm = $hasSite && Form::whereIn('site_id', $siteIds)->exists();
-
-        $hasBranding = $hasSite && $user->sites()->get()
-            ->contains(fn ($s) => filled($s->getAttr('email.logo')) || filled($s->theme));
-
-        $hasTeam = $hasSite && $user->sites()->get()
-            ->contains(fn ($s) => $s->members()->count() > 1);
+        // Any save in edit mode leaves a content version behind.
+        $hasEdits = $hasSite && ContentVersion::whereIn('site_id', $siteIds)->exists();
+        $hasDomain = $hasSite && (
+            $sites->contains(fn ($s) => $s->domain_verified_at !== null)
+            || DomainOrder::where('user_id', $user->id)->where('status', 'registered')->exists()
+        );
+        $isLive = $sites->contains(fn ($s) => (bool) $s->live);
 
         return [
             [
                 'key' => 'create_site',
-                'label' => 'Create your first site',
-                'description' => 'Spin up a site — the home for your pages, content and leads.',
+                'label' => 'Create your site',
+                'description' => 'Give it a name — it\'s the home for your pages, content and customers.',
                 'done' => $hasSite,
                 'cta_url' => null,               // handled by the "New site" button
                 'cta_label' => 'Create site',
             ],
             [
-                'key' => 'add_content',
-                'label' => 'Add your content',
-                'description' => 'Build a component or a collection so your pages have something to show.',
-                'done' => $hasContent,
-                'cta_url' => $to('components'),
-                'cta_label' => 'Add content',
+                'key' => 'choose_template',
+                'label' => 'Choose a template',
+                'description' => 'Pick the design your site uses. You can change it later without losing content.',
+                'done' => $hasTemplate,
+                'cta_url' => $to('design'),
+                'cta_label' => 'Choose template',
             ],
             [
-                'key' => 'capture_leads',
-                'label' => 'Capture leads',
-                'description' => 'Add a form — submissions land straight in your CRM.',
-                'done' => $hasForm,
-                'cta_url' => $to('forms'),
-                'cta_label' => 'Add a form',
+                'key' => 'update_content',
+                'label' => 'Update your pages',
+                'description' => 'Open edit mode, click any section and put in your own words and pictures.',
+                'done' => $hasEdits,
+                'cta_url' => $to('connect'),
+                'cta_label' => 'Edit pages',
             ],
             [
-                'key' => 'branding',
-                'label' => 'Make it yours',
-                'description' => 'Add your logo and colours so it feels like your brand.',
-                'done' => $hasBranding,
-                'cta_url' => $to('emails'),
-                'cta_label' => 'Add branding',
+                'key' => 'get_domain',
+                'label' => 'Get a domain name',
+                'description' => 'Buy a new web address, or connect one you already own.',
+                'done' => $hasDomain,
+                'cta_url' => $to('publish'),
+                'cta_label' => 'Get a domain',
             ],
             [
-                'key' => 'invite',
-                'label' => 'Invite a teammate',
-                'description' => 'Bring the team in — assign roles and share the workload.',
-                'done' => $hasTeam,
-                'cta_url' => $to('team'),
-                'cta_label' => 'Invite',
+                'key' => 'go_live',
+                'label' => 'Put your site live',
+                'description' => 'Switch it on so visitors can find it on your address.',
+                'done' => $isLive,
+                'cta_url' => $to('publish'),
+                'cta_label' => 'Go live',
             ],
         ];
     }

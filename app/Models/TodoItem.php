@@ -14,7 +14,7 @@ class TodoItem extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['todo_id', 'label', 'description', 'assigned_user_id', 'starts_at', 'ends_at', 'done', 'sort'];
+    protected $fillable = ['todo_id', 'key', 'label', 'description', 'assigned_user_id', 'starts_at', 'ends_at', 'done', 'sort'];
 
     protected $casts = ['done' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime'];
 

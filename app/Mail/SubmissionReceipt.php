@@ -83,7 +83,7 @@ class SubmissionReceipt extends Mailable implements ShouldQueue
         // Admin's uploaded logo (a URL) wins; otherwise fall back to the app
         // brand mark, served from a stable public URL so every mail client
         // loads it like any other image.
-        $logo = $this->site->getAttr('email.logo') ?: asset('images/olux-logo.png');
+        $logo = $this->site->brandLogo() ?: asset('images/olux-logo.png');
 
         return new Content(view: 'emails.branded-receipt', with: [
             'site' => $this->site,

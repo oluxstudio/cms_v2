@@ -167,7 +167,7 @@ test('the agent can message the team, create tasks, edit content and link pages'
     // Task with assignee + due date.
     $r = $tools->execute($site, $owner, 'create_task', ['title' => 'Update prices', 'assignee' => 'amy', 'due' => now()->addDays(3)->toDateString(), 'priority' => 'high']);
     expect($r['ok'])->toBeTrue();
-    $todo = $site->todos()->first();
+    $todo = $site->todos()->whereNull('system_key')->first(); // not the built-in setup task
     expect($todo->assigned_user_id)->toBe($member->id)
         ->and($todo->priority)->toBe('high')
         ->and($todo->status)->toBe('open');

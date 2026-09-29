@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
+use App\Models\CollectionItem;
+use App\Models\CollectionItemEvent;
 use App\Models\Site;
 use App\Services\ContentVersioner;
 use Illuminate\Http\JsonResponse;
@@ -60,20 +62,20 @@ class CollectionApiController extends Controller
      */
     public function event(string $siteName, string $id, string $itemId, Request $request)
     {
-        $site = \App\Models\Site::where('name', $siteName)->firstOrFail();
+        $site = Site::where('name', $siteName)->firstOrFail();
         $data = $request->validate([
-            'event' => ['required', 'in:'.implode(',', \App\Models\CollectionItemEvent::EVENTS)],
+            'event' => ['required', 'in:'.implode(',', CollectionItemEvent::EVENTS)],
             'session' => ['nullable', 'string', 'max:64'],
         ]);
 
-        $item = \App\Models\CollectionItem::where('site_id', $site->id)
+        $item = CollectionItem::where('site_id', $site->id)
             ->whereKey($itemId)
             ->where('collection_id', $id)
             ->where('status', 'published')
             ->whereHas('collection', fn ($q) => $q->where('is_public', true))
             ->first();
         if ($item) {
-            \App\Models\CollectionItemEvent::create([
+            CollectionItemEvent::create([
                 'site_id' => $site->id,
                 'collection_id' => $item->collection_id,
                 'collection_item_id' => $item->id,

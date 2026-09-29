@@ -10,6 +10,7 @@ use App\Models\Template;
 use App\Models\User;
 use App\Services\SiteConnect\AssetImporter;
 use App\Support\CuratedTemplates;
+use App\Support\TemplatePaths;
 use App\Templates\TemplateAppRegistry;
 use App\Templates\TemplatePackage;
 use App\Templates\TemplateRegistry;
@@ -203,7 +204,7 @@ class TemplateInstaller
         // TemplatePackage — fall back to the published package's layout so
         // their sites still get the header/footer chrome.
         if ($layout === [] && $appKey !== TemplateAppRegistry::BLANK) {
-            $dir = resource_path('templates/'.$appKey);
+            $dir = TemplatePaths::packageDir($appKey);
             if (is_dir($dir)) {
                 $layouts = (new TemplatePackage($dir))->layouts();
                 $layout = ($layouts['default'] ?? (reset($layouts) ?: []))['blocks'] ?? [];
@@ -395,7 +396,7 @@ class TemplateInstaller
         // install scaffolded for them is dead — the rewritten component renders
         // only its collection's rows, never those nodes.
         $nodeless = [];
-        $packageDir = resource_path('templates/'.$appKey);
+        $packageDir = TemplatePaths::packageDir($appKey);
         if (is_dir($packageDir)) {
             foreach ((new TemplatePackage($packageDir))->pages() as $p) {
                 foreach ((array) ($p['blocks'] ?? []) as $b) {
@@ -488,7 +489,7 @@ class TemplateInstaller
     {
         // The published template app is the source of truth (a preview build
         // can lag it and misses fonts/videos outside its rebased dirs).
-        foreach ([base_path("templates/{$appKey}/public"), public_path("nuxt-preview/{$appKey}")] as $dir) {
+        foreach ([TemplatePaths::appDir($appKey).'/public', TemplatePaths::shellDir($appKey)] as $dir) {
             if (is_dir($dir)) {
                 break;
             }

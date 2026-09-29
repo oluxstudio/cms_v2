@@ -56,6 +56,8 @@ test('the salon pack finds due-back clients, counts no-shows and computes the re
 
 test('the trades pack reports the quote pipeline with a chase flag and lead response speed', function () {
     $site = verticalSite('electrician');
+    expect(VerticalStats::for($site))->toBeNull(); // quote add-on off → no trades pack
+    $site->enableFeature('estimator');
     $mk = fn (string $status, $created) => tap(Estimate::create(['site_id' => $site->id, 'estimator_id' => null, 'reference' => 'EST'.strtoupper(substr(uniqid(), -6)), 'trade' => 'elec', 'customer_name' => 'C', 'customer_email' => uniqid().'@x.test', 'inputs' => [], 'results' => [], 'cost_low_cents' => 10000, 'cost_high_cents' => 20000, 'hours' => 1, 'completion' => 1, 'status' => $status]))
         ->forceFill(['created_at' => $created])->save();
     $mk('new', now()->subDays(9)); // stale → chase

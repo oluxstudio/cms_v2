@@ -56,6 +56,7 @@
 
 {{-- Ambient colored background elements — sit between the gradient and content. --}}
 <x-bg-ambient />
+<x-impersonation-bar />
 
 @php
     $currentSite = \App\Models\Site::where('name', $siteName)->first();
@@ -290,6 +291,7 @@
                             </form>
                         </div>
                     @endif
+                    <x-announcement-banner class="mx-4 mt-3" />
                     <div x-show="!detail" class="h-full">{{ $slot }}</div>
 
                     @auth
