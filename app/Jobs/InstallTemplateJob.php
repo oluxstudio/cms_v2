@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Site;
 use App\Models\SiteTemplate;
 use App\Services\TemplateInstaller;
+use App\Support\TaskAlerts;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -12,6 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * The heavy half of applying a design to a site — scaffolding pages,
@@ -24,7 +26,7 @@ class InstallTemplateJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public string $siteId, public string $siteTemplateId) {}
+    public function __construct(public string $siteId, public string $siteTemplateId, public ?string $userId = null) {}
 
     /** One install per site at a time — a second click must not double-scaffold. */
     public function middleware(): array
@@ -41,6 +43,8 @@ class InstallTemplateJob implements ShouldQueue
         }
 
         $installer->install($site, $row);
+        TaskAlerts::done($this->userId, $site->id, 'Design applied: '.$row->name,
+            Str::headline($site->name).' now uses it — pages, sections and settings are in place.', url($site->name.'/connect'), ['site_template_id' => $row->id]);
     }
 
     public function failed(?\Throwable $e): void
@@ -50,6 +54,12 @@ class InstallTemplateJob implements ShouldQueue
             'site_template_id' => $this->siteTemplateId,
             'error' => $e?->getMessage(),
         ]);
-        Site::find($this->siteId)?->setAttr('template_install', 'failed');
+        $site = Site::find($this->siteId);
+        $site?->setAttr('template_install', 'failed');
+        if ($site) {
+            TaskAlerts::failed($this->userId, $site->id, 'Design couldn\'t be applied',
+                'Setting up '.(SiteTemplate::whereKey($this->siteTemplateId)->value('name') ?: 'the design').' on '.Str::headline($site->name).' failed. Try applying it again.',
+                url($site->name.'/designs'));
+        }
     }
 }

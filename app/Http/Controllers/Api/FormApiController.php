@@ -38,7 +38,7 @@ class FormApiController extends Controller
         $site = $this->publicSite($siteName);
 
         return response()->json([
-            'forms' => Form::where('site_id', $site->id)->where('is_active', true)->get()
+            'forms' => Form::where('site_id', $site->id)->live()->get()
                 ->map(fn (Form $f) => collect($this->record($f))->except(['responses'])->all())->values(),
         ]);
     }

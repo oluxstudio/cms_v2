@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Site;
 use App\Models\Template;
+use App\Models\User;
+use App\Support\TemplateAccess;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 
@@ -19,7 +22,7 @@ class TemplateCatalog
     {
         $perPage = $perPage ?: (int) config('templates.per_page', 12);
 
-        $q = Template::query()->where('status', 'published');
+        $q = Template::query()->publiclyListed();
 
         if ($search = trim((string) ($filters['search'] ?? ''))) {
             $q->where(fn ($w) => $w->where('name', 'like', "%{$search}%")
@@ -59,19 +62,31 @@ class TemplateCatalog
     public function categories(): array
     {
         return Cache::remember('template_catalog_categories', 300, fn () => Template::query()
-            ->where('status', 'published')->whereNotNull('category')
+            ->publiclyListed()->whereNotNull('category')
             ->distinct()->orderBy('category')->pluck('category')->all());
     }
 
-    /** Resolve a published template by id, uuid or slug. */
+    /** Resolve a published, PUBLIC template by id, uuid or slug (private ones: findFor()). */
     public function find(int|string $id): ?Template
     {
-        return Template::query()->where('status', 'published')
+        return Template::query()->publiclyListed()
             ->where(function ($q) use ($id) {
                 $q->orWhere('uuid', $id)->orWhere('slug', $id);
                 if (is_numeric($id)) {
                     $q->orWhere('id', (int) $id);
                 }
             })->first();
+    }
+
+    /**
+     * A template this user may see (acting for $site's account): public
+     * published ones, plus private ones assigned to that account.
+     */
+    public function findFor(?User $user, int|string $id, ?Site $site = null): ?Template
+    {
+        $t = Template::query()->whereIn('status', ['published', 'private'])
+            ->where(fn ($q) => $q->orWhere('uuid', $id)->orWhere('slug', $id)->orWhere('id', $id))->first();
+
+        return $t && TemplateAccess::canSee($user, $t, $site) ? $t : null;
     }
 }

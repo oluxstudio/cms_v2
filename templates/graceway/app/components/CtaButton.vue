@@ -32,12 +32,12 @@ withDefaults(defineProps<{
   padding: .55rem .55rem .55rem 1.6rem;
   border-radius: 999px;
   text-decoration: none;
-  box-shadow: 0 8px 20px rgba(255, 45, 108, .35);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 35%, transparent);
   transition: transform .25s ease, box-shadow .25s ease;
 }
 .cta-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 26px rgba(255, 45, 108, .45);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 .cta-badge {
   display: grid;

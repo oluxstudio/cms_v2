@@ -9,7 +9,7 @@ const authoredEvents = useSiteContent().events
 // CMS-first: the "Events" collection feeds the grid; authored rows seed it.
 const events = computed<ChurchEvent[]>(() => {
   const rows = (useCms().items('events', []) as any[]).filter(e => e.id && e.title)
-  return rows.length ? rows.map(e => ({ ...authoredEvents.find(a => a.id === e.id), ...e, price: Number(e.price ?? 0), seatsLeft: Number(e.seatsLeft ?? 50) })) : authoredEvents
+  return (rows.length || useCms().isSite) ? rows.map(e => ({ ...authoredEvents.find(a => a.id === e.id), ...e, price: Number(e.price ?? 0), seatsLeft: Number(e.seatsLeft ?? 50) })) : authoredEvents
 })
 const PER_PAGE = 6
 const page = ref(1)

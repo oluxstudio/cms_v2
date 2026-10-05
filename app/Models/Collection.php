@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasVisibilityRules;
+use App\Support\CollectionQuery;
 use App\Support\HasFieldSchema;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -14,7 +16,7 @@ use Illuminate\Support\Str;
 
 class Collection extends Model
 {
-    use \App\Models\Concerns\HasVisibilityRules, HasFactory;
+    use HasFactory, HasVisibilityRules;
     use HasFieldSchema;
     use HasUlids;
 
@@ -106,8 +108,58 @@ class Collection extends Model
                 'status' => $i->status,
                 'created_at' => $i->created_at?->toIso8601String(),
             ])->values()->all();
+            if ($views = $this->blockViews($everything ? $this->items->where('status', 'published')->values() : $items)) {
+                $out['views'] = $views;
+            }
         }
 
         return $out;
+    }
+
+    /**
+     * Per-block selections: blocks that read this collection with a saved
+     * query (Edit page → "Items in this block") get the ids they show, keyed
+     * by the block's slug ("Events Grid" → "events-grid", which templates
+     * derive from EventsGridBlock.vue). The full items list is unchanged.
+     *
+     * @return array<string, array{block: string, ids: list<string>, query: array}>
+     */
+    /** @var array<string, \Illuminate\Support\Collection> per-request: site id → blocks with queries */
+    private static array $queryBlocks = [];
+
+    public static function forgetBlockQueries(?string $siteId = null): void
+    {
+        if ($siteId) {
+            unset(self::$queryBlocks[$siteId]);
+        } else {
+            self::$queryBlocks = [];
+        }
+    }
+
+    public function blockViews(?\Illuminate\Support\Collection $published = null): array
+    {
+        // One lookup per site per request (a payload serialises every collection).
+        self::$queryBlocks[$this->site_id] ??= Component::where('site_id', $this->site_id)->whereNotNull('collection_queries')
+            ->get(['id', 'name', 'collection_queries']);
+        $blocks = self::$queryBlocks[$this->site_id]
+            ->filter(fn (Component $c) => ! empty(($c->collection_queries ?? [])[$this->id] ?? null));
+        if ($blocks->isEmpty()) {
+            return [];
+        }
+        $published ??= $this->items->where('status', 'published')->values();
+        $views = [];
+        foreach ($blocks as $c) {
+            $q = CollectionQuery::normalize($c->collectionQuery($this->id), CollectionQuery::fieldKeys($this));
+            if ($q === []) {
+                continue;
+            }
+            $views[Str::slug($c->name)] = [
+                'block' => $c->name,
+                'ids' => CollectionQuery::apply($this, $q, $published)->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+                'query' => $q,
+            ];
+        }
+
+        return $views;
     }
 }

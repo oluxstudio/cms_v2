@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -18,7 +19,7 @@ return new class extends Migration
             Schema::table('collections', function (Blueprint $table) {
                 $table->boolean('auto_publish')->default(false)->after('allow_submit');
             });
-            \Illuminate\Support\Facades\DB::table('collections')->update(['auto_publish' => true]);
+            DB::table('collections')->update(['auto_publish' => true]);
         }
     }
 

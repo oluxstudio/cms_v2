@@ -31,18 +31,20 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('service_departures')) Schema::create('service_departures', function (Blueprint $t) {
-            $t->id();
-            $t->foreignId('service_id')->constrained()->cascadeOnDelete();
-            $t->string('origin');
-            $t->string('destination');
-            $t->dateTime('departs_at');
-            $t->unsignedInteger('seats');
-            $t->unsignedInteger('price_cents')->nullable(); // null = service price
-            $t->boolean('is_active')->default(true);
-            $t->timestamps();
-            $t->index(['service_id', 'departs_at']);
-        });
+        if (! Schema::hasTable('service_departures')) {
+            Schema::create('service_departures', function (Blueprint $t) {
+                $t->id();
+                $t->foreignId('service_id')->constrained()->cascadeOnDelete();
+                $t->string('origin');
+                $t->string('destination');
+                $t->dateTime('departs_at');
+                $t->unsignedInteger('seats');
+                $t->unsignedInteger('price_cents')->nullable(); // null = service price
+                $t->boolean('is_active')->default(true);
+                $t->timestamps();
+                $t->index(['service_id', 'departs_at']);
+            });
+        }
 
         if (Schema::hasTable('appointments')) {
             Schema::rename('appointments', 'bookings');
@@ -57,7 +59,7 @@ return new class extends Migration
             $t->dropUnique('appointments_site_id_service_id_starts_at_unique');
             $t->string('reference', 12)->nullable()->after('id');
             $t->foreignId('departure_id')->nullable()->after('service_id')
-              ->constrained('service_departures')->nullOnDelete();
+                ->constrained('service_departures')->nullOnDelete();
             $t->json('params')->nullable();          // kind payload (check_in/out, guests, qty…)
             $t->unsignedInteger('quantity')->default(1);
             $t->unsignedInteger('total_cents')->default(0);

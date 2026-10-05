@@ -13,15 +13,12 @@ const gatewayUrl = `https://www.biblegateway.com/passage/?search=${encodeURIComp
 
 <template>
   <div v-if="study">
-    <SiteHeader /> 
-	<PageHeroContent>
-        <BreadCrumbs :items="[{ label: 'Ministries', to: '/ministries' }, { label: 'Bible Study', to: '/bible-study' }, { label: study.title }]" />
-       
-		<p class="eyebrow">{{ study.series }}<template v-if="study.week"> · {{ study.week }}</template> · {{ study.audience }}</p>
-		<h1>{{ study.title }}</h1>
-		<p>{{ study.passage }} · {{ study.date }}</p>
-		<!-- <p>📖 {{ study.passage }} · {{ study.date }}</p> -->
-	</PageHeroContent>
+    <SiteHeader />
+    <PageHeroContent :crumbs="[{ label: 'Ministries', to: '/ministries' }, { label: 'Bible Study', to: '/bible-study' }, { label: study.title }]">
+      <p class="eyebrow">{{ study.series }}<template v-if="study.week"> · {{ study.week }}</template> · {{ study.audience }}</p>
+      <h1>{{ study.title }}</h1>
+      <p>{{ study.passage }} · {{ study.date.slice(0, 10) }}</p>
+    </PageHeroContent>
 
     <section class="study-view">
       <div class="container">

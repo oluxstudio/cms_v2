@@ -42,9 +42,17 @@ class PostsPage extends Component
 
     public string $status = 'draft';
 
+    /** ?post={id} — open that post straight in the editor (e.g. from the Edit page's post panel). */
+    #[Url(as: 'post')]
+    public ?string $openPost = null;
+
     public function mount(Site $site): void
     {
         $this->site = $site;
+        if ($this->openPost && $this->canManage() && Post::where('site_id', $site->id)->whereKey($this->openPost)->exists()) {
+            $this->editPost($this->openPost);
+        }
+        $this->openPost = null; // one-shot: closing the editor shouldn't re-open it on refresh
     }
 
     private function canManage(): bool

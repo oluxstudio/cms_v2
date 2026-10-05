@@ -8,6 +8,7 @@ use App\Services\AccountActivity;
 use App\Services\Blueprints\SalonBlueprint;
 use App\Services\SampleSiteSeeder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -99,7 +100,7 @@ class SiteComponent extends Component
     public function create(): void
     {
         $this->validate([
-            'form.name' => 'required|unique:sites,name',
+            'form.name' => ['required', 'unique:sites,name', fn ($attr, $value, $fail) => Site::nameTaken(Str::slug((string) $value)) && $fail('That address is taken. Try another.')],
             'form.domain' => 'required',
             'form.owner' => 'required',
         ]);

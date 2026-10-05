@@ -66,6 +66,9 @@ return [
     // the platform keeps `fee_percent` and pays the rest out to the creator.
     'stripe_platform' => [
         'secret' => env('STRIPE_PLATFORM_SECRET'),
+        // Publishable key for the Payment Element (Go-live domain checkout). Falls
+        // back to STRIPE_KEY, which must then belong to the same Stripe account.
+        'key' => env('STRIPE_PLATFORM_KEY', env('STRIPE_KEY')),
         'webhook_secret' => env('STRIPE_PLATFORM_WEBHOOK_SECRET'),
         'connect_webhook_secret' => env('STRIPE_PLATFORM_CONNECT_WEBHOOK_SECRET'),
         'fee_percent' => (float) env('TEMPLATES_FEE_PERCENT', 20),

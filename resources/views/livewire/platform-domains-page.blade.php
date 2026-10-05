@@ -8,6 +8,7 @@
         'failed' => ['#ffe4e6', '#be123c', 'Failed'],
         'paid' => ['#e0f2fe', '#0369a1', 'Paid, registering'],
         'pending' => ['#fef3c7', '#92400e', 'Awaiting payment'],
+        'checkout' => ['#f3f4f6', '#4b5563', 'Not paid'],
         'refunded' => ['#f3f4f6', '#374151', 'Refunded'],
         default => ['#f3f4f6', '#374151', ucfirst($s)],
     };

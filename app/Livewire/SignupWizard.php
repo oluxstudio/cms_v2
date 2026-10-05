@@ -155,7 +155,7 @@ class SignupWizard extends Component
         $label = $this->subdomain;
         $this->available = $label !== ''
             && Site::validSubdomainLabel($label)
-            && ! Site::where('name', $label)->exists();
+            && ! Site::nameTaken($label);
     }
 
     public function createSite(SignupVerification $codes): void

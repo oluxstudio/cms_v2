@@ -6,6 +6,7 @@ use App\Jobs\SyncSiteKnowledge;
 use App\Models\AiChunk;
 use App\Models\Site;
 use App\Support\Money;
+use App\Support\SiteProperties;
 use Illuminate\Support\Str;
 
 /**
@@ -101,16 +102,46 @@ class SiteKnowledge
         ])->filter(fn ($r) => $r['score'] > 0)->sortByDesc('score')->take($k)->pluck('content')->values()->all();
     }
 
+    /** Plain-text business profile (name, contact, address, hours, area…) for retrieval. */
+    public static function profileText(Site $site): string
+    {
+        $p = SiteProperties::payload($site);
+        $b = $p['business'];
+        $hours = collect(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])
+            ->map(fn ($d) => ucfirst($d).': '.($p['hours'][$d] ? collect($p['hours'][$d])->map(fn ($r) => $r[0].'–'.$r[1])->implode(', ') : 'closed'))
+            ->implode('; ');
+        $hasHours = collect($p['hours'])->except('closures')->contains(fn ($d) => $d !== []);
+
+        return collect([
+            'About '.$p['name'].'.',
+            $p['tagline'],
+            $b['description'] ?: $site->description,
+            $b['type'] !== 'LocalBusiness' ? 'Business type: '.Str::headline($b['type']).'.' : null,
+            $b['address'] ? 'Address: '.implode(', ', $b['address']).'.' : null,
+            collect($p['phones'])->filter(fn ($r) => filled($r['value']))->map(fn ($r) => ($r['label'] ?: 'Phone').': '.$r['value'])->implode('. ') ?: null,
+            $p['email'] ? 'Email: '.$p['email'].'.' : null,
+            collect($p['emails'])->filter(fn ($r) => filled($r['value']))->map(fn ($r) => ($r['label'] ?: 'Email').': '.$r['value'])->implode('. ') ?: null,
+            $p['whatsapp'] ? 'WhatsApp: '.$p['whatsapp'].'.' : null,
+            $hasHours ? 'Opening hours — '.$hours.'.' : null,
+            collect($p['hours']['closures'])->filter(fn ($c) => filled($c['date']))->map(fn ($c) => 'Special hours '.$c['date'].': '.($c['hours'] ?: 'closed').($c['note'] ? ' ('.$c['note'].')' : ''))->implode('. ') ?: null,
+            $b['service_area'] ? 'Areas covered: '.implode(', ', $b['service_area']).($b['service_radius_km'] ? ' (within '.$b['service_radius_km'].' km)' : '').'.' : null,
+            $b['price_range'] ? 'Price range: '.$b['price_range'].'.' : null,
+            $b['year_established'] ? 'Established '.$b['year_established'].'.' : null,
+            $p['social'] ? 'Social: '.collect($p['social'])->map(fn ($u, $k) => Str::headline($k).' '.$u)->implode(', ').'.' : null,
+        ])->filter()->implode(' ');
+    }
+
     /** @return iterable<array{0:string,1:string,2:string}> [type, id, text] */
     private function sources(Site $site): iterable
     {
-        // The business itself.
-        $attrs = collect(['business_name', 'description', 'phone', 'email', 'address', 'opening_hours'])
-            ->map(fn ($k) => ($v = $site->getAttr($k)) ? Str::headline($k).': '.$v : null)->filter()->implode('. ');
-        yield ['business', 'profile', 'About '.($site->getAttr('business_name') ?: $site->name).'. '.($site->description ?? '').' '.$attrs];
+        // The business itself — from Site Properties.
+        yield ['business', 'profile', self::profileText($site)];
 
         // Page/component copy — every node value with its label.
         foreach ($site->contentComponents()->with('nodes')->get() as $component) {
+            if (SiteProperties::isComponent($component)) {
+                continue; // already summarised as the business profile above
+            }
             $text = $component->nodes->map(fn ($n) => trim(($n->label ? $n->label.': ' : '').(string) $n->value))
                 ->filter()->implode('. ');
             yield ['component', (string) $component->id, $component->name.'. '.$text];

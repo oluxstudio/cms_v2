@@ -134,7 +134,7 @@ const sendForm = async (e: Event) => {
 .mms-card h3 { font-size: 1.05rem; color: var(--color-secondary); margin-bottom: .8rem; }
 .mms-row { display: flex; align-items: center; gap: .7rem; padding: .55rem 0; border-bottom: 1px solid #f1ece3; }
 .mms-row:last-child { border-bottom: 0; padding-bottom: 0; }
-.mms-row .icon { width: 34px; height: 34px; flex: none; border-radius: 10px; background: #fdeef3; display: grid; place-items: center; }
+.mms-row .icon { width: 34px; height: 34px; flex: none; border-radius: 10px; background: var(--primary-soft); display: grid; place-items: center; }
 .mms-row b { font-size: .92rem; color: var(--color-secondary); }
 .mms-row:hover b { color: var(--color-primary); }
 .mms-live p { font-size: .85rem; color: #55606b; margin-top: .8rem; }
@@ -162,7 +162,7 @@ const sendForm = async (e: Event) => {
   transition: transform .2s ease; }
 .mm-role:hover { transform: translateY(-4px); }
 .mm-role-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px;
-  background: #fdeef3; font-size: 1.5rem; margin-bottom: .9rem; }
+  background: var(--primary-soft); font-size: 1.5rem; margin-bottom: .9rem; }
 .mm-role h3 { font-size: 1.1rem; color: var(--color-secondary); margin-bottom: .4rem; }
 .mm-role p { font-size: .95rem; color: #55606b; line-height: 1.6; }
 

@@ -10,7 +10,7 @@ class TemplateEntitlement extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['user_id', 'template_id', 'source', 'purchase_id', 'price_paid_cents', 'stripe_session_id', 'purchased_at'];
+    protected $fillable = ['user_id', 'template_id', 'source', 'granted_by', 'purchase_id', 'price_paid_cents', 'stripe_session_id', 'purchased_at'];
 
     protected $casts = ['purchased_at' => 'datetime'];
 

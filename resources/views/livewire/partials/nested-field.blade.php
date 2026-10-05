@@ -2,28 +2,69 @@
        $path     dotted wire path to the value (e.g. "edit.items.3.data.facts")
        $value    the current array/object
        $fieldKey the field's key (labels)
-     Renders one of: scalar list · row list (sub-cards) · group (fixed keys).
+       $def      optional schema entry {type: list|rows|group|images, fields: [sub keys]} —
+                 shapes an EMPTY value (no rows yet to infer from)
+       $siteId   optional — resolves media (falls back to $site->id)
+     Renders one of: media gallery · scalar list · row list (sub-cards) · group (fixed keys).
+     Every leaf picks its input from its value (partials.nested-leaf: media, number, yes/no, text).
      Values failing WithNestedFields::nestedEditable must not be passed here. --}}
 @php
-    $isList = is_array($value) && array_is_list($value);
-    $isRows = $isList && is_array($value[0] ?? null);
+    $def ??= null;
+    $defType = $def['type'] ?? null;
+    $subKeys = (array) ($def['fields'] ?? []);
+    $value = is_array($value) ? $value : [];
+    $isList = array_is_list($value) && $defType !== 'group';
+    $isRows = $isList && (is_array($value[0] ?? null) || ($value === [] && $defType === 'rows'));
+    // Sub-field keys for the first row of an empty rows list (single-quoted: lives in a wire:click attribute).
+    $safeKeys = array_values(array_filter($subKeys, fn ($k) => is_string($k) && preg_match('/^[A-Za-z0-9_-]{1,60}$/', $k)));
+    $addArgs = $isRows && $value === [] && $safeKeys !== [] ? ", ['".implode("','", $safeKeys)."']" : '';
+    $siteId ??= isset($site) ? $site->id : null;
+    // A list of assets (all entries media) → a gallery editor.
+    $isGallery = $isList && ! $isRows && (\App\Support\MediaValue::isMediaList($value, $siteId) || ($value === [] && in_array($defType, ['images', 'gallery', 'media'], true)));
 @endphp
+
+@if ($isGallery)
+    {{-- media gallery: thumbnails · ◀ ▶ reorder · ✕ remove · + add from Assets --}}
+    <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+        @foreach ($value as $j => $entry)
+            @php $gm = \App\Support\MediaValue::detect($entry, $siteId); @endphp
+            <div class="group relative rounded-xl border border-gray-100 dark:border-white/[0.08] overflow-hidden bg-gray-50 dark:bg-white/[0.04]" wire:key="{{ $path }}-g-{{ $j }}-{{ md5((string) $entry) }}">
+                <div class="aspect-square flex items-center justify-center">
+                    @if ($gm && $gm['kind'] === 'image')
+                        <img src="{{ $gm['url'] }}" alt="" class="w-full h-full object-cover" loading="lazy" onerror="this.style.visibility='hidden'">
+                    @elseif ($gm && $gm['kind'] === 'video')
+                        <video src="{{ $gm['url'] }}#t=0.5" preload="metadata" muted class="w-full h-full object-cover bg-black"></video>
+                    @else
+                        <span class="text-[10px] font-bold uppercase text-gray-500 px-1 text-center break-all">{{ $gm['kind'] ?? 'file' }}<br><span class="font-normal normal-case">{{ \Illuminate\Support\Str::limit($gm['name'] ?? (string) $entry, 18) }}</span></span>
+                    @endif
+                </div>
+                <div class="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 px-1 py-0.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="flex">
+                        @if ($j > 0)<button type="button" wire:click="nestedMove('{{ $path }}', {{ $j }}, -1)" class="w-5 h-5 text-[11px] text-white" title="Move earlier">◀</button>@endif
+                        @if ($j < count($value) - 1)<button type="button" wire:click="nestedMove('{{ $path }}', {{ $j }}, 1)" class="w-5 h-5 text-[11px] text-white" title="Move later">▶</button>@endif
+                    </span>
+                    <button type="button" wire:click="nestedRemove('{{ $path }}', {{ $j }})" class="w-5 h-5 text-[11px] text-white hover:text-rose-300" title="Remove">✕</button>
+                </div>
+            </div>
+        @endforeach
+        <button type="button" @click="$dispatch('open-media-picker', { context: { scope: 'nested-media', path: '{{ $path }}', append: true } })"
+                class="aspect-square rounded-xl border-2 border-dashed border-gray-200 dark:border-white/[0.12] text-[11px] font-bold flex flex-col items-center justify-center gap-0.5 hover:border-indigo-300" style="color:var(--primary)">
+            <span class="text-lg leading-none">+</span> Add from Assets
+        </button>
+    </div>
+@else
 
 @if ($isList && ! $isRows)
     {{-- scalar list: tags, questions, body paragraphs… --}}
     <div class="space-y-1">
         @foreach ($value as $j => $entry)
             <span class="flex items-center gap-1.5" wire:key="{{ $path }}-{{ $j }}">
-                @if (is_string($entry) && mb_strlen($entry) > 70)
-                    <textarea wire:model.blur="{{ $path }}.{{ $j }}" rows="4" class="flex-1 min-w-0 w-full mt-0.5 px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 !mt-0"></textarea>
-                @else
-                    <input wire:model.blur="{{ $path }}.{{ $j }}" class="flex-1 min-w-0 w-full mt-0.5 px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 !mt-0">
-                @endif
+                <span class="flex-1 min-w-0">@include('livewire.partials.nested-leaf', ['path' => $path.'.'.$j, 'value' => $entry, 'siteId' => $siteId])</span>
                 <button type="button" wire:click="nestedRemove('{{ $path }}', {{ $j }})"
                         class="shrink-0 w-6 h-6 rounded-lg text-[11px] text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10" title="Remove">✕</button>
             </span>
         @endforeach
-        <button type="button" wire:click="nestedAdd('{{ $path }}')"
+        <button type="button" wire:click="nestedAdd('{{ $path }}'{{ $addArgs }})"
                 class="text-[11px] font-semibold" style="color:var(--primary)">+ add {{ \Illuminate\Support\Str::singular(str_replace(['-', '_'], ' ', $fieldKey)) }}</button>
     </div>
 @elseif ($isRows)
@@ -43,16 +84,12 @@
                 @foreach ($row as $sk => $sv)
                     <label class="block mb-1">
                         <span class="text-[10px] text-gray-400">{{ \Illuminate\Support\Str::headline((string) $sk) }}</span>
-                        @if (is_string($sv) && mb_strlen($sv) > 70)
-                            <textarea wire:model.blur="{{ $path }}.{{ $j }}.{{ $sk }}" rows="4" class="w-full mt-0.5 px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 !mt-0"></textarea>
-                        @else
-                            <input wire:model.blur="{{ $path }}.{{ $j }}.{{ $sk }}" class="w-full mt-0.5 px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 !mt-0">
-                        @endif
+                        @include('livewire.partials.nested-leaf', ['path' => $path.'.'.$j.'.'.$sk, 'value' => $sv, 'siteId' => $siteId])
                     </label>
                 @endforeach
             </div>
         @endforeach
-        <button type="button" wire:click="nestedAdd('{{ $path }}')"
+        <button type="button" wire:click="nestedAdd('{{ $path }}'{{ $addArgs }})"
                 class="text-[11px] font-semibold" style="color:var(--primary)">+ add {{ \Illuminate\Support\Str::singular(str_replace(['-', '_'], ' ', $fieldKey)) }}</button>
     </div>
 @else
@@ -61,8 +98,9 @@
         @foreach ((array) $value as $sk => $sv)
             <label class="block mb-1">
                 <span class="text-[10px] text-gray-400">{{ \Illuminate\Support\Str::headline((string) $sk) }}</span>
-                <input wire:model.blur="{{ $path }}.{{ $sk }}" class="w-full mt-0.5 px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 !mt-0">
+                @include('livewire.partials.nested-leaf', ['path' => $path.'.'.$sk, 'value' => $sv, 'siteId' => $siteId])
             </label>
         @endforeach
     </div>
+@endif
 @endif

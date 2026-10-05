@@ -14,11 +14,19 @@ class Page extends Model
     use HasFactory;
     use HasUlids;
 
-    protected $fillable = ['site_id', 'layout_id', 'block_layout_id', 'site_template_id', 'name', 'url', 'keywords', 'is_published'];
+    protected $fillable = ['site_id', 'layout_id', 'block_layout_id', 'site_template_id', 'name', 'url', 'keywords', 'is_published', 'template_keys', 'template_active'];
 
     protected $casts = [
         'is_published' => 'boolean',
+        'template_keys' => 'array',
+        'template_active' => 'boolean',
     ];
+
+    /** Came from a template (vs the owner's own page)? */
+    public function fromTemplate(): bool
+    {
+        return ! empty($this->template_keys);
+    }
 
     public function site()
     {
@@ -70,13 +78,23 @@ class Page extends Model
         return $this->blockLayout ?? BlockLayout::blank($this->site);
     }
 
-    /** Reusable content Components placed on this page (ordered, with settings). */
+    /**
+     * Every Component attached to this page (ordered, with settings) —
+     * including sections of a template that isn't the current one. Use this
+     * to attach/detach/sync; READ what the page shows via activeComponents().
+     */
     public function components(): BelongsToMany
     {
         return $this->belongsToMany(Component::class, 'page_component')
-            ->withPivot(['order', 'settings'])
+            ->withPivot(['order', 'settings', 'template_keys', 'active'])
             ->withTimestamps()
             ->orderBy('page_component.order');
+    }
+
+    /** The sections the page shows: the current template's and the owner's own. */
+    public function activeComponents(): BelongsToMany
+    {
+        return $this->components()->wherePivot('active', true);
     }
 
     /** Collections (groups of components) placed on this page (ordered). */

@@ -13,8 +13,8 @@
         }
         $initials = e(\Illuminate\Support\Str::of($u->name)->substr(0, 2)->upper());
         $badge = '<span class="'.$size.' rounded-full grid place-items-center text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#1d1e2a] overflow-hidden relative shrink-0" style="background:linear-gradient(135deg,#6366f1,#a855f7)" title="'.e($u->name).'">'.$initials;
-        if ($u->avatar) {
-            $badge .= '<img src="'.e($u->avatar).'" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">';
+        if ($u->avatarUrl()) {
+            $badge .= '<img src="'.e($u->avatarUrl()).'" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">';
         }
 
         return $badge.'</span>';

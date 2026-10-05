@@ -8,6 +8,7 @@ use App\Models\EstimatorCalc;
 use App\Models\EstimatorField;
 use App\Models\Site;
 use App\Services\Estimator\Formula;
+use App\Services\TemplateScaffolder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Url;
@@ -95,7 +96,7 @@ class EstimatesPage extends Component
         try {
             if ($this->site->templatePreviewUrl()) {
                 if (! $this->site->pages()->where('url', '/estimate')->exists()) {
-                    app(\App\Services\TemplateScaffolder::class)->applyPages($this->site, [[
+                    app(TemplateScaffolder::class)->applyPages($this->site, [[
                         'name' => 'Estimate',
                         'url' => '/estimate',
                         'keywords' => 'estimate, quote',

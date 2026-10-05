@@ -104,7 +104,7 @@ class CreatorTemplatesPage extends Component
         }
 
         if (! $this->canPublish) {
-            $this->err = 'Publishing to the template marketplace needs the Business plan.';
+            $this->err = 'Publishing to the template marketplace needs the Pro plan.';
 
             return;
         }

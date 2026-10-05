@@ -86,7 +86,7 @@ class TemplateVerify extends Command
         foreach (File::glob("$appDir/app/components/*Block.vue") as $comp) {
             $bk = Str::kebab(substr(basename($comp, '.vue'), 0, -5));
             if (! isset($usedBlocks[$bk])) {
-                $this->warn("⚠ ".basename($comp).' exists in sources but appears on no published page.');
+                $this->warn('⚠ '.basename($comp).' exists in sources but appears on no published page.');
             }
         }
 

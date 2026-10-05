@@ -7,6 +7,7 @@ use App\Models\Media;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Visit;
+use App\Services\AccountActivity;
 use App\Services\PlatformBilling;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
@@ -51,6 +52,12 @@ class PlatformAccountsPage extends Component
     /** plan => price string (whole units, '' = no override) */
     public array $prices = [];
 
+    /** Per-account mailbox limit ('' = plan default; Enterprise sets it here). */
+    public string $mailboxOverride = '';
+
+    /** Extra mailboxes on top of the plan (add-ons / goodwill). */
+    public string $extraMailboxes = '0';
+
     public function mount(): void
     {
         abort_unless(Auth::user()?->isSuper(), 403);
@@ -61,6 +68,8 @@ class PlatformAccountsPage extends Component
         $user = User::findOrFail($userId);
         $sub = $user->currentSubscription();
         $this->editingId = $userId;
+        $this->mailboxOverride = $sub->mailbox_limit_override === null ? '' : (string) $sub->mailbox_limit_override;
+        $this->extraMailboxes = (string) (int) $sub->extra_mailboxes;
         $this->prices = [];
         foreach (array_keys(config('plans.tiers')) as $plan) {
             if ($plan === 'trial') {
@@ -74,7 +83,7 @@ class PlatformAccountsPage extends Component
 
     public function close(): void
     {
-        $this->reset(['editingId', 'prices']);
+        $this->reset(['editingId', 'prices', 'mailboxOverride', 'extraMailboxes']);
     }
 
     /** Persist the per-tier overrides (blank clears back to list price). */
@@ -90,8 +99,18 @@ class PlatformAccountsPage extends Component
             }
             $overrides[$plan] = (int) round(((float) $value) * 100);
         }
-        $user->currentSubscription()->update(['price_overrides' => $overrides ?: null]);
-        $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Custom pricing updated for '.$user->name.'.');
+        $this->validate([
+            'mailboxOverride' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'extraMailboxes' => ['nullable', 'integer', 'min:0', 'max:10000'],
+        ], ['mailboxOverride.integer' => 'Whole number, or blank for the plan default.']);
+        $user->currentSubscription()->update([
+            'price_overrides' => $overrides ?: null,
+            'mailbox_limit_override' => trim((string) $this->mailboxOverride) === '' ? null : (int) $this->mailboxOverride,
+            'extra_mailboxes' => (int) ($this->extraMailboxes ?: 0),
+        ]);
+        AccountActivity::record($user->id, 'email.limits_set', 'Mailbox allowance updated by the platform',
+            ['actor_id' => Auth::id(), 'category' => 'email', 'icon' => 'envelope', 'meta' => ['override' => $this->mailboxOverride, 'extra' => $this->extraMailboxes]]);
+        $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Pricing and mailbox allowance updated for '.$user->name.'.');
         $this->close();
     }
 
@@ -109,6 +128,11 @@ class PlatformAccountsPage extends Component
                 'trial_ends_at' => now()->addDays((int) config('plans.trial_days', 14)),
             ]);
         } else {
+            if ($blocker = app(PlatformBilling::class)->downgradeBlocker($user, $plan)) {
+                $this->dispatch('toast', level: 'error', title: 'Can\'t switch plan yet', message: $blocker);
+
+                return;
+            }
             app(PlatformBilling::class)->activate($user, $plan);
         }
     }

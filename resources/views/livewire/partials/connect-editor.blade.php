@@ -6,75 +6,48 @@
         <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Fields</p>
         <button wire:click="addNode" class="text-xs font-semibold" style="color:var(--primary)">+ Add field</button>
     </div>
+    @if (! empty($edit['siteProperties']))
+        {{-- Site Properties: the same fields as the Properties page, grouped by its tabs. --}}
+        @php
+            $spFields = collect(\App\Support\SiteProperties::fields())->keyBy('label');
+            $spGroups = [];
+            foreach ($edit['nodes'] as $i => $node) {
+                $def = $spFields->get($node['label']);
+                $tab = $def['tab'] ?? null;
+                if (! $def && ($m = \App\Support\SiteProperties::repeaterMatch((string) $node['label']))) {
+                    $r = \App\Support\SiteProperties::repeaters()[$m[0]];
+                    $def = $r['fields'][$m[2]] + ['repeaterRow' => true];
+                    $tab = $r['tab'];
+                }
+                $spGroups[$tab ?? 'variables'][] = [$i, $node, $def];
+            }
+        @endphp
+        <p class="mt-1 text-[10.5px] text-gray-400">Also on the <a href="{{ url($site->name.'/properties') }}" class="font-semibold underline" style="color:var(--primary)">Properties page</a> — changes show in both.</p>
+        <div class="mt-1.5 space-y-2">
+            @foreach (config('site-properties.tabs') as $tk => $tl)
+                @continue(empty($spGroups[$tk]))
+                <details class="rounded-xl border border-gray-100 dark:border-white/[0.06]" @if ($loop->first) open @endif>
+                    <summary class="cursor-pointer select-none px-2.5 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">{{ $tl }} <span class="font-normal normal-case text-gray-400">({{ count($spGroups[$tk]) }})</span></summary>
+                    <div class="px-2 pb-2 space-y-2">
+                        @foreach ($spGroups[$tk] as [$i, $node, $def])
+                            @include('livewire.partials.connect-node-field', ['i' => $i, 'node' => $node, 'site' => $site, 'def' => $def])
+                        @endforeach
+                    </div>
+                </details>
+            @endforeach
+        </div>
+    @else
     <div class="mt-1.5 space-y-2">
         @foreach ($edit['nodes'] as $i => $node)
-            <div class="rounded-lg border border-gray-100 dark:border-white/[0.06] p-2" wire:key="node-{{ $node['id'] ?? 'new-'.$i }}"
-                 data-node-field="{{ \Illuminate\Support\Str::camel(\Illuminate\Support\Str::slug($node['label'])) }}">
-                <div class="flex items-center gap-1.5">
-                    @if (empty($node['id']))
-                        <input wire:model="edit.nodes.{{ $i }}.label" class="olx-in !mt-0" placeholder="Field label">
-                        {{-- .live so switching type immediately swaps the input (asset picker / collection link) --}}
-                        <select wire:model.live="edit.nodes.{{ $i }}.type" class="olx-in !mt-0 !w-24">
-                            @foreach (\App\Models\Node::TYPES as $nt)
-                                <option value="{{ $nt }}">{{ $nt === 'collection' ? 'collection (list)' : $nt }}</option>
-                            @endforeach
-                        </select>
-                    @else
-                        <span class="flex-1 text-[11px] text-gray-400">{{ $node['label'] }} <span class="opacity-60">({{ $node['type'] }})</span></span>
-                    @endif
-                    <button wire:click="removeNode({{ $i }})" class="text-[11px] text-rose-500 shrink-0">Remove</button>
-                </div>
-                @if ($node['type'] === 'collection')
-                    @if ($node['value'])
-                        <button wire:click="openLinkedCollection('{{ $node['value'] }}')"
-                                class="mt-1 w-full text-left text-[11px] font-semibold px-2 py-1.5 rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-white/[0.05] hover:bg-indigo-100 dark:hover:bg-white/[0.08]">
-                            Open items → ({{ \App\Models\Collection::where('site_id', $site->id)->find($node['value'])?->items()->count() ?? 0 }})
-                        </button>
-                    @else
-                        <p class="mt-1 text-[10px] text-gray-400">Save the component — the list is created and linked automatically.</p>
-                    @endif
-                @elseif ($node['type'] === 'image')
-                    <div class="flex items-center gap-1.5">
-                        @php $imgSrc = \App\Models\Media::resolveRef($site->id, (string) $node['value']); @endphp
-                        @if ($imgSrc !== '')
-                            <img src="{{ $imgSrc }}" alt="" class="w-9 h-9 rounded-lg object-cover shrink-0 border border-gray-100 dark:border-white/[0.08]">
-                        @endif
-                        <input type="text" wire:model="edit.nodes.{{ $i }}.value" class="olx-in !mt-0 flex-1 min-w-0" placeholder="https://… or @media/file">
-                        <button type="button" @click="$dispatch('open-media-picker', { context: { scope: 'connect', nodeIndex: {{ $i }} } })"
-                                class="shrink-0 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1]"
-                                title="Choose from the asset library">Assets</button>
-                    </div>
-                @else
-                    @include('livewire.partials.rich-text', ['path' => "edit.nodes.$i.value", 'value' => $node['value'] ?? ''])
-                @endif
-            </div>
+            @include('livewire.partials.connect-node-field', ['i' => $i, 'node' => $node, 'site' => $site, 'def' => null])
         @endforeach
     </div>
+    @endif
     @if (!empty($edit['collection']))
         {{-- Data source backing this component — entries edit in the collection panel --}}
-        <div class="mt-4 rounded-xl border border-gray-100 dark:border-white/[0.06] p-2.5">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">📦 Data source — {{ $edit['collection']['name'] }} ({{ $edit['collection']['count'] }})</p>
-                <span class="flex items-center gap-2">
-                    <button wire:click="addToLinkedCollection('{{ $edit['collection']['id'] }}')"
-                            class="text-xs font-semibold" style="color:var(--primary)" title="Add a new entry to this list">+ Add</button>
-                    <button wire:click="select('collection', '{{ $edit['collection']['id'] }}')"
-                            class="text-xs font-semibold" style="color:var(--primary)">Manage →</button>
-                </span>
-            </div>
-            <div class="grid grid-cols-3 gap-1.5">
-                @foreach ($edit['collection']['items'] as $ci)
-                    <button wire:click="select('collection', '{{ $edit['collection']['id'] }}')"
-                            class="group rounded-lg border border-gray-100 dark:border-white/[0.06] p-1.5 text-left hover:border-indigo-300 dark:hover:border-indigo-500/40 transition-colors"
-                            title="Edit in {{ $edit['collection']['name'] }}">
-                        @if ($ci['img'])
-                            <img src="{{ $ci['img'] }}" alt="" class="w-full aspect-square rounded-md object-cover mb-1" onerror="this.style.display='none'">
-                        @endif
-                        <span class="block text-[10px] font-semibold text-gray-600 dark:text-gray-300 truncate">{{ $ci['label'] }}</span>
-                    </button>
-                @endforeach
-            </div>
-            <p class="mt-1.5 text-[10px] text-gray-400">These entries feed this section — add, remove or edit them via Manage.</p>
+        <div class="mt-4">
+            @include('livewire.partials.connect-collection-card', ['card' => $edit['collection'], 'title' => '📦 Data source — '.$edit['collection']['name']])
+            <p class="mt-1.5 text-[10px] text-gray-400">These entries feed this section — click one to open it in Collections, or “Edit here” to edit them in this panel.</p>
         </div>
     @endif
     <button wire:click="saveComponent" class="olx-save">Save component</button>
@@ -118,14 +91,21 @@
             @php
                 $imgKeys = ['img', 'image', 'photo', 'src', 'cover', 'avatar', 'poster'];
                 $thumbKey = collect($edit['schema'])->first(fn ($k) => in_array(strtolower($k), $imgKeys, true));
-                $thumbRaw = $thumbKey ? (string) ($item['data'][$thumbKey] ?? '') : '';
-                $thumb = $thumbRaw !== '' && ! is_array($item['data'][$thumbKey] ?? null)
+                // A declared image field wins; a gallery (images) shows its first picture.
+                $thumbKey = collect($edit['schema'])->first(fn ($k) => in_array($edit['fieldDefs'][$k]['type'] ?? '', ['image', 'images'], true)) ?? $thumbKey;
+                $thumbVal = $thumbKey ? ($item['data'][$thumbKey] ?? '') : '';
+                $thumbRaw = is_array($thumbVal) ? (string) ($thumbVal[0] ?? '') : (string) $thumbVal;
+                $thumb = $thumbRaw !== '' && (is_array($thumbVal) || ! is_array($item['data'][$thumbKey] ?? null))
                     ? (str_starts_with($thumbRaw, '/assets/') ? \App\Models\Media::resolveRef($site->id, '@media/'.basename($thumbRaw)) : $thumbRaw)
                     : '';
                 $headKey = collect($edit['schema'])->first(fn ($k) => ! in_array(strtolower($k), $imgKeys, true) && is_string($item['data'][$k] ?? null) && trim((string) $item['data'][$k]) !== '');
                 $headline = $headKey ? \Illuminate\Support\Str::limit((string) $item['data'][$headKey], 46) : 'New entry';
             @endphp
-            <div data-item-row x-data="{ open: {{ empty($item['id']) ? 'true' : 'false' }} }" @olx-expand="open = true"
+            {{-- Keyed per collection + entry: without it Livewire morphs one
+                 collection's cards into the next one's (Contact Info → Hero
+                 Words), leaving inputs bound to the OLD field — blank, and
+                 saving under the wrong key. --}}
+            <div data-item-row wire:key="olx-item-{{ $edit['id'] ?? 'new' }}-{{ $item['id'] ?? 'n'.$i }}" x-data="{ open: {{ empty($item['id']) ? 'true' : 'false' }} }" @olx-expand="open = true"
                  class="rounded-xl border border-gray-100 dark:border-white/[0.06] overflow-hidden">
                 {{-- Card header: click to open/close --}}
                 <div class="flex items-center gap-2 px-2 py-1.5 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-white/[0.04]"
@@ -153,26 +133,47 @@
                     @foreach ($edit['schema'] as $key)
                         @php
                             $val = $item['data'][$key] ?? '';
-                            $isImg = in_array(strtolower($key), $imgKeys, true);
-                            $isLong = is_string($val) && (mb_strlen($val) > 70 || str_contains($val, "\n"));
+                            $fdef = $edit['fieldDefs'][$key] ?? null;
+                            $ftype = $fdef['type'] ?? 'text';
+                            $required = (bool) ($fdef['required'] ?? false);
+                            // A nested list (list/rows/group, a gallery, tags) — edit structurally even when empty.
+                            $isNested = in_array($ftype, ['list', 'rows', 'group', 'images', 'tags'], true) && ($val === '' || $val === [] || is_array($val));
+                            $isImg = $ftype === 'image' || in_array(strtolower($key), $imgKeys, true);
+                            // Declared textareas always get the multi-line editor; others when the value is long.
+                            $taRows = \App\Models\Collection::textareaRows($ftype);
+                            $isLong = $taRows || (! \App\Models\Collection::isBooleanType($ftype) && is_string($val) && (mb_strlen($val) > 70 || str_contains($val, "\n")));
                             $isJson = is_array($val);
+                            $kind = match ($ftype) { 'images' => 'gallery', 'tags' => 'tags', 'group' => 'group', 'list', 'rows' => 'list', default => null };
+                            $isEmpty = $val === '' || $val === [] || $val === null;
                         @endphp
-                        <label class="block">
-                            <span class="text-[10px] font-bold uppercase tracking-wide text-gray-400">{{ \Illuminate\Support\Str::headline($key) }}</span>
-                            @if ($isJson && \App\Livewire\Concerns\WithNestedFields::nestedEditable($val))
+                        {{-- Keyed by wire path: a reorder changes the index, so the input must rebind. --}}
+                        <label class="block" wire:key="olx-field-{{ $edit['id'] ?? 'new' }}-{{ $i }}-{{ $key }}">
+                            <span class="text-[10px] font-bold uppercase tracking-wide text-gray-400">{{ $fdef['label'] ?? \Illuminate\Support\Str::headline($key) }}@if ($required)<span class="text-rose-500" title="Required"> *</span>@endif @if ($isNested && $kind) <span class="font-normal normal-case">· {{ $kind }}</span>@endif @if ($required && $isEmpty)<span class="font-normal normal-case text-rose-500">· required</span>@endif</span>
+                            @if ($isNested && ($val === '' || $val === [] || \App\Livewire\Concerns\WithNestedFields::nestedEditable($val)))
+                                @include('livewire.partials.nested-field', ['path' => "edit.items.$i.data.$key", 'value' => $val === '' ? [] : $val, 'fieldKey' => $key, 'def' => $fdef])
+                            @elseif ($isJson && \App\Livewire\Concerns\WithNestedFields::nestedEditable($val))
                                 @include('livewire.partials.nested-field', ['path' => "edit.items.$i.data.$key", 'value' => $val, 'fieldKey' => $key])
                             @elseif ($isJson)
                                 {{-- irregular/deep value — protected raw preview --}}
                                 <span class="block mt-0.5 px-2 py-1.5 rounded-lg text-[11px] font-mono text-gray-400 bg-gray-50 dark:bg-white/[0.04] truncate">{{ \Illuminate\Support\Str::limit(json_encode($val, JSON_UNESCAPED_UNICODE), 60) }}</span>
                                 <a href="{{ url($site->name.'/collections?open='.($edit['id'] ?? '')) }}" target="_blank" class="text-[10px] font-semibold text-indigo-500 hover:underline">Edit this list in Collections ↗</a>
+                            @elseif (\App\Models\Collection::isBooleanType($ftype))
+                                {{-- Yes/no: the whole row is the label, so the switch toggles on click --}}
+                                <span class="flex items-center gap-2.5 mt-1 cursor-pointer">
+                                    <input type="checkbox" wire:model.live="edit.items.{{ $i }}.data.{{ $key }}" class="{{ $ftype === 'toggle' ? 'sr-only' : 'w-4 h-4 accent-[var(--primary)]' }}">
+                                    @if ($ftype === 'toggle')<span class="bkf-switch"></span>@endif
+                                    <span class="text-[12px] font-semibold text-gray-700 dark:text-gray-200">{{ filter_var($val, FILTER_VALIDATE_BOOLEAN) ? 'On' : 'Off' }}</span>
+                                </span>
                             @elseif ($isLong)
-                                @include('livewire.partials.rich-text', ['path' => "edit.items.$i.data.$key", 'value' => $val])
+                                @include('livewire.partials.rich-text', ['path' => "edit.items.$i.data.$key", 'value' => $val, 'rows' => $taRows ?? 4])
                             @else
                                 <span class="flex items-center gap-1.5 mt-0.5">
                                     @if ($isImg && $thumbKey === $key && $thumb)
                                         <img src="{{ $thumb }}" alt="" class="w-7 h-7 rounded-md object-cover shrink-0" onerror="this.style.display='none'">
                                     @endif
-                                    <input wire:model.blur="edit.items.{{ $i }}.data.{{ $key }}" class="olx-in !mt-0 flex-1 min-w-0">
+                                    <input wire:model.blur="edit.items.{{ $i }}.data.{{ $key }}" class="olx-in !mt-0 flex-1 min-w-0"
+                                           @if ($ftype === 'url') type="url" placeholder="https://…" @elseif (in_array($ftype, ['number', 'date', 'email', 'tel'], true)) type="{{ $ftype }}" @endif
+                                           @if ($required) required aria-required="true" @endif>
                                     @if ($isImg)
                                         <button type="button" @click="$dispatch('open-media-picker', { context: { scope: 'connect', itemIndex: {{ $i }}, itemKey: '{{ $key }}' } })"
                                                 class="shrink-0 px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1]"
@@ -236,10 +237,12 @@
         <input wire:model="edit.title" class="olx-in"></label>
     <label class="block mt-2"><span class="text-[11px] text-gray-400">Intro</span>
         <textarea wire:model="edit.excerpt" rows="2" class="olx-in"></textarea></label>
-    <label class="block mt-2"><span class="text-[11px] text-gray-400">Content (HTML)</span>
-        <textarea wire:model="edit.body" rows="6" class="olx-in font-mono text-[11px]"></textarea></label>
+    <div class="block mt-2" wire:key="post-body-{{ $edit['id'] ?? 'new' }}">
+        <span class="text-[11px] text-gray-400">Content</span>
+        @include('livewire.partials.rich-text', ['path' => 'edit.body', 'value' => $edit['body'] ?? '', 'blocks' => true, 'rows' => 8])
+    </div>
     <button wire:click="savePost" class="olx-save">Save post</button>
-    <a href="{{ route('site.posts', ['siteID' => $site->name]) }}" wire:navigate
+    <a href="{{ route('site.posts', ['siteID' => $site->name]) }}?post={{ $edit['id'] ?? '' }}" wire:navigate
        class="mt-2 block text-center text-xs font-semibold" style="color:var(--primary)">
         Open in Posts →
     </a>

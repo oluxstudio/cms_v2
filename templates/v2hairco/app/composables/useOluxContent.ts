@@ -42,14 +42,49 @@ async function loadContent(): Promise<any | null> {
  * Shared content states + one-time fetch trigger. Block composables and the
  * olux-design plugin both read the same reactive payload.
  */
+// The site's Assets-page favicon replaces the template's baked icon.
+const applyFavicon = (d: any) => {
+  try {
+    const href = d?.site?.favicon
+    if (!href) return
+    document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(l => l.remove())
+    const link = document.createElement('link')
+    link.rel = 'icon'
+    link.href = href
+    document.head.appendChild(link)
+  } catch { /* leave the baked favicon */ }
+}
+
+const cacheKey = () => {
+  const site = new URLSearchParams(window.location.search).get('site') || 'baked'
+  return `olux-content-cache:${site}`
+}
+
 export const ensureOluxContent = () => {
   const data = useState<any | null>('olux-content-data', () => null)
   const loaded = useState<boolean>('olux-content-loaded', () => false)
 
   if (import.meta.client && !fetchStarted) {
     fetchStarted = true
+    // Snapshot-first: the last payload hydrates SYNCHRONOUSLY so the very
+    // first paint is CMS data (no authored-fallback flash) and reloads are
+    // instant. The network fetch then revalidates in the background.
+    try {
+      // Connect-editor previews always paint fresh CMS data — no snapshot.
+      const editing = new URLSearchParams(window.location.search).get('olx-edit') === '1'
+      const cached = editing ? null : localStorage.getItem(cacheKey())
+      if (cached) {
+        data.value = JSON.parse(cached)
+        loaded.value = true
+        applyFavicon(data.value)
+      }
+    } catch { /* private mode etc. — fall through to the fetch gate */ }
     loadContent().then((d) => {
-      data.value = d
+      if (d) {
+        data.value = d
+        applyFavicon(d)
+        try { localStorage.setItem(cacheKey(), JSON.stringify(d)) } catch {}
+      }
       loaded.value = true
     })
   }
@@ -147,6 +182,10 @@ export const useOluxContent = (blockKey: string) => {
               const raw = p.replace(/^.*?\/assets\//, '/assets/')
               if (v.startsWith(p)) v = v.slice(p.length)
               else if (v.startsWith(raw)) v = v.slice(raw.length)
+            } else {
+              // No strip configured → the template renders this value as-is,
+              // so root-absolute asset paths need the app base (same as t()).
+              v = rebase(v)
             }
             row[key] = v
           }

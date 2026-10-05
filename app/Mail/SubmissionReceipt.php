@@ -61,7 +61,7 @@ class SubmissionReceipt extends Mailable implements ShouldQueue
     {
         $subject = EmailTemplate::forForm($this->form, $this->site)['subject'];
 
-        return new Envelope(subject: EmailTemplate::fill($subject, $this->ctx(), $this->summary));
+        return new Envelope(...$this->site->mailSender(), subject: EmailTemplate::fill($subject, $this->ctx(), $this->summary));
     }
 
     public function content(): Content

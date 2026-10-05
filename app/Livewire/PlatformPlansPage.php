@@ -34,6 +34,7 @@ class PlatformPlansPage extends Component
 
     public function edit(string $key): void
     {
+        $this->guard();
         $t = config("plans.tiers.{$key}");
         abort_unless($t, 404);
         $this->editing = $key;
@@ -52,6 +53,18 @@ class PlatformPlansPage extends Component
             'premium' => (bool) ($t['limits']['premium'] ?? false),
             'marketplace' => (bool) ($t['limits']['marketplace'] ?? false),
             'ai_tokens' => $t['limits']['ai_tokens_month'] ?? null,
+            'mailboxes' => array_key_exists('mailboxes', $t['limits'] ?? []) ? $t['limits']['mailboxes'] : 0,
+            'custom_domain' => (bool) ($t['limits']['custom_domain'] ?? true),
+            'annual_price' => isset($t['annual_price_cents']) ? number_format(((int) $t['annual_price_cents']) / 100, 2, '.', '') : '',
+            'price_prefix' => (string) ($t['price_prefix'] ?? ''),
+            'free_domain' => (string) ($t['limits']['free_domain'] ?? ''),
+            'bookings_month' => $t['limits']['bookings_month'] ?? null,
+            'staff_calendars' => $t['limits']['staff_calendars'] ?? null,
+            'invoices_month' => $t['limits']['invoices_month'] ?? null,
+            'deposits' => (bool) ($t['limits']['deposits'] ?? true),
+            'recurring_invoices' => (bool) ($t['limits']['recurring_invoices'] ?? true),
+            'payment_fee_pct' => $t['limits']['payment_fee_pct'] ?? null,
+            'badge' => (bool) ($t['limits']['badge'] ?? false),
             'features' => implode("\n", (array) ($t['features'] ?? [])),
             'description' => (string) ($t['description'] ?? ''),
         ];
@@ -60,11 +73,14 @@ class PlatformPlansPage extends Component
 
     public function create(): void
     {
+        $this->guard();
         $this->editing = '';
         $this->form = [
             'key' => '', 'name' => '', 'tagline' => '', 'price' => '', 'color' => '#6366f1', 'accent' => 'primary',
             'highlight' => false, 'hidden' => false, 'domain_included' => false,
-            'sites' => 1, 'storage_mb' => 1024, 'premium' => false, 'marketplace' => false, 'ai_tokens' => null,
+            'sites' => 1, 'storage_mb' => 1024, 'premium' => false, 'marketplace' => false, 'ai_tokens' => null, 'mailboxes' => 0, 'custom_domain' => true,
+            'annual_price' => '', 'price_prefix' => '', 'free_domain' => '', 'bookings_month' => null, 'staff_calendars' => 1,
+            'invoices_month' => null, 'deposits' => false, 'recurring_invoices' => false, 'payment_fee_pct' => 1, 'badge' => false,
             'features' => '', 'description' => '',
         ];
         $this->resetErrorBag();
@@ -77,6 +93,7 @@ class PlatformPlansPage extends Component
 
     public function save(): void
     {
+        $this->guard();
         $isNew = $this->editing === '';
         $isTrial = $this->editing === 'trial';
         if ($isNew) {
@@ -94,6 +111,14 @@ class PlatformPlansPage extends Component
             'form.sites' => ['nullable', 'integer', 'min:1', 'max:10000'],
             'form.storage_mb' => ['nullable', 'integer', 'min:1', 'max:10000000'],
             'form.ai_tokens' => ['nullable', 'integer', 'min:0', 'max:10000000000'],
+            'form.mailboxes' => ['nullable', 'integer', 'min:0', 'max:100000'],
+            'form.annual_price' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'form.price_prefix' => ['nullable', 'string', 'max:12'],
+            'form.free_domain' => ['nullable', 'in:,co.uk,uk,com,any'],
+            'form.bookings_month' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'form.staff_calendars' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'form.invoices_month' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'form.payment_fee_pct' => ['nullable', 'numeric', 'min:0', 'max:20'],
             'form.features' => ['nullable', 'string', 'max:2000'],
             'form.description' => ['nullable', 'string', 'max:3000'],
         ], [
@@ -109,6 +134,8 @@ class PlatformPlansPage extends Component
             'name' => trim($this->form['name']),
             'tagline' => trim((string) $this->form['tagline']),
             'price_cents' => $isTrial ? 0 : (int) round(((float) $this->form['price']) * 100),
+            'annual_price_cents' => $isTrial || ($this->form['annual_price'] ?? '') === '' ? null : (int) round(((float) $this->form['annual_price']) * 100),
+            'price_prefix' => trim((string) ($this->form['price_prefix'] ?? '')) ?: null,
             'domain_included' => (bool) $this->form['domain_included'],
             'order' => (int) $order,
             'color' => strtolower($this->form['color']),
@@ -121,6 +148,17 @@ class PlatformPlansPage extends Component
                 'storage_mb' => $this->form['storage_mb'] === null || $this->form['storage_mb'] === '' ? null : (int) $this->form['storage_mb'],
                 'marketplace' => (bool) $this->form['marketplace'],
                 'ai_tokens_month' => $this->form['ai_tokens'] === null || $this->form['ai_tokens'] === '' ? null : (int) $this->form['ai_tokens'],
+                // null = set per account by platform admins (Enterprise).
+                'mailboxes' => $isTrial ? 0 : ($this->form['mailboxes'] === null || $this->form['mailboxes'] === '' ? null : (int) $this->form['mailboxes']),
+                'custom_domain' => (bool) ($this->form['custom_domain'] ?? true),
+                'free_domain' => ($this->form['free_domain'] ?? '') ?: null,
+                'bookings_month' => $this->blankToNull('bookings_month'),
+                'staff_calendars' => $this->blankToNull('staff_calendars'),
+                'invoices_month' => $this->blankToNull('invoices_month'),
+                'deposits' => (bool) ($this->form['deposits'] ?? true),
+                'recurring_invoices' => (bool) ($this->form['recurring_invoices'] ?? true),
+                'payment_fee_pct' => ($this->form['payment_fee_pct'] ?? '') === '' || $this->form['payment_fee_pct'] === null ? null : round((float) $this->form['payment_fee_pct'], 2),
+                'badge' => (bool) ($this->form['badge'] ?? false),
             ],
             'features' => collect(preg_split('/\r?\n/', (string) $this->form['features']))->map(fn ($l) => trim($l))->filter()->values()->all(),
             'description' => trim((string) $this->form['description']),
@@ -141,8 +179,17 @@ class PlatformPlansPage extends Component
             message: $data['name'].' is updated everywhere. New checkouts use the new price; current subscribers keep theirs.');
     }
 
+    /** A number field where blank means unlimited. */
+    private function blankToNull(string $field): ?int
+    {
+        $v = $this->form[$field] ?? null;
+
+        return $v === null || $v === '' ? null : (int) $v;
+    }
+
     public function toggleHidden(string $key): void
     {
+        $this->guard();
         abort_if($key === 'trial', 422);
         $t = config("plans.tiers.{$key}");
         abort_unless($t, 404);
@@ -152,6 +199,7 @@ class PlatformPlansPage extends Component
     /** Swap display order with the neighbour above/below. */
     public function move(string $key, int $dir): void
     {
+        $this->guard();
         $keys = collect(config('plans.tiers'))->sortBy('order')->keys()->values();
         $i = $keys->search($key);
         $j = $i + ($dir < 0 ? -1 : 1);
@@ -166,21 +214,79 @@ class PlatformPlansPage extends Component
     }
 
     /** Only plans added here, with nobody on them, can be deleted. */
-    public function deletePlan(string $key): void
-    {
-        abort_if(PlanCatalog::isBuiltIn($key), 422);
-        if (AccountSubscription::where('plan', $key)->exists()) {
-            $this->dispatch('toast', level: 'error', title: 'Plan in use', message: 'Accounts are on this plan. Hide it instead so nobody new can pick it.');
+    /** Delete dialog: the plan being deleted, and where its accounts move to. */
+    public ?string $deleting = null;
 
-            return;
+    public string $moveTo = '';
+
+    public function startDelete(string $key): void
+    {
+        $this->guard();
+        abort_unless(config("plans.tiers.{$key}") && $key !== 'trial', 422);
+        $this->deleting = $key;
+        $this->moveTo = '';
+        $this->resetErrorBag();
+    }
+
+    public function cancelDelete(): void
+    {
+        $this->reset('deleting', 'moveTo');
+    }
+
+    /**
+     * Delete a plan — any plan except the signup trial. Accounts on it are
+     * moved to another plan first (never left on a plan that no longer
+     * exists). A built-in plan keeps a "deleted" marker so it can be restored.
+     */
+    public function deletePlan(): void
+    {
+        $this->guard();
+        $this->resetErrorBag();
+        $key = (string) $this->deleting;
+        $tier = config("plans.tiers.{$key}");
+        abort_unless($tier && $key !== 'trial', 422);
+
+        $accounts = AccountSubscription::where('plan', $key)->count();
+        if ($accounts > 0) {
+            if ($this->moveTo === '' || $this->moveTo === $key || ! config("plans.tiers.{$this->moveTo}")) {
+                $this->addError('moveTo', 'Pick the plan '.($accounts === 1 ? 'its account moves' : "its {$accounts} accounts move").' to.');
+
+                return;
+            }
+            AccountSubscription::where('plan', $key)->update(['plan' => $this->moveTo]);
         }
-        PlanCatalog::delete($key);
-        $this->editing = null;
-        $this->dispatch('toast', level: 'success', title: 'Plan deleted', message: 'Removed.');
+
+        PlanCatalog::isBuiltIn($key)
+            ? PlanCatalog::save($key, array_merge((array) (MembershipPlan::where('key', $key)->value('data') ?? []), ['deleted' => true, 'hidden' => true, 'highlight' => false]))
+            : PlanCatalog::delete($key);
+
+        $name = $tier['name'] ?? $key;
+        $moved = $accounts > 0 ? ' Its '.$accounts.' '.Str::plural('account', $accounts).' moved to '.(config("plans.tiers.{$this->moveTo}.name") ?? $this->moveTo).'.' : '';
+        $this->reset('deleting', 'moveTo', 'editing');
+        $this->dispatch('toast', level: 'success', title: 'Plan deleted', message: $name.' is gone from every pricing page.'.$moved);
+    }
+
+    /** Bring back a deleted built-in plan (with the edits it had). */
+    public function restorePlan(string $key): void
+    {
+        $this->guard();
+        abort_unless(PlanCatalog::isBuiltIn($key), 422);
+        $data = (array) (MembershipPlan::where('key', $key)->value('data') ?? []);
+        unset($data['deleted']);
+        $data['hidden'] = true; // comes back hidden — show it when ready
+        PlanCatalog::save($key, $data);
+        $this->dispatch('toast', level: 'success', title: 'Plan restored', message: (config("plans.tiers.{$key}.name") ?? $key).' is back (hidden — click Show to offer it again).');
+    }
+
+    /** Every action re-checks: only super admins manage plans. */
+    private function guard(): void
+    {
+        abort_unless(Auth::user()?->isSuper(), 403);
     }
 
     public function saveTrialDays(): void
     {
+        $this->guard();
         $this->validate(['trialDays' => ['required', 'integer', 'min:0', 'max:90']]);
         $settings = MembershipPlan::where('key', MembershipPlan::SETTINGS_KEY)->value('data') ?? [];
         PlanCatalog::save(MembershipPlan::SETTINGS_KEY, array_merge((array) $settings, ['trial_days' => $this->trialDays]));
@@ -215,6 +321,7 @@ class PlatformPlansPage extends Component
                 'trialing' => AccountSubscription::where('status', 'trialing')->count(),
             ],
             'accents' => self::ACCENTS,
+            'deletedPlans' => PlanCatalog::deletedBuiltIns(),
         ]);
     }
 }

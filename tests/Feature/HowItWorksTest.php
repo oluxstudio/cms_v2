@@ -28,12 +28,12 @@ test('the getting started guide covers the journey, plans, add-ons, going live a
 
 test('the plans section lists public plans and marks the reader\'s own', function () {
     $user = User::factory()->create();
-    $user->currentSubscription()->update(['plan' => 'business', 'status' => 'active']);
+    $user->currentSubscription()->update(['plan' => 'growth', 'status' => 'active']);
 
     $this->actingAs($user)->get('/how-it-works')
         ->assertOk()
-        ->assertSeeInOrder([config('plans.tiers.business.name'), 'Your plan'])
-        ->assertSee(Money::format((int) config('plans.tiers.business.price_cents'), 'gbp'));
+        ->assertSeeInOrder([config('plans.tiers.growth.name'), 'Your plan'])
+        ->assertSee(Money::format((int) config('plans.tiers.growth.price_cents'), 'gbp'));
 });
 
 test('first login shows the intro pack with plans; after hiding it the button brings it back', function () {

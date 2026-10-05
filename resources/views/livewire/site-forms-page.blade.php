@@ -13,7 +13,7 @@
     {{-- ════ LEFT RAIL: summary tiles ════ --}}
     <x-carousel.slide class="lg:!w-[280px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
     @php
-        $fActive = $forms->where('is_active', true)->count();
+        $fActive = $forms->filter(fn ($f) => $f->isLive())->count();   // on, and not parked by a template switch
         $fResponses = $forms->sum('responses_count');
         $fUnread = $forms->sum('unread_count');
     @endphp
@@ -87,7 +87,7 @@
 
                     {{-- Status + unread badge --}}
                     <div class="absolute top-3 right-3 flex items-center gap-1.5">
-                        @if (! $form->is_active)
+                        @if (! $form->is_active && $form->template_active !== false)
                             <span class="text-xs font-semibold px-2 py-0.5 rounded-full
                                          bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400">
                                 Inactive
@@ -120,6 +120,7 @@
                                 <p class="text-xs font-mono text-gray-400 dark:text-gray-500 mt-0.5">
                                     {{ $form->name }}
                                 </p>
+                                @include('partials.template-inactive', ['item' => $form, 'action' => 'activateForm', 'noun' => 'form'])
                             </div>
                         </div>
 

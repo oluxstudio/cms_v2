@@ -1,4 +1,5 @@
 {
+    "primary-soft": "color-mix(in srgb, var(--color-primary) 8%, #fff)",
     "radius": "14px",
     "section-max-width": "90rem",
     "container-width": "70rem",

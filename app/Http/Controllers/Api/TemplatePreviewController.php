@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SiteTemplate;
 use App\Models\Template;
 use App\Support\BlockPayloadPresenter;
+use App\Support\TemplateAccess;
 use App\Templates\ArrayTemplate;
 use App\Templates\TemplateAppRegistry;
 use App\Templates\TemplateContract;
@@ -26,6 +27,12 @@ class TemplatePreviewController extends Controller
 {
     public function show(string $ref): JsonResponse
     {
+        // Private templates (and account uploads) only with a signed preview
+        // token, handed out after an access check (Template::previewUrl).
+        if (TemplateAccess::isPrivateKey($ref) && ! TemplateAccess::validPreviewToken($ref, request()->query('pt'))) {
+            abort(404);
+        }
+
         $resolved = $this->resolve($ref);
         if (! $resolved) {
             return response()->json(['error' => 'Template not found.'], 404);
@@ -71,8 +78,8 @@ class TemplatePreviewController extends Controller
             return [$st->name ?: $c->name(), $c, $css];
         }
 
-        // 2. Published catalog template by slug.
-        if ($tpl = Template::where('slug', $ref)->first()) {
+        // 2. Catalog template by slug (drafts never; private ones passed the token check above).
+        if ($tpl = Template::where('slug', $ref)->whereIn('status', ['published', 'private'])->first()) {
             if ($c = $tpl->toContract()) {
                 return [$tpl->name, $c, (string) ($tpl->latestVersion?->payload['css'] ?? '')];
             }

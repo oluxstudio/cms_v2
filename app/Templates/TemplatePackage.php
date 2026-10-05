@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\File;
  *
  *   template.json        — manifest (key, name, meta, page order, thumbnail)
  *   tokens/colors.json   — colour theme variables
+ *   tokens/css-colors.json — the template's own --color-* variables + defaults
  *   tokens/sizes.json    — radius / base font-size
  *   fonts/fonts.json     — font families to load
  *   css/template.css     — template-specific CSS layered on install
@@ -169,6 +170,12 @@ class TemplatePackage implements TemplateContract
         }
 
         return $theme;
+    }
+
+    /** The template's CSS colour variables and their defaults: ['color-primary' => '#ec0470', …]. */
+    public function cssColors(): array
+    {
+        return array_filter((array) ($this->readJson('tokens/css-colors.json') ?: []), 'is_string');
     }
 
     /** Card thumbnail — the public convention file, else null. */

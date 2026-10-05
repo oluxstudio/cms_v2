@@ -3,9 +3,15 @@
 namespace App\Livewire;
 
 use App\Livewire\Concerns\WithLayoutMode;
+use App\Models\Component as SiteComponent;
 use App\Models\Media as MediaModel;
+use App\Models\Node;
+use App\Models\PageAttribute;
+use App\Models\Post;
 use App\Models\Site;
 use App\Services\MediaStore;
+use App\Support\SiteContentCache;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -17,13 +23,16 @@ class MediaPage extends Component
 {
     use WithFileUploads, WithLayoutMode, WithPagination;
 
-    public const PER_PAGE = 12;
+    public const PER_PAGE = 16; // 4 × 4 grid
 
     public Site $site;
 
     public string $search = '';
 
     public string $activeTab = 'all';   // all | image | video | document
+
+    /** Right-rail shortcut: only images without alt text. */
+    public bool $missingAlt = false;
 
     /** Preview lightbox. */
     public ?string $previewId = null;
@@ -63,6 +72,14 @@ class MediaPage extends Component
     public function setTab(string $tab): void
     {
         $this->activeTab = in_array($tab, ['all', ...MediaModel::TYPES], true) ? $tab : 'all';
+        $this->missingAlt = false;
+        $this->resetPage();
+    }
+
+    public function showMissingAlt(): void
+    {
+        $this->activeTab = 'image';
+        $this->missingAlt = true;
         $this->resetPage();
     }
 
@@ -132,6 +149,7 @@ class MediaPage extends Component
 
         $mediaItems = (clone $base)
             ->when($this->activeTab !== 'all', fn ($q) => $q->where('file_type', $this->activeTab))
+            ->when($this->missingAlt, fn ($q) => $q->where(fn ($w) => $w->whereNull('alt_text')->orWhere('alt_text', '')))
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->where('name', 'like', '%'.$this->search.'%')
                     ->orWhere('alt_text', 'like', '%'.$this->search.'%');
@@ -167,7 +185,63 @@ class MediaPage extends Component
             'counts' => $counts,
             'recent' => $recent,
             'storage' => $storage,
+            'summary' => $this->summary($base),
         ]);
+    }
+
+    /**
+     * Right-rail summary: space by type, what needs attention (alt text,
+     * heavy images, files nothing seems to use) and the largest files.
+     * Cached per site + content version, so typing in search stays cheap.
+     */
+    private function summary($base): array
+    {
+        $key = 'media-summary:'.$this->site->id.':'.SiteContentCache::version($this->site->id).':'.(clone $base)->count().':'.(clone $base)->max('updated_at');
+
+        return Cache::remember($key, 300, function () use ($base) {
+            $byType = (clone $base)->selectRaw('file_type, count(*) as n, coalesce(sum(bytes),0) as b')->groupBy('file_type')->get()
+                ->map(fn ($r) => ['type' => $r->file_type, 'n' => (int) $r->n, 'bytes' => (int) $r->b])
+                ->sortByDesc('bytes')->values()->all();
+
+            return [
+                'byType' => $byType,
+                'totalBytes' => array_sum(array_column($byType, 'bytes')),
+                'missingAlt' => (clone $base)->where('file_type', 'image')->where(fn ($w) => $w->whereNull('alt_text')->orWhere('alt_text', ''))->count(),
+                'heavy' => (clone $base)->where('file_type', 'image')->where('bytes', '>', 1024 * 1024)->count(),
+                'largest' => (clone $base)->where('bytes', '>', 0)->orderByDesc('bytes')->limit(5)->get(['id', 'name', 'file_type', 'bytes', 'url'])
+                    ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name, 'type' => $m->file_type, 'size' => MediaModel::humanSize((int) $m->bytes)])->all(),
+                'unused' => $this->unusedFiles($base),
+            ];
+        });
+    }
+
+    /**
+     * Files no content seems to reference — by file name (covers "@media/…"
+     * refs and full URLs) across sections, posts and site/page settings.
+     * A hint for clean-up, not a guarantee (templates may hard-code assets).
+     */
+    private function unusedFiles($base): array
+    {
+        $siteId = $this->site->id;
+        $hay = mb_strtolower(implode("\n", array_merge(
+            Node::whereIn('component_id', SiteComponent::where('site_id', $siteId)->select('id'))->pluck('value')->all(),
+            Post::where('site_id', $siteId)->get(['body', 'cover_image'])->flatMap(fn ($p) => [$p->body, $p->cover_image])->all(),
+            $this->site->siteAttributes()->pluck('value')->all(),
+            PageAttribute::whereIn('page_id', $this->site->pages()->select('id'))->pluck('value')->all(),
+        )));
+        $unused = (clone $base)->latest()->get(['id', 'name', 'url', 'file_type', 'bytes'])
+            ->reject(function ($m) use ($hay) {
+                $file = mb_strtolower(basename((string) $m->url));
+                $name = mb_strtolower((string) $m->name);
+
+                return ($file !== '' && str_contains($hay, $file)) || ($name !== '' && str_contains($hay, $name));
+            });
+
+        return [
+            'count' => $unused->count(),
+            'bytes' => MediaModel::humanSize((int) $unused->sum('bytes')),
+            'sample' => $unused->take(4)->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->values()->all(),
+        ];
     }
 
     // ── Manual add-by-URL / edit ──────────────────────────────────

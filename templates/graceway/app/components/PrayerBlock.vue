@@ -99,7 +99,7 @@ const sendForm = async (e: Event) => {
 /* rhythms */
 .pr-rhythms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.8rem; margin-top: 2rem; }
 .pr-card { background: #fff; border-radius: 20px; padding: 1.8rem; box-shadow: 0 14px 32px rgba(20, 24, 29, .08); }
-.pr-card .icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: #fdeef3;
+.pr-card .icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: var(--primary-soft);
   font-size: 1.3rem; margin-bottom: 1rem; }
 .pr-card h3 { font-size: 1.15rem; color: var(--color-secondary); margin-bottom: .3rem; }
 .pr-when { font-weight: 700; color: var(--color-primary); font-size: 1rem; margin-bottom: .5rem; }

@@ -165,7 +165,7 @@ class TemplateMirror extends Command
                 if ($currentItems == $wantedItems) {
                     continue;
                 }
-                $col->items()->delete();
+                $col->items()->withTrashed()->forceDelete(); // reseed replaces, never trash
                 foreach ($wantedItems as $data) {
                     $col->items()->create(['site_id' => $site->id, 'data' => $data, 'status' => 'published']);
                 }

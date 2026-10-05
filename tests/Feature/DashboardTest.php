@@ -1,7 +1,9 @@
 <?php
 
 use App\Livewire\SiteDashboard;
+use App\Models\Alert;
 use App\Models\Invoice;
+use App\Models\Message;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -97,9 +99,9 @@ test('the rail shows unread messages and alerts; enquiries, responses and task l
     $site = Site::create(['user_id' => $user->id, 'name' => 'attn-'.uniqid(), 'domain' => 'attn-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
     $site->members()->syncWithoutDetaching([$user->id => ['role' => 'owner']]);
 
-    \App\Models\Message::create(['site_id' => $site->id, 'sender_id' => $mate->id, 'recipient_id' => $user->id, 'body' => 'hi']);
-    \App\Models\Message::create(['site_id' => $site->id, 'sender_id' => $mate->id, 'recipient_id' => null, 'body' => 'team']);
-    \App\Models\Alert::create(['site_id' => $site->id, 'level' => 'info', 'type' => 'system', 'audience' => 'all', 'title' => 'Heads up']);
+    Message::create(['site_id' => $site->id, 'sender_id' => $mate->id, 'recipient_id' => $user->id, 'body' => 'hi']);
+    Message::create(['site_id' => $site->id, 'sender_id' => $mate->id, 'recipient_id' => null, 'body' => 'team']);
+    Alert::create(['site_id' => $site->id, 'level' => 'info', 'type' => 'system', 'audience' => 'all', 'title' => 'Heads up']);
 
     Livewire::actingAs($user)->test(SiteDashboard::class, ['site' => $site])
         ->assertSet('unreadMessages', 2)
@@ -109,4 +111,40 @@ test('the rail shows unread messages and alerts; enquiries, responses and task l
         ->assertSee(url($site->name.'/alerts'), false)
         ->assertDontSee('New enquiries')
         ->assertDontSee('Latest responses');
+});
+
+test('the header shows every team member, five faces then a +N chip', function () {
+    $owner = User::factory()->create(['name' => 'Olu Owner']);
+    $site = Site::create(['user_id' => $owner->id, 'name' => 'team-'.uniqid(), 'domain' => 'team-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
+    $site->members()->syncWithoutDetaching([$owner->id => ['role' => 'owner']]);
+    $mates = User::factory()->count(6)->create();
+    foreach ($mates as $m) {
+        $site->members()->syncWithoutDetaching([$m->id => ['role' => 'editor']]);
+    }
+    $mates->first()->update(['avatar' => 'https://cdn.example/face.png']);
+
+    Livewire::actingAs($owner)->test(SiteDashboard::class, ['site' => $site])
+        ->assertCount('team', 7)
+        ->assertSet('team.0.name', 'Olu Owner')                 // owner first
+        ->assertSee('https://cdn.example/face.png', false)
+        ->assertSee('+2')
+        ->assertSee($mates->last()->name);                     // named in the +N chip's tooltip
+});
+
+test('team avatars run in the order people joined, owner first, newest on the right', function () {
+    $owner = User::factory()->create(['name' => 'Owner Person']);
+    $site = Site::create(['user_id' => $owner->id, 'name' => 'join-'.uniqid(), 'domain' => 'join-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);
+
+    $zoe = User::factory()->create(['name' => 'Zoe First']);
+    $adam = User::factory()->create(['name' => 'Adam Second']);
+    $mia = User::factory()->create(['name' => 'Mia Third']);
+    // Join in a different order from both names and ids.
+    foreach ([[$zoe, 3], [$adam, 2], [$mia, 1]] as [$u, $daysAgo]) {
+        $this->travelTo(now()->subDays($daysAgo));
+        $site->members()->syncWithoutDetaching([$u->id => ['role' => 'editor']]);
+        $this->travelBack();
+    }
+
+    Livewire::actingAs($owner)->test(SiteDashboard::class, ['site' => $site])
+        ->assertSeeInOrder(['Owner Person', 'Zoe First', 'Adam Second', 'Mia Third']);
 });

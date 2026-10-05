@@ -16,6 +16,6 @@ const services: Service[] = [
 // CMS-first: the "Services" collection overrides the authored rows at runtime.
 export const useServices = (): Service[] => {
   const rows = (useCms().items('services', []) as any[]).filter(s => s.label && s.time)
-  return rows.length ? rows.map(s => ({ day: '', ...s }) as Service) : services
+  return (rows.length || useCms().isSite) ? rows.map(s => ({ day: '', ...s }) as Service) : services
 }
  

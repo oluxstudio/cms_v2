@@ -1,7 +1,7 @@
 {
     "key": "graceway",
     "name": "Graceway",
-    "extracted_at": "2026-09-24T02:07:25+00:00",
+    "extracted_at": "2026-10-05T07:01:47+00:00",
     "theme": {
         "color-primary": "#ec0470",
         "color-secondary": "#14181d",
@@ -13,6 +13,7 @@
         "font-heading": "'Baumans', cursive",
         "font-secondary": "'Bellota', cursive",
         "font-alt-1": "'Abel', sans-serif",
+        "primary-soft": "color-mix(in srgb, var(--color-primary) 8%, #fff)",
         "color-bg": "#f7f3ee",
         "radius": "14px",
         "section-max-width": "90rem",
@@ -24,7 +25,7 @@
     "behaviours": [],
     "assets": {
         "count": 55,
-        "bytes": 4974428,
+        "bytes": 4686729,
         "images": [
             "/assets/images/avatar1.svg",
             "/assets/images/avatar2.svg",
@@ -1071,10 +1072,10 @@
                             "order": 3
                         },
                         {
-                            "label": "Join Cta To",
-                            "type": "url",
-                            "value": "/newsletter",
-                            "kind": "copy:broadcastChannels.join.cta.to",
+                            "label": "Join Text",
+                            "type": "text",
+                            "value": "You're always welcome in the room. Plan a visit, meet the family, and make CAC Blackburn your church home.",
+                            "kind": "copy:broadcastChannels.join.text",
                             "order": 4
                         },
                         {
@@ -1083,6 +1084,13 @@
                             "value": "Join the Church",
                             "kind": "copy:broadcastChannels.join.cta.label",
                             "order": 5
+                        },
+                        {
+                            "label": "Join Cta To",
+                            "type": "url",
+                            "value": "/newsletter",
+                            "kind": "copy:broadcastChannels.join.cta.to",
+                            "order": 6
                         }
                     ],
                     "items": null
@@ -8248,6 +8256,93 @@
     ],
     "collections": [
         {
+            "name": "Broadcast Channels",
+            "description": "Data source extracted from useBroadcastChannels.ts \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "key",
+                    "label": "Key",
+                    "type": "text"
+                },
+                {
+                    "key": "handle",
+                    "label": "Handle",
+                    "type": "select",
+                    "options": [
+                        "@cacblackburn",
+                        "CAC Blackburn"
+                    ]
+                },
+                {
+                    "key": "color",
+                    "label": "Color",
+                    "type": "text"
+                },
+                {
+                    "key": "followers",
+                    "label": "Followers",
+                    "type": "text"
+                },
+                {
+                    "key": "live",
+                    "label": "Live",
+                    "type": "select",
+                    "options": [
+                        "1",
+                        ""
+                    ]
+                },
+                {
+                    "key": "watch",
+                    "label": "Watch",
+                    "type": "text"
+                },
+                {
+                    "key": "blurb",
+                    "label": "Blurb",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "key": "youtube",
+                    "handle": "@cacblackburn",
+                    "color": "#d1242f",
+                    "followers": "12.4k subscribers",
+                    "live": true,
+                    "watch": "https://youtube.com/@cacblackburn/live",
+                    "blurb": "Full Sunday services, sermon replays and worship nights in HD."
+                },
+                {
+                    "key": "facebook",
+                    "handle": "CAC Blackburn",
+                    "color": "#1d5fd1",
+                    "followers": "8.9k followers",
+                    "live": true,
+                    "watch": "https://facebook.com/cacblackburn/live",
+                    "blurb": "Live services with real-time chat, event updates and photo albums."
+                },
+                {
+                    "key": "instagram",
+                    "handle": "@cacblackburn",
+                    "color": "#c13584",
+                    "followers": "6.2k followers",
+                    "live": false,
+                    "watch": "https://instagram.com/cacblackburn",
+                    "blurb": "Daily encouragement, behind-the-scenes moments and reels from Sunday."
+                },
+                {
+                    "key": "tiktok",
+                    "handle": "@cacblackburn",
+                    "color": "#14181d",
+                    "followers": "Coming soon",
+                    "live": false,
+                    "watch": "https://tiktok.com/@cacblackburn/live",
+                    "blurb": "Short worship clips and testimonies \u2014 launching this season."
+                }
+            ]
+        },
+        {
             "name": "Contact Info",
             "description": "Data source extracted from useContactInfo.ts \u2014 components read it live via useCms().items().",
             "fields": [
@@ -8294,6 +8389,92 @@
                     "icon": "\ud83d\udccd",
                     "label": "Our Location",
                     "value": "85 Johnston Street"
+                }
+            ]
+        },
+        {
+            "name": "Hero Pills",
+            "description": "Data source extracted from useHeroPills.ts \u2014 components read it live via useCms().items().",
+            "fields": [
+                {
+                    "key": "key",
+                    "label": "Key",
+                    "type": "text"
+                },
+                {
+                    "key": "label",
+                    "label": "Label",
+                    "type": "text"
+                },
+                {
+                    "key": "desc",
+                    "label": "Desc",
+                    "type": "text"
+                },
+                {
+                    "key": "to",
+                    "label": "To",
+                    "type": "text"
+                },
+                {
+                    "key": "img",
+                    "label": "Img",
+                    "type": "url"
+                },
+                {
+                    "key": "tint",
+                    "label": "Tint",
+                    "type": "text"
+                }
+            ],
+            "items": [
+                {
+                    "key": "store",
+                    "label": "Stores",
+                    "desc": "Books, music and church merchandise \u2014 every purchase supports our outreach.",
+                    "to": "/store",
+                    "img": "/assets/images/circle-1.jpg",
+                    "tint": "tint-yellow"
+                },
+                {
+                    "key": "events",
+                    "label": "Events",
+                    "desc": "Picnics, food drives, worship nights \u2014 life together beyond Sunday.",
+                    "to": "/events",
+                    "img": "/assets/images/event-1.jpg",
+                    "tint": "tint-red"
+                },
+                {
+                    "key": "bible",
+                    "label": "Bible Study",
+                    "desc": "Midweek studies and small groups digging deeper into the Word.",
+                    "to": "/bible-study",
+                    "img": "/assets/images/circle-2.jpg",
+                    "tint": "tint-gold"
+                },
+                {
+                    "key": "sermons",
+                    "label": "Sermons & Blog",
+                    "desc": "Catch up on recent messages and read reflections from our pastors.",
+                    "to": "/sermons",
+                    "img": "/assets/images/event-2.jpg",
+                    "tint": "tint-blue"
+                },
+                {
+                    "key": "youth",
+                    "label": "Youth Ministry",
+                    "desc": "A place for teens to ask big questions and build real friendships.",
+                    "to": "/youth",
+                    "img": "/assets/images/circle-3.jpg",
+                    "tint": "tint-teal"
+                },
+                {
+                    "key": "worship",
+                    "label": "Worship",
+                    "desc": "Join us Sundays for music, prayer and teaching.",
+                    "to": "/worship",
+                    "img": "/assets/images/event-3.jpg",
+                    "tint": "tint-green"
                 }
             ]
         },
@@ -10132,93 +10313,6 @@
             ]
         },
         {
-            "name": "Broadcast Channels",
-            "description": "Data source extracted from useSiteContent.ts \u2014 components read it live via useCms().items().",
-            "fields": [
-                {
-                    "key": "key",
-                    "label": "Key",
-                    "type": "text"
-                },
-                {
-                    "key": "handle",
-                    "label": "Handle",
-                    "type": "select",
-                    "options": [
-                        "@cacblackburn",
-                        "CAC Blackburn"
-                    ]
-                },
-                {
-                    "key": "color",
-                    "label": "Color",
-                    "type": "text"
-                },
-                {
-                    "key": "followers",
-                    "label": "Followers",
-                    "type": "text"
-                },
-                {
-                    "key": "live",
-                    "label": "Live",
-                    "type": "select",
-                    "options": [
-                        "1",
-                        ""
-                    ]
-                },
-                {
-                    "key": "watch",
-                    "label": "Watch",
-                    "type": "text"
-                },
-                {
-                    "key": "blurb",
-                    "label": "Blurb",
-                    "type": "text"
-                }
-            ],
-            "items": [
-                {
-                    "key": "youtube",
-                    "handle": "@cacblackburn",
-                    "color": "#d1242f",
-                    "followers": "12.4k subscribers",
-                    "live": true,
-                    "watch": "https://youtube.com/@cacblackburn/live",
-                    "blurb": "Full Sunday services, sermon replays and worship nights in HD."
-                },
-                {
-                    "key": "facebook",
-                    "handle": "CAC Blackburn",
-                    "color": "#1d5fd1",
-                    "followers": "8.9k followers",
-                    "live": true,
-                    "watch": "https://facebook.com/cacblackburn/live",
-                    "blurb": "Live services with real-time chat, event updates and photo albums."
-                },
-                {
-                    "key": "instagram",
-                    "handle": "@cacblackburn",
-                    "color": "#c13584",
-                    "followers": "6.2k followers",
-                    "live": false,
-                    "watch": "https://instagram.com/cacblackburn",
-                    "blurb": "Daily encouragement, behind-the-scenes moments and reels from Sunday."
-                },
-                {
-                    "key": "tiktok",
-                    "handle": "@cacblackburn",
-                    "color": "#14181d",
-                    "followers": "Coming soon",
-                    "live": false,
-                    "watch": "https://tiktok.com/@cacblackburn/live",
-                    "blurb": "Short worship clips and testimonies \u2014 launching this season."
-                }
-            ]
-        },
-        {
             "name": "Worship History",
             "description": "Data source extracted from useSiteContent.ts \u2014 components read it live via useCms().items().",
             "fields": [
@@ -10991,12 +11085,16 @@
                 {
                     "key": "slug",
                     "label": "Slug",
-                    "type": "text"
+                    "type": "text",
+                    "required": true,
+                    "declared": true
                 },
                 {
                     "key": "title",
                     "label": "Title",
-                    "type": "text"
+                    "type": "text",
+                    "required": true,
+                    "declared": true
                 },
                 {
                     "key": "series",
@@ -11011,64 +11109,87 @@
                 {
                     "key": "passage",
                     "label": "Passage",
-                    "type": "text"
+                    "type": "textarea",
+                    "required": false,
+                    "declared": true
                 },
                 {
                     "key": "excerpt",
                     "label": "Excerpt",
-                    "type": "text"
+                    "type": "textarea",
+                    "required": false,
+                    "declared": true
                 },
                 {
                     "key": "summary",
                     "label": "Summary",
-                    "type": "text"
+                    "type": "textarea10",
+                    "required": false,
+                    "declared": true
                 },
                 {
                     "key": "questions",
                     "label": "Questions",
-                    "type": "list"
+                    "type": "list",
+                    "required": false,
+                    "declared": true
                 },
                 {
                     "key": "takeaway",
                     "label": "Takeaway",
-                    "type": "text"
+                    "type": "textarea10",
+                    "required": false,
+                    "declared": true
                 },
                 {
                     "key": "memoryVerse",
-                    "label": "Memory Verse",
-                    "type": "text"
+                    "label": "Memory verse",
+                    "type": "textarea2",
+                    "required": false,
+                    "declared": true
                 },
                 {
                     "key": "audience",
                     "label": "Audience",
                     "type": "select",
+                    "required": false,
                     "options": [
                         "Everyone",
                         "Youth",
                         "Women",
                         "Men",
                         "Seniors"
-                    ]
+                    ],
+                    "declared": true
                 },
                 {
                     "key": "date",
                     "label": "Date",
-                    "type": "date"
+                    "type": "date",
+                    "required": false,
+                    "auto": "created_at",
+                    "declared": true
                 },
                 {
                     "key": "videoUrl",
-                    "label": "Video Url",
-                    "type": "text"
+                    "label": "Video URL",
+                    "type": "url",
+                    "required": false,
+                    "declared": true
                 },
                 {
                     "key": "poster",
                     "label": "Poster",
-                    "type": "text"
+                    "type": "image",
+                    "required": false,
+                    "declared": true
                 },
                 {
                     "key": "audioUrl",
-                    "label": "Audio Url",
-                    "type": "text"
+                    "label": "Audio URL",
+                    "type": "url",
+                    "required": false,
+                    "declared": true
                 }
             ],
             "items": [
@@ -11401,7 +11522,7 @@
                     "memoryVerse": "Psalm 46:10",
                     "audience": "Everyone",
                     "date": "2026-09-18",
-                    "audioUrl": "/assets/media/study-audio-1.wav",
+                    "audioUrl": "/assets/media/study-audio-1.mp4",
                     "poster": "/assets/images/gallery-12.jpg"
                 }
             ]

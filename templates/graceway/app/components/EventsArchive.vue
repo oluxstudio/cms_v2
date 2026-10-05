@@ -6,7 +6,7 @@ const oluxFb: Record<string, string> = {}
 const { events: authoredEvents, eventsArchive } = useSiteContent()
 const rows = computed(() => {
   const cms = (useCms().items('events', []) as any[]).filter(e => e.title && e.img)
-  return cms.length ? cms : authoredEvents
+  return (cms.length || useCms().isSite) ? cms : authoredEvents
 })
 const now = new Date().toISOString()
 const past = computed(() => rows.value

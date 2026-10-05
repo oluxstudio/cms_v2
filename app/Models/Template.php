@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Money;
+use App\Support\TemplateAccess;
 use App\Support\TemplatePaths;
 use App\Templates\TemplateContract;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -21,7 +22,7 @@ class Template extends Model
 
     protected $fillable = [
         'uuid', 'user_id', 'creator_id', 'name', 'slug', 'description', 'short_description', 'category', 'tags', 'required_features', 'live_preview_url',
-        'status', 'price_cents', 'currency', 'source', 'builtin_key',
+        'status', 'status_before_hide', 'visibility', 'price_cents', 'currency', 'source', 'builtin_key', 'source_repo', 'source_branch',
         'accent_color', 'gradient_class', 'thumbnail_url', 'latest_version_id',
         'installs_count', 'rating_avg', 'rating_count',
         'published_at', 'submitted_at', 'rejection_reason',
@@ -70,7 +71,38 @@ class Template extends Model
         return Money::format((int) $this->price_cents, $this->currency ?? 'gbp', free: true);
     }
 
-    /** Live preview URL if a static demo exists for this template, else null. */
+    public function entitlements(): HasMany
+    {
+        return $this->hasMany(TemplateEntitlement::class);
+    }
+
+    /** Private templates are only for the accounts they're assigned to. */
+    public function isPrivate(): bool
+    {
+        return $this->visibility === 'private' || $this->status === 'private';
+    }
+
+    /** What the public store, gallery and APIs may list: published AND public. */
+    /**
+     * A customer's own upload (Design page): always private to their account.
+     * Admin store uploads are also source "upload" but carry the Olux Studio
+     * creator — those can be public.
+     */
+    public function isAccountUpload(): bool
+    {
+        return $this->status === 'private' || ($this->source === 'upload' && $this->creator_id === null);
+    }
+
+    public function scopePubliclyListed($q)
+    {
+        return $q->where('status', 'published')->where('visibility', 'public');
+    }
+
+    /**
+     * Live preview URL if a static demo exists for this template, else null.
+     * Private templates get a short-lived signed token — callers must have
+     * checked access (TemplateAccess) before handing this URL out.
+     */
     public function previewUrl(?string $siteName = null): ?string
     {
         $key = $this->builtin_key ?: $this->slug;
@@ -78,7 +110,12 @@ class Template extends Model
             return null;
         }
 
-        return TemplatePaths::shellUrl($key).'?'.http_build_query(array_filter(['site' => $siteName, 'template' => $key]));
+        return TemplatePaths::shellUrl($key).'?'.http_build_query(array_filter([
+            'site' => $siteName,
+            'template' => $key,
+            // Same rule the preview API enforces (uploads stay token-only until published publicly).
+            'pt' => TemplateAccess::isPrivateKey($key) ? TemplateAccess::previewToken($key) : null,
+        ]));
     }
 
     /** Resolve the latest published version to a TemplateContract for applying. */

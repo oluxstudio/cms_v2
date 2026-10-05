@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Features\FeatureRegistry;
 use App\Payments\PaymentGateway;
 use App\Payments\PaymentManager;
+use App\Support\SiteContentCache;
 use App\Support\SiteProperties;
 use App\Support\SiteSetupTask;
 use App\Support\TemplatePaths;
@@ -17,7 +18,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Site extends Model
@@ -31,7 +34,7 @@ class Site extends Model
     /** The commerce suite every site starts with (nav items show when enabled). */
     public const COMMERCE_FEATURES = ['store', 'invoices', 'donations', 'bookings', 'estimator'];
 
-    protected $fillable = ['user_id', 'name', 'domain', 'owner', 'description', 'template', 'theme', 'live', 'domain_verified_at'];
+    protected $fillable = ['user_id', 'name', 'domain', 'owner', 'description', 'template', 'theme', 'live', 'domain_verified_at', 'currency'];
 
     protected $casts = ['theme' => 'array', 'live' => 'boolean', 'domain_verified_at' => 'datetime'];
 
@@ -103,6 +106,22 @@ class Site extends Model
      * Normalize a user-entered domain: strip scheme/path/port/www, lowercase.
      * Returns null when nothing valid remains.
      */
+    /** Does the site use a real template (not the blank starter)? */
+    public function hasTemplate(): bool
+    {
+        return $this->renderTemplateKey() !== TemplateAppRegistry::BLANK;
+    }
+
+    /**
+     * The visitor-view preview for "Live preview" buttons — null when the site
+     * has no template yet, so the button says there's nothing to preview
+     * instead of opening the empty generic renderer.
+     */
+    public function visitorPreviewUrl(?string $pageUrl = null): ?string
+    {
+        return $this->hasTemplate() ? $this->templatePreviewUrl($pageUrl) : null;
+    }
+
     /**
      * Preview through the site's OWN template renderer (hairco, verita…) —
      * what a live domain serves — falling back to the generic block renderer.
@@ -189,6 +208,76 @@ class Site extends Model
         return self::where('name', $label)->first();
     }
 
+    // ── Changing the web address (old addresses live on as SiteAlias) ───────
+
+    public function aliases(): HasMany
+    {
+        return $this->hasMany(SiteAlias::class);
+    }
+
+    /** Is this address in use — by a site, or as another site's old address? */
+    public static function nameTaken(string $label, ?string $exceptSiteId = null): bool
+    {
+        $label = strtolower(trim($label));
+
+        return self::where('name', $label)->when($exceptSiteId, fn ($q) => $q->whereKeyNot($exceptSiteId))->exists()
+            || SiteAlias::where('name', $label)->when($exceptSiteId, fn ($q) => $q->where('site_id', '!=', $exceptSiteId))->exists();
+    }
+
+    /** The site now behind an old address (null when the name is current or unknown). */
+    public static function forOldName(?string $name): ?self
+    {
+        $name = strtolower(trim((string) $name));
+        if ($name === '' || self::where('name', $name)->exists()) {
+            return null;
+        }
+
+        return SiteAlias::where('name', $name)->first()?->site;
+    }
+
+    /** Why $label can't be this site's new address, or null when it can. */
+    public function addressError(string $label): ?string
+    {
+        $label = strtolower(trim($label));
+
+        return match (true) {
+            $label === $this->name => 'That is already this site’s address.',
+            ! self::validSubdomainLabel($label) => 'Use 3–63 lowercase letters, numbers or hyphens (not at the start or end).',
+            self::nameTaken($label, $this->id) => 'That address is taken. Try another.',
+            default => null,
+        };
+    }
+
+    /**
+     * Move the site to a new web address ({label}.{base} and /{label}/… in the
+     * app). The old address is kept as an alias, so shared links, the old
+     * subdomain, Stripe webhooks and Site Connect embeds keep working (they are
+     * redirected or resolved to the new one). Files already uploaded stay where
+     * they are; their URLs are stored and keep working.
+     */
+    public function changeAddress(string $label): void
+    {
+        $label = strtolower(trim($label));
+        if ($error = $this->addressError($label)) {
+            throw new \InvalidArgumentException($error);
+        }
+
+        DB::transaction(function () use ($label) {
+            $old = $this->name;
+            $base = (string) config('publishing.subdomain_base') ?: 'test';
+
+            // Taking back one of our own old addresses: it stops being an alias.
+            SiteAlias::where('site_id', $this->id)->where('name', $label)->delete();
+            SiteAlias::firstOrCreate(['name' => $old], ['site_id' => $this->id]);
+
+            // Sites made from a template store their free subdomain as the domain.
+            $domain = $this->domain === "{$old}.{$base}" ? "{$label}.{$base}" : $this->domain;
+
+            $this->forceFill(['name' => $label, 'domain' => $domain])->save();
+        });
+        SiteContentCache::bump($this->id);
+    }
+
     public static function normalizeDomain(?string $input): ?string
     {
         $d = strtolower(trim((string) $input));
@@ -251,20 +340,25 @@ class Site extends Model
     {
         $team = collect();
 
+        // joined_at: when the person joined this site's team (the owner "joins"
+        // when the site is created).
         if ($this->user) {
-            $team->push(['user' => $this->user, 'role' => 'owner']);
+            $team->push(['user' => $this->user, 'role' => 'owner', 'joined_at' => $this->created_at]);
         }
 
         AccountMember::with(['user', 'role'])
             ->where('account_id', $this->user_id)
             ->where(fn ($q) => $q->whereNull('site_id')->orWhere('site_id', $this->id))
             ->get()
-            ->each(fn ($m) => $m->user && $team->push(['user' => $m->user, 'role' => $m->role?->name]));
+            ->each(fn ($m) => $m->user && $team->push(['user' => $m->user, 'role' => $m->role?->name, 'joined_at' => $m->created_at]));
 
         $this->members()->get()
-            ->each(fn ($u) => $team->push(['user' => $u, 'role' => $u->pivot->role]));
+            ->each(fn ($u) => $team->push(['user' => $u, 'role' => $u->pivot->role, 'joined_at' => $u->pivot->created_at]));
 
-        return $team->unique(fn ($t) => $t['user']->id)->values();
+        // One entry per person: the first role found, the earliest join time.
+        return $team->groupBy(fn ($t) => $t['user']->id)
+            ->map(fn ($rows) => ['joined_at' => $rows->pluck('joined_at')->filter()->min()] + $rows->first())
+            ->values();
     }
 
     /** The role label for a given user on this site, or null if they're not on the team. */
@@ -386,10 +480,33 @@ class Site extends Model
         static::created(fn (Site $site) => SiteSetupTask::sync($site));
     }
 
+    /**
+     * Envelope parts for emails sent to this site's customers: the From NAME is
+     * the business (the address stays the platform's, so SPF/DKIM pass) and
+     * replies go to the business. Spread into `new Envelope(...)`.
+     *
+     * @return array{from?: Address, replyTo?: list<Address>}
+     */
+    public function mailSender(): array
+    {
+        $clean = fn (?string $v) => trim(mb_substr(preg_replace('/[\r\n\t"<>]+/', ' ', (string) $v), 0, 80));
+        $name = $clean(SiteProperties::value($this, 'email_sender_name') ?: $this->getAttr('business_name'));
+        $reply = trim(SiteProperties::value($this, 'reply_to') ?: SiteProperties::value($this, 'email'));
+        $out = [];
+        if ($name !== '' && filled(config('mail.from.address'))) {
+            $out['from'] = new Address((string) config('mail.from.address'), $name);
+        }
+        if (filter_var($reply, FILTER_VALIDATE_EMAIL)) {
+            $out['replyTo'] = [new Address($reply, $name !== '' ? $name : null)];
+        }
+
+        return $out;
+    }
+
     /** Logo for branded output: the email-specific one, else the site's property logo. */
     public function brandLogo(): string
     {
-        return (string) ($this->getAttr('email.logo') ?: $this->getAttr(SiteProperties::LOGO, ''));
+        return (string) ($this->getAttr('email.logo') ?: SiteProperties::imageUrl($this, SiteProperties::value($this, 'logo')));
     }
 
     /** All attributes as a flat [key => value] array. */
@@ -430,7 +547,8 @@ class Site extends Model
     {
         return $this->hasMany(Page::class)
             ->where('url', 'not like', '/\_archived-%')
-            ->where('url', 'not like', '/\_layout-%'); // layout shadow pages hold fixed-region blocks
+            ->where('url', 'not like', '/\_layout-%') // layout shadow pages hold fixed-region blocks
+            ->where('template_active', true);          // a non-current template's pages are parked, not deleted
     }
 
     public function collections()

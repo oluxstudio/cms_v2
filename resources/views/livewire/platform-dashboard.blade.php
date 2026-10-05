@@ -27,7 +27,7 @@
                 @foreach ($signups->take(7) as $u)
                     <a href="{{ route('admin.account', $u->id) }}" wire:navigate title="{{ $u->name }} · joined {{ $u->created_at->diffForHumans() }}"
                        class="rounded-full ring-2 ring-white dark:ring-[#1d1e2a] hover:-translate-y-0.5 transition-transform">
-                        <x-avatar :src="$u->avatar" :initials="strtoupper(substr($u->name, 0, 1))" size="w-10 h-10" textSize="text-sm font-bold" />
+                        <x-avatar :src="$u->avatarUrl()" :initials="strtoupper(substr($u->name, 0, 1))" size="w-10 h-10" textSize="text-sm font-bold" />
                     </a>
                 @endforeach
                 <a href="{{ route('admin.accounts', ['sort' => 'newest']) }}" wire:navigate title="All accounts"
@@ -139,7 +139,7 @@
                 @forelse ($signups->take(5) as $u)
                     <a href="{{ route('admin.account', $u->id) }}" wire:navigate
                        class="flex items-center gap-3 py-2.5 {{ $loop->last ? '' : 'border-b border-gray-50 dark:border-white/[0.04]' }}">
-                        <x-avatar :src="$u->avatar" :initials="strtoupper(substr($u->name, 0, 1))" size="w-10 h-10" textSize="text-sm font-bold" />
+                        <x-avatar :src="$u->avatarUrl()" :initials="strtoupper(substr($u->name, 0, 1))" size="w-10 h-10" textSize="text-sm font-bold" />
                         <span class="min-w-0 flex-1">
                             <span class="block text-[14px] font-bold text-gray-900 dark:text-white truncate">{{ $u->name }}</span>
                             <span class="block text-[11.5px] text-gray-500 dark:text-gray-400">{{ $u->created_at->format('j M Y') }} · {{ $u->sites_count }} {{ Str::plural('site', $u->sites_count) }}</span>

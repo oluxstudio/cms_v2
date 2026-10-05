@@ -3,17 +3,20 @@
 namespace App\Services;
 
 use App\Jobs\InstallTemplateJob;
+use App\Models\Component;
 use App\Models\Node;
 use App\Models\Site;
 use App\Models\SiteTemplate;
 use App\Models\Template;
+use App\Models\TemplateUpload;
 use App\Models\User;
-use App\Services\SiteConnect\AssetImporter;
+use App\Support\CollectionAutoFields;
 use App\Support\CuratedTemplates;
 use App\Support\TemplatePaths;
 use App\Templates\TemplateAppRegistry;
 use App\Templates\TemplatePackage;
 use App\Templates\TemplateRegistry;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -39,7 +42,7 @@ class TemplateInstaller
     {
         $base = Str::slug((string) ($card['name'] ?? 'site')) ?: 'site';
         $label = $base;
-        for ($i = 2; ! Site::validSubdomainLabel($label) || Site::where('name', $label)->exists(); $i++) {
+        for ($i = 2; ! Site::validSubdomainLabel($label) || Site::nameTaken($label); $i++) {
             $label = "{$base}-{$i}";
         }
 
@@ -149,7 +152,7 @@ class TemplateInstaller
     public function applyAsync(Site $site, SiteTemplate $row): void
     {
         $this->bind($site, $row);
-        InstallTemplateJob::dispatch($site->id, $row->id);
+        InstallTemplateJob::dispatch($site->id, $row->id, auth()->id());
     }
 
     /**
@@ -165,6 +168,7 @@ class TemplateInstaller
         $site->installedTemplates()->whereKeyNot($row->id)->update(['applied_at' => null]);
         $row->update(['applied_at' => now()]);
         $site->setAttr('template_install', 'installing');
+        $site->setAttr(InstallProgress::ATTR, json_encode(['percent' => 1, 'label' => 'Getting started', 'step' => 'start', 'done' => 0, 'total' => 0]));
 
         // An external client URL would override the preview on /connect, so
         // the user would never see the design they just applied. Stash it
@@ -178,18 +182,39 @@ class TemplateInstaller
     /**
      * The heavy half: scaffold pages/components, switch on commerce modules,
      * create the template's forms and apply its theme.
+     *
+     * SITE DATA BELONGS TO THE SITE. A template brings its layout, pages and
+     * default content; it adds a form or (empty) collection only when the site
+     * has none by that name, and NEVER changes what the site already has —
+     * components, collections and their entries, posts, forms. Only the owner
+     * edits those. $refresh = an update of the template the site already uses
+     * (template:deploy / repo push): then its own sections, forms and
+     * collections may be topped up with fields the template has gained.
      */
-    public function install(Site $site, SiteTemplate $row): void
+    public function install(Site $site, SiteTemplate $row, bool $refresh = false): void
     {
+        // What the site had before this run — a switch/apply never edits these.
+        $existingComponentIds = $refresh ? null : Component::where('site_id', $site->id)->pluck('id')->all();
+
         // bind() just stamped applied_at, so "was it applied before this
         // run?" means: was the previous theme already stashed for this row?
         $wasApplied = $row->previous_theme !== null;
         $appKey = $this->resolveAppKey($row);
+        $progress = new InstallProgress($site);
+
+        // A FRESH copy: pages, their sections + sample text, the header/footer
+        // layout, theme, forms (definitions) and empty collections. Never the
+        // template's data — no collection entries, posts, products, booking
+        // services, assets, contacts, tasks or messages.
 
         // 1. Content: pages + components (skips existing URLs — safe re-apply).
         $contract = $row->toContract();
-        if ($contract && ($pages = $contract->pages())) {
-            $this->scaffolder->applyPages($site, $pages);
+        $pages = $contract ? $contract->pages() : [];
+        $progress->step('pages', 'Creating pages', 0, count($pages));
+        if ($pages) {
+            $this->scaffolder->applyPages($site, $pages,
+                fn (int $done, string $name) => $progress->step('pages', 'Creating “'.$name.'” and its sections', $done, count($pages)),
+                topUp: $refresh);
         }
 
         // 1a. Chrome: the layout's header/nav + footer blocks wrap every page
@@ -210,45 +235,149 @@ class TemplateInstaller
                 $layout = ($layouts['default'] ?? (reset($layouts) ?: []))['blocks'] ?? [];
             }
         }
+        $progress->step('layout', 'Building the header and footer');
         if ($layout !== []) {
             $this->scaffolder->applyChrome($site, $layout);
         }
 
-        // 1b. Assets: the template's shipped images become the site's default
-        //     media library, and top-level image nodes point at the copies.
-        $this->importAssets($site, $appKey);
-
         // 2. Modules: every commerce feature switches on (idempotent), so the
         //    template's booking/store/estimator pages have working backends —
         //    the owner can still toggle any of them off in the Marketplace.
+        $progress->step('features', 'Switching on features');
         $site->enableCommerceSuite();
 
         // 3. Forms the template declares (manifest-driven, firstOrCreate).
-        $this->applyForms($site, $this->formsFor($row, $appKey));
+        $progress->step('forms', 'Setting up forms');
+        $this->applyForms($site, $this->formsFor($row, $appKey), $refresh);
 
         // 3a. Collections the template declares (repeatable lists the owner
-        //     can add/remove items on) — seeded with the template's rows.
+        //     can add/remove items on). Matched by name: a collection the site
+        //     already has (e.g. from its previous template) is REUSED with its
+        //     entries; only missing ones are created, empty. Collections the
+        //     new template doesn't use are left alone and still served.
+        $progress->step('collections', 'Creating empty collections');
         $manifest = TemplateAppRegistry::find($appKey)['manifest'] ?? [];
-        $this->applyCollections($site, (array) ($manifest['collections'] ?? $row->payload['collections'] ?? []));
+        $this->applyCollections($site, (array) ($manifest['collections'] ?? $row->payload['collections'] ?? []), $refresh);
 
         // 3a1b. Wire components to the collection that feeds them (static scan
         //       of the published app) — the connect editor then shows the
         //       data-source grid whenever such a component is selected.
-        $this->linkComponentCollections($site, $appKey);
-
-        // 3a2. Products the template declares — the store page works out of
-        //      the box; owner edits/pricing survive re-applies (slug match).
-        $this->applyProducts($site, (array) ($manifest['products'] ?? $row->payload['products'] ?? []));
+        $progress->step('linking', 'Connecting sections to collections');
+        $this->linkComponentCollections($site, $appKey, $existingComponentIds);
 
         // 3b. Booking: seed the template's services + availability so the
         //     template's appointment flow is bookable out of the box.
+        $progress->step('booking', 'Applying booking settings');
         $this->applyBooking($site, $row, $appKey);
 
         // 4. The template's colour tokens become the site theme; the outgoing
         //    theme is stashed on the row so "stop using" can restore it.
+        $progress->step('theme', 'Applying colours and fonts');
         $this->applyTheme($site, $row, $appKey, $wasApplied);
 
+        // 5. Only the CURRENT template's pages, sections and forms are active;
+        //    any other template's are parked (never deleted) until it's used again.
+        $this->syncActivation($site);
+
+        $progress->finish();
         $site->setAttr('template_install', 'done');
+    }
+
+    /** A template's display name for admin labels ("Hairco"), from its key. */
+    public static function templateName(string $key): string
+    {
+        $name = TemplateAppRegistry::find($key)['name'] ?? null;
+        $name ??= TemplateUpload::where('key', $key)->value('name');
+
+        return $name ?: Str::headline($key);
+    }
+
+    /** Mark that keeps an item active whatever the template (the owner switched it back on). */
+    public const OWNER_KEEP = '@owner';
+
+    /**
+     * Template-owned structure is active only under its own template:
+     *   · every page / form / page-section a template of this site declares is
+     *     tagged with that template's key (template_keys) — this also back-fills
+     *     what earlier templates created;
+     *   · it is ACTIVE when one of its keys is the site's current template, or
+     *     it carries no keys (the owner's own) or the OWNER_KEEP mark;
+     *   · inactive items stay in the database and come back on switching back.
+     * Collections, entries, posts and submissions are data — never touched.
+     * A site on no template (blank) has everything active.
+     */
+    public function syncActivation(Site $site): void
+    {
+        $current = $site->renderTemplateKey();
+        $current = $current === TemplateAppRegistry::BLANK ? null : $current;
+
+        // What each template this site has installed declares.
+        $declared = [];   // key => ['pages' => [url => [block names]], 'forms' => [names]]
+        foreach ($site->installedTemplates()->get() as $row) {
+            $key = $this->resolveAppKey($row);
+            if ($key === TemplateAppRegistry::BLANK) {
+                continue;
+            }
+            try {
+                $defs = $row->toContract()?->pages() ?? [];
+            } catch (\Throwable $e) {
+                report($e);
+                $defs = [];
+            }
+            foreach ($defs as $def) {
+                $url = $def['url'] ?? '/';
+                $names = collect((array) ($def['blocks'] ?? []))->pluck('name')->filter()->all();
+                $declared[$key]['pages'][$url] = array_values(array_unique(array_merge($declared[$key]['pages'][$url] ?? [], $names)));
+            }
+            foreach ($this->formsFor($row, $key) as $form) {
+                if (! empty($form['name'])) {
+                    $declared[$key]['forms'][] = $form['name'];
+                }
+            }
+        }
+
+        $isActive = fn (array $keys) => $current === null || $keys === [] || in_array(self::OWNER_KEEP, $keys, true) || in_array($current, $keys, true);
+        $merge = function (?array $have, callable $declares) use ($declared): array {
+            $keys = (array) ($have ?? []);
+            if (in_array(self::OWNER_KEEP, $keys, true)) {
+                return $keys; // the owner's call — never re-tagged
+            }
+            foreach ($declared as $key => $d) {
+                if ($declares($d)) {
+                    $keys[] = $key;
+                }
+            }
+
+            return array_values(array_unique($keys));
+        };
+
+        foreach ($site->pages()->get() as $page) {
+            $keys = $merge($page->template_keys, fn ($d) => array_key_exists($page->url, $d['pages'] ?? []));
+            $active = $isActive($keys);
+            if ($keys !== (array) ($page->template_keys ?? []) || $active !== (bool) $page->template_active) {
+                $page->forceFill(['template_keys' => $keys ?: null, 'template_active' => $active])->saveQuietly();
+            }
+
+            // Its sections: a block the current template declares on this page shows; others are parked.
+            foreach ($page->components()->get() as $component) {
+                $pivotKeys = json_decode((string) ($component->pivot->template_keys ?? ''), true) ?: [];
+                $keys = $merge($pivotKeys, fn ($d) => in_array($component->name, $d['pages'][$page->url] ?? [], true));
+                $active = $isActive($keys);
+                if ($keys !== $pivotKeys || $active !== (bool) $component->pivot->active) {
+                    DB::table('page_component')
+                        ->where('page_id', $page->id)->where('component_id', $component->id)
+                        ->update(['template_keys' => $keys ? json_encode($keys) : null, 'active' => $active]);
+                }
+            }
+        }
+
+        foreach ($site->forms()->get() as $form) {
+            $keys = $merge($form->template_keys, fn ($d) => in_array($form->name, $d['forms'] ?? [], true));
+            $active = $isActive($keys);
+            if ($keys !== (array) ($form->template_keys ?? []) || $active !== (bool) $form->template_active) {
+                $form->forceFill(['template_keys' => $keys ?: null, 'template_active' => $active])->saveQuietly();
+            }
+        }
     }
 
     /**
@@ -268,7 +397,7 @@ class TemplateInstaller
                 continue;
             }
             try {
-                $this->install($site, $row);
+                $this->install($site, $row, refresh: true);
                 $count++;
                 if ($onSite) {
                     $onSite($site->name);
@@ -282,28 +411,60 @@ class TemplateInstaller
     }
 
     /**
-     * Seed the manifest's collections: name + field schema + starter items.
-     * firstOrCreate by name; items seed only on first creation, so owner
-     * edits/removals survive re-applies.
+     * The manifest's collections: name + field schema, never entries.
+     * Matched by name — the site's existing collections (and their data) are
+     * kept and their declared field types synced; missing ones are created empty.
      */
-    private function applyCollections(Site $site, array $collections): void
+    private function applyCollections(Site $site, array $collections, bool $refresh = false): void
     {
         foreach ($collections as $def) {
             if (empty($def['name'])) {
                 continue;
             }
             $existing = $site->collections()->where('name', $def['name'])->first();
+            if ($existing && ! $refresh) {
+                continue; // the site's collection — its fields and entries are the owner's
+            }
             if ($existing) {
                 // Template gained fields → merge them in additively so the
                 // editor renders the new keys (owner fields/order untouched).
                 $have = collect($existing->fields ?? [])->pluck('key')->filter()->all();
                 $missing = collect((array) ($def['fields'] ?? []))
                     ->map(fn ($f) => ['key' => $f['key'] ?? $f['name'] ?? '', 'name' => $f['key'] ?? $f['name'] ?? '',
-                        'label' => $f['label'] ?? ucfirst((string) ($f['key'] ?? '')), 'type' => $f['type'] ?? 'text'] + array_intersect_key($f, array_flip(['fields', 'options'])))
+                        'label' => $f['label'] ?? ucfirst((string) ($f['key'] ?? '')), 'type' => $f['type'] ?? 'text'] + array_intersect_key($f, array_flip(['fields', 'options', 'required', 'auto'])))
                     ->filter(fn ($f) => $f['key'] !== '' && ! in_array($f['key'], $have, true))
                     ->values()->all();
-                if ($missing !== []) {
-                    $existing->update(['fields' => array_merge((array) $existing->fields, $missing)]);
+                // Fields the template DECLARES (@olux-field) keep their type,
+                // required flag and options in step with the template; the
+                // owner's label stays unless the template names one.
+                $declared = collect((array) ($def['fields'] ?? []))->filter(fn ($f) => ! empty($f['declared']))->keyBy('key');
+                $synced = collect((array) $existing->fields)->map(function ($f) use ($declared) {
+                    $d = $declared->get($f['key'] ?? '');
+                    if (! $d) {
+                        return $f;
+                    }
+                    $f['type'] = $d['type'] ?? ($f['type'] ?? 'text');
+                    $f['required'] = (bool) ($d['required'] ?? false);
+                    // Options belong to choice fields only (drop a guessed select's).
+                    if (in_array($f['type'], ['select', 'radio'], true) && isset($d['options'])) {
+                        $f['options'] = $d['options'];
+                    } elseif (! in_array($f['type'], ['select', 'radio'], true)) {
+                        unset($f['options']);
+                    }
+                    isset($d['label']) ? $f['label'] = $d['label'] : null;
+                    // A declared system source (auto=created_at) is template intent; an
+                    // owner-set source on a field the template leaves manual stays.
+                    isset($d['auto']) ? $f['auto'] = $d['auto'] : null;
+
+                    return $f;
+                })->all();
+                if ($missing !== [] || $synced !== (array) $existing->fields) {
+                    $oldAuto = CollectionAutoFields::autoFields($existing);
+                    $existing->update(['fields' => array_merge($synced, $missing)]);
+                    // Fields that just got a system source are filled on the existing entries.
+                    if (CollectionAutoFields::autoFields($existing) !== $oldAuto) {
+                        CollectionAutoFields::backfill($existing->fresh());
+                    }
                 }
 
                 continue;
@@ -317,17 +478,11 @@ class TemplateInstaller
                     'name' => $f['key'] ?? $f['name'] ?? '',
                     'label' => $f['label'] ?? ucfirst((string) ($f['key'] ?? '')),
                     'type' => $f['type'] ?? 'text',
-                ] + array_intersect_key($f, array_flip(['fields', 'options'])))->filter(fn ($f) => $f['key'] !== '')->values()->all(),
+                ] + array_intersect_key($f, array_flip(['fields', 'options', 'required', 'auto'])))->filter(fn ($f) => $f['key'] !== '')->values()->all(),
                 'is_public' => true,
             ]);
-            foreach ((array) ($def['items'] ?? []) as $i => $data) {
-                $col->items()->create([
-                    'site_id' => $site->id,
-                    'data' => (array) $data,
-                    'position' => $i,
-                    'status' => 'published',
-                ]);
-            }
+            // Fresh copy: the collection's fields only — never the template's sample
+            // entries. Until the owner adds some, the template shows its built-in samples.
         }
     }
 
@@ -338,9 +493,13 @@ class TemplateInstaller
      * accessor (useMembers → items('leadership')). Sets collection_id on the
      * site's matching components so editors can jump to the data source.
      */
-    private function linkComponentCollections(Site $site, string $appKey): void
+    private function linkComponentCollections(Site $site, string $appKey, ?array $protectedIds = null): void
     {
-        $appDir = base_path("templates/{$appKey}/app");
+        // $protectedIds: components the site already had — a switch/apply links
+        // only the sections it just created, never re-wiring or trimming the owner's.
+        $own = fn ($q) => $protectedIds === null ? $q : $q->whereNotIn('components.id', $protectedIds);
+        // The published app (first-party or uploaded) keeps its source under app/.
+        $appDir = TemplatePaths::appDir($appKey).'/app';
         if (! is_dir($appDir)) {
             return;
         }
@@ -384,8 +543,17 @@ class TemplateInstaller
                 }
             }
             if ($slug) {
+                // Every list the block reads (direct items() calls + accessors) —
+                // the extra ones become collection fields inside the component.
+                preg_match_all("#items\(['\"]([\w-]+)['\"]#", $code, $direct);
+                $all = $direct[1];
+                foreach ($byAccessor as $fn => $s) {
+                    if (str_contains($code, $fn.'(')) {
+                        $all[] = $s;
+                    }
+                }
                 $name = Str::headline(preg_replace('#Block$#', '', basename($file, '.vue')));
-                $links[$name] = ['slug' => $slug, 'explicit' => $explicit];
+                $links[$name] = ['slug' => $slug, 'explicit' => $explicit, 'all' => array_values(array_unique($all))];
             }
         }
         if ($links === []) {
@@ -415,7 +583,7 @@ class TemplateInstaller
                 // An explicit @olux-source marker is author intent — it
                 // ALWAYS wins (never freeze on an old heuristic guess);
                 // heuristic links only fill gaps.
-                $q = $site->contentComponents()->where('name', $name);
+                $q = $own($site->contentComponents()->where('name', $name));
                 if (! $link['explicit']) {
                     $q->whereNull('collection_id');
                 }
@@ -425,36 +593,34 @@ class TemplateInstaller
                 // scaffolded fields, so the connect editor opens the collection
                 // grid instead of a dead fields form.
                 if ($link['explicit'] && ($nodeless[$name] ?? false)) {
-                    foreach ($site->contentComponents()->where('name', $name)->get() as $component) {
+                    foreach ($own($site->contentComponents()->where('name', $name))->get() as $component) {
                         $component->nodes()->delete();
                     }
+                }
+            }
+
+            // The block's other lists (Hero → Hero Words, Contact Info) become
+            // collection fields, so the editor shows each as a grid inside it.
+            foreach ($link['all'] ?? [] as $slug) {
+                $other = $collections->get(Str::slug(Str::kebab($slug)));
+                if (! $other || ($col && $other->id === $col->id)) {
+                    continue;
+                }
+                foreach ($own($site->contentComponents()->where('name', $name))->get() as $component) {
+                    if ($component->collection_id === $other->id
+                        || $component->nodes()->where('type', 'collection')->where('value', $other->id)->exists()) {
+                        continue;
+                    }
+                    $component->nodes()->create([
+                        'label' => $other->name, 'type' => 'collection', 'value' => $other->id,
+                        'parent' => '0', 'order' => (int) $component->nodes()->max('order') + 1,
+                    ]);
                 }
             }
         }
     }
 
-    private function applyProducts(Site $site, array $products): void
-    {
-        foreach ($products as $i => $p) {
-            if (empty($p['name'])) {
-                continue;
-            }
-            $site->products()->firstOrCreate(['slug' => $p['slug'] ?? Str::slug($p['name'])], [
-                'name' => (string) $p['name'],
-                'description' => (string) ($p['description'] ?? ''),
-                'category' => (string) ($p['category'] ?? ''),
-                'tags' => (array) ($p['tags'] ?? []),
-                'price_cents' => (int) ($p['price_cents'] ?? 0),
-                'currency' => (string) ($p['currency'] ?? 'gbp'),
-                'image' => (string) ($p['image'] ?? ''),
-                'inventory' => $p['inventory'] ?? null,
-                'is_active' => true,
-                'sort' => $i,
-            ]);
-        }
-    }
-
-    private function applyForms(Site $site, array $forms): void
+    private function applyForms(Site $site, array $forms, bool $refresh = false): void
     {
         foreach ($forms as $form) {
             if (empty($form['name'])) {
@@ -472,63 +638,11 @@ class TemplateInstaller
             $missing = collect((array) ($form['fields'] ?? []))
                 ->filter(fn ($fl) => ! empty($fl['key']) && ! in_array($fl['key'], $have, true))
                 ->values()->all();
-            if ($missing !== [] && ! $existing->wasRecentlyCreated) {
+            // Only on a refresh of the same template — a switch never edits the site's forms.
+            if ($refresh && $missing !== [] && ! $existing->wasRecentlyCreated) {
                 $existing->update(['fields' => array_merge((array) $existing->fields, $missing)]);
             }
         }
-    }
-
-    /**
-     * Copy the template's shipped image assets into the site's own media
-     * library (defaults the owner can browse/replace), and rewrite the
-     * scaffolded TOP-LEVEL image nodes to @media refs. Repeatable-row image
-     * nodes ("Member 1 Image") keep their raw /assets paths — the shells'
-     * items() prefix-interpolation would break on resolved /storage URLs.
-     */
-    private function importAssets(Site $site, string $appKey): void
-    {
-        // The published template app is the source of truth (a preview build
-        // can lag it and misses fonts/videos outside its rebased dirs).
-        foreach ([TemplatePaths::appDir($appKey).'/public', TemplatePaths::shellDir($appKey)] as $dir) {
-            if (is_dir($dir)) {
-                break;
-            }
-            $dir = null;
-        }
-        if (! $dir) {
-            return;
-        }
-
-        // Every asset the template ships, wherever it keeps it — recursive
-        // across the whole public tree (AssetImporter gates types/sizes).
-        $importer = app(AssetImporter::class);
-        $refs = []; // basename → @media ref
-        $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
-        foreach ($it as $file) {
-            if (str_contains($file->getPathname(), '/_nuxt/') || str_contains($file->getPathname(), '/_payload')) {
-                continue; // build artefacts, not authored assets
-            }
-            if ($file->isFile() && ($ref = $importer->importLocal($site, $file->getPathname()))) {
-                $refs[strtolower($file->getFilename())] = $ref;
-            }
-        }
-        if ($refs === []) {
-            return;
-        }
-
-        // Top-level image nodes only (no "… 1 …" row labels) → the media copy.
-        Node::whereHas('component', fn ($q) => $q->where('site_id', $site->id))
-            ->where('type', 'image')->where('value', 'like', '/assets/%')
-            ->get()
-            ->each(function ($node) use ($refs) {
-                if (preg_match('/\s\d+\s/', ' '.$node->label.' ')) {
-                    return; // repeatable-row node — leave the raw path
-                }
-                $base = strtolower(basename((string) $node->value));
-                if (isset($refs[$base])) {
-                    $node->update(['value' => $refs[$base]]);
-                }
-            });
     }
 
     /**
@@ -544,19 +658,8 @@ class TemplateInstaller
             return;
         }
 
-        foreach ((array) ($booking['services'] ?? []) as $svc) {
-            if (empty($svc['name'])) {
-                continue;
-            }
-            $site->services()->firstOrCreate(['name' => $svc['name']], [
-                'kind' => (string) ($svc['kind'] ?? 'slot'),
-                'duration_min' => $svc['duration_min'] ?? null,
-                'price_cents' => $svc['price_cents'] ?? null,
-                'description' => $svc['description'] ?? null,
-                'is_active' => true,
-                'slug' => '',
-            ]);
-        }
+        // Fresh copy: the template's sample services are NOT created (that's data);
+        // only its booking availability settings apply.
 
         $availability = array_intersect_key(
             (array) ($booking['availability'] ?? $booking['settings'] ?? []),
@@ -590,7 +693,11 @@ class TemplateInstaller
         if (! $wasApplied) {
             $row->update(['previous_theme' => $site->theme]);
         }
-        $site->update(['theme' => $theme]);
+        // The owner's picked colours (Properties → Colours, keyed by the template's
+        // own --color-* names) survive every re-apply and sync.
+        $picked = collect(is_array($site->theme) ? $site->theme : [])
+            ->filter(fn ($v, $k) => str_starts_with((string) $k, 'color-'))->all();
+        $site->update(['theme' => array_merge($theme, $picked)]);
     }
 
     /** Which built renderer app draws this design. */

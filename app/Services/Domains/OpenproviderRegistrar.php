@@ -118,10 +118,20 @@ class OpenproviderRegistrar implements DomainRegistrar, Registrar
                 'records' => $records,
             ]);
         } catch (RuntimeException $e) {
-            // Zone already exists (registration may auto-create it) → replace records.
-            $this->send('put', "/dns/zones/{$name}.{$extension}", [
-                'name' => "{$name}.{$extension}",
-                'records' => ['replace' => $records],
+            // Zone already exists (registration may auto-create it): swap only the
+            // web records (apex + www). Never a full replace — that would wipe
+            // MX/SPF/DKIM added for business email.
+            $zone = "{$name}.{$extension}";
+            $existing = (array) ($this->send('get', "/dns/zones/{$zone}/records", ['limit' => 500])['results'] ?? []);
+            $web = fn (array $r) => in_array(strtoupper((string) $r['type']), ['A', 'AAAA', 'CNAME'], true)
+                && in_array(rtrim(strtolower((string) $r['name']), '.'), ['', '@', $zone, 'www', 'www.'.$zone], true);
+            $remove = collect($existing)->filter($web)->map(fn ($r) => [
+                'name' => in_array(rtrim(strtolower((string) $r['name']), '.'), ['www', 'www.'.$zone], true) ? 'www' : '',
+                'type' => strtoupper((string) $r['type']), 'value' => (string) $r['value'], 'ttl' => (int) ($r['ttl'] ?? 900),
+            ])->values()->all();
+            $this->send('put', "/dns/zones/{$zone}", [
+                'name' => $zone,
+                'records' => array_filter(['remove' => $remove, 'add' => $records]),
             ]);
         }
     }

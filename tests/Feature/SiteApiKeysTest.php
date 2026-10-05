@@ -1,4 +1,5 @@
 <?php
+
 use App\Livewire\SiteApiKeys;
 use App\Models\AccountMember;
 use App\Models\ApiToken;
@@ -10,7 +11,7 @@ use Livewire\Livewire;
 function apiKeySite(): array
 {
     $owner = User::factory()->create();
-    $site = Site::create(['user_id'=>$owner->id,'name'=>'ak-'.uniqid(),'domain'=>'ak.test','owner'=>$owner->name,'description'=>'t']);
+    $site = Site::create(['user_id' => $owner->id, 'name' => 'ak-'.uniqid(), 'domain' => 'ak.test', 'owner' => $owner->name, 'description' => 't']);
 
     return [$owner, $site];
 }
@@ -47,7 +48,7 @@ test('a non-admin member cannot open the site API keys panel', function () {
 
 test('a key created in the site panel actually authenticates against that site only', function () {
     [$owner, $site] = apiKeySite();
-    $other = Site::create(['user_id'=>$owner->id,'name'=>'ak2-'.uniqid(),'domain'=>'ak2.test','owner'=>$owner->name,'description'=>'t']);
+    $other = Site::create(['user_id' => $owner->id, 'name' => 'ak2-'.uniqid(), 'domain' => 'ak2.test', 'owner' => $owner->name, 'description' => 't']);
 
     // Capture the raw token by generating, then re-hash check via the API.
     $c = Livewire::actingAs($owner)->test(SiteApiKeys::class, ['site' => $site])

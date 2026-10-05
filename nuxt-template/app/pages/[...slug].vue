@@ -76,13 +76,21 @@ const themeCss = computed(() => {
   return `:root{${decls}${vars ? ';' + vars : ''}}${font}${size}`
 })
 
-// ── SEO from page attributes + theme styles ──
+// ── SEO from page attributes + Site Properties + theme styles ──
+const props = computed(() => site.value?.properties || null)
+const siteName = computed(() => props.value?.name || site.value?.name || 'Site')
+const pageTitle = computed(() => {
+  if (! currentPage.value) return siteName.value
+  const pattern = props.value?.seo?.title_pattern || '{page} | {site}'
+  return pattern.replace('{page}', currentPage.value.name).replace('{site}', siteName.value)
+})
+// The live shell ships a default description tag; this page manages its own.
+onMounted(() => document.querySelectorAll('meta[data-olux-default]').forEach((el) => el.remove()))
+
 useHead(() => ({
-  title: currentPage.value
-    ? `${currentPage.value.name} — ${site.value?.name ?? 'Site'}`
-    : (site.value?.name ?? 'Loading…'),
+  title: pageTitle.value,
   meta: [
-    { name: 'description', content: currentPage.value?.description || site.value?.description || '' },
+    { name: 'description', content: currentPage.value?.description || props.value?.seo?.meta_description || props.value?.business?.description || site.value?.description || '' },
     { name: 'keywords', content: currentPage.value?.keywords || '' },
   ],
   // Load the template's web font (e.g. Google Fonts) when the theme supplies a URL.

@@ -106,11 +106,37 @@ test('the stepper captions reflect real state: saved domain shown, buying while 
     [$owner2, $site2] = flowSite();
     DomainOrder::create([
         'user_id' => $owner2->id, 'site_id' => $site2->id, 'domain' => $bd = 'inflight-'.uniqid().'.com',
-        'type' => 'register', 'years' => 1, 'price_cents' => 1500, 'status' => 'pending',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1500, 'status' => 'paid',
     ]);
+    // Buying through us: Site ready → Web address → Payment → Live.
     $steps2 = collect(GoLiveChecklist::steps($site2))->keyBy('key');
-    expect($steps2['domain']['state'])->toBe('working')
-        ->and($steps2['domain']['description'])->toContain('Buying '.$bd);
+    expect($steps2->keys()->all())->toBe(['template', 'domain', 'payment', 'live'])
+        ->and($steps2['domain']['state'])->toBe('done')
+        ->and($steps2['domain']['description'])->toBe($bd)
+        ->and($steps2['payment']['state'])->toBe('working')
+        ->and($steps2['payment']['description'])->toContain('registering '.$bd);
+});
+
+test('on the Buy path the stepper follows the domain search into the payment step', function () {
+    [, $site] = flowSite(['template' => 'blank']);
+
+    $search = collect(GoLiveChecklist::steps($site, 'buy', 'search'))->keyBy('key');
+    expect($search->keys()->all())->toBe(['template', 'domain', 'payment', 'live'])
+        ->and($search['domain']['state'])->toBe('active');
+
+    $pay = collect(GoLiveChecklist::steps($site, 'buy', 'pay', $d = 'paying-'.uniqid().'.co.uk'))->keyBy('key');
+    expect($pay['domain']['state'])->toBe('done')
+        ->and($pay['domain']['description'])->toBe($d)
+        ->and($pay['payment']['state'])->toBe('active');
+
+    // An unpaid order (checkout, or a legacy pending one) is not "buying" — and never shows "Payment received".
+    DomainOrder::create(['user_id' => $site->user_id, 'site_id' => $site->id, 'domain' => 'unpaid-'.uniqid().'.com',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1500, 'status' => 'checkout']);
+    expect(collect(GoLiveChecklist::steps($site))->pluck('key')->all())->toBe(['template', 'domain', 'dns', 'live']);
+    $owner = User::find($site->user_id);
+    Livewire::actingAs($owner)->test(GoLivePage::class, ['site' => $site])
+        ->assertDontSee('Payment received')
+        ->assertDontSee('registering');
 });
 
 test('saving a domain verifies it actually exists', function () {

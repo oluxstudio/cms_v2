@@ -6,6 +6,7 @@ use App\Models\Contact;
 use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Site;
+use App\Services\TemplateInstaller;
 use App\Support\EmailTemplate;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -267,6 +268,17 @@ class SiteFormsPage extends Component
         }
 
         $this->mode = 'detail';
+    }
+
+    /** Bring a form parked by a template switch back — it is the owner's from now on (active under any template). */
+    public function activateForm(string $id): void
+    {
+        $form = $this->guardedForm($id);
+        if (! $form) {
+            return;
+        }
+        $form->forceFill(['template_keys' => array_values(array_unique([...(array) $form->template_keys, TemplateInstaller::OWNER_KEEP])), 'template_active' => true])->save();
+        $this->dispatch('toast', level: 'success', title: 'Form activated', message: ($form->title ?: $form->name).' accepts submissions again, whichever template you use.');
     }
 
     public function deleteForm(string $id): void

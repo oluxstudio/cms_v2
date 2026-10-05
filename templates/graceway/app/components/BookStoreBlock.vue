@@ -315,7 +315,7 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
 .store-cat { display: flex; justify-content: space-between; align-items: center; gap: .6rem; width: 100%;
   border: 0; background: transparent; text-align: left; font: inherit; font-size: .95rem; color: var(--color-default);
   padding: .5rem .7rem; border-radius: 10px; cursor: pointer; transition: background .2s, color .2s; }
-.store-cat:hover { background: #fdeef3; }
+.store-cat:hover { background: var(--primary-soft); }
 .store-cat.on { background: var(--color-primary); color: #fff; font-weight: 700; }
 .store-cat .count { font-size: .75rem; background: var(--color-primary); color: #fff; border-radius: 999px; padding: .1rem .5rem; }
 .store-cat.on .count { background: #fff; color: var(--color-primary); }
@@ -334,7 +334,7 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
 .store-pager { display: flex; justify-content: center; align-items: center; gap: .4rem; margin-top: 2rem; flex-wrap: wrap; }
 .store-pager button { border: 0; background: transparent; font: inherit; font-size: .9rem; color: var(--color-default);
   padding: .45rem .8rem; border-radius: 10px; cursor: pointer; }
-.store-pager button:hover:not(:disabled) { background: #fdeef3; }
+.store-pager button:hover:not(:disabled) { background: var(--primary-soft); }
 .store-pager button:disabled { opacity: .4; cursor: default; }
 .store-pager .num.on { background: var(--color-primary); color: #fff; font-weight: 700; }
 
@@ -413,7 +413,7 @@ const sendCta = async () => { if (await ctaSubmit({ email: ctaEmail.value })) ct
   cursor: pointer; text-align: center; transition: border-color .2s, background .2s, color .2s; }
 .fulfil-pill small { opacity: .7; }
 .fulfil-pill input { position: absolute; opacity: 0; pointer-events: none; }
-.fulfil-pill.on { border-color: var(--color-primary); background: #fdeef3; color: var(--color-secondary); font-weight: 700; }
+.fulfil-pill.on { border-color: var(--color-primary); background: var(--primary-soft); color: var(--color-secondary); font-weight: 700; }
 
 @media (max-width: 900px) {
   .store-layout { grid-template-columns: 1fr; gap: 1rem; }

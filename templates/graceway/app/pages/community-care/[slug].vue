@@ -13,16 +13,11 @@ useHead({ title: `${prog.name} — Community Care — CAC Blackburn` })
 <template>
   <div v-if="prog">
     <SiteHeader />
-    <section class="page-hero">
-      <div class="container">
-        <BreadCrumbs :items="[{ label: 'Ministries', to: '/ministries' }, { label: 'Community Care', to: '/community-care' }, { label: prog.name }]" />
-        <PageHeroContent>
-          <p class="eyebrow">Community care & outreach</p>
-          <h1>{{ prog.name }}</h1>
-          <p>{{ prog.short }}</p>
-        </PageHeroContent>
-      </div>
-    </section>
+    <PageHeroContent :crumbs="[{ label: 'Ministries', to: '/ministries' }, { label: 'Community Care', to: '/community-care' }, { label: prog.name }]">
+      <p class="eyebrow">Community care & outreach</p>
+      <h1>{{ prog.name }}</h1>
+      <p>{{ prog.short }}</p>
+    </PageHeroContent>
 
     <section class="oc-detail">
       <div class="container">

@@ -22,8 +22,8 @@ class TemplateUpload extends Model
     public const FAILED = 'failed';
 
     protected $fillable = [
-        'user_id', 'site_id', 'for_store', 'key', 'name', 'original_filename', 'status', 'step', 'error',
-        'lint_score', 'warnings', 'template_id', 'build_started_at', 'finished_at',
+        'user_id', 'site_id', 'for_store', 'visibility', 'key', 'name', 'original_filename', 'repo_url', 'repo_branch', 'status', 'step', 'error',
+        'lint_score', 'warnings', 'template_id', 'replaces_template_id', 'build_started_at', 'finished_at',
     ];
 
     protected $casts = [
@@ -46,6 +46,12 @@ class TemplateUpload extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(Template::class);
+    }
+
+    /** The store template this upload ships a new version of (null = a new template). */
+    public function replaces(): BelongsTo
+    {
+        return $this->belongsTo(Template::class, 'replaces_template_id');
     }
 
     public function inProgress(): bool

@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureSitePermission;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\HoneypotGuard;
 use App\Http\Middleware\ImpersonationGuard;
+use App\Http\Middleware\ResolveSiteAlias;
 use App\Http\Middleware\ResolveTokenSite;
 use App\Http\Middleware\ServeLiveSite;
 use App\Http\Middleware\VerifySiteOrigin;
@@ -33,6 +34,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Super admin "view as client": 60-minute limit, no admin area meanwhile.
         $middleware->web(append: [ImpersonationGuard::class]);
+
+        // A site's old web addresses (after a change of address) still resolve.
+        $middleware->web(append: [ResolveSiteAlias::class]);
+        $middleware->api(append: [ResolveSiteAlias::class]);
 
         // Per-site feature gate: ->middleware('feature:store')
         $middleware->alias([

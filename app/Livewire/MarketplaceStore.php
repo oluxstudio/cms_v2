@@ -134,7 +134,13 @@ class MarketplaceStore extends Component
 
         $allTags = Template::where('status', 'published')->pluck('tags')->flatten()->filter()->unique()->sort()->values();
 
+        // Private templates assigned to THIS site's account ("Made for you").
+        $exclusive = Template::where('visibility', 'private')->where('status', 'published')
+            ->whereHas('entitlements', fn ($q) => $q->where('user_id', $this->site->user_id))
+            ->orderBy('name')->get();
+
         return view('livewire.marketplace-store', [
+            'exclusive' => $exclusive,
             'templates' => $templates,
             'owned' => $owned,
             'library' => $library,

@@ -49,7 +49,7 @@ class PageJsonController extends Controller
     {
         $url = $slug === 'index' ? '/' : '/'.str_replace('-', '/', $slug);
 
-        return Page::where('site_id', $site->id)
+        return Page::where('site_id', $site->id)->where('template_active', true)
             ->where(fn ($q) => $q->where('url', $url)->orWhere('url', '/'.$slug))
             ->firstOr(function () use ($site, $slug) {
                 // Last resort: match by the generator's slugging of each page url.

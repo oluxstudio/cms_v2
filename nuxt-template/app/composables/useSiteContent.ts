@@ -22,6 +22,12 @@ function templateParam(): string {
   return new URLSearchParams(window.location.search).get('template') || ''
 }
 
+/** Signed preview token for private templates (?pt=), passed through to the API. */
+function previewTokenParam(): string {
+  if (typeof window === 'undefined') return ''
+  return new URLSearchParams(window.location.search).get('pt') || ''
+}
+
 /**
  * Load site content. In a generated build a baked ./content.json sits next to
  * the app; in preview (api mode, or when no content.json exists) we fall back
@@ -47,7 +53,8 @@ async function load(): Promise<void> {
   const tpl = templateParam()
   if (tpl) {
     try {
-      const data = await $fetch<ContentT>(`${api}/api/templates/preview/${encodeURIComponent(tpl)}`)
+      const pt = previewTokenParam()
+      const data = await $fetch<ContentT>(`${api}/api/templates/preview/${encodeURIComponent(tpl)}${pt ? `?pt=${encodeURIComponent(pt)}` : ''}`)
       content.value = data
     } catch (e) {
       error.value = 'Failed to load template preview.'

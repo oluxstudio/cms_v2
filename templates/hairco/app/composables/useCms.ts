@@ -82,10 +82,12 @@ export function useCms() {
     return v == null || v === '' ? fallback : v
   }
 
-  /** CMS collection items (from the snapshot), or the fallback rows. */
+  /** CMS collection items (from the snapshot); the fallback rows only in a template preview. */
   const items = <T = Record<string, any>>(collection: string, fallback: T[] = []): T[] => {
     const rows = data.value?.collections?.[collection]
-    return Array.isArray(rows) && rows.length ? rows : fallback
+    if (Array.isArray(rows) && rows.length) return rows
+    // A real site shows only its own entries; samples are for the template preview.
+    return useOluxSite().isSite ? [] : fallback
   }
 
   return { cms: data, field, items }

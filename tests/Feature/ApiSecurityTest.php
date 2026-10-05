@@ -123,3 +123,13 @@ test('public module submissions land pending by default and published with auto_
     expect($collection->items()->where('status', 'published')->count())->toBe(1)
         ->and($collection->items()->where('status', 'pending')->count())->toBe(1);
 });
+
+test('the public posts list ignores array-shaped query params instead of erroring', function () {
+    [, $site] = securitySite();
+
+    foreach (['category[]=x', 'tag[]=x', 'author[]=x', 'exclude[]=x', 'sort[]=x', 'limit[]=x', 'offset[]=x', 'per_page[]=x'] as $q) {
+        $this->getJson('/api/sites/'.$site->name.'/posts?'.$q)->assertOk();
+    }
+    $this->getJson('/api/sites/'.$site->name.'/posts?limit=5&offset=0&sort=popular&exclude=a,b')
+        ->assertOk()->assertJsonPath('limit', 5);
+});

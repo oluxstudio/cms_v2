@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class User extends Authenticatable
@@ -101,6 +102,22 @@ class User extends Authenticatable
         return $this->belongsToMany(Site::class, 'site_user')
             ->withPivot('role')
             ->withTimestamps();
+    }
+
+    /**
+     * Public URL of the profile photo. Uploaded photos are stored as a path on
+     * the public disk; social-login photos arrive as full URLs.
+     */
+    public function avatarUrl(): ?string
+    {
+        $a = trim((string) $this->avatar);
+        if ($a === '') {
+            return null;
+        }
+
+        return preg_match('#^(https?:)?//#i', $a) || str_starts_with($a, '/')
+            ? $a
+            : Storage::disk('public')->url($a);
     }
 
     public function initials(): string

@@ -94,14 +94,7 @@
              x-data="{ tab: (location.hash || '#overview').slice(1) }"
              x-init="if (! @js(array_keys($tabs)).includes(tab)) tab = 'overview'; $watch('tab', t => history.replaceState(null, '', '#' + t))">
 
-            <div class="flex gap-1 p-1 mb-5 rounded-full bg-white/70 dark:bg-white/[0.05] shadow-sm overflow-x-auto no-scrollbar" role="tablist">
-                @foreach ($tabs as $tk => $tl)
-                    <button type="button" role="tab" @click="tab = '{{ $tk }}'" :aria-selected="tab === '{{ $tk }}'"
-                            class="shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors"
-                            :class="tab === '{{ $tk }}' ? 'shadow-sm' : 'text-gray-600 dark:text-gray-300'"
-                            :style="tab === '{{ $tk }}' ? 'background:var(--foreground);color:var(--background)' : ''">{{ $tl }}</button>
-                @endforeach
-            </div>
+            <x-pill-tabs :tabs="$tabs" />
 
             {{-- Overview --}}
             <section x-show="tab === 'overview'" class="space-y-4">
@@ -191,6 +184,7 @@
                                 @endif
                             </div>
                             <p class="mt-3">
+                                @if (($t['price_cents'] ?? 0) && ! empty($t['price_prefix']))<span class="text-[12px] font-bold text-gray-500">{{ $t['price_prefix'] }} </span>@endif
                                 <span class="font-display text-2xl font-extrabold text-gray-900 dark:text-white">{{ ($t['price_cents'] ?? 0) ? $gbp((int) $t['price_cents']) : 'Free' }}</span>
                                 @if ($t['price_cents'] ?? 0)<span class="text-[12px] text-gray-500"> / month</span>@endif
                             </p>
@@ -202,7 +196,7 @@
                             <p class="mt-3 text-[11.5px] text-gray-500 dark:text-gray-400">
                                 {{ $limit($t['limits']['sites'] ?? null) }} {{ ($t['limits']['sites'] ?? 2) === 1 ? 'site' : 'sites' }}
                                 · {{ $storage($t['limits']['storage_mb'] ?? null) }} storage
-                                · {{ ! empty($t['limits']['premium']) ? 'premium add-ons' : 'basic add-ons' }}
+                                · {{ array_key_exists('mailboxes', $t['limits'] ?? []) ? (($t['limits']['mailboxes'] ?? null) === null ? 'custom mailboxes' : (($t['limits']['mailboxes'] ?: 'no').' '.Str::plural('mailbox', (int) ($t['limits']['mailboxes'] ?: 2)))) : '' }}
                             </p>
                         </div>
                     @endforeach

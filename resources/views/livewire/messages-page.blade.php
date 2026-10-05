@@ -121,8 +121,7 @@
             @php $u = $profile['user']; @endphp
             <div class="rounded-2xl bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm p-5 mb-4 text-center">
                 @php
-                    $avatarUrl = ($u->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($u->avatar))
-                        ? \Illuminate\Support\Facades\Storage::url($u->avatar) : null;
+                    $avatarUrl = $u->avatarUrl();
                 @endphp
                 @if($avatarUrl)
                     <img src="{{ $avatarUrl }}" alt="{{ $u->name }}" class="w-20 h-20 rounded-full object-cover mx-auto mb-3 ring-4 ring-gray-50 dark:ring-white/[0.06]">

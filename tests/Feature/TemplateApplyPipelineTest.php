@@ -2,11 +2,19 @@
 
 use App\Jobs\InstallTemplateJob;
 use App\Livewire\ConnectReviewPage;
+use App\Livewire\PageComponent;
 use App\Livewire\SiteTemplatesPage;
+use App\Models\CollectionItem;
+use App\Models\Contact;
 use App\Models\Media;
+use App\Models\Message;
 use App\Models\Node;
+use App\Models\Post;
 use App\Models\Site;
+use App\Models\SiteAttribute;
+use App\Models\Todo;
 use App\Models\User;
+use App\Services\InstallProgress;
 use App\Services\TemplateInstaller;
 use App\Support\CuratedTemplates;
 use Illuminate\Support\Facades\Mail;
@@ -165,24 +173,23 @@ test('the content API exposes the page wireframe the renderer apps draw from', f
         ->and($wf[0]['nodes'][0])->toHaveKeys(['label', 'type', 'value', 'order']);
 });
 
-test('applying a template seeds its booking services and availability', function () {
+test('a fresh copy brings booking availability but none of the template\'s sample services', function () {
     [$owner, $site] = pipelineSite();
     $installer = app(TemplateInstaller::class);
     $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
 
-    expect($site->services()->pluck('name')->all())->toContain('Haircut', 'Colouring')
-        ->and($site->services()->where('name', 'Haircut')->first()->price_cents)->toBe(3800)
+    expect($site->services()->count())->toBe(0)          // services are data — never copied
         ->and($site->hasFeature('bookings'))->toBeTrue();
 
     $cfg = (array) $site->siteFeatures()->where('key', 'bookings')->value('config');
     expect($cfg['days'] ?? null)->toBe('mon,tue,wed,thu,fri,sat')
         ->and($cfg['slot_minutes'] ?? null)->toBe(30);
 
-    // Idempotent, and owner-set availability survives a re-apply.
+    // Owner-set availability survives a re-apply.
     $site->saveFeatureConfig('bookings', array_merge($cfg, ['open_time' => '10:00']));
     $installer->apply($site->fresh(), $site->installedTemplates()->first());
-    expect($site->services()->where('name', 'Haircut')->count())->toBe(1)
-        ->and(((array) $site->siteFeatures()->where('key', 'bookings')->value('config'))['open_time'])->toBe('10:00');
+    expect(((array) $site->siteFeatures()->where('key', 'bookings')->value('config'))['open_time'])->toBe('10:00')
+        ->and($site->services()->count())->toBe(0);
 });
 
 test('renderer-mode connect is edit-enabled: olx-edit URL, trusted own origin, slug key resolution', function () {
@@ -201,31 +208,16 @@ test('renderer-mode connect is edit-enabled: olx-edit URL, trusted own origin, s
         ->and($c->get('selectedId'))->toBe($hero->id);
 });
 
-test('applying a template imports its images as default site media and relinks top-level image nodes', function () {
+test('a fresh copy imports none of the template\'s assets; image fields keep the template\'s own paths', function () {
     [$owner, $site] = pipelineSite();
     $installer = app(TemplateInstaller::class);
     $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
 
-    // Media rows get human labels now ("hero.svg" → "Hero", folder-prefixed
-    // outside the standard asset dirs); the stored file keeps its real name.
-    $media = Media::where('site_id', $site->id)->get();
-    expect($media->firstWhere(fn ($m) => str_contains(strtolower((string) $m->url), 'hero')))->not->toBeNull()
-        ->and($media->count())->toBeGreaterThan(3);
+    expect(Media::where('site_id', $site->id)->count())->toBe(0);
 
+    // Sample images still show — they point at the template's shipped files.
     $hero = $site->contentComponents()->where('name', 'Hero')->first()->nodes()->where('type', 'image')->first();
-    expect($hero->value)->toStartWith('@media/');
-
-    // Repeatable-row image nodes keep their raw shipped paths.
-    $rowImage = Node::whereHas('component', fn ($q) => $q->where('site_id', $site->id))
-        ->where('label', 'like', '% 1 Image')->first();
-    if ($rowImage) {
-        expect($rowImage->value)->toStartWith('/assets/');
-    }
-
-    // Re-apply: no duplicate media rows.
-    $count = Media::where('site_id', $site->id)->count();
-    $installer->apply($site->fresh(), $site->installedTemplates()->first());
-    expect(Media::where('site_id', $site->id)->count())->toBe($count);
+    expect($hero->value)->not->toStartWith('@media/')->and($hero->value)->not->toBe('');
 });
 
 test('inline in-page edits from the shell save to the component node', function () {
@@ -301,6 +293,8 @@ test('a block used on several pages is ONE shared component, and image swaps sho
     $about = $site->contentComponents()->where('name', 'About')->first();
     $imageNode = $about?->nodes()->where('type', 'image')->first();
     if ($imageNode) {
+        // A fresh site's Assets library starts empty — add the picture the owner swaps in.
+        Media::create(['site_id' => $site->id, 'name' => 'work-style.jpg', 'file_type' => 'image', 'url' => '/storage/media/'.$site->name.'/work-style.jpg']);
         $imageNode->update(['value' => '@media/work-style.jpg']);
         $pages = $this->getJson("/api/sites/{$site->name}/content")->json('pages');
         foreach ($pages as $p) {
@@ -350,7 +344,7 @@ test('Add item in the preview clones a new row onto a node-based list', function
         ->and($target->nodes()->count())->toBe($before + $rowFields);
 });
 
-test('applying hairco seeds its collections with items; add/remove items works by marker key', function () {
+test('a fresh copy creates the template\'s collections EMPTY; adding/removing entries works by marker key', function () {
     [$owner, $site] = pipelineSite();
     $installer = app(TemplateInstaller::class);
     $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
@@ -358,39 +352,217 @@ test('applying hairco seeds its collections with items; add/remove items works b
     $col = $site->collections()->where('slug', 'about-points')->first();
     expect($col)->not->toBeNull()
         ->and($col->is_public)->toBeTrue()
-        ->and($col->items()->count())->toBeGreaterThan(2);
-    $count = $col->items()->count();
+        ->and($col->fields)->not->toBeEmpty()          // the structure…
+        ->and($col->items()->count())->toBe(0);        // …but none of the template's entries
 
-    // Public collections API serves them (the shell's items() source).
+    // Public collections API serves it (the shell's items() source → falls back to the template samples).
     $this->getJson("/api/sites/{$site->name}/collections")->assertOk()
         ->assertJsonFragment(['slug' => 'about-points']);
 
-    // Preview "+ Add item" → one more published row; ✕ by index removes it.
+    // Preview "+ Add item" → a row; typing saves to it; ✕ removes it.
     $c = Livewire\Livewire::actingAs($owner)->test(ConnectReviewPage::class, ['site' => $site->fresh()]);
     $c->call('inlineItemAdd', null, 'about-points', null, null);
-    expect($col->items()->count())->toBe($count + 1);
-    $c->call('inlineItemRemoveByIndex', 'about-points', $count); // the new last row
-    expect($col->items()->count())->toBe($count);
-
-    // Typing directly into a row in the preview saves to that row.
+    expect($col->items()->count())->toBe(1);
     $c->call('inlineFieldEditByIndex', 'about-points', 'point', 'Typed in the page', 0);
-    expect($col->items()->orderBy('position')->orderBy('id')->first()->data['point'])->toBe('Typed in the page');
+    expect($col->items()->first()->data['point'])->toBe('Typed in the page');
+    $c->call('inlineItemRemoveByIndex', 'aboutPoints', 0);     // camelCase marker keys resolve too
+    expect($col->items()->count())->toBe(0);
 
-    // camelCase marker keys resolve too ("aboutPoints" → about-points).
-    $c->call('inlineItemAdd', null, 'aboutPoints', null, null);
-    expect($col->items()->count())->toBe($count + 1);
-    $c->call('inlineItemRemoveByIndex', 'aboutPoints', $count);
-    expect($col->items()->count())->toBe($count);
-
-    // Re-apply never duplicates or reseeds.
-    $col->items()->orderBy('position')->first()->delete();
+    // Re-apply never duplicates the collection or seeds entries.
     $installer->apply($site->fresh(), $site->installedTemplates()->first());
     expect($site->collections()->where('slug', 'about-points')->count())->toBe(1)
-        ->and($col->items()->count())->toBe($count - 1);
+        ->and($col->items()->count())->toBe(0);
 });
 
 test('curated gallery cards carry the real manifest description after the registry path fix', function () {
     $desc = json_decode(file_get_contents(resource_path('templates/verita/template.json')), true)['description'];
     expect(CuratedTemplates::find('verita')['description'])->toBe($desc);
+    publishBuiltinTemplate('verita');   // public only through its published catalog row
     $this->get('/designs/curated-verita')->assertOk()->assertSee('Verita');
+});
+
+test('a fresh copy keeps pages, sections, layout, theme and form definitions — and none of the template\'s data', function () {
+    [$owner, $site] = pipelineSite();
+    $installer = app(TemplateInstaller::class);
+    $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
+    $site = $site->fresh();
+
+    // Kept: the structure and sample text.
+    expect($site->livePages()->count())->toBeGreaterThan(1)
+        ->and($site->contentComponents()->whereHas('nodes')->count())->toBeGreaterThan(3)
+        ->and($site->contentComponents()->where('name', 'Site Header')->exists())->toBeTrue()
+        ->and($site->forms()->count())->toBeGreaterThan(0); // definitions only (submissions are contacts — none, checked below)
+
+    // Not copied: entries, products, services, assets, posts, contacts, messages, template tasks.
+    expect(CollectionItem::where('site_id', $site->id)->count())->toBe(0)
+        ->and($site->products()->count())->toBe(0)
+        ->and($site->services()->count())->toBe(0)
+        ->and(Media::where('site_id', $site->id)->count())->toBe(0)
+        ->and(Post::where('site_id', $site->id)->count())->toBe(0)
+        ->and(Contact::where('site_id', $site->id)->count())->toBe(0)
+        ->and(Message::where('site_id', $site->id)->count())->toBe(0)
+        // only the platform's own "Set up your site" checklist
+        ->and(Todo::where('site_id', $site->id)->whereNull('system_key')->count())->toBe(0);
+});
+
+test('installing reports progress step by step, and the setup screen shows a progress bar', function () {
+    [$owner, $site] = pipelineSite();
+    $installer = app(TemplateInstaller::class);
+    $row = $installer->saveCuratedToSite($site, 'hairco');
+
+    // While the job is queued: "installing" with a starting progress.
+    Queue::fake();
+    $installer->applyAsync($site, $row);
+    expect(InstallProgress::read($site->fresh()))->toMatchArray(['percent' => 1, 'step' => 'start']);
+    Livewire\Livewire::actingAs($owner)->test(ConnectReviewPage::class, ['site' => $site->fresh()])
+        ->assertSee('Setting up your site')->assertSee('Pages & sections')->assertSeeHtml('wire:poll.1s');
+
+    // Each step is recorded; the end is 100%.
+    $seen = [];
+    $site->setAttr(InstallProgress::ATTR, '');
+    SiteAttribute::saved(function ($attr) use (&$seen) {
+        if ($attr->key === InstallProgress::ATTR && ($p = json_decode((string) $attr->value, true))) {
+            $seen[] = $p['step'];
+        }
+    });
+    $installer->install($site->fresh(), $row->fresh());
+    expect(array_values(array_unique($seen)))->toContain('pages', 'layout', 'forms', 'collections', 'theme', 'done')
+        ->and(InstallProgress::read($site->fresh())['percent'])->toBe(100)
+        ->and($site->fresh()->getAttr('template_install'))->toBe('done');
+});
+
+test('switching templates imports no template data or assets; the site keeps its own data and the new template uses it', function () {
+    [$owner, $site] = pipelineSite();
+    $installer = app(TemplateInstaller::class);
+    $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
+
+    // The owner's own data, built up while on hairco.
+    $services = $site->collections()->where('slug', 'services')->firstOrFail();
+    $services->items()->create(['site_id' => $site->id, 'data' => ['title' => 'Our own cut'], 'status' => 'published']);
+    $nav = $site->collections()->where('slug', 'navigation')->firstOrFail();
+    $nav->items()->create(['site_id' => $site->id, 'data' => ['label' => 'Home'], 'status' => 'published']);
+    Media::create(['site_id' => $site->id, 'name' => 'mine.jpg', 'file_type' => 'image', 'url' => '/storage/media/mine.jpg', 'size' => '1 KB', 'bytes' => 1024]);
+    $before = [
+        'items' => CollectionItem::where('site_id', $site->id)->count(),
+        'media' => Media::where('site_id', $site->id)->count(),
+        'posts' => Post::where('site_id', $site->id)->count(),
+        'contacts' => Contact::where('site_id', $site->id)->count(),
+    ];
+
+    // Switch to v2hairco (shares Services/Team/… with hairco; adds Footer Links etc.).
+    $installer->apply($site->fresh(), $installer->saveCuratedToSite($site->fresh(), 'v2hairco'));
+    $site->refresh();
+
+    // Nothing of the template's data or assets came in…
+    expect(CollectionItem::where('site_id', $site->id)->count())->toBe($before['items'])
+        ->and(Media::where('site_id', $site->id)->count())->toBe($before['media'])
+        ->and(Post::where('site_id', $site->id)->count())->toBe($before['posts'])
+        ->and(Contact::where('site_id', $site->id)->count())->toBe($before['contacts']);
+
+    // …the site's own collections and entries are untouched and reused (no duplicates)…
+    expect($site->collections()->where('slug', 'services')->count())->toBe(1)
+        ->and($services->items()->pluck('data')->pluck('title')->all())->toBe(['Our own cut'])
+        ->and($nav->fresh())->not->toBeNull()                              // a collection the new template doesn't use stays
+        ->and($nav->items()->count())->toBe(1);
+
+    // …collections only the new template has start empty…
+    $footer = $site->collections()->where('slug', 'footer-links')->first();
+    expect($footer)->not->toBeNull()->and($footer->items()->count())->toBe(0);
+
+    // …and the new template reads the site's data: every collection is served by slug.
+    $api = collect($this->getJson("/api/sites/{$site->name}/collections")->assertOk()->json('collections'))->keyBy('slug');
+    expect(json_encode($api->get('services')))->toContain('Our own cut')
+        ->and($api->has('navigation'))->toBeTrue();
+});
+
+test('a switch never edits what the site already has: sections, forms and collections stay exactly as the owner left them', function () {
+    [$owner, $site] = pipelineSite();
+    $installer = app(TemplateInstaller::class);
+    $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
+
+    // The owner trims and edits things the next template also declares.
+    $hero = $site->contentComponents()->where('name', 'Hero')->firstOrFail();
+    $removed = $hero->nodes()->orderBy('order')->first();
+    $removed->delete();
+    $heroNodes = $hero->nodes()->orderBy('id')->get(['label', 'value'])->toArray();
+    $contact = $site->forms()->where('name', 'contact')->firstOrFail();
+    $contact->update(['fields' => [['key' => 'email', 'label' => 'Email', 'type' => 'email']]]);
+    $services = $site->collections()->where('slug', 'services')->firstOrFail();
+    $services->update(['fields' => [['key' => 'title', 'label' => 'Name', 'type' => 'text']]]);
+    $componentIds = $site->contentComponents()->pluck('id')->sort()->values()->all();
+
+    $installer->apply($site->fresh(), $installer->saveCuratedToSite($site->fresh(), 'v2hairco'));
+
+    expect($hero->nodes()->orderBy('id')->get(['label', 'value'])->toArray())->toBe($heroNodes)   // not topped up
+        ->and($hero->nodes()->where('label', $removed->label)->exists())->toBeFalse()
+        ->and($contact->fresh()->fields)->toEqual([['key' => 'email', 'label' => 'Email', 'type' => 'email']])   // (JSON key order aside)
+        ->and($services->fresh()->fields)->toEqual([['key' => 'title', 'label' => 'Name', 'type' => 'text']])
+        ->and($site->contentComponents()->whereIn('id', $componentIds)->count())->toBe(count($componentIds)); // nothing removed
+
+    // A refresh of the SAME template (template:deploy) may top its own sections back up.
+    $installer->refreshAppliedSites('v2hairco');
+    expect($hero->nodes()->where('label', $removed->label)->exists())->toBeTrue();
+});
+
+test('the renderer stub shows a site\'s own rows only — template samples are for the template preview', function () {
+    $stub = file_get_contents(base_path('stubs/olux/useCms.ts'));
+    expect($stub)->toContain('return isSite ? [] : fallback')
+        ->toContain("isSite: !!site && !q.has('template')")
+        ->toContain('window as any).__OLUX_SITE__');
+});
+
+test('only the current template\'s pages, sections and forms are active; the others are parked, never deleted', function () {
+    [$owner, $site] = pipelineSite();
+    $installer = app(TemplateInstaller::class);
+    $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
+    $own = $site->pages()->create(['name' => 'My notes', 'url' => '/my-notes', 'keywords' => '', 'is_published' => true]);
+    $pageCount = $site->pages()->count();
+    $formCount = $site->forms()->count();
+
+    $installer->apply($site->fresh(), $installer->saveCuratedToSite($site->fresh(), 'verita'));
+    $site->refresh();
+    $page = fn ($url) => $site->pages()->where('url', $url)->first();
+
+    // Nothing deleted…
+    expect($site->pages()->count())->toBeGreaterThanOrEqual($pageCount)
+        ->and($site->forms()->count())->toBeGreaterThanOrEqual($formCount);
+    // …hairco-only pages parked, shared + verita pages and the owner's own page active.
+    expect($page('/shop')->template_active)->toBeFalse()
+        ->and($page('/services')->template_active)->toBeFalse()
+        ->and($page('/')->template_active)->toBeTrue()
+        ->and($page('/contact')->template_active)->toBeTrue()
+        ->and($own->fresh()->template_active)->toBeTrue()
+        ->and($own->fresh()->template_keys)->toBeNull();
+    // Forms: verita's contact form stays; hairco-only forms are parked and refuse submissions.
+    expect($site->forms()->where('name', 'contact')->value('template_active'))->toBeTrue()
+        ->and($site->forms()->where('name', 'appointment')->value('template_active'))->toBeFalse();
+    $this->postJson("/api/sites/{$site->name}/form/appointment", ['name' => 'X', 'email' => 'x@x.test'])->assertForbidden();
+
+    // Home shows only verita's sections; hairco's are kept on the page but hidden.
+    $home = $page('/');
+    expect($home->activeComponents()->count())->toBeLessThan($home->components()->count())
+        ->and($home->activeComponents()->get()->every(fn ($c) => in_array('verita', json_decode((string) $c->pivot->template_keys, true) ?: [], true)))->toBeTrue();
+
+    // The live site / API never shows parked pages.
+    $urls = collect($this->getJson("/api/sites/{$site->name}/content")->assertOk()->json('pages'))->pluck('url');
+    expect($urls)->not->toContain('/shop')->toContain('/contact')->toContain('/my-notes');
+    $this->getJson("/api/sites/{$site->name}/page?url=/shop")->assertNotFound();
+
+    // Admin lists them, marked inactive, with an Activate button.
+    Livewire\Livewire::actingAs($owner)->test(PageComponent::class, ['site' => $site])
+        ->assertSee('Inactive — from')
+        ->call('activatePage', $page('/shop')->id);
+    expect($page('/shop')->fresh()->template_active)->toBeTrue();   // the owner's call: active under any template
+
+    // Switching back brings hairco's pages and forms back and parks verita's.
+    $installer->apply($site->fresh(), $installer->saveCuratedToSite($site->fresh(), 'hairco'));
+    expect($page('/services')->fresh()->template_active)->toBeTrue()
+        ->and($page('/contact')->fresh()->template_active)->toBeFalse()
+        ->and($page('/shop')->fresh()->template_active)->toBeTrue()
+        ->and($site->forms()->where('name', 'appointment')->value('template_active'))->toBeTrue();
+
+    // Stop using any template → everything is active again.
+    Livewire\Livewire::actingAs($owner)->test(SiteTemplatesPage::class, ['site' => $site->fresh()])->call('stopUsing');
+    expect($site->pages()->where('template_active', false)->count())->toBe(0)
+        ->and($site->forms()->where('template_active', false)->count())->toBe(0);
 });

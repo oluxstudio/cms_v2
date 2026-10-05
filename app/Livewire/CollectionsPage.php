@@ -11,6 +11,8 @@ use App\Models\CollectionItemEvent;
 use App\Models\Component as ComponentModel;
 use App\Models\Media;
 use App\Models\Site;
+use App\Support\CollectionFieldShape;
+use App\Support\MediaValue;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -110,6 +112,11 @@ class CollectionsPage extends Component
         if (($id = (string) request()->query('open')) !== ''
             && CollectionModel::where('site_id', $site->id)->whereKey($id)->exists()) {
             $this->viewingId = $id;
+            // …and ?item={id} opens that entry (e.g. clicked in a block's grid on the Edit page).
+            $itemId = (string) request()->query('item');
+            if ($itemId !== '' && CollectionModel::find($id)->items()->whereKey($itemId)->exists()) {
+                $this->openItem($itemId);
+            }
         }
     }
 
@@ -163,7 +170,7 @@ class CollectionsPage extends Component
 
     public function closeEntries(): void
     {
-        $this->reset(['viewingId', 'editingItemId', 'itemForm', 'itemJsonKeys', 'memberSearch']);
+        $this->reset(['viewingId', 'editingItemId', 'itemForm', 'itemJsonKeys', 'itemLineKeys', 'memberSearch']);
     }
 
     public function deleteItem(string $itemId): void
@@ -183,6 +190,9 @@ class CollectionsPage extends Component
     /** Fields holding arrays/objects (multi-dimensional data) — edited as JSON. */
     public array $itemJsonKeys = [];
 
+    /** Fields stored as one-path-per-line text (media lists) — edited as a gallery, saved back as lines. */
+    public array $itemLineKeys = [];
+
     /** Open the entry editor — blank for a new entry, prefilled for an existing one. */
     public function openItem(?string $itemId = null): void
     {
@@ -190,11 +200,15 @@ class CollectionsPage extends Component
         $keys = collect($collection->fields ?? [])->pluck('key')->all();
 
         $item = $itemId ? $collection->items()->findOrFail($itemId) : null;
+        // Declared list fields (gallery/tags) stored as text → arrays for the editors.
+        if ($item) {
+            $item->data = CollectionFieldShape::shape((array) ($item->data ?? []), (array) ($collection->fields ?? []));
+        }
 
         // A field is JSON-edited when its schema says so, or when any stored
         // entry holds an array under it (schemas often say "text" for arrays).
         $declared = collect($collection->fields ?? [])
-            ->filter(fn ($f) => in_array($f['type'] ?? '', ['json', 'list', 'array'], true))
+            ->filter(fn ($f) => in_array($f['type'] ?? '', ['json', 'list', 'array', 'images', 'tags'], true))
             ->pluck('key')->all();
         $samples = $item ? collect([$item]) : $collection->items()->latest()->limit(20)->get();
         // Array values: STRUCTURED editing when the shape is uniform (scalar
@@ -205,8 +219,12 @@ class CollectionsPage extends Component
         $sampleFor = fn ($k) => $item ? data_get($item->data, $k) : $samples->map(fn ($i) => data_get($i->data, $k))->first(fn ($v) => is_array($v));
         $this->itemJsonKeys = $arrayKeys->reject(fn ($k) => self::nestedEditable($sampleFor($k) ?? []))->values()->all();
 
-        $this->itemForm = collect($keys)->mapWithKeys(function ($k) use ($item, $arrayKeys) {
+        $types = collect($collection->fields ?? [])->mapWithKeys(fn ($f) => [($f['key'] ?? '') => $f['type'] ?? 'text']);
+        $this->itemForm = collect($keys)->mapWithKeys(function ($k) use ($item, $arrayKeys, $types) {
             $v = $item ? data_get($item->data, $k, '') : '';
+            if (CollectionModel::isBooleanType($types[$k] ?? null)) {
+                return [$k => filter_var($v, FILTER_VALIDATE_BOOLEAN)]; // a real true/false for the checkbox
+            }
             if (in_array($k, $this->itemJsonKeys, true)) {
                 $v = is_array($v) ? $v : ($v === '' || $v === null ? [] : [$v]);
 
@@ -218,6 +236,14 @@ class CollectionsPage extends Component
 
             return [$k => is_array($v) ? json_encode($v, JSON_UNESCAPED_SLASHES) : (string) $v];
         })->all();
+        // Several media paths in one text value → edit as a gallery (saved back as lines).
+        $this->itemLineKeys = [];
+        foreach ($this->itemForm as $k => $v) {
+            if (($paths = MediaValue::lines($v, $collection->site_id)) !== null) {
+                $this->itemForm[$k] = $paths;
+                $this->itemLineKeys[] = $k;
+            }
+        }
         $this->editingItemId = $itemId ?? '';
     }
 
@@ -233,6 +259,9 @@ class CollectionsPage extends Component
     #[On('media-picked')]
     public function onMediaPicked(array $context, string $mediaRef, string $url): void
     {
+        if ($this->nestedMediaPicked($context, $url)) {
+            return;
+        }
         if (($context['scope'] ?? '') === 'collection-item' && isset($context['key'])) {
             $this->itemForm[$context['key']] = $url;
         }
@@ -240,11 +269,12 @@ class CollectionsPage extends Component
 
     public function cancelItem(): void
     {
-        $this->reset(['editingItemId', 'itemForm', 'itemJsonKeys']);
+        $this->reset(['editingItemId', 'itemForm', 'itemJsonKeys', 'itemLineKeys']);
     }
 
     public function saveItem(): void
     {
+        $this->resetErrorBag();
         $collection = CollectionModel::where('site_id', $this->site->id)->findOrFail($this->viewingId);
         $keys = collect($collection->fields ?? [])->pluck('key')->all();
 
@@ -259,7 +289,41 @@ class CollectionsPage extends Component
             }
         }
 
-        $data = collect($this->itemForm)->only($keys)->map(function ($v, $k) {
+        // Typed fields: numbers/sliders must be numbers, emails valid — then stored as their type.
+        $defs = collect($collection->fields ?? [])->keyBy('key');
+        foreach ($defs as $k => $f) {
+            $v = $this->itemForm[$k] ?? null;
+            if (! is_scalar($v) || trim((string) $v) === '') {
+                continue;
+            }
+            $type = $f['type'] ?? 'text';
+            if (in_array($type, ['number', 'slider'], true) && ! is_numeric(trim((string) $v))) {
+                $this->addError("itemForm.{$k}", ($f['label'] ?? $k).' must be a number.');
+            } elseif ($type === 'email' && ! filter_var(trim((string) $v), FILTER_VALIDATE_EMAIL)) {
+                $this->addError("itemForm.{$k}", ($f['label'] ?? $k).' must be a valid email address.');
+            }
+        }
+        // Required fields (a template's @olux-field … required, or Edit fields).
+        foreach ($defs as $k => $f) {
+            if (! empty($f['required']) && empty($f['hidden']) && empty($f['auto']) && CollectionFieldShape::missingRequired([$k => $this->itemForm[$k] ?? null], [$f]) !== []) {
+                $this->addError("itemForm.{$k}", ($f['label'] ?? $k).' is required.');
+            }
+        }
+        if ($this->getErrorBag()->isNotEmpty()) {
+            return;
+        }
+
+        $data = collect($this->itemForm)->only($keys)->map(function ($v, $k) use ($defs) {
+            if (in_array($k, $this->itemLineKeys, true) && is_array($v)) {
+                return implode("\n", array_values(array_filter(array_map(fn ($x) => trim((string) $x), $v), fn ($x) => $x !== '')));
+            }
+            $type = $defs[$k]['type'] ?? 'text';
+            if (CollectionModel::isBooleanType($type)) {
+                return filter_var($v, FILTER_VALIDATE_BOOLEAN);
+            }
+            if (in_array($type, ['number', 'slider'], true) && is_scalar($v) && is_numeric(trim((string) $v))) {
+                return 0 + trim((string) $v); // 4 → 4, 4.5 → 4.5
+            }
             if (in_array($k, $this->itemJsonKeys, true)) {
                 $raw = trim((string) $v);
 
@@ -277,7 +341,7 @@ class CollectionsPage extends Component
         } else {
             $collection->items()->create(['site_id' => $this->site->id, 'data' => $data, 'status' => 'published']);
         }
-        $this->reset(['editingItemId', 'itemForm', 'itemJsonKeys']);
+        $this->reset(['editingItemId', 'itemForm', 'itemJsonKeys', 'itemLineKeys']);
         $this->bustRenderCache($this->site);
         $this->dispatch('toast', level: 'success', title: 'Saved', message: 'Entry saved — the site shows it on the next load.');
     }

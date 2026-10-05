@@ -53,7 +53,7 @@ class MarketplaceApiController extends Controller
     /** POST /api/templates/{template}/library — add a FREE template (idempotent). */
     public function addToLibrary(Request $request, Template $template, TemplateCommerce $commerce): JsonResponse
     {
-        abort_unless($template->status === 'published', 404);
+        abort_unless($template->status === 'published' && ! $template->isPrivate(), 404);
         $item = $commerce->addFreeToLibrary($request->user(), $template);
 
         return response()->json(['in_library' => true, 'source' => $item->source]);
@@ -62,7 +62,7 @@ class MarketplaceApiController extends Controller
     /** POST /api/templates/{template}/checkout — platform-account Stripe Checkout. */
     public function checkout(Request $request, Template $template, TemplateCommerce $commerce): JsonResponse
     {
-        abort_unless($template->status === 'published', 404);
+        abort_unless($template->status === 'published' && ! $template->isPrivate(), 404);
         if ($commerce->inLibrary($request->user(), $template)) {
             return response()->json(['in_library' => true, 'url' => null]);
         }

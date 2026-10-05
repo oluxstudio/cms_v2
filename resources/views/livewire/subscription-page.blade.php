@@ -51,7 +51,8 @@
                 icon="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
         <x-tile accent="cocoa" :value="$sub->allowsPremium() ? 'Included' : 'Not included'" label="Premium add-ons" :sub="$sub->allowsPremium() ? 'on plan' : 'upgrade'"
                 icon="M11.48 3.5a.562.562 0 011.04 0l2.125 5.11a.563.563 0 00.475.345l5.518.442c.5.04.7.663.32.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557L3.04 10.385a.562.562 0 01.32-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-        <x-tile accent="rose" wide :value="! empty($tier['domain_included']) ? 'Included' : 'Not included'" label="Free domain" :sub="! empty($tier['domain_included']) ? 'first year on us' : 'buy one on Go live'"
+        @php $freeDomain = $limits['free_domain'] ?? null; @endphp
+        <x-tile accent="rose" wide :value="$freeDomain ? ($freeDomain === 'any' ? 'Any domain' : '.'.$freeDomain) : 'Not included'" label="Free domain" :sub="$freeDomain ? 'first year on us' : 'buy one on Go live'"
                 icon="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
     </div>
     </x-slot:rail>
@@ -61,6 +62,12 @@
         @if($sub->trialExpired())
             <div class="mb-4 rounded-2xl px-5 py-3.5 text-sm font-semibold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-500/20">
                 Your free trial has ended — pick a plan to unlock your sites again. Nothing you built has been deleted.
+            </div>
+        @endif
+
+        @if($blocker)
+            <div class="mb-4 rounded-2xl px-5 py-3.5 text-sm font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-500/20">
+                {{ $blocker }}
             </div>
         @endif
 
@@ -119,10 +126,14 @@
                         <span class="text-3xl font-extrabold">Free</span>
                         <span class="block text-[11px] mt-1 {{ $contrast ? 'text-white/70' : 'text-gray-400' }}">{{ config('plans.trial_days') }} days</span>
                     @else
+                        @if(! empty($t['price_prefix']) && $effective > 0)<span class="block text-[11px] font-bold mb-1 {{ $contrast ? 'text-white/70' : 'text-gray-500' }}">{{ $t['price_prefix'] }}</span>@endif
                         <span class="text-3xl font-extrabold">{{ $effective === 0 ? 'Free' : Money::format($effective, 'gbp') }}</span>
                         <span class="block text-[11px] mt-1 {{ $contrast ? 'text-white/70' : 'text-gray-400' }}">
                             per month @if($sub->hasOverride($key)) · <b class="text-emerald-500 dark:text-emerald-300">your price</b> @endif
                         </span>
+                        @if(! empty($t['annual_price_cents']) && ! $sub->hasOverride($key))
+                            <span class="block text-[11px] mt-1 font-semibold {{ $contrast ? 'text-white/80' : 'text-gray-500 dark:text-gray-400' }}">or £{{ number_format($t['annual_price_cents'] / 100) }}/year · 2 months free</span>
+                        @endif
                     @endif
                 </div>
 
@@ -143,6 +154,45 @@
         </div>
         @endforeach
         </div>
+
+        {{-- Compare plans: the full line-up side by side (config plans.compare) --}}
+        @php
+            $compare = (array) config('plans.compare');
+            $cols = collect($tiers)->keys()->filter(fn ($k) => collect($compare)->contains(fn ($row) => array_key_exists($k, $row)))->values();
+        @endphp
+        @if($compare)
+            <section class="mt-8" aria-labelledby="compare-plans">
+                <h2 id="compare-plans" class="text-lg font-extrabold text-gray-900 dark:text-white mb-3">Compare plans</h2>
+                <div class="{{ $panel }} overflow-x-auto">
+                    <table class="w-full min-w-[46rem] text-[12.5px] text-left">
+                        <thead>
+                            <tr class="border-b border-gray-100 dark:border-white/[0.06]">
+                                <th scope="col" class="sticky left-0 z-10 bg-white dark:bg-[#1d1e2a] p-3.5 font-bold text-gray-400 w-[9.5rem]"><span class="sr-only">Feature</span></th>
+                                @foreach($cols as $k)
+                                    <th scope="col" class="p-3.5 align-bottom">
+                                        <span class="block text-[14px] font-extrabold text-gray-900 dark:text-white">{{ $tiers[$k]['name'] }}</span>
+                                        <span class="block text-[11.5px] font-semibold text-gray-500 dark:text-gray-400">
+                                            {{ ! empty($tiers[$k]['price_prefix']) ? $tiers[$k]['price_prefix'].' ' : '' }}{{ ($tiers[$k]['price_cents'] ?? 0) === 0 ? 'Free' : Money::format($sub->priceFor($k), 'gbp').'/mo' }}
+                                        </span>
+                                        @if($sub->plan === $k)<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider" style="background:var(--primary);color:var(--on-primary)">Current</span>@endif
+                                    </th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($compare as $label => $row)
+                                <tr class="border-b last:border-0 border-gray-100 dark:border-white/[0.05]">
+                                    <th scope="row" class="sticky left-0 z-10 p-3.5 font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1d1e2a] shadow-[1px_0_0_rgba(0,0,0,0.05)]">{{ $label }}</th>
+                                    @foreach($cols as $k)
+                                        <td class="p-3.5 text-gray-600 dark:text-gray-300 {{ $sub->plan === $k ? 'font-semibold text-gray-900 dark:text-white' : '' }}">{{ $row[$k] ?? '—' }}</td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        @endif
 
         <p class="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-6">
             Plans switch instantly. Billing is handled on your account — you can change or cancel at any time.
@@ -234,6 +284,7 @@
                 <h3 class="text-2xl font-extrabold">{{ $vt['name'] }}</h3>
                 <p class="text-[12px] text-white/70 mt-1">{{ $vt['tagline'] }}</p>
                 <div class="mt-5">
+                    @if(! empty($vt['price_prefix']) && $vEffective > 0)<span class="block text-xs font-bold text-white/70 mb-1">{{ $vt['price_prefix'] }}</span>@endif
                     <span class="text-4xl font-extrabold">{{ $viewingPlan === 'trial' ? 'Free' : ($vEffective === 0 ? 'Free' : Money::format($vEffective, 'gbp')) }}</span>
                     <span class="text-xs text-white/60">{{ $viewingPlan === 'trial' ? '/ '.config('plans.trial_days').' days' : '/ month' }}</span>
                 </div>
@@ -262,16 +313,30 @@
                 <p class="text-[11px] font-bold uppercase tracking-[.14em]" style="color:{{ $va['ink'] }}">About this plan</p>
                 <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mt-3">{{ $vt['description'] }}</p>
 
+                @php
+                    $vl = $vt['limits'] ?? [];
+                    $vBoxes = array_key_exists('mailboxes', $vl) ? ($vl['mailboxes'] === null ? 'Custom' : ($vl['mailboxes'] ?: 'None')) : '—';
+                    $vCal = array_key_exists('staff_calendars', $vl) ? ($vl['staff_calendars'] ?? '∞') : '—';
+                    $vFee = array_key_exists('payment_fee_pct', $vl) && $vl['payment_fee_pct'] !== null ? rtrim(rtrim(number_format((float) $vl['payment_fee_pct'], 1), '0'), '.').'%' : '—';
+                @endphp
                 <div class="grid grid-cols-2 gap-3 mt-6">
-                    <div class="rounded-2xl p-4" style="background:{{ $va['base'] }}">
-                        <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Sites</p>
-                        <p class="text-2xl font-extrabold text-gray-900 mt-1">{{ $vLimit === null ? '∞' : $vLimit }}</p>
-                    </div>
-                    <div class="rounded-2xl p-4" style="background:{{ $va['base'] }}">
-                        <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Premium modules</p>
-                        <p class="text-2xl font-extrabold text-gray-900 mt-1">{{ ($vt['limits']['premium'] ?? false) ? 'Yes' : 'No' }}</p>
-                    </div>
+                    @foreach ([
+                        ['Sites', $vLimit === null ? '∞' : $vLimit],
+                        ['Storage', $mb($vl['storage_mb'] ?? null)],
+                        ['Mailboxes', $vBoxes],
+                        ['Staff calendars', $vCal],
+                        ['Payment fee', $vFee],
+                        ['Free domain', ($vl['free_domain'] ?? null) ? (($vl['free_domain'] === 'any') ? 'Any, year 1' : '.'.$vl['free_domain'].', year 1') : 'No'],
+                    ] as [$vLabel, $vValue])
+                        <div class="rounded-2xl p-4" style="background:{{ $va['base'] }}">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{{ $vLabel }}</p>
+                            <p class="text-xl font-extrabold text-gray-900 mt-1">{{ $vValue }}</p>
+                        </div>
+                    @endforeach
                 </div>
+                @if(! empty($vt['annual_price_cents']))
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">Annual: <span class="font-semibold text-gray-700 dark:text-gray-200">{{ Money::format((int) $vt['annual_price_cents'], 'gbp') }}/year</span> — two months free.</p>
+                @endif
 
                 <p class="text-xs text-gray-400 mt-5">Best for: <span class="font-semibold text-gray-600 dark:text-gray-300">{{ $vt['tagline'] }}</span></p>
             </div>

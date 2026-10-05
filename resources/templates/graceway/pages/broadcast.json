@@ -45,11 +45,11 @@
                     "description": "copy:broadcastChannels.join.title"
                 },
                 {
-                    "label": "Join Cta To",
-                    "type": "url",
-                    "value": "/newsletter",
+                    "label": "Join Text",
+                    "type": "text",
+                    "value": "You're always welcome in the room. Plan a visit, meet the family, and make CAC Blackburn your church home.",
                     "order": 4,
-                    "description": "copy:broadcastChannels.join.cta.to"
+                    "description": "copy:broadcastChannels.join.text"
                 },
                 {
                     "label": "Join Cta Label",
@@ -57,6 +57,13 @@
                     "value": "Join the Church",
                     "order": 5,
                     "description": "copy:broadcastChannels.join.cta.label"
+                },
+                {
+                    "label": "Join Cta To",
+                    "type": "url",
+                    "value": "/newsletter",
+                    "order": 6,
+                    "description": "copy:broadcastChannels.join.cta.to"
                 }
             ]
         },

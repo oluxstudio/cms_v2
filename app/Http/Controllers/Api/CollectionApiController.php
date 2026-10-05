@@ -9,6 +9,7 @@ use App\Models\CollectionItem;
 use App\Models\CollectionItemEvent;
 use App\Models\Site;
 use App\Services\ContentVersioner;
+use App\Support\SiteTokens;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -42,18 +43,18 @@ class CollectionApiController extends Controller
     {
         $site = $this->publicSite($siteName);
 
-        return response()->json([
+        return response()->json(SiteTokens::apply($site, [
             'collections' => $site->collections()->where('is_public', true)->with('items')->get()
-                ->map(fn (Collection $c) => $this->record($c))->values(),
-        ]);
+                ->map(fn (Collection $c) => $this->record($c))->values()->all(),
+        ]));
     }
 
     public function show(string $siteName, string $id): JsonResponse
     {
-        $collection = $this->publicSite($siteName)->collections()
-            ->where('is_public', true)->with('items')->findOrFail($id);
+        $site = $this->publicSite($siteName);
+        $collection = $site->collections()->where('is_public', true)->with('items')->findOrFail($id);
 
-        return response()->json(['collection' => $this->record($collection)]);
+        return response()->json(SiteTokens::apply($site, ['collection' => $this->record($collection)]));
     }
 
     /**
@@ -146,7 +147,7 @@ class CollectionApiController extends Controller
     public function destroy(Request $request, string $siteName, string $id): JsonResponse
     {
         $collection = $this->manageableSite($request, $siteName, 'collections.manage')->collections()->findOrFail($id);
-        $collection->items()->delete();
+        $collection->items()->withTrashed()->forceDelete();
         $collection->delete();
 
         return response()->json(['ok' => true]);

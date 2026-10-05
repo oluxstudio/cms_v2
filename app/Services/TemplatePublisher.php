@@ -160,7 +160,7 @@ class TemplatePublisher
             return;
         }
         if (! $creator->currentSubscription()->allowsMarketplacePublishing()) {
-            throw new RuntimeException('Publishing to the template marketplace needs the Business plan — upgrade to publish and sell your templates.');
+            throw new RuntimeException('Publishing to the template marketplace needs the Pro plan — upgrade to publish and sell your templates.');
         }
     }
 

@@ -29,7 +29,7 @@ return new class extends Migration
         // Link form responses to the contact they created / updated
         Schema::table('form_responses', function (Blueprint $table) {
             $table->foreignId('contact_id')->nullable()->after('form_id')
-                  ->constrained('contacts')->nullOnDelete();
+                ->constrained('contacts')->nullOnDelete();
             $table->timestamp('converted_at')->nullable()->after('read_at');
         });
     }

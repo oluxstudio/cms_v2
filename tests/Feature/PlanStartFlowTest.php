@@ -18,8 +18,8 @@ test('signed-in user choosing a plan goes to checkout with the plan', function (
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->get('/get-started/business')
-        ->assertRedirect(route('account.subscription', ['plan' => 'business']));
+        ->get('/get-started/growth')
+        ->assertRedirect(route('account.subscription', ['plan' => 'growth']));
 });
 
 test('an unknown plan is ignored', function () {

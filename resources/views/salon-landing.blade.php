@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Olux for Salons &amp; Barbers — website, bookings &amp; reminders, £79/month</title>
-    <meta name="description" content="The all-in-one system for hair salons and barbershops: a proper website, online booking with deposits, per-chair calendars, automatic reminders and review requests — £79/month, no marketplace competing for your clients.">
+    <title>Olux for Salons &amp; Barbers — website, bookings &amp; reminders, £{{ number_format(config('plans.tiers.growth.price_cents', 3900) / 100, 0) }}/month</title>
+    <meta name="description" content="The all-in-one system for hair salons and barbershops: a proper website, online booking with deposits, per-chair calendars, automatic reminders and review requests — £{{ number_format(config('plans.tiers.growth.price_cents', 3900) / 100, 0) }}/month, no marketplace competing for your clients.">
     <link rel="icon" href="{{ asset('favicon.ico') }}">
     <style>
         @font-face { font-family: 'junegull'; src: url('/fonts/junegull.otf'); font-display: swap; }
@@ -125,11 +125,11 @@
         <h2>One price. Everything in.</h2>
         <p class="sub">No setup fee for founding clients. No contracts — cancel anytime.</p>
         <div class="price-card">
-            <div class="amount">£79<small>/month</small></div>
+            <div class="amount">£{{ number_format(config('plans.tiers.growth.price_cents', 3900) / 100, 0) }}<small>/month</small></div>
             <ul>
                 <li>Salon website — 5 pages, ready in a day</li>
                 <li>Online booking with deposits (Stripe)</li>
-                <li>Per-chair / per-stylist calendars</li>
+                <li>Up to 3 stylist calendars (unlimited on Pro)</li>
                 <li>Automatic reminders &amp; review requests</li>
                 <li>Rebooking prompts that fill quiet weeks</li>
                 <li>Client CRM, forms &amp; email inbox</li>

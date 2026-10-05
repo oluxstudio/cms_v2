@@ -92,7 +92,7 @@ const socials = computed(() => useSiteContent().socials.filter(s => s.key !== 'z
 .ct-social { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid #f1ece3; }
 .ct-social b { display: block; font-size: 1rem; color: var(--color-secondary); margin-bottom: .8rem; }
 .ct-social-links { display: flex; flex-wrap: wrap; gap: .7rem; }
-.ct-social-links a { width: 44px; height: 44px; border-radius: 12px; background: #fdeef3; color: var(--color-secondary);
+.ct-social-links a { width: 44px; height: 44px; border-radius: 12px; background: var(--primary-soft); color: var(--color-secondary);
   display: grid; place-items: center; transition: background .2s, color .2s, transform .2s; }
 .ct-social-links a:hover { background: var(--sc); color: #fff; transform: translateY(-2px); }
 .ct-social-links svg { width: 20px; height: 20px; }

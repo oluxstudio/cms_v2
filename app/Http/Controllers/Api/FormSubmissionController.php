@@ -38,7 +38,7 @@ class FormSubmissionController extends Controller
         }
 
         // ── 2. Active check ──────────────────────────────────────
-        if (! $form->is_active) {
+        if (! $form->isLive()) {   // switched off, or parked with a non-current template
             return response()->json([
                 'message' => 'This form is currently not accepting submissions.',
             ], 403);

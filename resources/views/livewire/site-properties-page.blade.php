@@ -2,16 +2,68 @@
     $panel = 'rounded-[1.75rem] bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm';
     $input = 'w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[color:var(--primary)]/40 focus:border-[color:var(--primary)]';
     $label = 'block text-[12px] font-bold text-gray-600 dark:text-gray-300 mb-1';
-    $ghostBtn = 'fx inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 hover:border-gray-400';
+    $ghost = 'fx inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 hover:border-gray-400';
     $iconBtn = 'w-8 h-8 grid place-items-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1d1e2a] text-gray-500 hover:text-gray-900 dark:hover:text-white disabled:opacity-30';
-    $imageVars = collect($variables)->where('type', 'image')->count();
-    $filledPhones = collect($phones)->filter(fn ($p) => trim($p['value'] ?? '') !== '')->count();
-    $filledEmails = collect($emails)->filter(fn ($e) => trim($e['value'] ?? '') !== '')->count();
-    $tabs = ['identity' => 'Identity', 'contacts' => 'Contact details', 'variables' => 'Variables'];
-    $err = fn (string $key) => $errors->first($key);
+    $v = $values;
+    $filled = fn ($k) => trim((string) ($v[$k] ?? '')) !== '';
+    $on = fn ($k) => in_array($v[$k] ?? '', ['1', 'true', 'on'], true);
+    $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    $phoneCount = collect($rows['phones'] ?? [])->filter(fn ($r) => trim($r['value'] ?? '') !== '')->count();
+
+    // ── Overview numbers for the rail ──
+    $checks = [
+        'site_name' => $filled('site_name'), 'tagline' => $filled('tagline'), 'logo' => $filled('logo'),
+        'square_icon' => $filled('square_icon'), 'share_image' => $filled('share_image'), 'email' => $filled('email'),
+        'phone' => $phoneCount > 0, 'business_type' => $filled('business_type'), 'address' => $filled('address_street') && $filled('address_postcode'),
+        'hours' => collect($days)->contains(fn ($d) => $filled("hours_{$d}")), 'meta_description' => $filled('meta_description'),
+        'social' => collect(['facebook', 'instagram', 'tiktok', 'linkedin', 'x', 'youtube'])->contains(fn ($s) => $filled($s)),
+    ];
+    $complete = (int) round(count(array_filter($checks)) / count($checks) * 100);
+    $napMissing = array_keys(array_filter(['name' => ! $filled('site_name'), 'address' => ! $checks['address'], 'phone' => ! $checks['phone']]));
+    $openDays = collect($days)->filter(fn ($d) => \App\Support\SiteProperties::parseHours($v["hours_{$d}"] ?? '') !== [])->count();
+    $tz = $v['timezone'] ?: 'Europe/London';
+    $now = now($tz);
+    $openNow = collect(\App\Support\SiteProperties::parseHours($v['hours_'.strtolower($now->englishDayOfWeek)] ?? ''))
+        ->contains(fn ($r) => $now->format('H:i') >= $r[0] && $now->format('H:i') < $r[1]);
+    $socialCount = collect(['facebook', 'instagram', 'tiktok', 'linkedin', 'x', 'youtube'])->filter(fn ($s) => $filled($s))->count();
+    $legalCount = collect(['company_number', 'vat_number', 'ico_number'])->filter(fn ($k) => $filled($k))->count() + count($rows['accreditations'] ?? []);
+    $hidden = $on('noindex') || ($on('noindex_while_draft') && ! $site->live);
+    $tags = collect(['ga4_id', 'plausible_domain', 'meta_pixel_id'])->filter(fn ($k) => $filled($k))->count();
+    $status = $on('maintenance') ? 'Maintenance' : ($site->live ? 'Live' : 'Offline');
+
+    $tabErrors = collect($errors->keys())->map(function ($k) use ($fields, $repeaters) {
+        $p = explode('.', $k);
+
+        return match ($p[0]) {
+            'values' => $fields[$p[1] ?? '']['tab'] ?? null,
+            'rows' => $repeaters[$p[1] ?? '']['tab'] ?? null,
+            'variables' => 'variables', 'colors' => 'colours', 'scripts' => 'seo', 'currency' => 'locale',
+            'uploads' => ($p[1] ?? '') === 'fields' ? ($fields[$p[2] ?? '']['tab'] ?? null) : (($p[1] ?? '') === 'rows' ? ($repeaters[$p[2] ?? '']['tab'] ?? null) : 'variables'),
+            default => null,
+        };
+    })->filter()->unique()->flip();
+
+    // Fields per tab, split into titled groups (ungrouped first).
+    $groupsFor = fn (string $tab) => collect($fields)->filter(fn ($f) => $f['tab'] === $tab && $f['input'] !== 'hours')
+        ->groupBy(fn ($f) => $f['group'] ?? '', true);
+    $tabIntro = [
+        'brand' => ['Brand', 'Your name and look — used on the site, in emails, browser tabs and when your site is shared.'],
+        'business' => ['Business details', 'What you do and where — powers your contact pages, maps and Google\'s business listing.'],
+        'contact' => ['Contact', 'How customers reach you.'],
+        'legal' => ['Company details', 'UK registration details shown in your footer and used for trust signals.'],
+        'seo' => ['Search engines', 'Defaults for Google and other search engines.'],
+        'locale' => ['Language & region', 'How dates, times and prices are shown.'],
+        'assistant' => ['AI assistant', 'Personality and limits for the assistant that answers questions about your business.'],
+    ];
+    // Same address the site is really served at: verified live custom domain → {name}.subdomain.
+    $siteHost = $site->live && $site->domain && $site->domain_verified_at
+        ? $site->domain
+        : ($site->subdomainHost() ?: $site->name.'.oluxstudio.com');
+    $snippetTitle = str_replace(['{page}', '{site}'], ['Home', $v['site_name'] ?: $site->name], $v['title_pattern'] ?: '{page} | {site}');
+    $sub = $site->user?->currentSubscription();
 @endphp
 <div>
-<x-tri-layout title="Properties" subtitle="Your site's name, logo, contact details and custom variables — used across the site and its templates."
+<x-tri-layout title="Properties" subtitle="Your business profile — used across the site, its templates, emails and search engines. Also editable on the Edit page."
     :site-name="$site->name" :labels="['📊 Overview', '⚙️ Properties', '👁 Preview']" quick-width="lg:!w-[330px] xl:!w-[350px]">
 
     <x-slot:header>
@@ -23,48 +75,36 @@
         </button>
     </x-slot:header>
 
-    {{-- ══ LEFT rail: what's filled in ══ --}}
+    {{-- ══ LEFT rail: how complete the profile is ══ --}}
     <x-slot:rail>
     <div class="grid grid-cols-2 gap-3">
-        <x-tile accent="ink" wide :value="$name ?: 'Unnamed'" label="Site name" :sub="$site->name"
+        <x-tile accent="ink" wide :value="$complete.'%'" label="Profile complete" :sub="$v['site_name'] ?: $site->name"
                 style="background:var(--primary);color:var(--on-primary);--tile-icon:var(--on-primary)"
-                icon="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-        <x-tile accent="lime" :value="$logo ? 'Set' : 'Missing'" label="Logo" :sub="$logo ? 'site & emails' : 'add one'"
-                icon="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        <x-tile accent="sky" :value="$email ? 'Set' : 'Missing'" label="Main email" :sub="$email ? 'primary' : 'add one'"
-                icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        <x-tile accent="cocoa" :value="$filledPhones" label="Phone numbers" sub="listed"
-                icon="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-        <x-tile accent="rose" :value="$filledEmails" label="Other emails" sub="listed"
-                icon="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-        <x-tile accent="lavender" wide :value="count($variables)" label="Custom variables"
-                :sub="$imageVars.' '.\Illuminate\Support\Str::plural('image', $imageVars).' · '.(count($variables) - $imageVars).' text'"
+                icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <x-tile accent="lime" :value="$napMissing ? 'Missing' : 'Complete'" label="Business listing" :sub="$napMissing ? 'add '.$napMissing[0] : 'all set'"
+                icon="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        <x-tile accent="sky" :value="$openDays ? $openDays.' '.\Illuminate\Support\Str::plural('day', $openDays) : 'Not set'" label="Opening hours" :sub="$openDays ? ($openNow ? 'open now' : 'closed now') : 'add hours'"
+                icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <x-tile accent="lavender" :value="$socialCount" label="Social profiles" sub="linked"
+                icon="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+        <x-tile accent="cocoa" :value="$legalCount" label="Legal details" sub="on record"
+                icon="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+        <x-tile accent="rose" wide :value="$hidden ? 'Hidden' : 'Visible'" label="Search engines" :sub="$hidden ? ($on('noindex') ? 'noindex on' : 'until the site is live') : ($tags ? $tags.' tracking tag'.($tags > 1 ? 's' : '') : 'no tracking tags')"
+                icon="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <x-tile accent="sky" :value="$status" label="Site status" :sub="$filled('launch_date') ? \Illuminate\Support\Carbon::parse($v['launch_date'])->format('j M') : ($site->live ? 'online' : 'draft')"
+                icon="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9m-9 9a9 9 0 019-9" />
+        <x-tile accent="lime" :value="count($variables)" label="Custom variables" :sub="collect($variables)->where('type', 'image')->count().' img'"
                 icon="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zm5 3l-2 2 2 2m6-4l2 2-2 2" />
     </div>
     </x-slot:rail>
 
-    {{-- ══ CENTER: the editor ══ --}}
+    {{-- ══ CENTER: pill tabs ══ --}}
     <div class="@container max-w-[52rem] mx-auto"
-         x-data="{ tab: (location.hash || '#identity').slice(1) }"
-         x-init="if (! @js(array_keys($tabs)).includes(tab)) tab = 'identity'; $watch('tab', t => history.replaceState(null, '', '#' + t))"
+         x-data="{ tab: (location.hash || '#brand').slice(1) }"
+         x-init="if (! @js(array_keys($tabs)).includes(tab)) tab = 'brand'; $watch('tab', t => history.replaceState(null, '', '#' + t))"
          x-on:properties-error.window="tab = $event.detail.tab">
 
-        <div class="flex gap-1 p-1 mb-5 rounded-full bg-white/70 dark:bg-white/[0.05] shadow-sm overflow-x-auto no-scrollbar" role="tablist">
-            @foreach ($tabs as $tk => $tl)
-                @php $tabHasError = collect($errors->keys())->contains(fn ($k) => match ($tk) {
-                    'identity' => in_array($k, ['name', 'logo', 'email', 'logoUpload']),
-                    'contacts' => str_starts_with($k, 'phones') || str_starts_with($k, 'emails'),
-                    'variables' => str_starts_with($k, 'variable'),
-                }); @endphp
-                <button type="button" role="tab" @click="tab = '{{ $tk }}'" :aria-selected="tab === '{{ $tk }}'"
-                        class="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors"
-                        :class="tab === '{{ $tk }}' ? 'shadow-sm' : 'text-gray-600 dark:text-gray-300'"
-                        :style="tab === '{{ $tk }}' ? 'background:var(--foreground);color:var(--background)' : ''">
-                    {{ $tl }}
-                    @if ($tabHasError)<span class="w-2 h-2 rounded-full bg-rose-500" aria-label="has errors"></span>@endif
-                </button>
-            @endforeach
-        </div>
+        <x-pill-tabs :tabs="$tabs" :dots="$tabErrors->keys()->all()" />
 
         @if ($errors->any())
             <div class="mb-4 rounded-2xl px-5 py-3 text-sm font-semibold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-500/20">
@@ -72,122 +112,205 @@
             </div>
         @endif
 
-        {{-- Identity --}}
-        <section x-show="tab === 'identity'" class="space-y-4">
-            <div class="{{ $panel }} p-6">
-                <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">Name & main email</h2>
-                <p class="text-[12.5px] text-gray-500 dark:text-gray-400 mb-4">How your business appears on the site, in emails and to search engines.</p>
-                <div class="grid @xl:grid-cols-2 gap-4">
-                    <div>
-                        <label class="{{ $label }}" for="prop-name">Site name</label>
-                        <input id="prop-name" type="text" wire:model.live.debounce.400ms="name" class="{{ $input }}" placeholder="e.g. Grace Way Church" maxlength="120">
-                        @if ($m = $err('name'))<p class="text-xs text-rose-500 mt-1">{{ $m }}</p>@endif
-                        <p class="text-[11px] text-gray-400 mt-1">Your web address stays <b>{{ $site->name }}</b>.</p>
+        {{-- Standard tabs: grouped schema fields + that tab's repeaters --}}
+        @foreach (['brand', 'business', 'contact', 'legal', 'seo', 'locale', 'assistant'] as $tk)
+            <section x-show="tab === '{{ $tk }}'" @if ($tk !== 'brand') x-cloak @endif class="space-y-4">
+                @if ($tk === 'locale')
+                    <div class="{{ $panel }} p-6">
+                        <label class="{{ $label }}" for="p-currency">Currency</label>
+                        <select id="p-currency" wire:model="currency" class="{{ $input }} max-w-xs">
+                            @foreach (['gbp' => 'GBP — Pound sterling', 'eur' => 'EUR — Euro', 'usd' => 'USD — US dollar', 'cad' => 'CAD — Canadian dollar', 'aud' => 'AUD — Australian dollar', 'ngn' => 'NGN — Naira', 'zar' => 'ZAR — Rand', 'ghs' => 'GHS — Cedi', 'kes' => 'KES — Kenyan shilling', 'inr' => 'INR — Rupee'] as $cv => $cl)
+                                <option value="{{ $cv }}">{{ $cl }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-[11px] text-gray-400 mt-1">Prices, checkout and invoices use this currency. Same setting as on the Payments page.</p>
                     </div>
-                    <div>
-                        <label class="{{ $label }}" for="prop-email">Main email address</label>
-                        <input id="prop-email" type="email" wire:model.live.debounce.400ms="email" class="{{ $input }}" placeholder="hello@yourbusiness.com">
-                        @if ($m = $err('email'))<p class="text-xs text-rose-500 mt-1">{{ $m }}</p>@endif
-                    </div>
-                </div>
-            </div>
+                @endif
 
-            <div class="{{ $panel }} p-6">
-                <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">Logo</h2>
-                <p class="text-[12.5px] text-gray-500 dark:text-gray-400 mb-4">Shown on your site and on every email (unless the Emails page sets a different one).</p>
-                <div class="flex flex-wrap items-center gap-4">
-                    <div class="w-28 h-28 rounded-2xl border border-dashed border-gray-200 dark:border-white/10 grid place-items-center overflow-hidden bg-gray-50 dark:bg-white/[0.03] shrink-0">
-                        @if ($logo)
-                            <img src="{{ $logo }}" alt="Logo" class="max-w-full max-h-full object-contain p-2">
+                @foreach ($groupsFor($tk) as $group => $groupFields)
+                    <div class="{{ $panel }} p-6">
+                        @if ($group === '' && isset($tabIntro[$tk]))
+                            <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">{{ $tabIntro[$tk][0] }}</h2>
+                            <p class="text-[12.5px] text-gray-500 dark:text-gray-400 mb-4">{{ $tabIntro[$tk][1] }}</p>
+                        @elseif ($group !== '')
+                            <h2 class="text-[16px] font-bold text-gray-900 dark:text-white mb-4">{{ $group }}</h2>
+                        @endif
+                        <div class="grid @xl:grid-cols-2 gap-4">
+                            @foreach ($groupFields as $key => $f)
+                                <div class="{{ in_array($f['input'], ['textarea', 'image'], true) || in_array($key, ['service_area', 'title_pattern'], true) ? '@xl:col-span-2' : '' }}" wire:key="f-{{ $key }}">
+                                    @include('partials.properties.field', ['f' => $f, 'model' => "values.$key", 'upload' => "fields.$key", 'value' => $v[$key] ?? ''])
+                                    @include('partials.properties.linked-hint', ['prop' => $key])
+                                    @if ($key === 'registered_office')
+                                        <button type="button" wire:click="copyAddressToOffice" class="text-[11px] font-bold mt-1" style="color:var(--primary)">Same as trading address</button>
+                                    @endif
+                                    @if ($key === 'square_icon' && $icons)
+                                        <div class="flex items-end gap-2 mt-2">
+                                            @foreach ($icons as $size => $url)
+                                                <img src="{{ $url }}" alt="{{ $size }}px icon" title="{{ $size }}×{{ $size }}" class="rounded border border-gray-100 dark:border-white/10" style="width:{{ min(40, max(16, (int) $size / 8)) }}px;height:auto">
+                                            @endforeach
+                                            <span class="text-[11px] text-gray-400">favicon & app icons made from this</span>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+
+                @foreach ($repeaters as $rk => $r)
+                    @if ($r['tab'] === $tk)
+                        @include('partials.properties.repeater', ['key' => $rk, 'r' => $r, 'rows' => $rows, 'site' => $site, 'panel' => $panel])
+                        @if ($rk === 'phones')
+                            <div class="-mt-2 px-1">@include('partials.properties.linked-hint', ['prop' => 'phone', 'note' => 'The first number'])</div>
+                        @endif
+                    @endif
+                @endforeach
+
+                @if ($tk === 'seo')
+                    <div class="{{ $panel }} p-6">
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                                <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">Custom scripts</h2>
+                                <p class="text-[12.5px] text-gray-500 dark:text-gray-400">Code added to every page — chat widgets, extra analytics. Only paste code from services you trust.</p>
+                            </div>
+                            <span class="text-[10px] font-extrabold tracking-wider px-2 py-0.5 rounded shrink-0" style="background:color-mix(in srgb, var(--primary) 18%, transparent);color:var(--primary)">PRO</span>
+                        </div>
+                        @if ($this->canEditScripts)
+                            <div class="grid gap-4">
+                                <div>
+                                    <label class="{{ $label }}" for="p-head">In the page head</label>
+                                    <textarea id="p-head" wire:model.blur="scripts.head" rows="4" class="{{ $input }} font-mono text-xs" placeholder="<script src=&quot;https://…&quot;></script>"></textarea>
+                                </div>
+                                <div>
+                                    <label class="{{ $label }}" for="p-body">Before the closing body tag</label>
+                                    <textarea id="p-body" wire:model.blur="scripts.body" rows="4" class="{{ $input }} font-mono text-xs"></textarea>
+                                </div>
+                            </div>
                         @else
-                            <span class="text-xs text-gray-400">No logo</span>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                {{ $sub?->allowsPremium() ? 'Only the account owner or a team admin can edit custom scripts.' : 'Available on plans with premium features.' }}
+                                @unless ($sub?->allowsPremium())<a href="{{ route('account.subscription') }}" class="font-bold" style="color:var(--primary)">See plans →</a>@endunless
+                            </p>
                         @endif
                     </div>
-                    <div class="flex-1 min-w-[220px] space-y-2">
-                        <x-asset-picker model="logo" :site="$site" type="image" placeholder="Logo URL, or pick from assets" />
-                        <div class="flex items-center gap-3">
-                            <label class="{{ $ghostBtn }} cursor-pointer">
-                                <span wire:loading.remove wire:target="logoUpload">⬆ Upload</span>
-                                <span wire:loading wire:target="logoUpload">Uploading…</span>
-                                <input type="file" wire:model="logoUpload" accept="image/*" class="hidden">
-                            </label>
-                            @if ($logo)
-                                <button type="button" wire:click="$set('logo', '')" class="text-xs font-semibold text-rose-500 hover:text-rose-600">Remove</button>
-                            @endif
-                        </div>
-                        @if ($m = $err('logoUpload'))<p class="text-xs text-rose-500">{{ $m }}</p>@endif
+                @endif
+            </section>
+        @endforeach
+
+        {{-- Hours: the week + special closures --}}
+        <section x-show="tab === 'hours'" x-cloak class="space-y-4">
+            <div class="{{ $panel }} p-6">
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">Opening hours</h2>
+                        <p class="text-[12.5px] text-gray-500 dark:text-gray-400">Type times like <b>09:00-17:00</b>. Split days: <b>09:00-12:00, 13:00-17:00</b>. Leave empty if you'd rather not show hours.</p>
                     </div>
+                    <button type="button" wire:click="copyHoursToWeekdays" class="{{ $ghost }}">Copy Monday to weekdays</button>
                 </div>
+                <div class="divide-y divide-gray-50 dark:divide-white/[0.04]">
+                    @foreach ($days as $d)
+                        @php $dk = "hours_{$d}"; @endphp
+                        <div class="flex flex-wrap @xl:flex-nowrap items-center gap-2 py-2" wire:key="h-{{ $d }}">
+                            <span class="w-28 shrink-0 text-sm font-bold text-gray-800 dark:text-gray-100">{{ ucfirst($d) }}</span>
+                            <div class="flex-1 min-w-[180px]">
+                                @include('partials.properties.field', ['f' => $fields[$dk] + ['placeholder' => '09:00-17:00'], 'model' => "values.$dk", 'upload' => '', 'value' => $v[$dk] ?? '', 'hideLabel' => true])
+                            </div>
+                            <div class="flex gap-1.5 shrink-0">
+                                <button type="button" wire:click="$set('values.{{ $dk }}', '09:00-17:00')" class="{{ $ghost }}">9–5</button>
+                                <button type="button" wire:click="$set('values.{{ $dk }}', 'Closed')" class="{{ $ghost }}">Closed</button>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            @include('partials.properties.repeater', ['key' => 'closures', 'r' => $repeaters['closures'], 'rows' => $rows, 'site' => $site, 'panel' => $panel])
+        </section>
+
+        {{-- Colours: the template's own CSS colour variables, applied live on the site --}}
+        <section x-show="tab === 'colours'" x-cloak class="space-y-4">
+            <div class="{{ $panel }} p-6">
+                <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">Theme colours</h2>
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400 mb-5">The colours your template is built from. Pick a new one and save — the whole site updates, nothing to rebuild.</p>
+                @php $colorDefaults = \App\Support\SiteColors::defaults($site); @endphp
+                @forelse ($colors as $name => $value)
+                    @php $isHex = (bool) preg_match('/^#[0-9a-fA-F]{6}$/', trim((string) $value)); @endphp
+                    <div class="flex flex-wrap items-center gap-3 py-3 border-t border-gray-100 dark:border-white/5 first:border-t-0" wire:key="color-{{ $name }}">
+                        <div class="w-40 shrink-0">
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ \App\Support\SiteColors::label($name) }}</p>
+                            <code class="text-[11px] font-mono text-gray-400">--{{ $name }}</code>
+                        </div>
+                        <div class="flex items-center gap-2 flex-1 min-w-[12rem]" x-data>
+                            <input type="color" value="{{ $isHex ? $value : '#888888' }}" title="Pick a colour"
+                                   class="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-gray-200 dark:border-white/10 bg-transparent p-1"
+                                   x-on:input="$refs.txt.value = $event.target.value; $refs.txt.dispatchEvent(new Event('input', { bubbles: true }))">
+                            <input type="text" x-ref="txt" wire:model="colors.{{ $name }}" class="{{ $input }} font-mono" placeholder="{{ $colorDefaults[$name] ?? '' }}" maxlength="60"
+                                   x-on:input="if (/^#[0-9a-f]{6}$/i.test($event.target.value)) $el.previousElementSibling.value = $event.target.value">
+                        </div>
+                        @if (strcasecmp(trim((string) $value), $colorDefaults[$name] ?? '') !== 0)
+                            <button type="button" class="text-[12px] font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-white"
+                                    wire:click="$set('colors.{{ $name }}', @js($colorDefaults[$name] ?? ''))" title="Back to the template's {{ $colorDefaults[$name] ?? '' }}">Reset</button>
+                        @endif
+                        @if ($m = $errors->first("colors.$name"))<p class="w-full text-xs text-rose-500">{{ $m }}</p>@endif
+                    </div>
+                @empty
+                    <p class="text-sm text-gray-500 dark:text-gray-400">This site's template doesn't define any colour variables yet. Templates list them as <code class="font-mono">--color-*</code> variables on <code class="font-mono">:root</code>.</p>
+                @endforelse
             </div>
         </section>
 
-        {{-- Contact details --}}
-        <section x-show="tab === 'contacts'" x-cloak class="space-y-4">
-            @foreach ([
-                ['phones', 'Phone numbers', 'Add every number customers might need — give each a label such as Office, Mobile or WhatsApp.', 'Office', '+44 20 7946 0000', 'tel', 'addPhone', 'removePhone', '+ Add phone number'],
-                ['emails', 'Email addresses', 'Other addresses beyond the main one — e.g. Bookings, Accounts, Support.', 'Bookings', 'bookings@yourbusiness.com', 'email', 'addEmail', 'removeEmail', '+ Add email address'],
-            ] as [$prop, $title, $help, $labelPh, $valuePh, $inputType, $addAction, $removeAction, $addLabel])
-                <div class="{{ $panel }} p-6">
-                    <div class="flex items-start justify-between gap-3 mb-4">
-                        <div>
-                            <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">{{ $title }}</h2>
-                            <p class="text-[12.5px] text-gray-500 dark:text-gray-400">{{ $help }}</p>
-                        </div>
-                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.08] text-gray-600 dark:text-gray-300 shrink-0">{{ count($$prop) }}</span>
-                    </div>
-                    <div class="space-y-2.5">
-                        @forelse ($$prop as $i => $row)
-                            <div class="flex flex-wrap @xl:flex-nowrap items-start gap-2" wire:key="{{ $prop }}-{{ $i }}">
-                                <div class="w-full @xl:w-44 shrink-0">
-                                    <input type="text" wire:model.blur="{{ $prop }}.{{ $i }}.label" class="{{ $input }}" placeholder="{{ $labelPh }}" aria-label="Label" maxlength="60">
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <input type="{{ $inputType }}" wire:model.blur="{{ $prop }}.{{ $i }}.value" class="{{ $input }}" placeholder="{{ $valuePh }}" aria-label="{{ $inputType === 'tel' ? 'Number' : 'Email address' }}">
-                                    @if ($m = $err("$prop.$i.value"))<p class="text-xs text-rose-500 mt-1">{{ $m }}</p>@endif
-                                </div>
-                                <button type="button" wire:click="{{ $removeAction }}({{ $i }})" class="{{ $iconBtn }} hover:!text-rose-500 mt-0.5" title="Remove">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                            </div>
-                        @empty
-                            <p class="text-sm text-gray-400 py-2">None yet.</p>
-                        @endforelse
-                    </div>
-                    <button type="button" wire:click="{{ $addAction }}" class="{{ $ghostBtn }} mt-4">{{ $addLabel }}</button>
-                </div>
-            @endforeach
-        </section>
-
-        {{-- Custom variables --}}
+        {{-- Variables: any other node on the Site Properties component --}}
         <section x-show="tab === 'variables'" x-cloak class="space-y-4">
+            {{-- Reusable values: every property + custom variable as a {{token}} usable in any content --}}
+            <div class="{{ $panel }} p-6" x-data="{ copied: '' }">
+                <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">Reusable values</h2>
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400 mb-4">
+                    Type a token into any text on the Edit page or in a collection entry — e.g. <code class="font-mono text-gray-700 dark:text-gray-200">Call us on @{{phone}}</code> —
+                    and your live site shows the current value. Change it here once and every place updates.
+                </p>
+                <div class="divide-y divide-gray-100 dark:divide-white/[0.06] rounded-2xl border border-gray-100 dark:border-white/[0.08] overflow-hidden">
+                    @foreach ($tokens as $t)
+                        @php $code = str_repeat('{', 2).$t['token'].str_repeat('}', 2); @endphp
+                        <div class="flex items-center gap-3 px-4 py-2.5" wire:key="tok-{{ $t['token'] }}">
+                            <button type="button" @click="navigator.clipboard.writeText(@js($code)); copied = @js($t['token']); setTimeout(() => copied = '', 1500)"
+                                    class="shrink-0 font-mono text-[12.5px] font-semibold px-2.5 py-1 rounded-lg border {{ $t['custom'] ? 'border-indigo-200 dark:border-indigo-500/30' : 'border-gray-200 dark:border-white/[0.1]' }} bg-white dark:bg-[#1d1e2a] text-gray-800 dark:text-gray-100 hover:border-[var(--primary)]"
+                                    title="Copy {{ $code }}">
+                                <span x-show="copied !== @js($t['token'])">{{ $code }}</span>
+                                <span x-show="copied === @js($t['token'])" x-cloak style="color:var(--primary)">Copied!</span>
+                            </button>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-[12px] text-gray-500 dark:text-gray-400">{{ $t['label'] }}@if ($t['custom']) <span class="text-indigo-500">· your variable</span>@endif</span>
+                                <span class="block text-[13px] text-gray-800 dark:text-gray-100 truncate" title="{{ $t['value'] }}">{{ $t['value'] !== '' ? $t['value'] : '—' }}</span>
+                            </span>
+                        </div>
+                    @endforeach
+                </div>
+                <p class="text-[11px] text-gray-400 mt-2">Values shown are the saved ones — save to update them. Tokens nobody recognises are left as typed.</p>
+            </div>
+
             <div class="{{ $panel }} p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                     <div class="max-w-xl">
                         <h2 class="text-[16px] font-bold text-gray-900 dark:text-white">Custom variables</h2>
-                        <p class="text-[12.5px] text-gray-500 dark:text-gray-400">Name any other detail your site needs — opening hours, a hero image, a registration number. Pick a type, and templates can read it by its name.</p>
+                        <p class="text-[12.5px] text-gray-500 dark:text-gray-400">Name anything else your site needs — a hero image, a registration line. Fields added to "Site Properties" on the Edit page appear here too.</p>
                     </div>
                     <div class="flex gap-2">
-                        <button type="button" wire:click="addVariable('text')" class="{{ $ghostBtn }}">+ Text</button>
-                        <button type="button" wire:click="addVariable('image')" class="{{ $ghostBtn }}">+ Image</button>
+                        <button type="button" wire:click="addVariable('text')" class="{{ $ghost }}">+ Text</button>
+                        <button type="button" wire:click="addVariable('image')" class="{{ $ghost }}">+ Image</button>
                     </div>
                 </div>
-
                 <div class="space-y-3">
-                    @forelse ($variables as $i => $v)
+                    @forelse ($variables as $i => $var)
                         <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-gray-50/60 dark:bg-white/[0.02] p-4" wire:key="var-{{ $i }}">
                             <div class="flex flex-wrap @xl:flex-nowrap items-start gap-2">
                                 <div class="flex-1 min-w-[160px]">
                                     <label class="{{ $label }}">Name</label>
-                                    <input type="text" wire:model.blur="variables.{{ $i }}.key" class="{{ $input }} font-mono" placeholder="opening_hours" maxlength="40"
-                                           x-on:input="$el.value = $el.value.toLowerCase().replace(/[^a-z0-9_]+/g, '_')">
-                                    @if ($m = $err("variables.$i.key"))<p class="text-xs text-rose-500 mt-1">{{ $m }}</p>@endif
+                                    <input type="text" wire:model.blur="variables.{{ $i }}.key" class="{{ $input }}" placeholder="Opening line" maxlength="60">
+                                    @if ($m = $errors->first("variables.$i.key"))<p class="text-xs text-rose-500 mt-1">{{ $m }}</p>@endif
                                 </div>
                                 <div class="w-36 shrink-0">
                                     <label class="{{ $label }}">Type</label>
                                     <select wire:model.live="variables.{{ $i }}.type" class="{{ $input }}">
-                                        @foreach ($types as $tv => $tl)
-                                            <option value="{{ $tv }}">{{ $tl }}</option>
-                                        @endforeach
+                                        @foreach ($types as $tv => $tl)<option value="{{ $tv }}">{{ $tl }}</option>@endforeach
                                     </select>
                                 </div>
                                 <div class="flex items-end gap-1.5 pt-5 shrink-0">
@@ -202,34 +325,15 @@
                                     </button>
                                 </div>
                             </div>
-
                             <div class="mt-3">
-                                <label class="{{ $label }}">Value</label>
-                                @if (($v['type'] ?? 'text') === 'image')
-                                    <div class="flex flex-wrap items-center gap-3">
-                                        <div class="w-20 h-20 rounded-xl border border-dashed border-gray-200 dark:border-white/10 grid place-items-center overflow-hidden bg-white dark:bg-white/[0.03] shrink-0">
-                                            @if ($v['value'])
-                                                <img src="{{ $v['value'] }}" alt="" class="w-full h-full object-cover">
-                                            @else
-                                                <span class="text-[10px] text-gray-400">No image</span>
-                                            @endif
-                                        </div>
-                                        <div class="flex-1 min-w-[200px] space-y-2">
-                                            <x-asset-picker :model="'variables.'.$i.'.value'" :site="$site" type="image" placeholder="Image URL, or pick from assets" />
-                                            <label class="{{ $ghostBtn }} cursor-pointer">
-                                                <span wire:loading.remove wire:target="variableUploads.{{ $i }}">⬆ Upload image</span>
-                                                <span wire:loading wire:target="variableUploads.{{ $i }}">Uploading…</span>
-                                                <input type="file" wire:model="variableUploads.{{ $i }}" accept="image/*" class="hidden">
-                                            </label>
-                                            @if ($m = $err("variableUploads.$i"))<p class="text-xs text-rose-500">{{ $m }}</p>@endif
-                                        </div>
-                                    </div>
+                                @if (($var['type'] ?? 'text') === 'image')
+                                    @include('partials.properties.field', ['f' => ['label' => 'Value', 'input' => 'image'], 'model' => "variables.$i.value", 'upload' => "variables.$i", 'value' => $var['value'] ?? ''])
                                 @else
-                                    <textarea wire:model.blur="variables.{{ $i }}.value" rows="2" class="{{ $input }}" placeholder="Mon–Fri 9am–5pm"></textarea>
+                                    <label class="{{ $label }}">Value</label>
+                                    <textarea wire:model.blur="variables.{{ $i }}.value" rows="2" class="{{ $input }}"></textarea>
                                 @endif
-                                @if ($m = $err("variables.$i.value"))<p class="text-xs text-rose-500 mt-1">{{ $m }}</p>@endif
-                                @if (preg_match(\App\Support\SiteProperties::KEY_PATTERN, $v['key'] ?? ''))
-                                    <p class="text-[11px] text-gray-400 mt-1.5">Templates read this as <code class="font-mono text-gray-600 dark:text-gray-300">properties.variables.{{ $v['key'] }}</code></p>
+                                @if (preg_match(\App\Support\SiteProperties::KEY_PATTERN, $var['key'] ?? ''))
+                                    <p class="text-[11px] text-gray-400 mt-1.5">Use it in any content as <code class="font-mono text-gray-700 dark:text-gray-200">{{ str_repeat('{', 2).\App\Support\SiteTokens::key($var['key']).str_repeat('}', 2) }}</code> — templates can also read <code class="font-mono text-gray-600 dark:text-gray-300">properties.variables["{{ $var['key'] }}"]</code></p>
                                 @endif
                             </div>
                         </div>
@@ -253,72 +357,75 @@
         </div>
     </div>
 
-    {{-- ══ RIGHT rail: live preview + how it's used ══ --}}
+    {{-- ══ RIGHT rail: previews + where the rest lives ══ --}}
     <x-slot:quick>
         <div class="{{ $panel }} p-5">
             <p class="text-[11px] font-bold uppercase tracking-[.14em] mb-3" style="color:var(--primary)">Contact card preview</p>
             <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl grid place-items-center overflow-hidden shrink-0 {{ $logo ? 'bg-white border border-gray-100 dark:border-white/10' : '' }}"
-                     @unless ($logo) style="background:var(--primary);color:var(--on-primary)" @endunless>
-                    @if ($logo)
-                        <img src="{{ $logo }}" alt="" class="max-w-full max-h-full object-contain p-1">
+                @php $logoSrc = \App\Support\SiteProperties::imageUrl($site, $v['logo']); @endphp
+                <div class="w-12 h-12 rounded-xl grid place-items-center overflow-hidden shrink-0 {{ $logoSrc ? 'bg-white border border-gray-100 dark:border-white/10' : '' }}"
+                     @unless ($logoSrc) style="background:var(--primary);color:var(--on-primary)" @endunless>
+                    @if ($logoSrc)
+                        <img src="{{ $logoSrc }}" alt="" class="max-w-full max-h-full object-contain p-1">
                     @else
-                        <span class="text-lg font-extrabold">{{ mb_strtoupper(mb_substr($name ?: $site->name, 0, 1)) }}</span>
+                        <span class="text-lg font-extrabold">{{ mb_strtoupper(mb_substr($v['site_name'] ?: $site->name, 0, 1)) }}</span>
                     @endif
                 </div>
                 <div class="min-w-0">
-                    <p class="font-display text-[16px] font-extrabold text-gray-900 dark:text-white truncate">{{ $name ?: 'Your site name' }}</p>
-                    <p class="text-[12px] text-gray-500 dark:text-gray-400 truncate">{{ $email ?: 'no main email yet' }}</p>
+                    <p class="font-display text-[16px] font-extrabold text-gray-900 dark:text-white truncate">{{ $v['site_name'] ?: 'Your site name' }}</p>
+                    <p class="text-[12px] text-gray-500 dark:text-gray-400 truncate">{{ $v['tagline'] ?: ($v['email'] ?: 'no main email yet') }}</p>
                 </div>
             </div>
-            @php $cardRows = collect($phones)->filter(fn ($p) => trim($p['value'] ?? '') !== '')->map(fn ($p) => ['📞', $p['label'] ?: 'Phone', $p['value']])
-                ->merge(collect($emails)->filter(fn ($e) => trim($e['value'] ?? '') !== '')->map(fn ($e) => ['✉️', $e['label'] ?: 'Email', $e['value']])); @endphp
+            @php
+                $cardRows = collect($rows['phones'] ?? [])->filter(fn ($p) => trim($p['value'] ?? '') !== '')->map(fn ($p) => ['📞', $p['label'] ?: 'Phone', $p['value']])
+                    ->when($v['email'], fn ($c) => $c->push(['✉️', 'Email', $v['email']]))
+                    ->when($checks['address'], fn ($c) => $c->push(['📍', 'Address', collect([$v['address_street'], $v['address_town'], $v['address_postcode']])->filter()->implode(', ')]));
+            @endphp
             @if ($cardRows->isNotEmpty())
                 <div class="mt-4 space-y-1.5">
-                    @foreach ($cardRows->take(8) as [$ic, $cl, $cv])
+                    @foreach ($cardRows->take(6) as [$ic, $cl, $cv])
                         <div class="flex items-center gap-2 text-[12.5px]">
                             <span aria-hidden="true">{{ $ic }}</span>
                             <span class="text-gray-500 dark:text-gray-400 shrink-0">{{ $cl }}</span>
                             <span class="font-semibold text-gray-800 dark:text-gray-100 truncate ml-auto">{{ $cv }}</span>
                         </div>
                     @endforeach
-                    @if ($cardRows->count() > 8)<p class="text-[11px] text-gray-400">+{{ $cardRows->count() - 8 }} more</p>@endif
-                </div>
-            @endif
-        </div>
-
-        <div class="rounded-[1.75rem] p-5 shadow-sm" style="background:var(--foreground);color:var(--background)">
-            <h3 class="font-display text-[16px] font-bold">Where these appear</h3>
-            <ul class="mt-2 space-y-1.5 text-[12.5px] opacity-85 leading-relaxed list-disc pl-4">
-                <li>Your template's header, footer and contact sections.</li>
-                <li>The logo on every email your site sends.</li>
-                <li>Developers: the content API returns them as <code class="font-mono">site.properties</code>.</li>
-            </ul>
-            @if (collect($variables)->filter(fn ($v) => preg_match(\App\Support\SiteProperties::KEY_PATTERN, $v['key'] ?? ''))->isNotEmpty())
-                <div class="mt-3 rounded-xl p-3 text-[11px] font-mono leading-relaxed overflow-x-auto" style="background:color-mix(in srgb, var(--background) 12%, transparent)">
-                    @foreach (collect($variables)->filter(fn ($v) => preg_match(\App\Support\SiteProperties::KEY_PATTERN, $v['key'] ?? ''))->take(6) as $v)
-                        <div class="whitespace-nowrap">variables.{{ $v['key'] }} <span class="opacity-60">· {{ $types[$v['type']] ?? 'Text' }}</span></div>
-                    @endforeach
                 </div>
             @endif
         </div>
 
         <div class="{{ $panel }} p-5">
-            <h3 class="text-[15px] font-bold text-gray-900 dark:text-white mb-1">Related</h3>
+            <p class="text-[11px] font-bold uppercase tracking-[.14em] mb-3" style="color:var(--primary)">In Google search</p>
+            <p class="text-[11.5px] text-gray-500 dark:text-gray-400 truncate">{{ $siteHost }}</p>
+            <p class="text-[15px] font-semibold text-[#1a0dab] dark:text-[#8ab4f8] leading-snug line-clamp-2">{{ $snippetTitle }}</p>
+            <p class="text-[12.5px] text-gray-600 dark:text-gray-300 line-clamp-3 mt-0.5">{{ $v['meta_description'] ?: ($v['description'] ?: 'Add a meta description so search engines show your own summary here.') }}</p>
+            @if ($hidden)<p class="text-[11px] font-bold text-rose-500 mt-2">Hidden from search engines right now.</p>@endif
+        </div>
+
+        <div class="{{ $panel }} p-5">
+            <h3 class="text-[15px] font-bold text-gray-900 dark:text-white mb-1">Managed elsewhere</h3>
             @foreach ([
-                ['Edit site', 'place these on your pages', url($site->name.'/connect')],
-                ['Emails', 'email logo & wording', url($site->name.'/emails')],
-                ['Assets', 'logos & images', url($site->name.'/media')],
-                ['Design', 'template & colours', url($site->name.'/design')],
+                ['Domain', $site->domain ? $site->domain.($site->domain_verified_at ? ' · connected' : ' · not verified') : 'Free address only', url($site->name.'/publish')],
+                ['Status', $site->live ? 'Live' : 'Offline', url($site->name.'/publish')],
+                ['Plan', $sub?->tier()['name'] ?? '—', route('account.subscription')],
+                ['Template', \Illuminate\Support\Str::headline($site->template ?: 'none'), url($site->name.'/design')],
+                ['Colours & fonts', 'in edit mode', url($site->name.'/connect')],
+                ['Team', $site->teamUsers()->count().' people', url($site->name.'/team')],
             ] as [$rl, $rd, $ru])
                 <a href="{{ $ru }}" class="flex items-center gap-2.5 py-2 {{ $loop->last ? '' : 'border-b border-gray-50 dark:border-white/[0.04]' }}">
                     <span class="min-w-0 flex-1">
                         <span class="block text-[13px] font-bold text-gray-800 dark:text-gray-100">{{ $rl }}</span>
-                        <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ $rd }}</span>
+                        <span class="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ $rd }}</span>
                     </span>
                     <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </a>
             @endforeach
+        </div>
+
+        <div class="rounded-[1.75rem] p-5 shadow-sm" style="background:var(--foreground);color:var(--background)">
+            <h3 class="font-display text-[16px] font-bold">Same data, two places</h3>
+            <p class="mt-1.5 text-[12.5px] opacity-85 leading-relaxed">These details live in the <b>Site Properties</b> component. Change them here or in edit mode — both update the other.</p>
+            <a href="{{ url($site->name.'/connect') }}?properties=1" class="inline-block mt-2 text-[12px] font-bold underline underline-offset-2">Open in edit mode →</a>
         </div>
     </x-slot:quick>
 </x-tri-layout>

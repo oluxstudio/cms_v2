@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\CollectionItem;
 use Carbon\Carbon;
 
 /**
@@ -75,7 +76,7 @@ trait HasVisibilityRules
             return $this->items()->where('status', 'published')->exists();
         }
         if (isset($this->collection_id) && $this->collection_id) {
-            return \App\Models\CollectionItem::where('collection_id', $this->collection_id)
+            return CollectionItem::where('collection_id', $this->collection_id)
                 ->where('status', 'published')->exists();
         }
 

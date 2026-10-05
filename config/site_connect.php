@@ -34,6 +34,7 @@ return [
         'max_pages' => [
             'free' => 10,
             'starter' => 25,
+            'growth' => 50,
             'pro' => 50,
         ],
         'max_page_bytes' => 2 * 1024 * 1024, // 2 MB per fetched page

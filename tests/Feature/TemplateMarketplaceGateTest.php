@@ -27,13 +27,13 @@ function templateMarketplaceGatePlanUser(string $plan): User
     return $user;
 }
 
-test('publishing needs the Business plan; Business and moderators pass, Pro is refused', function () {
+test('publishing needs the Pro plan; Pro and moderators pass, Growth is refused', function () {
     $publisher = app(TemplatePublisher::class);
 
-    expect(fn () => $publisher->publishFromZip(templateMarketplaceGatePlanUser('pro'), marketZip()))
-        ->toThrow(RuntimeException::class, 'Business plan');
+    expect(fn () => $publisher->publishFromZip(templateMarketplaceGatePlanUser('growth'), marketZip()))
+        ->toThrow(RuntimeException::class, 'Pro plan');
 
-    $tpl = $publisher->publishFromZip(templateMarketplaceGatePlanUser('business'), marketZip());
+    $tpl = $publisher->publishFromZip(templateMarketplaceGatePlanUser('pro'), marketZip());
     expect($tpl->status)->toBe('draft');
 
     config(['templates.moderators' => [$mod = 'mod-'.uniqid().'@example.com']]);
@@ -43,20 +43,20 @@ test('publishing needs the Business plan; Business and moderators pass, Pro is r
 
 test('submit is gated too — a creator downgraded after drafting cannot enter review', function () {
     $publisher = app(TemplatePublisher::class);
-    $creator = templateMarketplaceGatePlanUser('business');
+    $creator = templateMarketplaceGatePlanUser('pro');
     $tpl = $publisher->publishFromZip($creator, marketZip());
 
     $creator->currentSubscription()->update(['plan' => 'starter']);
     expect(fn () => $publisher->submit($tpl->fresh()))->toThrow(RuntimeException::class);
     expect($tpl->fresh()->status)->toBe('draft');
 
-    $creator->currentSubscription()->update(['plan' => 'business']);
+    $creator->currentSubscription()->update(['plan' => 'pro']);
     $publisher->submit($tpl->fresh());
     expect($tpl->fresh()->status)->toBe('in_review');
 });
 
 test('new templates are priced in gbp and the sync command still runs without a user', function () {
-    $tpl = app(TemplatePublisher::class)->publishFromZip(templateMarketplaceGatePlanUser('business'), marketZip());
+    $tpl = app(TemplatePublisher::class)->publishFromZip(templateMarketplaceGatePlanUser('pro'), marketZip());
     expect($tpl->currency)->toBe('gbp')
         ->and($tpl->priceLabel())->not->toContain('$');
 

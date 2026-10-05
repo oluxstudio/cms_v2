@@ -27,10 +27,10 @@ return new class extends Migration
         DB::table('contacts')->orderBy('id')->each(function ($contact) {
             DB::table('activities')->insert([
                 'contact_id' => $contact->id,
-                'user_id'    => null,
-                'type'       => 'created',
-                'body'       => null,
-                'meta'       => null,
+                'user_id' => null,
+                'type' => 'created',
+                'body' => null,
+                'meta' => null,
                 'created_at' => $contact->created_at,
                 'updated_at' => $contact->created_at,
             ]);
@@ -42,10 +42,10 @@ return new class extends Migration
                 ->each(function ($r) use ($contact) {
                     DB::table('activities')->insert([
                         'contact_id' => $contact->id,
-                        'user_id'    => null,
-                        'type'       => 'form_submitted',
-                        'body'       => null,
-                        'meta'       => json_encode(['response_id' => $r->id, 'form_id' => $r->form_id]),
+                        'user_id' => null,
+                        'type' => 'form_submitted',
+                        'body' => null,
+                        'meta' => json_encode(['response_id' => $r->id, 'form_id' => $r->form_id]),
                         'created_at' => $r->created_at,
                         'updated_at' => $r->created_at,
                     ]);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Collection;
 use App\Models\Invoice;
 use App\Models\Page;
 use App\Models\Site;
@@ -58,6 +59,11 @@ class SiteController extends Controller
         abort_unless($site->canManageTeam(Auth::user()), 403);
 
         return view('api-keys', compact('site'));
+    }
+
+    public function mailboxes($siteID)
+    {
+        return view('site-mailboxes', ['site' => $this->findSiteBySlug($siteID)]);
     }
 
     public function properties($siteID)
@@ -139,6 +145,14 @@ class SiteController extends Controller
         $site = $this->findSiteBySlug($siteID);
 
         return view('collections', ['site' => $site]);
+    }
+
+    public function collectionDetail($siteID, string $collection)
+    {
+        $site = $this->findSiteBySlug($siteID);
+        $col = Collection::where('site_id', $site->id)->findOrFail($collection);
+
+        return view('collection-detail', ['site' => $site, 'collection' => $col]);
     }
 
     public function media($siteID)

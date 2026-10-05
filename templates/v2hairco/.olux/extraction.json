@@ -1,7 +1,7 @@
 {
     "key": "v2hairco",
     "name": "V2Hairco",
-    "extracted_at": "2026-09-13T16:56:01+00:00",
+    "extracted_at": "2026-10-05T07:03:11+00:00",
     "theme": {
         "color-primary": "#146aa8",
         "color-primary-dark": "#0e4f80",
@@ -5863,6 +5863,104 @@
                             ]
                         }
                     ]
+                }
+            ]
+        }
+    ],
+    "forms": [
+        {
+            "name": "donate",
+            "title": "Donate",
+            "fields": [
+                {
+                    "key": "amount",
+                    "label": "Amount",
+                    "type": "number",
+                    "required": true
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": false
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "email",
+                    "required": false
+                },
+                {
+                    "key": "message",
+                    "label": "Message",
+                    "type": "textarea",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "product",
+            "title": "Product",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email (Optional)",
+                    "type": "email",
+                    "required": false
+                },
+                {
+                    "key": "body",
+                    "label": "What Did You Think Of It?",
+                    "type": "textarea",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "quote",
+            "title": "Quote",
+            "fields": [
+                {
+                    "key": "text",
+                    "label": "Text",
+                    "type": "select",
+                    "required": true
+                },
+                {
+                    "key": "checkbox",
+                    "label": "Checkbox",
+                    "type": "checkbox",
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "email",
+                    "required": true
+                },
+                {
+                    "key": "phone",
+                    "label": "Phone",
+                    "type": "tel",
+                    "required": false
+                },
+                {
+                    "key": "notes",
+                    "label": "Notes",
+                    "type": "textarea",
+                    "required": false
                 }
             ]
         }

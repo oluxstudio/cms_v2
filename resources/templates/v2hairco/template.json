@@ -53,6 +53,102 @@
                     "required": true
                 }
             ]
+        },
+        {
+            "name": "donate",
+            "title": "Donate",
+            "fields": [
+                {
+                    "key": "amount",
+                    "label": "Amount",
+                    "type": "number",
+                    "required": true
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": false
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "email",
+                    "required": false
+                },
+                {
+                    "key": "message",
+                    "label": "Message",
+                    "type": "textarea",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "product",
+            "title": "Product",
+            "fields": [
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email (Optional)",
+                    "type": "email",
+                    "required": false
+                },
+                {
+                    "key": "body",
+                    "label": "What Did You Think Of It?",
+                    "type": "textarea",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "quote",
+            "title": "Quote",
+            "fields": [
+                {
+                    "key": "text",
+                    "label": "Text",
+                    "type": "select",
+                    "required": true
+                },
+                {
+                    "key": "checkbox",
+                    "label": "Checkbox",
+                    "type": "checkbox",
+                    "required": false
+                },
+                {
+                    "key": "name",
+                    "label": "Name",
+                    "type": "text",
+                    "required": true
+                },
+                {
+                    "key": "email",
+                    "label": "Email",
+                    "type": "email",
+                    "required": true
+                },
+                {
+                    "key": "phone",
+                    "label": "Phone",
+                    "type": "tel",
+                    "required": false
+                },
+                {
+                    "key": "notes",
+                    "label": "Notes",
+                    "type": "textarea",
+                    "required": false
+                }
+            ]
         }
     ],
     "booking": {
@@ -436,7 +532,7 @@
     "accentColor": "#146aa8",
     "author": "Olux Marketplace",
     "version": "1.0.0",
-    "createdAt": "2026-09-13",
+    "createdAt": "2026-10-05",
     "tags": [
         "App"
     ],

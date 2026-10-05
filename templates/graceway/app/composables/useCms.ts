@@ -62,11 +62,15 @@ export function useCms() {
     window.addEventListener('olux:refresh', () => pull())
   }
 
-  /** CMS collection rows (id + data merged), or the authored fallback. */
+  /** CMS collection rows (id + data merged); the authored fallback only in a template preview. */
+  // false only in a template gallery preview (?template=KEY) — see useOluxSite()
+  const isSite = useOluxSite().isSite
   const items = <T = Record<string, any>>(collection: string, fallback: T[] = []): T[] => {
     const rows = data.value.collections[collection]
-    return Array.isArray(rows) && rows.length ? (rows as T[]) : fallback
+    if (Array.isArray(rows) && rows.length) return rows as T[]
+    // A real site shows only its own entries; samples are for the template preview.
+    return isSite ? [] : fallback
   }
 
-  return { data, ready, items }
+  return { data, ready, items, isSite }
 }

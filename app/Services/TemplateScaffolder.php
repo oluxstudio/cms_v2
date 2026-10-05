@@ -29,7 +29,8 @@ class TemplateScaffolder
      *
      * @return array{pages:int,components:int}
      */
-    public function applyPages(Site $site, array $pageDefs): array
+    /** @param  callable(int $done, string $pageName): void|null  $onPage  progress after each page */
+    public function applyPages(Site $site, array $pageDefs, ?callable $onPage = null, bool $topUp = true): array
     {
         $author = $site->user?->name ?? 'Olux';
         // The business name from signup when known, else a title-cased slug.
@@ -37,6 +38,7 @@ class TemplateScaffolder
         $pages = 0;
         $components = 0;
 
+        $progressDone = 0;
         foreach ($pageDefs as $def) {
             $url = $def['url'] ?? '/';
 
@@ -71,7 +73,7 @@ class TemplateScaffolder
                 // never attach a sibling duplicate next to it.
                 $component = $page->components()->where('components.name', $name)->first()
                     ?? $site->contentComponents()->where('name', $name)->first();
-                if ($component) {
+                if ($component && $topUp) {
                     // Template updated since this site's install: top up any
                     // manifest fields the component doesn't have yet (never
                     // touching values the owner may have edited).
@@ -110,6 +112,9 @@ class TemplateScaffolder
                     $components++;
                 }
                 $page->components()->syncWithoutDetaching([$component->id => ['order' => $order]]);
+            }
+            if ($onPage) {
+                $onPage(++$progressDone, (string) ($def['name'] ?? 'Page'));
             }
         }
 

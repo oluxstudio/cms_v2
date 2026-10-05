@@ -13,12 +13,17 @@ export function useOluxSite() {
   const baked = (cfg.cmsSite as string) || 'hairco'
 
   if (typeof window === 'undefined') {
-    return { site: baked, cmsServed: false, apiBase: ((cfg.bookingApiBase as string) || '').replace(/\/$/, '') }
+    return { site: baked, cmsServed: false, apiBase: ((cfg.bookingApiBase as string) || '').replace(/\/$/, ''), isSite: !!baked }
   }
 
   const w = window as any
   let query: string | null = null
-  try { query = new URL(window.location.href).searchParams.get('site') } catch (_) { /* noop */ }
+  let templatePreview = false
+  try {
+    const q = new URL(window.location.href).searchParams
+    query = q.get('site')
+    templatePreview = q.has('template')
+  } catch (_) { /* noop */ }
 
   const injected = typeof w.__OLUX_SITE__ === 'string' && w.__OLUX_SITE__ ? (w.__OLUX_SITE__ as string) : null
   const site = injected || query || baked
@@ -27,5 +32,9 @@ export function useOluxSite() {
   const origin = window.location.origin
   const apiBase = cmsServed ? origin : (((cfg.bookingApiBase as string) || '').replace(/\/$/, '') || origin)
 
-  return { site, cmsServed, apiBase, baked }
+  // A real site (its own deploy, ?site= preview, or CMS-served domain) shows only
+  // its own collection rows; authored sample rows are for the template gallery
+  // preview (?template=KEY, no site) alone.
+  const isSite = !templatePreview && !!(injected || query || baked)
+  return { site, cmsServed, apiBase, baked, isSite }
 }

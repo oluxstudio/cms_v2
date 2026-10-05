@@ -9,6 +9,7 @@ use App\Services\TemplateInstaller;
 use App\Support\TemplateCards;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -17,10 +18,13 @@ use Livewire\Component;
  */
 class TemplateBuyPage extends Component
 {
+    #[Locked]
     public string $urlKey = '';
 
+    #[Locked]
     public array $card = [];
 
+    #[Locked]
     public string $templateId = '';
 
     public string $siteId = '';

@@ -22,9 +22,9 @@ return new class extends Migration
         // Backfill: every existing site's owner becomes an 'owner' member
         DB::table('sites')->whereNotNull('user_id')->orderBy('id')->each(function ($site) {
             DB::table('site_user')->insertOrIgnore([
-                'site_id'    => $site->id,
-                'user_id'    => $site->user_id,
-                'role'       => 'owner',
+                'site_id' => $site->id,
+                'user_id' => $site->user_id,
+                'role' => 'owner',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

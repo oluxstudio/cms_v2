@@ -7,6 +7,7 @@ use App\Models\ApiToken;
 use App\Models\Site;
 use App\Models\User;
 use App\Services\AccountActivity;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
@@ -15,7 +16,7 @@ test('login fires an account activity record', function () {
     $user = User::factory()->create();
     $this->actingAs($user); // does not fire Login event
 
-    event(new \Illuminate\Auth\Events\Login('web', $user, false));
+    event(new Login('web', $user, false));
 
     $log = AccountActivityLog::where('account_id', $user->id)->where('action', 'login')->first();
     expect($log)->not->toBeNull()->and($log->category)->toBe('Login');
@@ -43,13 +44,13 @@ test('creating a site and API key records account activity', function () {
 
 test('a token-authenticated write is recorded, reads are not', function () {
     $owner = User::factory()->create();
-    $site = Site::create(['user_id'=>$owner->id,'name'=>'aw-'.uniqid(),'domain'=>'aw.test','owner'=>$owner->name,'description'=>'t']);
+    $site = Site::create(['user_id' => $owner->id, 'name' => 'aw-'.uniqid(), 'domain' => 'aw.test', 'owner' => $owner->name, 'description' => 't']);
     $raw = Str::random(64);
-    ApiToken::create(['user_id'=>$owner->id,'site_id'=>$site->id,'name'=>'k','token'=>hash('sha256',$raw),'token_preview'=>substr($raw,0,8)]);
+    ApiToken::create(['user_id' => $owner->id, 'site_id' => $site->id, 'name' => 'k', 'token' => hash('sha256', $raw), 'token_preview' => substr($raw, 0, 8)]);
     $auth = ['Authorization' => 'Bearer '.$raw];
 
     $this->getJson("/api/sites/{$site->name}/components", $auth);       // read — not logged
-    $this->postJson("/api/sites/{$site->name}/posts", ['title'=>'Hi'], $auth)->assertCreated(); // write — logged
+    $this->postJson("/api/sites/{$site->name}/posts", ['title' => 'Hi'], $auth)->assertCreated(); // write — logged
 
     $calls = AccountActivityLog::where('account_id', $owner->id)->where('action', 'api_call')->get();
     expect($calls)->toHaveCount(1)

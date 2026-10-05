@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Exceptions\PlanLimitReached;
 use App\Models\Site;
 use App\Services\MediaStore;
 use App\Support\EmailTemplate;
@@ -78,7 +79,14 @@ class SiteEmailsPage extends Component
     {
         // NB: the plain `image` rule rejects SVG in Laravel 11 — allow it explicitly.
         $this->validate(['logoUpload' => ['file', 'mimes:jpg,jpeg,png,gif,webp,avif,svg', 'max:4096']]);
-        $media = app(MediaStore::class)->store($this->site, $this->logoUpload);
+        try {
+            $media = app(MediaStore::class)->store($this->site, $this->logoUpload);
+        } catch (PlanLimitReached $e) {
+            $this->logoUpload = null;
+            $this->dispatch('upgrade-required', reason: $e->getMessage(), cta: $e->cta);
+
+            return;
+        }
         $this->logo = $media->publicUrl();
         $this->logoUpload = null;
         $this->site->setAttr('email.logo', $this->logo);

@@ -129,13 +129,13 @@ footer{background:var(--dark);padding:2rem 0}
       </div>
       {{-- If there's a CTA-type URL node on the page, wire it up --}}
       @php
-        $ctaNode = $page->components
+        $ctaNode = $page->activeComponents
             ->flatMap->nodes
             ->first(fn($n) => $n->type === 'url' && str_contains(strtolower($n->label), 'cta'));
       @endphp
       @if($ctaNode)
         <a href="{{ $ctaNode->value }}" class="nav-cta">
-          {{ $page->components->flatMap->nodes->first(fn($n) => str_contains(strtolower($n->label), 'cta') && $n->type === 'text')?->value ?? 'Get Started' }}
+          {{ $page->activeComponents->flatMap->nodes->first(fn($n) => str_contains(strtolower($n->label), 'cta') && $n->type === 'text')?->value ?? 'Get Started' }}
         </a>
       @endif
     </nav>
@@ -144,7 +144,7 @@ footer{background:var(--dark);padding:2rem 0}
 
 {{-- ── Page sections ── --}}
 <main>
-@foreach($page->components as $component)
+@foreach($page->activeComponents as $component)
 @php
   $nodes    = $component->nodes->sortBy('order');
   $byLabel  = fn(string $kw) => $nodes->first(fn($n) => str_contains(strtolower($n->label), $kw));

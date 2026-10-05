@@ -260,9 +260,7 @@
                 <div class="flex items-center gap-2 mt-3">
                     <a href="{{ url($site->name.'/connect') }}" wire:navigate
                        class="fx px-3 py-1.5 rounded-xl text-white text-xs font-semibold" style="background:var(--primary);color:var(--on-primary)">Edit site →</a>
-                    @if($site->templatePreviewUrl())
-                        <x-preview-button :href="$site->templatePreviewUrl()" label="Preview" small />
-                    @endif
+                    <x-preview-button :href="$site->visitorPreviewUrl()" label="Preview" small />
                 </div>
             @else
                 <p class="text-xs text-gray-400 rounded-xl border border-dashed border-gray-200 dark:border-white/[0.08] px-3 py-5 text-center">No template applied yet.</p>

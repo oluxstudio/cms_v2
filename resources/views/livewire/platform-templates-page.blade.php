@@ -6,6 +6,7 @@
         'in_review' => ['#fef3c7', '#92400e', 'In review'],
         'private' => ['#e0f2fe', '#0369a1', 'Private'],
         'rejected' => ['#ffe4e6', '#be123c', 'Rejected'],
+        'archived' => ['#e5e7eb', '#4b5563', 'Hidden'],
         default => ['#f3f4f6', '#374151', ucfirst($s)],
     };
     $sourceLabel = fn (?string $s) => match ($s) {
@@ -30,7 +31,7 @@
         <div class="flex flex-wrap items-center gap-2">
         <button wire:click="openUpload" class="fx inline-flex items-center gap-1.5 min-h-[40px] px-4 rounded-full text-sm font-bold shadow-sm" style="background:var(--primary);color:var(--on-primary)">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            Upload template
+            Add template
         </button>
         <div class="flex items-center gap-1 p-1 rounded-full bg-white/70 dark:bg-white/[0.05] shadow-sm">
             @foreach (['catalog' => 'Catalog', 'uploads' => 'Client uploads', 'review' => 'Review'.($stats['in_review'] ? ' ('.$stats['in_review'].')' : '')] as $tk => $tl)
@@ -73,7 +74,7 @@
             <select wire:model.live="status" class="bkf-input !w-auto" aria-label="Status">
                 <option value="">Any status</option>
                 @if ($tab === 'catalog')
-                    @foreach (['published' => 'Published', 'draft' => 'Draft', 'in_review' => 'In review', 'private' => 'Private', 'rejected' => 'Rejected'] as $v => $l)
+                    @foreach (['published' => 'Published', 'draft' => 'Draft', 'in_review' => 'In review', 'private' => 'Private', 'rejected' => 'Rejected', 'archived' => 'Hidden'] as $v => $l)
                         <option value="{{ $v }}">{{ $l }}</option>
                     @endforeach
                 @else
@@ -137,13 +138,24 @@
                             @if ($preview = $t->previewUrl())
                                 <x-preview-button :href="$preview" label="Preview" small />
                             @endif
-                            @if ($t->status !== 'private' && $t->status !== 'in_review')
+                            @if ($t->status === 'archived')
+                                <button wire:click="show('{{ $t->id }}')" class="{{ $btnOutline }}">Show</button>
+                            @elseif ($t->status !== 'private' && $t->status !== 'in_review')
                                 <button wire:click="togglePublished('{{ $t->id }}')"
                                         @if ($t->status === 'published') data-confirm="Hide {{ $t->name }} from the Templates store? Sites already using it keep it." @endif
                                         class="{{ $t->status === 'published' ? $btnOutline : $btn }}"
                                         @if ($t->status !== 'published') style="background:var(--primary);color:var(--on-primary)" @endif>
                                     {{ $t->status === 'published' ? 'Unpublish' : 'Publish' }}
                                 </button>
+                            @endif
+                            @if (\App\Livewire\PlatformTemplatesPage::canNewVersion($t))
+                                @if ($t->source_repo)
+                                    <button wire:click="updateFromGithub('{{ $t->id }}')" wire:loading.attr="disabled" wire:target="updateFromGithub('{{ $t->id }}')"
+                                            title="Pull the latest from {{ Str::after($t->source_repo, 'github.com/') }}{{ $t->source_branch ? ' ('.$t->source_branch.')' : '' }} and build a new version"
+                                            class="{{ $btnOutline }} disabled:opacity-60"><svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v5h5M20 20v-5h-5M5.6 15A7 7 0 0018.4 15M18.4 9A7 7 0 005.6 9"/></svg>Update from GitHub</button>
+                                @else
+                                    <button wire:click="openNewVersion('{{ $t->id }}')" class="{{ $btnOutline }}">New version</button>
+                                @endif
                             @endif
                             <button wire:click="startEdit('{{ $t->id }}')" class="{{ $btnOutline }}">Edit</button>
                         </div>
@@ -167,7 +179,7 @@
                                 @if ($u->status === 'ready' && $u->template_id)
                                     <button wire:click="open('{{ $u->template_id }}')" class="{{ $btnOutline }}">Template</button>
                                 @endif
-                                @unless ($u->inProgress())
+                                @unless ($u->inProgress() || ($u->template_id && ! $u->replaces_template_id))
                                     <button wire:click="deleteUpload('{{ $u->id }}')" data-confirm="Delete this upload and its files?" class="{{ $btnOutline }}">Delete</button>
                                 @endunless
                             </span>
@@ -309,13 +321,32 @@
             </x-slot:header>
 
             <form id="tpl-edit-form" wire:submit="saveEdit" class="p-6 space-y-5">
+                <div class="flex items-start gap-4">
+                    <div class="w-28 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/[0.05] shrink-0">
+                        @if ($thumbnail && method_exists($thumbnail, 'temporaryUrl'))
+                            <img src="{{ $thumbnail->temporaryUrl() }}" alt="" class="w-full h-full object-cover object-top">
+                        @elseif ($editingTemplate?->thumbnail_url)
+                            <img src="{{ $editingTemplate->thumbnail_url }}" alt="" class="w-full h-full object-cover object-top">
+                        @endif
+                    </div>
+                    <label class="block flex-1 min-w-0">
+                        <span class="bkf-label">Thumbnail <span class="font-normal text-gray-500">(store cards · JPG, PNG or WebP, 4 MB max)</span></span>
+                        <input type="file" wire:model="thumbnail" accept="image/jpeg,image/png,image/webp"
+                               class="bkf-input w-full file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-[12.5px] file:font-bold file:bg-gray-100 dark:file:bg-white/[0.08] file:text-gray-700 dark:file:text-gray-200">
+                        <span wire:loading wire:target="thumbnail" class="text-[12px] text-gray-500">Sending the image…</span>
+                        @error('thumbnail')<span class="block text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        @if ($editingTemplate?->thumbnail_url && ! $thumbnail)
+                            <button type="button" wire:click="removeThumbnail" data-confirm="Remove this template's thumbnail?" class="mt-1 text-[12px] font-semibold text-rose-600 hover:underline">Remove thumbnail</button>
+                        @endif
+                    </label>
+                </div>
                 <label class="block">
                     <span class="bkf-label">Name</span>
                     <input type="text" wire:model.live.debounce.300ms="edit.name" maxlength="80" class="bkf-input w-full">
                     @error('edit.name')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
                 </label>
                 <label class="block">
-                    <span class="bkf-label">Short description <span class="font-normal text-gray-500">(on store cards)</span></span>
+                    <span class="bkf-label">Tagline <span class="font-normal text-gray-500">(the one-line description on template cards)</span></span>
                     <input type="text" wire:model="edit.short_description" maxlength="200" class="bkf-input w-full">
                     @error('edit.short_description')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
                 </label>
@@ -344,6 +375,21 @@
                     <input type="text" wire:model="edit.tags" maxlength="300" placeholder="church, events, donations" class="bkf-input w-full">
                 </label>
 
+                @if ($editingId && ($repoTpl = \App\Models\Template::find($editingId)) && \App\Livewire\PlatformTemplatesPage::canNewVersion($repoTpl))
+                    <div class="grid sm:grid-cols-[1fr_10rem] gap-3">
+                        <label class="block">
+                            <span class="bkf-label">GitHub repository <span class="font-normal text-gray-500">(for "Update from GitHub")</span></span>
+                            <input type="url" wire:model="edit.source_repo" placeholder="https://github.com/owner/repo" class="bkf-input w-full">
+                            @error('edit.source_repo')<span class="block text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        </label>
+                        <label class="block">
+                            <span class="bkf-label">Branch</span>
+                            <input type="text" wire:model="edit.source_branch" placeholder="default" class="bkf-input w-full">
+                            @error('edit.source_branch')<span class="block text-[12px] font-semibold text-rose-600">That branch name isn't valid.</span>@enderror
+                        </label>
+                    </div>
+                @endif
+
                 <fieldset>
                     <legend class="bkf-label">Features it turns on</legend>
                     <p class="text-[12px] text-gray-500 dark:text-gray-400 mb-2">Switched on automatically for a site when this template is applied.</p>
@@ -360,10 +406,73 @@
                         @endforeach
                     </div>
                 </fieldset>
+
+                @php
+                    $editTpl = \App\Models\Template::find($editingId);
+                    $lockedPrivate = $editTpl && $editTpl->isAccountUpload();
+                    $grants = $editTpl ? $editTpl->entitlements()->with('user:id,name,email')->latest()->get() : collect();
+                @endphp
+                <fieldset>
+                    <legend class="bkf-label">Who can see it</legend>
+                    <div class="grid sm:grid-cols-2 gap-2">
+                        @foreach (['public' => ['Public', 'Listed in the Templates store for everyone.'], 'private' => ['Private', 'Hidden. Only the accounts you assign below can see and use it.']] as $vk => [$vl, $vd])
+                            <label class="flex items-start gap-2.5 rounded-xl border px-3 py-2.5 {{ $lockedPrivate && $vk === 'public' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer' }} {{ $edit['visibility'] === $vk ? '' : 'border-gray-200 dark:border-white/[0.1]' }}"
+                                   @if ($edit['visibility'] === $vk) style="border-color:var(--primary);background:color-mix(in srgb, var(--primary) 8%, transparent)" @endif>
+                                <input type="radio" wire:model.live="edit.visibility" value="{{ $vk }}" class="mt-0.5 accent-[var(--primary)]" @disabled($lockedPrivate && $vk === 'public')>
+                                <span>
+                                    <span class="block text-[13px] font-bold text-gray-900 dark:text-white">{{ $vl }}</span>
+                                    <span class="block text-[11.5px] text-gray-500 dark:text-gray-400">{{ $vd }}</span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                    @if ($lockedPrivate)<p class="text-[11.5px] text-gray-500 dark:text-gray-400 mt-1.5">A client's own upload always stays private to their account.</p>@endif
+                </fieldset>
+
+                @if ($edit['visibility'] === 'private')
+                    <fieldset>
+                        <legend class="bkf-label">Assigned accounts</legend>
+                        <p class="text-[12px] text-gray-500 dark:text-gray-400 mb-2">They'll find it under "Made for you" in their Templates store and can use it on any of their sites. Removing an account doesn't change sites already using it.</p>
+                        <div class="flex gap-2">
+                            <input type="email" wire:model="assignEmail" placeholder="account owner's email" class="bkf-input w-full" wire:keydown.enter.prevent="assignAccount">
+                            <button type="button" wire:click="assignAccount" class="{{ $btnOutline }} shrink-0">Assign</button>
+                        </div>
+                        @error('assignEmail')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        <div class="mt-3 divide-y divide-gray-50 dark:divide-white/[0.04]">
+                            @forelse ($grants as $g)
+                                <div class="flex items-center gap-3 py-2">
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block text-[13px] font-bold text-gray-900 dark:text-white truncate">{{ $g->user?->name ?? 'Deleted account' }}</span>
+                                        <span class="block text-[11.5px] text-gray-500 dark:text-gray-400 truncate">{{ $g->user?->email }} · {{ ['granted' => 'assigned', 'upload' => 'their upload', 'purchase' => 'bought', 'free' => 'added'][$g->source] ?? $g->source }}</span>
+                                    </span>
+                                    @if ($g->source === 'granted' && $g->user)
+                                        <button type="button" wire:click="unassignAccount('{{ $g->user->id }}')" data-confirm="Remove {{ $g->user->name }}'s access to this template? Their sites keep their current design." class="text-[12px] font-semibold text-rose-600 hover:underline">Remove</button>
+                                    @endif
+                                </div>
+                            @empty
+                                <p class="text-[12.5px] text-gray-500 dark:text-gray-400 py-2">Not assigned to any account yet.</p>
+                            @endforelse
+                        </div>
+                    </fieldset>
+                @endif
             </form>
 
             <x-slot:footer>
-                <div class="flex justify-end gap-2">
+                @php
+                    $editBlocker = $editTpl ? \App\Livewire\PlatformTemplatesPage::deleteBlocker($editTpl) : null;
+                @endphp
+                <div class="flex items-center gap-2">
+                    {{-- Delete a mistaken / duplicate template (sales & activity records are kept). --}}
+                    @if ($editTpl)
+                        @if ($editBlocker)
+                            <span class="{{ $btnOutline }} opacity-50 cursor-not-allowed !text-rose-600" title="{{ $editBlocker }}">Delete</span>
+                        @else
+                            <button type="button" wire:click="deleteTemplate('{{ $editTpl->id }}')"
+                                    data-confirm="Delete {{ $editTpl->name }}{{ $editTpl->builtin_key ? ' ('.$editTpl->builtin_key.')' : '' }}? Its versions and files are removed for good. Sales and activity records are kept."
+                                    class="{{ $btnOutline }} !text-rose-600 !border-rose-200 dark:!border-rose-500/30">Delete</button>
+                        @endif
+                    @endif
+                    <span class="flex-1"></span>
                     <button type="button" wire:click="cancelEdit" class="{{ $btnOutline }}">Cancel</button>
                     <button type="submit" form="tpl-edit-form" class="{{ $btn }} min-w-[7rem]" style="background:var(--primary);color:var(--on-primary)">
                         <span wire:loading.remove wire:target="saveEdit">Save changes</span>
@@ -374,47 +483,158 @@
         </x-side-drawer>
     @endif
 
-    {{-- ══ Upload drawer: a new Olux Studio store template ══ --}}
+    {{-- ══ Add-template drawer: zip · GitHub · copy a site ══ --}}
     @if ($uploading)
         <x-side-drawer close="closeUpload" width="max-w-xl">
             <x-slot:header>
-                <p class="text-[11px] font-bold uppercase tracking-wide text-gray-500">New template</p>
-                <h2 class="font-display text-xl font-bold text-gray-900 dark:text-white">Upload a template</h2>
+                @if ($replacingTemplate)
+                    <p class="text-[11px] font-bold uppercase tracking-wide text-gray-500">New version</p>
+                    <h2 class="font-display text-xl font-bold text-gray-900 dark:text-white">{{ $replacingTemplate->name }}</h2>
+                @else
+                    <p class="text-[11px] font-bold uppercase tracking-wide text-gray-500">New template</p>
+                    <h2 class="font-display text-xl font-bold text-gray-900 dark:text-white">Add a template</h2>
+                @endif
             </x-slot:header>
 
-            <form id="tpl-upload-form" wire:submit="uploadTemplate" class="p-6 space-y-5">
-                <p class="text-[13px] text-gray-600 dark:text-gray-300">
-                    Upload a zipped Nuxt app. It's checked, connected to the editor and built in the background, then appears in
-                    the catalog as a <b>draft</b> by Olux Studio. Edit its details and publish it when you're happy.
-                </p>
-                <label class="block">
-                    <span class="bkf-label">Nuxt app (.zip, up to 60 MB)</span>
-                    <input type="file" wire:model="appZip" accept=".zip,application/zip"
-                           class="bkf-input w-full file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-[12.5px] file:font-bold file:bg-gray-100 dark:file:bg-white/[0.08] file:text-gray-700 dark:file:text-gray-200">
-                    <span wire:loading wire:target="appZip" class="text-[12px] text-gray-500">Sending the file…</span>
-                    @error('appZip')<span class="block text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
-                </label>
-                <label class="block">
-                    <span class="bkf-label">Name (optional — taken from the app otherwise)</span>
-                    <input type="text" wire:model="uploadName" maxlength="80" class="bkf-input w-full">
-                </label>
-                <div class="rounded-2xl bg-gray-50 dark:bg-white/[0.04] p-4 text-[12.5px] text-gray-600 dark:text-gray-300">
-                    <p class="font-bold text-gray-800 dark:text-gray-100 mb-1">The zip should contain</p>
-                    <ul class="list-disc ml-4 space-y-1">
-                        <li><code>package.json</code>, <code>nuxt.config.ts</code> and <code>app/pages</code> (or <code>pages</code>).</li>
-                        <li>Page sections as components, so each becomes an editable block.</li>
-                        <li>No <code>node_modules</code>, <code>.nuxt</code>, <code>.output</code> or <code>.env</code> files.</li>
-                    </ul>
+            <div class="p-6 space-y-5">
+                @if ($replacingTemplate)
+                    <p class="rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-4 text-[12.5px] text-amber-900 dark:text-amber-200">
+                        The app is checked and rebuilt under the same template, as version
+                        <b>{{ \App\Services\TemplateUploads\TemplateUploadPipeline::nextVersion($replacingTemplate->versions()->pluck('version')->all()) }}</b>.
+                        Its name, price, status and thumbnail stay as they are. Sites using it keep their current version until you update them from its details.
+                    </p>
+                @endif
+                <div class="grid {{ $replacingTemplate ? 'grid-cols-2' : 'grid-cols-3' }} gap-2">
+                    @foreach (array_filter([
+                        'zip' => ['M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2', 'Upload a .zip', 'A Nuxt app from your computer'],
+                        'github' => ['M16 18l6-6-6-6M8 6l-6 6 6 6', 'From GitHub', 'Import a repository'],
+                        'site' => $replacingTemplate ? null : ['M8 8V5a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1h-3M5 8h10a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V9a1 1 0 011-1z', 'Copy a site', 'Turn an existing site into a template'],
+                    ]) as $mk => [$mi, $ml, $md])
+                        <button type="button" wire:click="$set('addMode', '{{ $mk }}')"
+                                class="text-left rounded-2xl border px-3 py-3 transition-colors {{ $addMode === $mk ? '' : 'border-gray-200 dark:border-white/[0.1] hover:border-gray-400' }}"
+                                @if ($addMode === $mk) style="border-color:var(--primary);background:color-mix(in srgb, var(--primary) 8%, transparent)" @endif>
+                            <svg class="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ $mi }}"/></svg>
+                            <span class="block text-[13px] font-bold text-gray-900 dark:text-white mt-1">{{ $ml }}</span>
+                            <span class="block text-[11px] text-gray-500 dark:text-gray-400 leading-snug">{{ $md }}</span>
+                        </button>
+                    @endforeach
                 </div>
-            </form>
+
+                @if ($addMode === 'zip')
+                    <form id="tpl-add-form" wire:submit="uploadTemplate" class="space-y-5">
+                        <p class="text-[13px] text-gray-600 dark:text-gray-300">
+                            Upload a zipped Nuxt app. It's checked, connected to the editor and built in the background, then appears in
+                            the catalog as a <b>draft</b> by Olux Studio. Edit its details and publish it when you're happy.
+                        </p>
+                        <label class="block">
+                            <span class="bkf-label">Nuxt app (.zip, up to 60 MB)</span>
+                            <input type="file" wire:model="appZip" accept=".zip,application/zip"
+                                   class="bkf-input w-full file:mr-3 file:rounded-lg file:border-0 file:px-3 file:py-1.5 file:text-[12.5px] file:font-bold file:bg-gray-100 dark:file:bg-white/[0.08] file:text-gray-700 dark:file:text-gray-200">
+                            <span wire:loading wire:target="appZip" class="text-[12px] text-gray-500">Sending the file…</span>
+                            @error('appZip')<span class="block text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        </label>
+                        @if (! $replacingId && $zipMatchId && ($zipMatch = \App\Models\Template::find($zipMatchId)))
+                            <div class="rounded-2xl p-4 text-[12.5px] {{ $asSeparate ? 'bg-gray-50 dark:bg-white/[0.04] text-gray-600 dark:text-gray-300' : '' }}"
+                                 @unless ($asSeparate) style="background:color-mix(in srgb, var(--primary) 8%, transparent)" @endunless>
+                                @if ($asSeparate)
+                                    <p>This will be added as a <b>separate new template</b>.</p>
+                                @else
+                                    <p class="text-gray-800 dark:text-gray-100">This looks like <b>{{ $zipMatch->name }}</b> — it will be uploaded as its <b>next version</b>, not a new template. Sites using it stay on their version until you press "Update sites".</p>
+                                @endif
+                                <label class="mt-2 flex items-center gap-2 text-[12.5px] text-gray-600 dark:text-gray-300 cursor-pointer">
+                                    <input type="checkbox" wire:model.live="asSeparate" class="accent-[var(--primary)]">
+                                    Add it as a separate new template instead
+                                </label>
+                            </div>
+                        @endif
+                        @unless ($replacingTemplate)
+                            <label class="block">
+                                <span class="bkf-label">Name (optional — taken from the app otherwise)</span>
+                                <input type="text" wire:model="uploadName" maxlength="80" class="bkf-input w-full">
+                            </label>
+                            @include('partials.template-visibility-choice')
+                        @endunless
+                        <div class="rounded-2xl bg-gray-50 dark:bg-white/[0.04] p-4 text-[12.5px] text-gray-600 dark:text-gray-300">
+                            <p class="font-bold text-gray-800 dark:text-gray-100 mb-1">The zip should contain</p>
+                            <ul class="list-disc ml-4 space-y-1">
+                                <li><code>package.json</code>, <code>nuxt.config.ts</code> and <code>app/pages</code> (or <code>pages</code>).</li>
+                                <li>Page sections as components, so each becomes an editable block.</li>
+                                <li>No <code>node_modules</code>, <code>.nuxt</code>, <code>.output</code> or <code>.env</code> files.</li>
+                            </ul>
+                        </div>
+                    </form>
+                @elseif ($addMode === 'github')
+                    <form id="tpl-add-form" wire:submit="importFromGithub" class="space-y-5">
+                        <p class="text-[13px] text-gray-600 dark:text-gray-300">
+                            Paste a GitHub repository holding a Nuxt app. We download it and put it through the same checks and build as a zip upload.
+                            Private repositories need <code>TEMPLATES_GIT_TOKEN</code> set on the server.
+                        </p>
+                        <label class="block">
+                            <span class="bkf-label">Repository</span>
+                            <input type="url" wire:model="repoUrl" placeholder="https://github.com/owner/repo" class="bkf-input w-full">
+                            @error('repoUrl')<span class="block text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        </label>
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <label class="block">
+                                <span class="bkf-label">Branch (optional)</span>
+                                <input type="text" wire:model="repoBranch" placeholder="main" class="bkf-input w-full">
+                            </label>
+                            @unless ($replacingTemplate)
+                                <label class="block">
+                                    <span class="bkf-label">Name (optional)</span>
+                                    <input type="text" wire:model="uploadName" maxlength="80" class="bkf-input w-full">
+                                </label>
+                            @endunless
+                        </div>
+                        @unless ($replacingTemplate)
+                            @include('partials.template-visibility-choice')
+                        @endunless
+                    </form>
+                @else
+                    <form id="tpl-add-form" wire:submit="createFromSite" class="space-y-5">
+                        <p class="text-[13px] text-gray-600 dark:text-gray-300">
+                            Copies a site's pages, sections, words, pictures and colours into a new <b>draft</b> template that keeps the site's design.
+                            The site itself isn't changed.
+                        </p>
+                        <label class="block">
+                            <span class="bkf-label">Find a site</span>
+                            <input type="search" wire:model.live.debounce.300ms="siteQuery" placeholder="Site name or domain" class="bkf-input w-full">
+                        </label>
+                        @if ($this->siteMatches->isNotEmpty())
+                            <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] divide-y divide-gray-50 dark:divide-white/[0.04] overflow-hidden">
+                                @foreach ($this->siteMatches as $sm)
+                                    <button type="button" wire:click="pickSite('{{ $sm->id }}')"
+                                            class="w-full text-left flex items-center gap-3 px-3 py-2.5 {{ $fromSiteId === $sm->id ? '' : 'hover:bg-gray-50 dark:hover:bg-white/[0.04]' }}"
+                                            @if ($fromSiteId === $sm->id) style="background:color-mix(in srgb, var(--primary) 8%, transparent)" @endif>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-[13px] font-bold text-gray-900 dark:text-white truncate">{{ \Illuminate\Support\Str::headline($sm->name) }}</span>
+                                            <span class="block text-[11.5px] text-gray-500 dark:text-gray-400 truncate">{{ $sm->domain }} · {{ $sm->user?->email }} · design: {{ $sm->template ?: 'blank' }}</span>
+                                        </span>
+                                        @if ($fromSiteId === $sm->id)<span class="text-[11px] font-bold" style="color:var(--primary)">Selected</span>@endif
+                                    </button>
+                                @endforeach
+                            </div>
+                        @elseif (mb_strlen(trim($siteQuery)) >= 2)
+                            <p class="text-[12.5px] text-gray-500">No sites match.</p>
+                        @endif
+                        @error('fromSiteId')<span class="block text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        <label class="block">
+                            <span class="bkf-label">Template name</span>
+                            <input type="text" wire:model="fromSiteName" maxlength="80" class="bkf-input w-full" placeholder="Church Classic">
+                            @error('fromSiteName')<span class="block text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        </label>
+                        @include('partials.template-visibility-choice')
+                    </form>
+                @endif
+            </div>
 
             <x-slot:footer>
                 <div class="flex justify-end gap-2">
                     <button type="button" wire:click="closeUpload" class="{{ $btnOutline }}">Cancel</button>
-                    <button type="submit" form="tpl-upload-form" wire:loading.attr="disabled" wire:target="appZip,uploadTemplate"
-                            class="{{ $btn }} min-w-[7rem] disabled:opacity-50" style="background:var(--primary);color:var(--on-primary)">
-                        <span wire:loading.remove wire:target="uploadTemplate">Upload</span>
-                        <span wire:loading wire:target="uploadTemplate">Starting…</span>
+                    <button type="submit" form="tpl-add-form" wire:loading.attr="disabled" wire:target="appZip,uploadTemplate,importFromGithub,createFromSite"
+                            class="{{ $btn }} min-w-[8rem] disabled:opacity-50" style="background:var(--primary);color:var(--on-primary)">
+                        <span wire:loading.remove wire:target="uploadTemplate,importFromGithub,createFromSite">{{ ['zip' => 'Upload', 'github' => 'Import', 'site' => 'Create template'][$addMode] }}</span>
+                        <span wire:loading wire:target="uploadTemplate,importFromGithub,createFromSite">Working…</span>
                     </button>
                 </div>
             </x-slot:footer>
@@ -448,6 +668,62 @@
                             <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ $k }}</p>
                         </div>
                     @endforeach
+                </div>
+
+                @if ($detail['outdated'] > 0)
+                    <div class="rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-4 flex flex-wrap items-center gap-3">
+                        <p class="flex-1 min-w-[12rem] text-[12.5px] text-amber-900 dark:text-amber-200">
+                            <b>{{ $detail['outdated'] }} {{ Str::plural('site', $detail['outdated']) }}</b> {{ $detail['outdated'] === 1 ? 'is' : 'are' }} on an older version.
+                            Updating adds the new version's pages and sections. Their content is kept.
+                        </p>
+                        <button wire:click="updateSites('{{ $opened->id }}')" data-confirm="Move {{ $detail['outdated'] }} {{ Str::plural('site', $detail['outdated']) }} to the latest version of {{ $opened->name }}?"
+                                class="{{ $btn }}" style="background:var(--primary);color:var(--on-primary)">Update sites</button>
+                    </div>
+                @endif
+
+                @if ($opened->source_repo)
+                    <div class="rounded-2xl bg-gray-50 dark:bg-white/[0.04] p-4">
+                        <p class="text-[12.5px] text-gray-600 dark:text-gray-300">
+                            Built from <a href="{{ $opened->source_repo }}{{ $opened->source_branch ? '/tree/'.$opened->source_branch : '' }}" target="_blank" rel="noopener" class="font-bold underline">{{ Str::after($opened->source_repo, 'github.com/') }}</a>{{ $opened->source_branch ? ' · '.$opened->source_branch : ' · default branch' }}.
+                            Push your changes, then press <b>Update from GitHub</b> — it builds the next version in the background and tells you when it's ready.
+                        </p>
+                    </div>
+                @endif
+
+                <div class="flex flex-wrap gap-2">
+                    @if (\App\Livewire\PlatformTemplatesPage::canNewVersion($opened))
+                        @if ($opened->source_repo)
+                            <button wire:click="updateFromGithub('{{ $opened->id }}')" wire:loading.attr="disabled" wire:target="updateFromGithub('{{ $opened->id }}')"
+                                    class="{{ $btn }} disabled:opacity-60" style="background:var(--primary);color:var(--on-primary)"><svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v5h5M20 20v-5h-5M5.6 15A7 7 0 0018.4 15M18.4 9A7 7 0 005.6 9"/></svg>Update from GitHub</button>
+                        @endif
+                        <button wire:click="openNewVersion('{{ $opened->id }}')" class="{{ $btnOutline }}">{{ $opened->source_repo ? 'New version (zip or other repo)' : 'New version' }}</button>
+                    @endif
+                    @if ($opened->status === 'archived')
+                        <button wire:click="show('{{ $opened->id }}')" class="{{ $btnOutline }}">Show</button>
+                    @elseif ($opened->status !== 'in_review')
+                        <button wire:click="hide('{{ $opened->id }}')" data-confirm="Hide {{ $opened->name }}? It leaves the store and can't be applied to new sites. Sites already using it keep it, and you can show it again any time."
+                                class="{{ $btnOutline }}">Hide</button>
+                    @endif
+                </div>
+                @if ($opened->status === 'archived')
+                    <p class="-mt-4 text-[11.5px] text-gray-500 dark:text-gray-400">Hidden — not in the store or libraries, and can't be applied to new sites. Sites already using it keep it.</p>
+                @endif
+
+                {{-- Delete — e.g. a duplicate import. Refused while live sites use it (hide instead). --}}
+                <div class="rounded-2xl border border-rose-100 dark:border-rose-500/20 p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-[13px] font-bold text-gray-900 dark:text-white">Delete template</p>
+                            <p class="text-[11.5px] text-gray-500 dark:text-gray-400">{{ $detail['delete_blocker'] ?? 'Removes it, its versions and its files for good. Sales stay on record.' }}</p>
+                        </div>
+                        @if ($detail['delete_blocker'])
+                            <span class="{{ $btnOutline }} opacity-50 cursor-not-allowed" title="{{ $detail['delete_blocker'] }}">Delete</span>
+                        @else
+                            <button wire:click="deleteTemplate('{{ $opened->id }}')"
+                                    data-confirm="Delete {{ $opened->name }}{{ $opened->builtin_key ? ' ('.$opened->builtin_key.')' : '' }}? Its versions and files are removed and this can't be undone."
+                                    class="{{ $btn }} !bg-rose-600 !text-white">Delete</button>
+                        @endif
+                    </div>
                 </div>
 
                 @if ($opened->required_features)

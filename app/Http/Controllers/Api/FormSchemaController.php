@@ -31,7 +31,7 @@ class FormSchemaController extends Controller
             return response()->json(['message' => 'Form not found.'], 404);
         }
 
-        if (! $form->is_active) {
+        if (! $form->isLive()) {
             return response()->json(['message' => 'This form is not accepting submissions.'], 403);
         }
 

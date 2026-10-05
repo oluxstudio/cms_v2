@@ -182,6 +182,7 @@ class PlatformDomainsPage extends Component
         $sites = null;
         if ($this->tab === 'orders') {
             $orders = DomainOrder::with('user', 'site')
+                ->when($this->status !== 'checkout', fn ($q) => $q->where('status', '!=', 'checkout'))
                 ->when($this->status !== '', fn ($q) => $this->status === 'expiring'
                     ? $q->where('status', 'registered')->whereBetween('expires_at', [now(), now()->addDays(30)])
                     : $q->where('status', $this->status))

@@ -136,7 +136,7 @@ class SeedAboutSection extends Command
             ['site_id' => $site->id, 'slug' => Str::slug($name)],
             ['name' => $name, 'type' => 'list', 'fields' => $fields, 'is_public' => true, 'allow_submit' => false],
         );
-        $collection->items()->delete();
+        $collection->items()->withTrashed()->forceDelete();
         foreach ($items as $data) {
             $collection->items()->create(['site_id' => $site->id, 'data' => $data, 'status' => 'published']);
         }

@@ -13,6 +13,7 @@ use App\Services\TemplateInstaller;
 use App\Services\TemplatePackageImporter;
 use App\Services\TemplateRatings;
 use App\Support\CuratedTemplates;
+use App\Support\TemplateAccess;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -281,7 +282,8 @@ class MarketplacePage extends Component
     public function rateTemplate(string $templateId, int $stars): void
     {
         $tpl = Template::find($templateId);
-        if (! $tpl) {
+        // Only published templates this account can see (never a private one it isn't assigned).
+        if (! $tpl || ! in_array($tpl->status, ['published', 'private'], true) || ! TemplateAccess::canSee(Auth::user(), $tpl, $this->site)) {
             return;
         }
         $ratings = app(TemplateRatings::class);

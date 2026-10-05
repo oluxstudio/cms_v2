@@ -7,7 +7,11 @@ use App\Models\Todo;
 use App\Models\User;
 use App\Support\SiteProperties;
 use App\Support\SiteSetupTask;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Livewire\Livewire;
+
+// Site Names are unique across sites: keep each test's sites out of the next run.
+uses(DatabaseTransactions::class);
 
 function setupSite(): array
 {
@@ -38,7 +42,7 @@ test('every new site gets the setup task with the five steps, in order', functio
 test('steps tick themselves from real data and the task completes when all are done', function () {
     [$owner, $site] = setupSite();
 
-    SiteProperties::save($site, ['name' => 'Grace Way', 'phones' => [], 'emails' => [], 'variables' => []]);
+    SiteProperties::save($site, ['values' => ['site_name' => 'Grace Way']]);
     $site->update(['template' => 'graceway']);
     ContentVersion::create(['site_id' => $site->id, 'subject_type' => 'page', 'subject_id' => 'x', 'payload' => [], 'label' => 'x', 'created_by' => $owner->id]);
     SiteSetupTask::sync($site->fresh());

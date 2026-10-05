@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\CollectionAutoFields;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -34,13 +35,18 @@ class CollectionSourceExtractor
             $code = File::get($file);
 
             // Docblock marker(s): each names the collection and points at the
-            // NEXT array literal in the source.
-            if (preg_match_all('#/\*\*\s*@olux-collection\s+([A-Za-z][\w ]*?)\s*\*/(.*?)=\s*\[#s', $code, $m, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+            // NEXT array literal in the source. The block may also declare
+            // field types, one per line (see declaredFields()):
+            //   /** @olux-collection Projects
+            //    * @olux-field images images
+            //    * @olux-field title text required
+            //    */
+            if (preg_match_all('#/\*\*\s*@olux-collection\s+([A-Za-z][\w ]*?)[ \t]*(\r?\n(?:(?!\*/).)*?)?\s*\*/(.*?)=\s*\[#s', $code, $m, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
                 foreach ($m as $hit) {
                     $name = trim($hit[1][0]);
                     $offset = $hit[0][1] + strlen($hit[0][0]) - 1; // position of '['
                     if ($rows = $this->parseArray($code, $offset)) {
-                        $collections[$name] = $this->definition($name, $rows, basename($file));
+                        $collections[$name] = $this->definition($name, $rows, basename($file), $this->declaredFields((string) ($hit[2][0] ?? '')));
                     }
                 }
 
@@ -312,8 +318,51 @@ class CollectionSourceExtractor
         return $out;
     }
 
-    /** Manifest collections entry: typed field schema + items verbatim. */
-    private function definition(string $name, array $rows, string $sourceFile): array
+    /** Field types a template may declare with @olux-field. */
+    public const DECLARED_TYPES = ['text', 'textarea', 'textarea2', 'textarea6', 'textarea10', 'textarea15', 'url', 'email', 'tel', 'number', 'date', 'select',
+        'checkbox', 'toggle', 'image', 'images', 'tags', 'list'];
+
+    /**
+     * `@olux-field <key> <type> [required] [options=a|b|c] [label="Shown label"] [auto=created_at]`
+     *   auto=  a system-filled source (created_at, updated_at, created_by, number, …)
+     * lines from a collection's docblock → [key => partial field definition].
+     *   images  a gallery (list of asset paths)    tags  a list of short words
+     *   image   one asset                          textarea / url / number / date / select / …
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function declaredFields(string $doc): array
+    {
+        $out = [];
+        // Type = letters then digits (textarea10, textarea2 …), so a size suffix is never split off.
+        preg_match_all('#@olux-field\s+([A-Za-z][\w-]*)\s+([a-z]+\d*)\b([^\n]*)#', $doc, $m, PREG_SET_ORDER);
+        foreach ($m as [$_, $key, $type, $rest]) {
+            if (! in_array($type, self::DECLARED_TYPES, true)) {
+                continue;
+            }
+            $field = ['type' => $type, 'required' => (bool) preg_match('#\brequired\b#', $rest)];
+            if (preg_match('#label="([^"]{1,60})"#', $rest, $lm)) {
+                $field['label'] = $lm[1];
+            }
+            if (preg_match('#options=([^\s]+)#', $rest, $om)) {
+                $field['options'] = array_values(array_filter(array_map('trim', explode('|', $om[1])), 'strlen'));
+            }
+            // System-filled source (auto=created_at, auto=number, …) — see CollectionAutoFields.
+            if (preg_match('#auto=([\w:.-]+)#', $rest, $am) && CollectionAutoFields::valid($am[1])) {
+                $field['auto'] = $am[1];
+            }
+            $out[$key] = $field;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Manifest collections entry: typed field schema + items verbatim.
+     * Declared fields (@olux-field) win over inferred types and are flagged
+     * `declared`, so installs keep existing sites' schemas in step.
+     */
+    private function definition(string $name, array $rows, string $sourceFile, array $declared = []): array
     {
         $keys = [];
         foreach ($rows as $row) {
@@ -356,6 +405,18 @@ class CollectionSourceExtractor
                 $field['options'] = $distinct->values()->all();
             }
             $fields[] = $field;
+        }
+
+        // Declared types override the guesses (and add declared-only keys).
+        foreach ($declared as $key => $decl) {
+            $at = collect($fields)->search(fn ($f) => $f['key'] === $key);
+            $base = $at === false ? ['key' => $key, 'label' => Str::headline($key)] : $fields[$at];
+            $field = array_merge(array_diff_key($base, array_flip(['fields', 'options'])), $decl, ['declared' => true]);
+            if ($at === false) {
+                $fields[] = $field;
+            } else {
+                $fields[$at] = $field;
+            }
         }
 
         return [

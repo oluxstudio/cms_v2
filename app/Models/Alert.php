@@ -11,9 +11,9 @@ class Alert extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['site_id', 'user_id', 'level', 'type', 'dedupe_key', 'audience', 'title', 'body', 'link', 'meta', 'read_at'];
+    protected $fillable = ['site_id', 'user_id', 'level', 'type', 'dedupe_key', 'audience', 'title', 'body', 'link', 'meta', 'read_at', 'toasted_at'];
 
-    protected $casts = ['meta' => 'array', 'read_at' => 'datetime'];
+    protected $casts = ['meta' => 'array', 'read_at' => 'datetime', 'toasted_at' => 'datetime'];
 
     public function site(): BelongsTo
     {
@@ -23,6 +23,12 @@ class Alert extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** Alerts addressed to this person (their task notices, any site or none). */
+    public function scopeForUser(Builder $q, User $user): Builder
+    {
+        return $q->where('user_id', $user->id);
     }
 
     /**

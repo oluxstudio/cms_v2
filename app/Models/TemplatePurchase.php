@@ -11,7 +11,7 @@ class TemplatePurchase extends Model
     use HasUlids;
 
     protected $fillable = [
-        'uuid', 'template_id', 'template_version_id', 'user_id', 'creator_user_id',
+        'uuid', 'template_id', 'template_name', 'template_version_id', 'user_id', 'creator_user_id',
         'price_cents', 'currency', 'platform_fee_cents', 'creator_amount_cents',
         'stripe_checkout_session_id', 'stripe_payment_intent_id', 'status', 'purchased_at',
         'payout_id', 'clawback_payout_id', 'refunded_at',

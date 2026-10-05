@@ -3,6 +3,8 @@
 namespace App\Services\TemplateUploads;
 
 use App\Jobs\CollectTemplateBuild;
+use App\Models\SiteTemplate;
+use App\Models\Template;
 use App\Models\TemplateCreator;
 use App\Models\TemplateEntitlement;
 use App\Models\TemplateSubmission;
@@ -13,9 +15,11 @@ use App\Services\TemplateExtractor;
 use App\Services\TemplateLint;
 use App\Services\TemplateStager;
 use App\Support\NuxtShell;
+use App\Support\TaskAlerts;
 use App\Support\TemplatePaths;
 use App\Templates\TemplatePackage;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
@@ -164,11 +168,86 @@ class TemplateUploadPipeline
         $key = $upload->key;
         NuxtShell::publish($output, TemplatePaths::shellDir($key), TemplatePaths::shellBase($key));
 
+        if ($upload->replaces_template_id && ($existing = $upload->replaces)) {
+            $template = $this->finishNewVersion($upload, $existing);
+        } else {
+            $template = $this->finishNewTemplate($upload);
+        }
+
+        $upload->update([
+            'status' => TemplateUpload::READY, 'step' => null, 'error' => null,
+            'template_id' => $template->id, 'finished_at' => now(),
+        ]);
+        if ($upload->repo_url) {
+            // Built from GitHub: remember where, for one-click "Update from GitHub".
+            $template->update(['source_repo' => $upload->repo_url, 'source_branch' => $upload->repo_branch]);
+        }
+
+        if ($upload->replaces_template_id) {
+            $version = $template->latestVersion?->version;
+            $behind = SiteTemplate::where('template_id', $template->id)->whereNotNull('applied_at')->whereHas('site')
+                ->where(fn ($q) => $q->whereNull('template_version_id')->orWhere('template_version_id', '!=', $template->latest_version_id))->count();
+            TaskAlerts::done($upload->user_id, $upload->site_id, 'New version ready: '.$template->name.($version ? ' '.$version : ''),
+                $behind ? $behind.' '.Str::plural('site', $behind).' can be moved to it — open the template and press "Update sites".' : 'It\'s live for new installs.',
+                url('/admin/templates'), ['upload_id' => $upload->id, 'template_id' => $template->id]);
+        } else {
+            TaskAlerts::done($upload->user_id, $upload->site_id, 'Template ready: '.$template->name,
+                $upload->for_store ? 'It\'s built and in the catalog as a draft. Publish it when you\'re happy.' : 'It\'s built and saved to your designs.',
+                $this->uploadLink($upload), ['upload_id' => $upload->id, 'template_id' => $template->id]);
+        }
+    }
+
+    /**
+     * A new version of an existing store template: same key (the rebuilt
+     * shell already replaced the old one), the next version number, and the
+     * admin's catalog details (name, price, status, thumbnail…) left as they
+     * are. Sites stay pinned to their version until they're updated.
+     */
+    private function finishNewVersion(TemplateUpload $upload, Template $existing): Template
+    {
+        $dir = TemplatePaths::packageDir($upload->key);
+        $manifest = json_decode((string) File::get("{$dir}/template.json"), true) ?: [];
+        $manifest['version'] = self::nextVersion($existing->versions()->pluck('version')->all());
+        File::put("{$dir}/template.json", json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return $this->catalog->upsert(new TemplatePackage($dir), [
+            'name' => $existing->name,
+            'description' => $existing->description,
+            'category' => $existing->category,
+            'tags' => $existing->tags,
+            'status' => $existing->status,
+            'visibility' => $existing->visibility,
+            'source' => $existing->source,
+            'user_id' => $existing->user_id,
+            'creator_id' => $existing->creator_id,
+            'builtin_key' => $existing->builtin_key,
+            'accent_color' => $existing->accent_color,
+            'gradient_class' => $existing->gradient_class,
+            'thumbnail_url' => $existing->thumbnail_url,
+            'published_at' => $existing->published_at,
+        ], $existing);
+    }
+
+    /** Minor bump past the highest recorded version: 1.0.0 → 1.1.0. */
+    public static function nextVersion(array $versions): string
+    {
+        $latest = collect($versions)->filter(fn ($v) => preg_match('/^\d+(\.\d+){0,2}$/', (string) $v))
+            ->sort(fn ($a, $b) => version_compare($a, $b))->last() ?? '1.0.0';
+        $parts = array_map('intval', array_pad(explode('.', $latest), 3, 0));
+
+        return $parts[0].'.'.($parts[1] + 1).'.0';
+    }
+
+    private function finishNewTemplate(TemplateUpload $upload): Template
+    {
+        $key = $upload->key;
         $package = new TemplatePackage(TemplatePaths::packageDir($key));
         if ($upload->for_store) {
             // Admin upload: a store draft by Olux Studio, published from /admin/templates.
             $template = $this->catalog->upsert($package, [
                 'status' => 'draft',
+                // Chosen in the Add template drawer: private = only assigned accounts.
+                'visibility' => $upload->visibility === 'private' ? 'private' : 'public',
                 'source' => 'upload',
                 'user_id' => $upload->user_id,
                 'creator_id' => TemplateCreator::where('slug', 'olux-studio')->value('id'),
@@ -191,14 +270,15 @@ class TemplateUploadPipeline
             );
         }
 
-        $upload->update([
-            'status' => TemplateUpload::READY, 'step' => null, 'error' => null,
-            'template_id' => $template->id, 'finished_at' => now(),
-        ]);
+        return $template;
     }
 
     public function fail(TemplateUpload $upload, \Throwable $e): void
     {
+        $name = $upload->name ?: $upload->original_filename ?: 'Your template';
+        TaskAlerts::failed($upload->user_id, $upload->site_id, 'Template build failed: '.$name,
+            $e instanceof RuntimeException ? $e->getMessage() : 'Something went wrong while processing the upload.',
+            $this->uploadLink($upload), ['upload_id' => $upload->id]);
         $upload->update([
             'status' => TemplateUpload::FAILED,
             'step' => null,
@@ -207,6 +287,16 @@ class TemplateUploadPipeline
         ]);
         File::delete($upload->zipPath());
         File::deleteDirectory(TemplatePaths::uploadsRoot().'/_staging/'.$upload->key);
+    }
+
+    /** Where the uploader follows up: the admin catalog for store uploads, else the site's Design page. */
+    private function uploadLink(TemplateUpload $upload): ?string
+    {
+        if ($upload->for_store) {
+            return url('/admin/templates?tab=uploads');
+        }
+
+        return $upload->site ? url($upload->site->name.'/design') : null;
     }
 
     private function sandboxDir(string $key): string

@@ -1,0 +1,1 @@
+import{$ as e,P as t,V as n,t as r,z as i}from"./D8WpFzx-.js";import{i as a,t as o}from"./BpTI51KH.js";import{t as s}from"./S1OzHLx9.js";var c=n({__name:`[slug]`,setup(n){return r({title:`Shop`}),(n,r)=>{let c=a,l=s,u=o;return e(),t(`div`,null,[i(c),i(l),i(u)])}}});export{c as default};

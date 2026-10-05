@@ -1,4 +1,5 @@
 <?php
+
 use App\Livewire\SubscriptionPage;
 use App\Models\User;
 use Livewire\Livewire;

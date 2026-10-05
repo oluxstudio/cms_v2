@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Exceptions\PlanLimitReached;
 use App\Models\Media;
 use App\Models\Site;
 use App\Services\MediaStore;
@@ -40,6 +41,8 @@ class MediaPicker extends Component
     public function openPicker(array $context = []): void
     {
         $this->context = $context;
+        // The caller may say which kind it wants (a video field opens on Video).
+        $this->type = in_array($context['type'] ?? null, Media::TYPES, true) ? $context['type'] : 'image';
         $this->search = '';
         $this->resetPage();
         $this->open = true;
@@ -83,8 +86,12 @@ class MediaPicker extends Component
         );
         $site = Site::findOrFail($this->siteId);
         $store = app(MediaStore::class);
-        foreach ($this->uploads as $file) {
-            $store->store($site, $file);
+        try {
+            foreach ($this->uploads as $file) {
+                $store->store($site, $file);
+            }
+        } catch (PlanLimitReached $e) {
+            $this->dispatch('upgrade-required', reason: $e->getMessage(), cta: $e->cta);
         }
         $this->uploads = [];
         $this->resetPage();

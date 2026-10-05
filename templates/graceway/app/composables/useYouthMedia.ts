@@ -40,5 +40,5 @@ export const useYouthMedia = (): GalleryItem[] => {
     .filter(m => (m.ministry || 'worship') === 'youth' && m.title && m.type)
     .map(m => ({ id: m.id, _cid: m._cid, type: m.type, img: m.img || undefined, src: m.src || undefined,
                title: m.title, cat: m.cat || 'General', date: m.date || '' }) as GalleryItem)
-  return rows.length ? rows : fallback
+  return (rows.length || useCms().isSite) ? rows : fallback
 }

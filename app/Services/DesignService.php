@@ -28,7 +28,9 @@ class DesignService
     public function apply(User $user, Site $site, Template $template, ?string $versionId = null): array
     {
         abort_unless($site->allows($user, 'addons.manage') || $site->canManageTeam($user), 403);
-        abort_unless($this->commerce->inLibrary($user, $template), 403, 'This template is not in your library.');
+        // Licences are per ACCOUNT: the site owner's library counts for their team.
+        abort_unless($this->commerce->inLibrary($user, $template) || ($site->user && $this->commerce->inLibrary($site->user, $template)),
+            403, 'This template is not in your library.');
 
         // ── Restore point BEFORE anything changes ──
         $restore = [
@@ -83,6 +85,8 @@ class DesignService
                 ->update(['applied_at' => now()]);
         }
         $applied->update(['previous_state' => null]);
+        // The restored template's pages/sections/forms are the active ones again.
+        $this->installer->syncActivation($site->fresh());
 
         return ['reverted_to' => $state['template'] ?? TemplateAppRegistry::BLANK];
     }

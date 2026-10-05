@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\ComponentsPage;
+use App\Livewire\PageComponent;
 use App\Models\AccountMember;
 use App\Models\ApiToken;
 use App\Models\Component;
@@ -136,7 +137,7 @@ test('components carry tags and the pages picker filters by them', function () {
     $footer->nodes()->create(['label' => 'Text', 'type' => 'text', 'value' => 'x', 'parent' => 0, 'order' => 0]);
 
     // Pages page picker: tag filter narrows the list, toggle attaches/detaches.
-    $picker = Livewire::actingAs($owner)->test(\App\Livewire\PageComponent::class, ['site' => $site])
+    $picker = Livewire::actingAs($owner)->test(PageComponent::class, ['site' => $site])
         ->call('openPicker', $page->id)
         ->set('pickerTag', 'hero');
     expect($picker->instance()->pickerComponents->pluck('name')->all())->toBe(['Hero banner']);

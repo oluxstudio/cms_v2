@@ -115,7 +115,7 @@ class SiteDesignPage extends Component
 
         $this->reset('appZip', 'uploadName');
         $this->dispatch('toast', level: 'success', title: 'Upload received',
-            message: 'We\'re checking and building your design. This usually takes a few minutes; you can leave this page.');
+            message: 'We\'re checking and building your design. This usually takes a few minutes — you can leave this page and we\'ll let you know when it\'s ready.');
     }
 
     /** Apply a finished upload straight to this site. */

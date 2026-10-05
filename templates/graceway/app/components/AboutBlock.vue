@@ -156,7 +156,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .side-mission p { font-family: var(--font-heading); font-size: 1.15rem; color: #fff; line-height: 1.4; }
 .side-row { display: flex; gap: .9rem; align-items: center; padding: .7rem 0; border-bottom: 1px solid #f1ece3; }
 .side-row:last-child { border-bottom: 0; padding-bottom: 0; }
-.side-row .icon { width: 40px; height: 40px; flex: none; border-radius: 12px; background: #fdeef3; display: grid; place-items: center; font-size: 1.1rem; }
+.side-row .icon { width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--primary-soft); display: grid; place-items: center; font-size: 1.1rem; }
 .side-row img { width: 46px; height: 46px; flex: none; border-radius: 50%; object-fit: cover; }
 .side-row b { display: block; font-size: 1rem; color: var(--color-secondary); }
 .side-row p { font-size: 17px; color: #55606b; }

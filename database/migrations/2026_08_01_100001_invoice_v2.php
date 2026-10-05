@@ -13,14 +13,14 @@ return new class extends Migration
     public function up(): void
     {
         foreach ([
-            'opened_at'         => fn (Blueprint $t) => $t->timestamp('opened_at')->nullable()->after('sent_at'),
-            'viewed_at'         => fn (Blueprint $t) => $t->timestamp('viewed_at')->nullable()->after('opened_at'),
-            'reminded_at'       => fn (Blueprint $t) => $t->timestamp('reminded_at')->nullable()->after('viewed_at'),
-            'reminders_sent'    => fn (Blueprint $t) => $t->unsignedTinyInteger('reminders_sent')->default(0)->after('reminded_at'),
-            'recur_interval'    => fn (Blueprint $t) => $t->string('recur_interval', 12)->nullable()->after('reminders_sent'),
-            'recur_next_on'     => fn (Blueprint $t) => $t->date('recur_next_on')->nullable()->after('recur_interval'),
+            'opened_at' => fn (Blueprint $t) => $t->timestamp('opened_at')->nullable()->after('sent_at'),
+            'viewed_at' => fn (Blueprint $t) => $t->timestamp('viewed_at')->nullable()->after('opened_at'),
+            'reminded_at' => fn (Blueprint $t) => $t->timestamp('reminded_at')->nullable()->after('viewed_at'),
+            'reminders_sent' => fn (Blueprint $t) => $t->unsignedTinyInteger('reminders_sent')->default(0)->after('reminded_at'),
+            'recur_interval' => fn (Blueprint $t) => $t->string('recur_interval', 12)->nullable()->after('reminders_sent'),
+            'recur_next_on' => fn (Blueprint $t) => $t->date('recur_next_on')->nullable()->after('recur_interval'),
             'parent_invoice_id' => fn (Blueprint $t) => $t->foreignId('parent_invoice_id')->nullable()->after('recur_next_on')
-                                                          ->constrained('invoices')->nullOnDelete(),
+                ->constrained('invoices')->nullOnDelete(),
         ] as $col => $add) {
             if (! Schema::hasColumn('invoices', $col)) {
                 Schema::table('invoices', $add);

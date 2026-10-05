@@ -17,6 +17,9 @@ class SubscriptionPage extends Component
     /** Where the user came FROM — upgrading returns them there. */
     public string $backUrl = '';
 
+    /** Why the last plan change was refused (e.g. too many mailboxes for the new plan). */
+    public ?string $blocker = null;
+
     /** Plan key whose detail panel is open (null = closed). */
     public ?string $viewingPlan = null;
 
@@ -61,6 +64,12 @@ class SubscriptionPage extends Component
         }
 
         $billing = app(PlatformBilling::class);
+        if ($blocker = $billing->downgradeBlocker($user, $plan)) {
+            $this->dispatch('toast', level: 'error', title: 'Delete mailboxes first', message: $blocker);
+            $this->blocker = $blocker;
+
+            return null;
+        }
 
         // Real payment: hosted Stripe Checkout (subscription mode) at the
         // client's EFFECTIVE price (admin override or list price). Activation

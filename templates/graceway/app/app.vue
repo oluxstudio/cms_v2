@@ -1,12 +1,13 @@
 <template>
-  <!-- Teal page frame with the floating white canvas — the Graceway look. -->
-  <div class="canvas">
+  <div>
     <Transition name="loader-fade">
       <AppLoader v-if="loading || booting" />
     </Transition>
     <!-- pages mount only once the CMS payload is in, so setup-time reads of
          useSiteContent()/useMembers() capture CMS values, not authored seeds -->
-    <NuxtPage v-if="!booting" />
+    <NuxtLayout v-if="!booting">
+      <NuxtPage />
+    </NuxtLayout>
   </div>
 </template>
 

@@ -74,7 +74,9 @@ return [
         'max_total_mb' => 60,
         'max_file_mb' => 10,
         'allowed_ext' => ['vue', 'ts', 'js', 'mjs', 'json', 'css', 'scss', 'md', 'txt',
-            'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'otf', 'eot'],
+            'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'otf', 'eot',
+            // Background/hero video (inert media; still bound by max_file_mb).
+            'mp4', 'webm'],
         'denied_dirs' => ['node_modules', '.nuxt', '.output', '.git', '.github'],
         // Harmless project metadata: skipped (never unpacked) instead of
         // failing the upload. Anything else unexpected is still rejected.

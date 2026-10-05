@@ -16,8 +16,11 @@ use Illuminate\Support\Str;
  */
 class TemplateCatalogWriter
 {
-    /** @param  array  $overrides  column values that win over the defaults (status, source, user_id…) */
-    public function upsert(TemplateContract $contract, array $overrides = []): Template
+    /**
+     * @param  array  $overrides  column values that win over the defaults (status, source, user_id…)
+     * @param  Template|null  $into  write into this row instead of looking it up by slug (new versions)
+     */
+    public function upsert(TemplateContract $contract, array $overrides = [], ?Template $into = null): Template
     {
         $slug = $contract->key();
 
@@ -40,7 +43,7 @@ class TemplateCatalogWriter
         ];
 
         // 3. Upsert the catalog row (preserve uuid on update).
-        $template = Template::firstOrNew(['slug' => $slug]);
+        $template = $into ?? Template::firstOrNew(['slug' => $slug]);
         if (! $template->exists) {
             $template->uuid = (string) Str::uuid();
         }
@@ -49,7 +52,7 @@ class TemplateCatalogWriter
             'description' => $contract->description(),
             'category' => $contract->category(),
             'tags' => $contract->tags(),
-            'status' => 'published',
+            'status' => $template->status === 'archived' ? 'archived' : 'published',
             'source' => 'builtin',
             'builtin_key' => $slug,
             'accent_color' => $contract->accentColor(),

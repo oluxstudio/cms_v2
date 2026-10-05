@@ -65,7 +65,7 @@ class SiteSetupTask
     public static function detect(Site $site): array
     {
         return [
-            'properties' => filled($site->getAttr(SiteProperties::NAME)),
+            'properties' => filled(SiteProperties::value($site, 'site_name')),
             'choose_template' => (filled($site->template) && $site->template !== 'blank')
                 || SiteTemplate::where('site_id', $site->id)->whereNotNull('applied_at')->exists(),
             'update_content' => ContentVersion::where('site_id', $site->id)->exists(),

@@ -78,11 +78,6 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
             'department' => ['nullable', 'string', 'max:100'],
         ]);
 
-        if ($this->photo) {
-            $path = $this->photo->store('avatars', 'public');
-            $validated['avatar'] = $path;
-        }
-
         // A changed email must be re-verified.
         if ($validated['email'] !== $user->email) {
             $validated['email_verified_at'] = null;
@@ -91,6 +86,41 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
         $user->update($validated);
         \App\Services\AccountActivity::profileUpdated($user);
         $this->successMessage = 'Personal information updated successfully.';
+    }
+
+    /** A picked photo is uploaded and becomes the account avatar straight away. */
+    public function updatedPhoto(): void
+    {
+        // Raster images only — an SVG avatar could carry script.
+        $this->validate(['photo' => ['image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096']]);
+
+        $user = Auth::user();
+        $old = $user->avatar;
+        $path = $this->photo->store('avatars', 'public');
+        $user->update(['avatar' => $path]);
+        $this->forgetStoredAvatar($old);
+        $this->photo = null;
+
+        \App\Services\AccountActivity::profileUpdated($user);
+        $this->dispatch('avatar-updated', url: $user->avatarUrl());
+        $this->successMessage = 'Profile photo updated.';
+    }
+
+    public function removePhoto(): void
+    {
+        $user = Auth::user();
+        $this->forgetStoredAvatar($user->avatar);
+        $user->update(['avatar' => null]);
+        $this->dispatch('avatar-updated', url: null);
+        $this->successMessage = 'Profile photo removed.';
+    }
+
+    /** Delete a previously uploaded photo (never a social-login URL). */
+    private function forgetStoredAvatar(?string $avatar): void
+    {
+        if ($avatar && str_starts_with($avatar, 'avatars/')) {
+            Storage::disk('public')->delete($avatar);
+        }
     }
 
     public function savePassword(): void
@@ -306,7 +336,7 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                     <div class="flex items-center gap-5 mb-8 p-5 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
                         <div class="relative">
                             <x-avatar
-                                :src="Auth::user()->avatar ? Storage::url(Auth::user()->avatar) : null"
+                                :src="Auth::user()->avatarUrl()" live
                                 :initials="Auth::user()->initials()"
                                 size="w-20 h-20"
                                 textSize="text-2xl font-bold"
@@ -323,7 +353,15 @@ new #[Layout('components.layouts.home', ['withSiteNav' => true])] class extends 
                         <div>
                             <p class="font-semibold text-gray-900">{{ Auth::user()->name }}</p>
                             <p class="text-sm text-gray-400">{{ Auth::user()->email }}</p>
-                            @if($photo) <p class="text-xs text-indigo-500 mt-1">New photo selected — save to apply.</p> @endif
+                            <p class="text-xs text-gray-400 mt-1" wire:loading.remove wire:target="photo">
+                                Click the camera to upload a photo (JPG, PNG, WebP or GIF, up to 4 MB) — it's used straight away.
+                            </p>
+                            <p class="text-xs font-semibold mt-1" style="color:var(--primary)" wire:loading wire:target="photo">Uploading…</p>
+                            @error('photo') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                            @if (Auth::user()->avatar)
+                                <button type="button" wire:click="removePhoto" data-confirm="Remove your profile photo?"
+                                        class="text-xs font-semibold text-rose-500 hover:text-rose-600 mt-1">Remove photo</button>
+                            @endif
                         </div>
                     </div>
 

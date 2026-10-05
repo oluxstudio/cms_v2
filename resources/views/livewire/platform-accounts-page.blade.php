@@ -105,7 +105,7 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" wire:click="close"></div>
         <div class="relative bg-white dark:bg-[#1d1e2a] rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h2 class="text-base font-bold text-gray-900 dark:text-white">Custom pricing — {{ $u?->name }}</h2>
+            <h2 class="text-base font-bold text-gray-900 dark:text-white">Pricing &amp; allowances — {{ $u?->name }}</h2>
             <p class="text-xs text-gray-400 mt-1 mb-5">Monthly price per tier for THIS client. Blank = list price. They'll see it as “★ Your price”.</p>
             <form wire:submit="savePrices" class="space-y-3">
                 @foreach(config('plans.tiers') as $key => $t)
@@ -120,6 +120,21 @@
                         </div>
                     </div>
                 @endforeach
+                @php $esub = $u?->currentSubscription(); @endphp
+                <div class="pt-3 mt-2 border-t border-gray-100 dark:border-white/[0.06]">
+                    <p class="text-xs font-bold text-gray-700 dark:text-gray-200">Business email</p>
+                    <p class="text-[11px] text-gray-400 mb-2">Plan includes {{ \App\Models\AccountSubscription::planMailboxes($esub?->plan ?? 'trial') ?? 'per-account (set below)' }} · using {{ $esub?->mailboxesUsed() ?? 0 }} · allowed now {{ $esub?->mailboxLimit() ?? 0 }}</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="text-[11px] text-gray-500">Mailbox limit (blank = plan)
+                            <input wire:model="mailboxOverride" type="number" min="0" class="bkf-input w-full mt-1" placeholder="plan default">
+                        </label>
+                        <label class="text-[11px] text-gray-500">Extra mailboxes
+                            <input wire:model="extraMailboxes" type="number" min="0" class="bkf-input w-full mt-1">
+                        </label>
+                    </div>
+                    @error('mailboxOverride')<p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>@enderror
+                    @error('extraMailboxes')<p class="text-[11px] text-rose-500 mt-1">{{ $message }}</p>@enderror
+                </div>
                 <div class="flex justify-end gap-3 pt-3">
                     <button type="button" wire:click="close" class="fx px-4 py-2 rounded-xl text-sm font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200">Cancel</button>
                     <button type="submit" class="fx px-5 py-2 rounded-xl text-sm font-bold" style="background:var(--primary);color:var(--on-primary)">Save pricing</button>

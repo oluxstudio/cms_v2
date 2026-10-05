@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\SiteTemplate;
 use App\Models\Template;
 use App\Services\TemplateCatalog;
+use Illuminate\Support\Str;
 
 /**
  * One card shape for every template surface (public gallery, detail page,
@@ -39,6 +40,18 @@ class TemplateCards
         return $thumbnail ? [$thumbnail] : [];
     }
 
+    /** The card's one-liner: the template's tagline (Admin › Templates), else the description's first sentence. */
+    private static function tagline(?string $tagline, string $description): string
+    {
+        $tagline = trim((string) $tagline);
+        if ($tagline !== '') {
+            return $tagline;
+        }
+        $first = preg_split('/(?<=[.!?])\s+/', trim($description), 2)[0] ?? '';
+
+        return Str::limit($first, 90);
+    }
+
     /** Per-category fallback bullets when a template ships no designedFor list. */
     private static function designedForFallback(string $category): array
     {
@@ -60,6 +73,7 @@ class TemplateCards
             'slug' => 'curated-'.$t['key'],
             'builtin' => $t['key'],
             'name' => $t['name'],
+            'tagline' => self::tagline($t['manifest']['tagline'] ?? null, (string) $t['description']),
             'description' => $t['description'],
             'category' => $t['category'],
             'accent' => $t['accent'],
@@ -88,6 +102,7 @@ class TemplateCards
             'slug' => $t->slug,
             'builtin' => $t->builtin_key,
             'name' => $t->name,
+            'tagline' => self::tagline($t->short_description, (string) $t->description),
             'description' => (string) $t->description,
             'category' => (string) $t->category,
             'accent' => $t->accent_color ?: '#6366f1',
@@ -113,9 +128,10 @@ class TemplateCards
     public static function resolve(string $urlKey): ?array
     {
         if (str_starts_with($urlKey, 'curated-')) {
-            $t = CuratedTemplates::find(substr($urlKey, 8));
+            // First-party designs are public only through their published catalog row.
+            $tpl = Template::query()->publiclyListed()->where('builtin_key', substr($urlKey, 8))->first();
 
-            return $t ? [self::fromCurated($t), null] : null;
+            return $tpl ? [self::fromCatalog($tpl), $tpl] : null;
         }
         $tpl = app(TemplateCatalog::class)->find($urlKey);
 

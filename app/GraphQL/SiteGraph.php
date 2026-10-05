@@ -37,7 +37,7 @@ class SiteGraph
         $all = $this->widened($context, $site, 'pages.view');
 
         return $site->pages()
-            ->when(! $all, fn ($q) => $q->where('is_published', true))
+            ->when(! $all, fn ($q) => $q->where('is_published', true)->where('template_active', true))
             ->orderBy('id')->limit($this->cap($args))->get()
             ->map(fn (Page $p) => [
                 'id' => $p->id,
@@ -46,7 +46,7 @@ class SiteGraph
                 'keywords' => $p->keywords,
                 'is_published' => (bool) $p->is_published,
                 'attributes' => $p->attrMap(),
-                'components' => $p->components()->with('nodes')->get()
+                'components' => $p->activeComponents()->with('nodes')->get()
                     ->map(fn (Component $c) => $c->payload())->values()->all(),
             ])->values()->all();
     }
@@ -135,7 +135,7 @@ class SiteGraph
     {
         $slug = $args['slug'];
         $url = $slug === 'index' ? '/' : '/'.str_replace('-', '/', $slug);
-        $page = Page::where('site_id', $site->id)
+        $page = Page::where('site_id', $site->id)->where('template_active', true)
             ->where(fn ($q) => $q->where('url', $url)->orWhere('url', '/'.$slug))
             ->first()
             ?? $site->livePages()->get()->first(fn (Page $p) => $this->pageSlug($p) === $slug);
@@ -185,7 +185,7 @@ class SiteGraph
         $all = $this->widened($context, $site, 'forms.view');
 
         return Form::where('site_id', $site->id)
-            ->when(! $all, fn ($q) => $q->where('is_active', true))
+            ->when(! $all, fn ($q) => $q->live())
             ->limit($this->cap($args))->get()
             ->map(fn (Form $f) => [
                 'id' => $f->id,

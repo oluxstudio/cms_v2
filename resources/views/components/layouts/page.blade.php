@@ -90,12 +90,16 @@
             </div>
         </div>
 
+        @auth
+            <livewire:task-watcher />
+        @endauth
+
         {{-- Profile + logout --}}
         <div class="relative shrink-0">
             <button @click="profileOpen = !profileOpen"
                 class="flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <x-avatar
-                    :src="Auth::user()->avatar ? Storage::url(Auth::user()->avatar) : null"
+                    :src="Auth::user()->avatarUrl()" live
                     :initials="Auth::user()->initials()"
                     size="w-9 h-9"
                     :ring="true" />
@@ -116,7 +120,7 @@
                 <div class="px-4 py-3 bg-gradient-to-br from-indigo-50 dark:from-gray-800 to-white dark:to-gray-900 border-b border-gray-100 dark:border-gray-800">
                     <div class="flex items-center gap-3">
                         <x-avatar
-                            :src="Auth::user()->avatar ? Storage::url(Auth::user()->avatar) : null"
+                            :src="Auth::user()->avatarUrl()" live
                             :initials="Auth::user()->initials()"
                             size="w-10 h-10" />
                         <div class="min-w-0">
@@ -167,6 +171,7 @@
 
 @stack('scripts')
 <style>[x-cloak]{display:none!important}</style>
+    @include('partials.toasts')
     <x-confirm-modal />
     <x-upgrade-modal />
     <livewire:welcome-onboarding />

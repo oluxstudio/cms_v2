@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 /**
  * Convention lint for template submissions: scores a staging app's extraction
@@ -160,7 +161,7 @@ class TemplateLint
 
         foreach (File::allFiles("$appDir/app/pages") as $pageFile) {
             $file = $pageFile->getPathname();
-            $page = ltrim(str_replace('\\', '/', \Illuminate\Support\Str::after($file, '/app/pages/')), '/');
+            $page = ltrim(str_replace('\\', '/', Str::after($file, '/app/pages/')), '/');
             if ($pageFile->getExtension() !== 'vue' || str_contains($page, '[')) {
                 continue; // dynamic routes are not extracted (same rule as TemplateExtractor)
             }

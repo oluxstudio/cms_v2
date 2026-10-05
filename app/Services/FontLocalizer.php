@@ -69,7 +69,7 @@ class FontLocalizer
             }
             $families[$fam[1]] = true;
             $faces[] = "@font-face {\n  font-family: '{$fam[1]}';\n  font-style: {$style[1]};\n"
-                ."  font-weight: ".trim($weight[1]).";\n  font-display: swap;\n"
+                .'  font-weight: '.trim($weight[1]).";\n  font-display: swap;\n"
                 ."  src: url('/assets/fonts/{$file}') format('woff2');\n}";
         }
         if ($faces === []) {

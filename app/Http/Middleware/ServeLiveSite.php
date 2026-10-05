@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use App\Models\Site;
 use App\Services\LiveShell;
+use App\Services\SiteHead;
+use App\Support\SiteProperties;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,8 +35,37 @@ class ServeLiveSite
         }
 
         $site = self::siteForHost($host);
+        if (! $site) {
+            // An old subdomain of a site that changed its address → its new one.
+            if ($to = self::movedSubdomainUrl($host, $request)) {
+                return redirect()->away($to, 301);
+            }
 
-        return $site ? app(LiveShell::class)->respond($site) : $next($request);
+            return $next($request);
+        }
+
+        // Site Properties at the domain level: preferred host, crawler files,
+        // app manifest and maintenance mode.
+        if ($to = SiteHead::canonicalRedirect($site, $request)) {
+            return redirect()->away($to, 301);
+        }
+        switch ($request->path()) {
+            case 'robots.txt':
+                return response(SiteHead::robots($site, $request), 200, ['Content-Type' => 'text/plain; charset=utf-8']);
+            case 'sitemap.xml':
+                $xml = SiteHead::sitemap($site, $request);
+
+                return $xml === null ? response('Not found', 404) : response($xml, 200, ['Content-Type' => 'application/xml; charset=utf-8']);
+            case 'site.webmanifest':
+                return response()->json(SiteHead::manifest($site), 200, ['Content-Type' => 'application/manifest+json'], JSON_UNESCAPED_SLASHES);
+        }
+        if (SiteHead::inMaintenance($site)) {
+            return response()->view('live-maintenance', ['site' => $site, 'p' => SiteProperties::payload($site)], 503)
+                ->header('Retry-After', '3600')
+                ->header('Cache-Control', 'no-store');
+        }
+
+        return app(LiveShell::class)->respond($site);
     }
 
     /** Custom domain (must be live) first, then instant subdomain (always on). */
@@ -47,6 +78,21 @@ class ServeLiveSite
             ->where(fn ($q) => $q->where('domain', $bare)->orWhere('domain', $host))
             ->first()
             ?? Site::forSubdomainHost($host);
+    }
+
+    /** {old}.{base}/path → https://{new}.{base}/path, or null when $host isn't an old subdomain. */
+    public static function movedSubdomainUrl(string $host, Request $request): ?string
+    {
+        $base = (string) config('publishing.subdomain_base');
+        if ($base === '' || ! str_ends_with($host, '.'.$base)) {
+            return null;
+        }
+        $site = Site::forOldName(substr($host, 0, -strlen('.'.$base)));
+        if (! $site || ! ($new = $site->subdomainHost())) {
+            return null;
+        }
+
+        return 'https://'.$new.$request->getRequestUri();
     }
 
     private function isPlatformHost(string $host): bool

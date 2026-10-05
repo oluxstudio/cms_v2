@@ -38,12 +38,34 @@ class PlanCatalog
 
                 continue;
             }
-            $tiers[$key] = $data + ($tiers[$key] ?? []);
+            // A deleted plan (a built-in one keeps its row so it can be restored).
+            if (! empty($data['deleted'])) {
+                unset($tiers[$key]);
+
+                continue;
+            }
+            $base = $tiers[$key] ?? [];
+            $merged = $data + $base;
+            // Limits merge key-by-key: a limit added in code (e.g. mailboxes)
+            // still applies to plans an admin edited before it existed.
+            $merged['limits'] = ((array) ($data['limits'] ?? [])) + ((array) ($base['limits'] ?? []));
+            $tiers[$key] = $merged;
         }
         config(['plans.tiers' => $tiers]);
     }
 
-    /** Is this plan one of the shipped defaults (can be hidden, not deleted)? */
+    /** Built-in plans a super admin deleted (restorable): key => name. @return array<string,string> */
+    public static function deletedBuiltIns(): array
+    {
+        self::$defaults ??= ['tiers' => config('plans.tiers', []), 'trial_days' => config('plans.trial_days', 14)];
+
+        return MembershipPlan::whereIn('key', array_keys(self::$defaults['tiers']))->get()
+            ->filter(fn ($row) => ! empty(((array) $row->data)['deleted']))
+            ->mapWithKeys(fn ($row) => [$row->key => (string) (((array) $row->data)['name'] ?? self::$defaults['tiers'][$row->key]['name'] ?? $row->key)])
+            ->all();
+    }
+
+    /** Is this plan one of the shipped defaults (deleting it keeps a restorable marker)? */
     public static function isBuiltIn(string $key): bool
     {
         self::$defaults ??= ['tiers' => config('plans.tiers', []), 'trial_days' => config('plans.trial_days', 14)];

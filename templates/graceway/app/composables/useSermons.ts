@@ -128,11 +128,11 @@ const sermons: Sermon[] = [
 // authored rows are the seed + offline fallback.
 export const useSermonSeries = (): SermonSeries[] => {
   const rows = (useCms().items('sermon-series', []) as any[]).filter(s => s.slug && s.name)
-  return rows.length ? rows as SermonSeries[] : series
+  return (rows.length || useCms().isSite) ? rows as SermonSeries[] : series
 }
 export const useSermons = (): Sermon[] => {
   const rows = (useCms().items('sermons', []) as any[]).filter(s => s.slug && s.title)
-  return rows.length ? rows.map(s => ({ ...sermons.find(a => a.slug === s.slug), ...s }) as Sermon) : sermons
+  return (rows.length || useCms().isSite) ? rows.map(s => ({ ...sermons.find(a => a.slug === s.slug), ...s }) as Sermon) : sermons
 }
 
 export const sermonSeriesOf = (s: Sermon) => useSermonSeries().find(x => x.slug === s.seriesSlug)

@@ -134,6 +134,7 @@ class PlatformSalesPage extends Component
                 ->when($this->status !== '', fn ($q) => $q->where('status', $this->status))
                 ->when($this->q !== '', fn ($q) => $q->where(fn ($w) => $w
                     ->whereHas('template', fn ($t) => $t->where('name', 'like', "%{$this->q}%"))
+                    ->orWhere('template_name', 'like', "%{$this->q}%")
                     ->orWhereHas('buyer', fn ($u) => $u->where('email', 'like', "%{$this->q}%")->orWhere('name', 'like', "%{$this->q}%"))))
                 ->latest('purchased_at')->paginate(20);
         } elseif ($this->tab === 'payouts') {

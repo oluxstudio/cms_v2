@@ -109,9 +109,9 @@ const sendForm = async (e: Event) => {
 .join-perks li { display: flex; align-items: flex-start; gap: .9rem; font-size: 17px; color: #2b333d; line-height: 1.55;
   padding: .75rem 0; border-bottom: 1px solid #f1ece3; }
 .join-perks li:last-child { border-bottom: 0; }
-.join-perks li i { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #fdeef3; color: var(--color-primary);
+.join-perks li i { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--primary-soft); color: var(--color-primary);
   font-style: normal; font-weight: 800; font-size: .85rem; display: grid; place-items: center; margin-top: .1rem; }
-.join-note { margin-top: 1.4rem; padding: 1.2rem 1.3rem; background: #fdeef3; border-radius: 14px;
+.join-note { margin-top: 1.4rem; padding: 1.2rem 1.3rem; background: var(--primary-soft); border-radius: 14px;
   border-left: 4px solid var(--color-primary); }
 .join-note b { display: block; font-size: 1rem; color: var(--color-secondary); margin-bottom: .3rem; }
 .join-note p { font-size: 17px; color: #2b333d; line-height: 1.55; }

@@ -19,11 +19,18 @@
                     if (this.open && this.hub && this.tab === tab) { this.close(); return; }
                     this.tab = tab;
                     this.hub = true;
+                    this.dock();
                     this.open = true;
                     if (window.Livewire) Livewire.dispatch('rail-tab', { tab });
                 },
-                openChat() { this.open = true; this.hub = false; this.llm = true; },
+                // ≥4xl the rail is pinned while `docked`; closing it there
+                // un-docks it (remembered per browser) until reopened.
+                docked: (() => { try { return localStorage.getItem('olux_rail_docked') !== '0' } catch (e) { return true } })(),
+                wide() { return window.matchMedia('(min-width: 120rem)').matches; },
+                dock(on = true) { this.docked = on; try { localStorage.setItem('olux_rail_docked', on ? '1' : '0') } catch (e) {} },
+                openChat() { this.dock(); this.open = true; this.hub = false; this.llm = true; },
                 close() { this.open = false; this.llm = false; this.hub = true; },
+                dismiss() { if (this.wide()) this.dock(false); this.close(); },
             });
         });
     </script>
@@ -84,7 +91,10 @@
     }
 
     // Template apps available for the in-page "Generate" form (renderer to bundle).
+    // Public apps plus this site's own private ones — never other accounts' uploads.
     $genTemplates = collect(\App\Templates\TemplateAppRegistry::all())
+        ->filter(fn ($t) => ! \App\Support\TemplateAccess::isPrivateKey($t['key'])
+            || ($currentSite && \App\Support\TemplateAccess::canUseUploadKey(auth()->user(), $t['key'], $currentSite)))
         ->map(fn ($t) => ['key' => $t['key'], 'name' => $t['name']])->values()->all();
     $genCurrentKey = $currentSite?->renderTemplateKey();
     $canGenerate  = $currentSite && $currentSite->canManageTeam(auth()->user());
@@ -129,12 +139,14 @@
                 <div class="w-px h-6 bg-gray-200 dark:bg-white/10 mx-1"></div>
 
                 @auth
+                <livewire:task-watcher />
+
                 {{-- Profile dropdown --}}
                 <div class="relative" x-data="{ profileOpen: false }" @click.outside="profileOpen = false">
                     <button @click="profileOpen = !profileOpen"
                             class="flex items-center gap-2 p-0.5 sm:pr-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
                         <x-avatar
-                            :src="Auth::user()->avatar ? Storage::url(Auth::user()->avatar) : null"
+                            :src="Auth::user()->avatarUrl()" live
                             :initials="Auth::user()->initials()"
                             size="w-8 h-8"
                             :ring="true" />
@@ -156,7 +168,7 @@
                         <div class="px-4 py-3 bg-gradient-to-br from-indigo-50 dark:from-white/[0.04] to-white dark:to-transparent border-b border-gray-100 dark:border-white/[0.05]">
                             <div class="flex items-center gap-3">
                                 <x-avatar
-                                    :src="Auth::user()->avatar ? Storage::url(Auth::user()->avatar) : null"
+                                    :src="Auth::user()->avatarUrl()" live
                                     :initials="Auth::user()->initials()"
                                     size="w-10 h-10" />
                                 <div class="min-w-0">
@@ -241,7 +253,7 @@
                     <div class="hidden 4xl:flex gap-1 bg-white/70 dark:bg-white/[0.05] rounded-2xl p-1">
                         @foreach ($railTabs as $railKey => [$railLabel, $railColor, $railPath])
                             <button type="button"
-                                    @click="$store.rail.tab = '{{ $railKey }}'; Livewire.dispatch('rail-tab', { tab: '{{ $railKey }}' })"
+                                    @click="$store.rail.tab = '{{ $railKey }}'; $store.rail.dock(); Livewire.dispatch('rail-tab', { tab: '{{ $railKey }}' })"
                                     class="fx flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-colors"
                                     :class="$store.rail.tab === '{{ $railKey }}'
                                         ? 'bg-gray-900 text-white shadow dark:bg-white dark:text-gray-900'
@@ -313,16 +325,18 @@
                       bg-[#f7f3ee] dark:bg-[#16171d] overflow-hidden"
                :class="$store.rail.open
                    ? 'flex max-4xl:fixed max-4xl:right-0 max-4xl:top-0 max-4xl:bottom-0 max-4xl:z-50 max-4xl:shadow-2xl'
-                   : 'hidden 4xl:flex'"
+                   : ($store.rail.docked ? 'hidden 4xl:flex' : 'hidden')"
                x-cloak>
 
-            {{-- Drawer header (below 4xl only): close --}}
-            <div class="4xl:hidden shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-white/[0.05]">
+            {{-- Panel header with a clear close button — at every width (≥4xl it un-docks the rail). --}}
+            <div class="shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 border-b border-gray-200 dark:border-white/[0.05]">
                 <span class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider"
                       x-text="$store.rail.hub ? $store.rail.tab : 'Polux · AI Assistant'"></span>
-                <button type="button" @click="$store.rail.close()" title="Close panel"
-                        class="fx w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-rose-600 hover:bg-white dark:hover:bg-white/[0.05]">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                <button type="button" @click="$store.rail.dismiss()" title="Close panel" aria-label="Close panel"
+                        class="fx inline-flex items-center gap-1.5 h-8 pl-2.5 pr-3 rounded-full text-xs font-bold shadow-sm border border-gray-200 dark:border-white/10
+                               bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 hover:text-white hover:bg-rose-500 hover:border-rose-500 transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Close
                 </button>
             </div>
 
@@ -357,8 +371,8 @@
         </aside>
 
         {{-- Below 4xl there is no inline assistant bar — this FAB opens it. --}}
-        <button type="button" id="bk-chat-fab" x-show="!$store.rail.open" x-cloak @click="$store.rail.openChat()"
-                class="4xl:hidden fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full text-white shadow-lg flex items-center justify-center"
+        <button type="button" id="bk-chat-fab" x-show="!$store.rail.open && ! ($store.rail.docked && $store.rail.wide())" x-cloak @click="$store.rail.openChat()"
+                class="fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full text-white shadow-lg flex items-center justify-center"
                 style="background:var(--primary)" title="Ask Polux">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.4-4 8-9 8a9.9 9.9 0 01-4-.8L3 20l1.3-3.9A7.4 7.4 0 013 12c0-4.4 4-8 9-8s9 3.6 9 8z"/>

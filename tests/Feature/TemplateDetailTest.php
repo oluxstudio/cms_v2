@@ -4,7 +4,6 @@ use App\Livewire\SignupWizard;
 use App\Livewire\TemplateBuyPage;
 use App\Livewire\TemplateDetailPage;
 use App\Models\Site;
-use App\Models\SiteTemplate;
 use App\Models\Template;
 use App\Models\User;
 use App\Services\TemplatePublisher;
@@ -26,6 +25,7 @@ function detailTemplate(array $extra = []): Template
 }
 
 test('guests see the detail page (curated and catalog), drafts 404, and Get sends them to register', function () {
+    publishBuiltinTemplate('verita');
     $tpl = detailTemplate();
     $this->get('/designs/curated-verita')->assertOk()->assertSee('Verita')->assertSee('View template')->assertSee('Use template');
     $this->get('/designs/'.$tpl->slug)->assertOk()->assertSee($tpl->name);
@@ -39,8 +39,9 @@ test('guests see the detail page (curated and catalog), drafts 404, and Get send
 });
 
 test('Use template creates a fresh site for the design — existing sites are never touched', function () {
+    publishBuiltinTemplate('verita');
     $owner = User::factory()->create();
-    $owner->currentSubscription()->update(['plan' => 'business', 'status' => 'active']);
+    $owner->currentSubscription()->update(['plan' => 'pro', 'status' => 'active']);
     $existing = Site::create(['user_id' => $owner->id, 'name' => 'det-'.uniqid(), 'domain' => 'det-'.uniqid().'.test', 'owner' => 'x', 'description' => 't', 'template' => 'blank']);
     $tpl = detailTemplate();
 
@@ -83,6 +84,7 @@ test('a priced template routes Get to the buy page, which shows the price and ne
 });
 
 test('a design chosen before signup lands on the site created by the wizard', function () {
+    publishBuiltinTemplate('verita');
     Mail::fake();
     $user = User::factory()->create(['email_verified_at' => now()]);
 
@@ -96,17 +98,18 @@ test('a design chosen before signup lands on the site created by the wizard', fu
 });
 
 test('the detail page carries slideshow screenshots, specs and the accordion', function () {
+    publishBuiltinTemplate('verita');
     // Curated: real generated screenshots + specs.
     $this->get('/designs/curated-verita')->assertOk()
         ->assertSee('template-screenshots', false) // URLs are JSON-escaped inside the Alpine payload
         ->assertSee('Product specs')->assertSee('Framework')->assertSee('Nuxt 4 app')
         ->assertSee('Added to sites')->assertSee("What's inside", false)->assertSee('About');
 
-    // Curated installs = saved-to-site rows for that app key.
+    // First-party designs are listed through their published catalog row.
     $card = TemplateCards::resolve('curated-verita')[0];
     expect($card['screenshots'])->toHaveCount(3)
         ->and($card['framework'])->toBe('Nuxt 4 app')
-        ->and($card['installs'])->toBe(SiteTemplate::where('builtin_key', 'verita')->count());
+        ->and($card['installs'])->toBe((int) Template::where('builtin_key', 'verita')->value('installs_count'));
 
     // Catalog with only a thumbnail → single-image fallback, no rail markup needed.
     $tpl = detailTemplate(['thumbnail_url' => 'https://cdn.example/x.png']);
@@ -127,7 +130,7 @@ test('creator zips can ship screenshot-*.png files that land in the version payl
     $zip->close();
 
     $creator = User::factory()->create();
-    $creator->currentSubscription()->update(['plan' => 'business', 'status' => 'active']);
+    $creator->currentSubscription()->update(['plan' => 'pro', 'status' => 'active']);
     $tpl = app(TemplatePublisher::class)->publishFromZip($creator, $path);
 
     $shots = $tpl->latestVersion->payload['screenshots'] ?? [];
@@ -136,6 +139,7 @@ test('creator zips can ship screenshot-*.png files that land in the version payl
 });
 
 test('using a curated template creates a new site bound to it and opens its connect page', function () {
+    publishBuiltinTemplate('hairco');
     $owner = User::factory()->create();
     $owner->currentSubscription()->update(['plan' => 'enterprise', 'status' => 'active']);
     Site::create(['user_id' => $owner->id, 'name' => 'cn-'.uniqid(), 'domain' => 'cn-'.uniqid().'.test', 'owner' => 'x', 'description' => 't']);

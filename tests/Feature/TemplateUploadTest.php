@@ -236,7 +236,7 @@ test('an admin store upload finishes as an Olux Studio draft, not a private libr
     Queue::fake();
     [$admin] = tuOwnerSite();
     $upload = TemplateUpload::create([
-        'user_id' => $admin->id, 'for_store' => true, 'key' => 'u-'.strtolower(Str::random(10)),
+        'user_id' => $admin->id, 'for_store' => true, 'visibility' => 'private', 'key' => 'u-'.strtolower(Str::random(10)),
         'name' => 'Store Design', 'status' => TemplateUpload::QUEUED,
     ]);
     $this->tuKeys[] = $upload->key;
@@ -253,6 +253,30 @@ test('an admin store upload finishes as an Olux Studio draft, not a private libr
 
     $template = $upload->fresh()->template;
     expect($template->status)->toBe('draft')
+        ->and($template->visibility)->toBe('private')
         ->and($template->creator?->slug)->toBe('olux-studio')
         ->and(TemplateEntitlement::where('template_id', $template->id)->exists())->toBeFalse();
+});
+
+test('a finished github build remembers its repo on the template', function () {
+    Queue::fake();
+    [$admin] = tuOwnerSite();
+    $upload = TemplateUpload::create([
+        'user_id' => $admin->id, 'for_store' => true, 'key' => 'u-'.strtolower(Str::random(10)), 'name' => 'Repo Design',
+        'status' => TemplateUpload::QUEUED, 'repo_url' => 'https://github.com/olux/tu-repo', 'repo_branch' => 'cms-template',
+    ]);
+    $this->tuKeys[] = $upload->key;
+    File::ensureDirectoryExists(dirname($upload->zipPath()));
+    File::copy(tuAppZip(), $upload->zipPath());
+
+    $pipeline = app(TemplateUploadPipeline::class);
+    $pipeline->scanAndPublish($upload->fresh());
+    $job = config('templates.uploads.sandbox_path')."/jobs/{$upload->key}";
+    File::ensureDirectoryExists("{$job}/out");
+    File::put("{$job}/out/index.html", '<html></html>');
+    File::put("{$job}/DONE", '');
+    $pipeline->collect($upload->fresh());
+
+    expect($upload->fresh()->template->source_repo)->toBe('https://github.com/olux/tu-repo')
+        ->and($upload->fresh()->template->source_branch)->toBe('cms-template');
 });

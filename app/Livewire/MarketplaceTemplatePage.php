@@ -5,9 +5,13 @@ namespace App\Livewire;
 use App\Features\FeatureRegistry;
 use App\Models\Site;
 use App\Models\Template;
+use App\Services\DesignService;
 use App\Services\TemplateCommerce;
+use App\Support\TemplateAccess;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Component;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /** Template detail — store page for one template, account-level. */
 class MarketplaceTemplatePage extends Component
@@ -24,14 +28,42 @@ class MarketplaceTemplatePage extends Component
 
     public function template(): Template
     {
-        return Template::with(['creator', 'versions' => fn ($q) => $q->latest()->limit(5)])
-            ->where('status', 'published')->where('slug', $this->slug)->firstOrFail();
+        $t = Template::with(['creator', 'versions' => fn ($q) => $q->latest()->limit(5)])
+            ->whereIn('status', ['published', 'private'])->where('slug', $this->slug)->first();
+        // Private: only for the accounts it's assigned to — everyone else gets a plain 404.
+        abort_unless($t && TemplateAccess::canSee(Auth::user(), $t, $this->site), 404);
+
+        return $t;
     }
 
     public function addToLibrary(TemplateCommerce $commerce): void
     {
         $commerce->addFreeToLibrary(Auth::user(), $this->template());
         $this->dispatch('toast', level: 'success', title: 'Added to your library', message: 'Use it on any of your sites from the Design page.');
+    }
+
+    /** Apply this template to the site the visitor came from (restore point kept by DesignService). */
+    public function useOnThisSite(DesignService $design)
+    {
+        $t = $this->template();
+        if (! $this->canChangeDesign()) {
+            abort(403);
+        }
+        try {
+            $design->apply(Auth::user(), $this->site, $t);
+        } catch (HttpException $e) {
+            $this->dispatch('toast', level: 'error', title: 'Couldn\'t apply it', message: $e->getMessage() ?: 'Add it to your library first.');
+
+            return null;
+        }
+        session()->flash('toast', ['level' => 'success', 'title' => 'Design applied', 'message' => Str::headline($this->site->name).' now uses '.$t->name.'. Your previous design can be restored from the Design page.']);
+
+        return $this->redirect(url($this->site->name.'/connect'));
+    }
+
+    private function canChangeDesign(): bool
+    {
+        return $this->site->allows(Auth::user(), 'addons.manage') || $this->site->canManageTeam(Auth::user());
     }
 
     public function buy(TemplateCommerce $commerce): void
@@ -64,7 +96,9 @@ class MarketplaceTemplatePage extends Component
         return view('livewire.marketplace-template-page', [
             'template' => $t,
             'included' => $included,
-            'inLibrary' => $commerce->inLibrary($user, $t),
+            'inLibrary' => $commerce->inLibrary($user, $t) || ($this->site->user && $commerce->inLibrary($this->site->user, $t)),
+            'canUse' => $this->canChangeDesign(),
+            'usedHere' => $this->site->installedTemplates()->whereNotNull('applied_at')->where('template_id', $t->id)->exists(),
             'justAdded' => (bool) session('mp-added'),
             'refSite' => $refSite,
             'requiredFeatures' => collect((array) $t->required_features)

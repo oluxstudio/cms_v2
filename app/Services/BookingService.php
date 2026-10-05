@@ -99,6 +99,21 @@ class BookingService
     {
         $this->releaseStaleHolds($service);
 
+        // Plan cap on online bookings per month (Free: 20). The visitor gets a
+        // polite message; the owner gets one alert a month to upgrade.
+        $sub = $site->user?->currentSubscription();
+        if ($sub && ! $sub->canTakeBooking()) {
+            app(TaskLogger::class)->alert($site,
+                'Online booking is paused until next month',
+                'plan_limit', 'warning',
+                'Your plan includes '.$sub->limit('bookings_month').' online bookings a month and they\'re all used. Upgrade to Starter or above for unlimited bookings.',
+                link: '/account/subscription',
+                dedupeKey: 'bookings_cap:'.now()->format('Y-m'),
+            );
+
+            return 'Online booking is full this month — please contact us to book.';
+        }
+
         return DB::transaction(fn () => match ($service->kind) {
             'stay' => $this->bookStay($site, $service, $input, $status),
             'trip' => $this->bookTrip($site, $service, $input, $status),

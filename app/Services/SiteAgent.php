@@ -8,6 +8,7 @@ use App\Models\Site;
 use App\Models\User;
 use App\Modules\ModuleRegistry;
 use App\Services\Ai\SiteKnowledge;
+use App\Support\SiteProperties;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -203,6 +204,10 @@ class SiteAgent
         } catch (\Throwable $e) {
             report($e); // knowledge is best-effort — never blocks the assistant
         }
+        // Voice from Site Properties › Assistant (per turn, so the system prompt stays cacheable).
+        if ($brief = $this->assistantBrief($site)) {
+            $userContent = $brief."\n\n".$userContent;
+        }
         $messages[] = ['role' => 'user', 'content' => $userContent];
 
         try {
@@ -250,6 +255,25 @@ class SiteAgent
     }
 
     // ── System prompt assembly ─────────────────────────────────────────
+
+    /** A short brief from Site Properties: whose site this is and how to sound. */
+    private function assistantBrief(Site $site): ?string
+    {
+        try {
+            $p = SiteProperties::payload($site);
+        } catch (\Throwable) {
+            return null;
+        }
+        $a = $p['assistant'];
+        $lines = array_filter([
+            'Business: '.$p['name'].($p['tagline'] ? ' — '.$p['tagline'] : ''),
+            $a['name'] ? 'Assistant name: '.$a['name'] : null,
+            'Tone for any wording you write: '.$a['tone'],
+            $a['handover'] ? 'If you cannot help, point people to: '.$a['handover'] : null,
+        ]);
+
+        return "## Site profile\n- ".implode("\n- ", $lines);
+    }
 
     private function systemPrompt(Site $site, User $user): string
     {

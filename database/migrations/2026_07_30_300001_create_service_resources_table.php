@@ -29,14 +29,14 @@ return new class extends Migration
 
         Schema::table('bookings', function (Blueprint $t) {
             $t->foreignId('resource_id')->nullable()->after('departure_id')
-              ->constrained('service_resources')->nullOnDelete();
+                ->constrained('service_resources')->nullOnDelete();
             $t->index(['resource_id', 'status']);
         });
 
         Schema::table('service_departures', function (Blueprint $t) {
             // The vehicle operating this departure (optional).
             $t->foreignId('resource_id')->nullable()->after('service_id')
-              ->constrained('service_resources')->nullOnDelete();
+                ->constrained('service_resources')->nullOnDelete();
         });
     }
 

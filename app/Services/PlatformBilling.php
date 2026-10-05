@@ -6,7 +6,9 @@ use App\Mail\TutorialWelcome;
 use App\Models\AccountSubscription;
 use App\Models\User;
 use App\Services\Domains\DomainPurchase;
+use App\Services\Email\BusinessEmail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Stripe\Checkout\Session;
 use Stripe\StripeClient;
 use Stripe\Webhook;
@@ -112,6 +114,14 @@ class PlatformBilling
             }
         }
 
+        // Domain purchases paid on the Go-live page (Payment Element).
+        if ($event->type === 'payment_intent.succeeded') {
+            app(DomainPurchase::class)->fulfilFromPaymentIntent($event->data->object);
+        }
+        if ($event->type === 'invoice.paid') {
+            app(DomainPurchase::class)->fulfilFromInvoice($event->data->object);
+        }
+
         if ($event->type === 'charge.refunded') {
             // Template sales on the platform account (domains/plans are refunded by hand).
             app(TemplateCommerce::class)->refundByPaymentIntent((string) ($event->data->object->payment_intent ?? ''));
@@ -119,13 +129,38 @@ class PlatformBilling
 
         if ($event->type === 'customer.subscription.deleted') {
             $stripeSub = $event->data->object;
-            AccountSubscription::where('stripe_subscription_id', $stripeSub->id)
-                ->update(['status' => 'cancelled']);
+            $sub = AccountSubscription::where('stripe_subscription_id', $stripeSub->id)->first();
+            if ($sub) {
+                $sub->update(['status' => 'cancelled']);
+                // Business email: suspend (dashboard-only) and start the export window.
+                if ($sub->user) {
+                    app(BusinessEmail::class)->suspendAccount($sub->user);
+                }
+            }
         }
     }
 
+    /**
+     * Why the account can't move to $plan right now, or null. Moving to a plan
+     * with fewer mailboxes than the account uses is blocked until mailboxes
+     * are deleted to fit.
+     */
+    public function downgradeBlocker(User $user, string $plan): ?string
+    {
+        $sub = $user->currentSubscription();
+        if ($sub->mailboxesFit($plan)) {
+            return null;
+        }
+        $used = $sub->mailboxesUsed();
+        $allowed = $sub->mailboxLimitOn($plan);
+        $name = config("plans.tiers.{$plan}.name", $plan);
+
+        return "You have {$used} business email ".Str::plural('mailbox', $used)." but {$name} includes {$allowed}. "
+            .'Delete '.($used - $allowed).' '.Str::plural('mailbox', $used - $allowed).' first (their mail is deleted too), then switch plans.';
+    }
+
     /** Flip the account onto the plan (idempotent) and remember the Stripe ids. */
-    public function activate(User $user, string $plan, ?Session $session = null): void
+    public function activate(User $user, string $plan, ?object $session = null): void
     {
         if (! config("plans.tiers.{$plan}")) {
             return;
@@ -143,6 +178,11 @@ class PlatformBilling
             'stripe_customer_id' => $session->customer ?? null,
             'stripe_subscription_id' => $session->subscription ?? null,
         ], fn ($v) => $v !== null));
+
+        // Back on a paid plan inside the export window: email comes back.
+        if ($plan !== 'trial') {
+            app(BusinessEmail::class)->restoreAccount($user);
+        }
 
         if ($isNewActivation) {
             $tier = config("plans.tiers.{$plan}");

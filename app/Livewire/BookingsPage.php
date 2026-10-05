@@ -437,6 +437,37 @@ class BookingsPage extends Component
         return $this->bookingTypes->firstWhere('id', $this->wizTypeId)?->fieldEnabled($key) ?? true;
     }
 
+    // ── Plan limits (config/plans.php): staff calendars + deposits ─────
+
+    /** May $adding more booking calendars be created on this account's plan? */
+    private function calendarsAllowed(int $adding = 1): bool
+    {
+        $sub = $this->site->user?->currentSubscription();
+        $cap = $sub?->limit('staff_calendars');
+        if ($cap === null || $sub->staffCalendarsUsed() + $adding <= (int) $cap) {
+            return true;
+        }
+        $this->dispatch('upgrade-required',
+            reason: 'Your plan includes '.$cap.' booking '.Str::plural('calendar', (int) $cap).'. Upgrade for more staff calendars (Growth: 3, Pro: unlimited).',
+            cta: 'See plans');
+
+        return false;
+    }
+
+    /** Deposits come with Growth and above; a service that already takes one keeps it. */
+    private function depositAllowed(?Service $existing = null): bool
+    {
+        if ($this->depositMode === 'none' || ($this->site->user?->currentSubscription()->allowsDeposits() ?? true)) {
+            return true;
+        }
+        if ($existing && (($existing->deposit_cents ?? 0) > 0 || ($existing->deposit_pct ?? 0) > 0)) {
+            return true;
+        }
+        $this->dispatch('upgrade-required', reason: 'Booking deposits come with Growth and above.', cta: 'See plans');
+
+        return false;
+    }
+
     public function wizBack(): void
     {
         $this->wizStep = max(1, $this->wizStep - 1);
@@ -444,6 +475,9 @@ class BookingsPage extends Component
 
     public function wizNext(): void
     {
+        if ($this->wizStep === 2 && ! $this->depositAllowed()) {
+            return;
+        }
         if ($this->wizStep === 2) {
             $this->validate([
                 'name' => 'required|string|max:120',
@@ -457,6 +491,11 @@ class BookingsPage extends Component
     public function wizAddResource(): void
     {
         if (trim($this->wizResName) === '') {
+            return;
+        }
+        $isNew = ! $this->site->resources()->where('name', trim($this->wizResName))->exists();
+        $pendingNew = collect($this->wizResources)->filter(fn ($r) => ! $this->site->resources()->where('name', $r['name'])->exists())->count();
+        if ($isNew && ! $this->calendarsAllowed($pendingNew + 1)) {
             return;
         }
         $this->wizResources[] = [
@@ -1110,6 +1149,10 @@ class BookingsPage extends Component
             'maxGuests' => 'required|integer|min:1|max:100',
         ]);
 
+        if (! $this->depositAllowed($this->editingId ? $this->site->services()->find($this->editingId) : null)) {
+            return;
+        }
+
         $config = match ($data['kind']) {
             'stay' => [
                 'min_nights' => (int) $data['minNights'],
@@ -1232,6 +1275,9 @@ class BookingsPage extends Component
             return;
         }
         $this->validate(['resName' => 'required|string|max:120']);
+        if (! $this->calendarsAllowed()) {
+            return;
+        }
 
         $config = $svc->kind === 'slot' ? array_filter([
             'days' => trim($this->resDays) ?: null,
@@ -1342,6 +1388,9 @@ class BookingsPage extends Component
         if ($this->srEditingId) {
             $this->site->resources()->whereKey($this->srEditingId)->first()?->update($attrs);
         } else {
+            if (! $this->calendarsAllowed()) {
+                return;
+            }
             $this->site->resources()->create($attrs + ['is_active' => true]);
         }
 

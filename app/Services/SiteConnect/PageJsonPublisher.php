@@ -4,6 +4,7 @@ namespace App\Services\SiteConnect;
 
 use App\Models\Page;
 use App\Models\SiteConnection;
+use App\Support\SiteContentCache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -26,6 +27,8 @@ class PageJsonPublisher
      */
     public function publish(Page $page): array
     {
+        SiteContentCache::bump($page->site_id);
+
         $version = ((int) $page->page_json_version) + 1;
         $document = $this->generator->generate($page, $version);
 

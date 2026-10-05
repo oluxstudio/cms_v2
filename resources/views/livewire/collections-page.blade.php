@@ -64,7 +64,7 @@
                                     </div>
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $typeClassFor($collection->type) }}">{{ ucfirst($collection->type) }}</span>
                                 </div>
-                                <p class="mt-3 text-base font-bold text-gray-900 dark:text-white">{{ $collection->name }}</p>
+                                <a href="{{ route('collections.show', [$site->name, $collection->id]) }}" wire:navigate class="block mt-3 text-base font-bold text-gray-900 dark:text-white hover:underline">{{ $collection->name }}</a>
                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{{ $collection->description ?: 'No description' }}</p>
                                 <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Created {{ $collection->created_at->format('M d, Y') }}</p>
                             </div>
@@ -106,7 +106,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-white/[0.04]">
                         @forelse($collections as $collection)
                             <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors group">
-                                <td class="{{ $pad }} font-medium text-gray-900 dark:text-white">{{ $collection->name }}</td>
+                                <td class="{{ $pad }} font-medium text-gray-900 dark:text-white"><a href="{{ route('collections.show', [$site->name, $collection->id]) }}" wire:navigate class="hover:underline">{{ $collection->name }}</a></td>
                                 <td class="{{ $pad }}">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $typeClassFor($collection->type) }}">
                                         {{ ucfirst($collection->type) }}
@@ -269,7 +269,7 @@
                     border border-gray-200 dark:border-white/[0.08]">
             <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-white/[0.05]">
                 <div>
-                    <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ $viewing->name }} — entries</h2>
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ $viewing->name }} — entries <a href="{{ route('collections.show', [$site->name, $viewing->id]) }}" wire:navigate class="ml-1 text-xs font-semibold" style="color:var(--primary)">Open page ↗</a></h2>
                     <p class="text-xs text-gray-400">{{ $entries->count() }} {{ Str::plural('entry', $entries->count()) }}</p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -324,60 +324,7 @@
                 @endif
             </div>
 
-            {{-- Entry editor — built from the collection's field schema --}}
-            @if($editingItemId !== null)
-            <div class="p-5 border-b border-gray-100 dark:border-white/[0.05] bg-gray-50/70 dark:bg-white/[0.02]">
-                <p class="text-xs font-bold uppercase tracking-[.12em] text-gray-400 mb-3">{{ $editingItemId ? 'Edit entry' : 'New entry' }}</p>
-                <div class="grid sm:grid-cols-2 gap-3">
-                    @foreach(($viewing->fields ?? []) as $f)
-                    @php
-                        $key = $f['key']; $ftype = $f['type'] ?? 'text';
-                        $isJson = in_array($key, $itemJsonKeys ?? [], true);
-                        $isNested = ! $isJson && is_array($itemForm[$key] ?? null);
-                    @endphp
-                    <div class="{{ ($ftype === 'textarea' || $isJson || $isNested) ? 'sm:col-span-2' : '' }}">
-                        <label class="block text-[11px] font-bold text-gray-500 mb-1">{{ $f['label'] ?? $key }}@if($isJson) <span class="font-normal text-gray-400">· list (JSON)</span>@endif</label>
-                        @if($isNested)
-                            @include('livewire.partials.nested-field', ['path' => "itemForm.$key", 'value' => $itemForm[$key], 'fieldKey' => $key])
-                        @elseif($isJson)
-                            <textarea wire:model="itemForm.{{ $key }}" rows="4" spellcheck="false" class="w-full px-3 py-2 text-xs font-mono rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-y"></textarea>
-                            @error('itemForm.'.$key)<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
-                        @elseif($ftype === 'textarea')
-                            <textarea wire:model="itemForm.{{ $key }}" rows="2" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-none"></textarea>
-                        @elseif($ftype === 'select' && !empty($f['options']))
-                            <select wire:model="itemForm.{{ $key }}" class="w-full px-3 py-2 pr-7 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
-                                <option value="">—</option>
-                                @foreach($f['options'] as $opt)<option value="{{ $opt }}">{{ $opt }}</option>@endforeach
-                            </select>
-                        @elseif($ftype === 'url')
-                            {{-- photo/url picker: type a path, or pick from the site's assets --}}
-                            <div class="flex items-center gap-2">
-                                <input wire:model.live.debounce.500ms="itemForm.{{ $key }}" type="text" list="media-url-options"
-                                       placeholder="Pick from Assets, or type a path"
-                                       class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
-                                <button type="button" @click="$dispatch('open-media-picker', { context: { scope: 'collection-item', key: '{{ $key }}' } })"
-                                        class="shrink-0 px-2.5 py-2 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1]"
-                                        title="Choose from the asset library">Assets</button>
-                                @if(!empty($itemForm[$key]))
-                                    <img src="{{ $itemForm[$key] }}" alt="" class="w-9 h-9 rounded-lg object-cover border border-gray-200 dark:border-white/[0.08] shrink-0"
-                                         onerror="this.style.display='none'" onload="this.style.display=''">
-                                @endif
-                            </div>
-                        @else
-                            <input wire:model="itemForm.{{ $key }}" type="{{ in_array($ftype, ['number','date','email']) ? $ftype : 'text' }}" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100">
-                        @endif
-                    </div>
-                    @endforeach
-                </div>
-                <datalist id="media-url-options">
-                    @foreach($this->mediaUrlOptions as $m)<option value="{{ $m['url'] }}">{{ $m['name'] }}</option>@endforeach
-                </datalist>
-                <div class="flex gap-2 mt-3">
-                    <button wire:click="saveItem" class="px-4 py-2 rounded-lg text-xs font-semibold text-white" style="background:var(--primary)">Save entry</button>
-                    <button wire:click="cancelItem" class="px-4 py-2 rounded-lg text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300">Cancel</button>
-                </div>
-            </div>
-            @endif
+            @include('livewire.partials.collection-item-form', ['viewing' => $viewing])
             <div class="overflow-auto p-2">
                 @if($cols->isEmpty())
                     <p class="p-6 text-sm text-gray-400 text-center">This collection has no fields defined.</p>

@@ -5,6 +5,7 @@ namespace App\Jobs\SiteConnect;
 use App\Models\PageIngestion;
 use App\Models\Site;
 use App\Services\SiteConnect\SsrfGuard;
+use App\Support\TaskAlerts;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -12,6 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 /**
  * From the first ingested page's discovered links, fetch additional internal
@@ -74,6 +76,12 @@ class CrawlSiteJob implements ShouldQueue
             $seen[] = $url;
             $fetched++;
         }
+
+        if ($fetched > 0) {
+            TaskAlerts::done(null, $site->id, 'Website import finished',
+                'We fetched '.$fetched.' '.Str::plural('page', $fetched).' from your website. They\'re being turned into editable sections now.',
+                url($site->name.'/connect'), ['pages' => $fetched]);
+        }
     }
 
     /** @return array<int,string> */
@@ -90,7 +98,8 @@ class CrawlSiteJob implements ShouldQueue
     private function pageCap(Site $site): int
     {
         $tiers = config('site_connect.crawl.max_pages', []);
-        $tier = $site->currentSubscription()?->tier()['key'] ?? 'free';
+        // Plans live on the owning account (trial crawls like Free).
+        $tier = $site->user?->currentSubscription()->plan ?? 'free';
 
         return $tiers[$tier] ?? ($tiers['free'] ?? 10);
     }

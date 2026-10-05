@@ -5,17 +5,29 @@ namespace App\Providers;
 use App\Access\Permissions;
 use App\Contracts\DomainRegistrar;
 use App\Models\ApiToken;
+use App\Models\Collection;
+use App\Models\CollectionItem;
+use App\Models\Component;
 use App\Models\Form;
 use App\Models\FormResponse;
 use App\Models\Media;
+use App\Models\Module;
+use App\Models\Node;
 use App\Models\Page;
+use App\Models\PageAttribute;
+use App\Models\Post;
+use App\Models\Product;
 use App\Models\Site;
+use App\Models\SiteAttribute;
+use App\Models\SiteFeature;
+use App\Models\SiteTemplate;
 use App\Models\Todo;
 use App\Models\User;
 use App\Observers\FormObserver;
 use App\Observers\FormResponseObserver;
 use App\Observers\MediaObserver;
 use App\Observers\PageObserver;
+use App\Observers\SiteContentObserver;
 use App\Observers\TodoObserver;
 use App\Payments\PaymentManager;
 use App\Services\AccountActivity;
@@ -23,7 +35,11 @@ use App\Services\Domains\FakeRegistrar;
 use App\Services\Domains\OpenproviderRegistrar;
 use App\Services\Domains\Registrar;
 use App\Services\Domains\ResellerClubRegistrar;
+use App\Services\Email\EmailProvider;
+use App\Services\Email\FakeEmailProvider;
+use App\Services\Email\OpenproviderEmailProvider;
 use App\Services\Impersonation;
+use App\Services\Openprovider\OpenproviderClient;
 use App\Support\ConfigOverlay;
 use App\Support\PlanCatalog;
 use Illuminate\Auth\Events\Login;
@@ -51,6 +67,12 @@ class AppServiceProvider extends ServiceProvider
             default => new FakeRegistrar,
         });
 
+        // Business email provider (tenant mailboxes). Singleton so tests can inspect the fake.
+        $this->app->singleton(EmailProvider::class, fn () => match (config('email.driver')) {
+            'openprovider' => new OpenproviderEmailProvider(new OpenproviderClient(config('openprovider'))),
+            default => new FakeEmailProvider,
+        });
+
         // Openprovider reseller seam (Phase 1: availability + cost price).
         $this->app->singleton(DomainRegistrar::class, fn () => new OpenproviderRegistrar(config('openprovider')));
     }
@@ -66,6 +88,16 @@ class AppServiceProvider extends ServiceProvider
         Form::observe(FormObserver::class);
         FormResponse::observe(FormResponseObserver::class);
         Todo::observe(TodoObserver::class);
+
+        // Public content cache: anything the site payload is built from retires it.
+        foreach ([
+            Site::class, Page::class, PageAttribute::class, Component::class,
+            Node::class, Collection::class, CollectionItem::class, Form::class,
+            Media::class, SiteAttribute::class, SiteFeature::class, SiteTemplate::class,
+            Module::class, Post::class, Product::class,
+        ] as $contentModel) {
+            $contentModel::observe(SiteContentObserver::class);
+        }
         Media::observe(MediaObserver::class);
 
         // RBAC: every catalog permission becomes a Gate — usable anywhere as

@@ -1,9 +1,10 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('settings page is displayed', function () {
     $this->actingAs(User::factory()->create());

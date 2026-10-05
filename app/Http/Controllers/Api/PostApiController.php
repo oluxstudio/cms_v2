@@ -13,7 +13,8 @@ use Illuminate\Http\Request;
 /**
  * Public blog API — consumed by the template-folder site apps:
  *
- *   GET  /api/sites/{site}/posts             → published posts (paginated)
+ *   GET  /api/sites/{site}/posts             → published posts — filter by category/tag/author,
+ *                                              exclude slugs, sort, page or offset+limit (see index)
  *   GET  /api/sites/{site}/posts/{slug}      → one published post (full HTML body)
  *   POST /api/sites/{site}/posts/{slug}/view → count a visit   (feeds the tiles)
  *   POST /api/sites/{site}/posts/{slug}/like → count a like    (feeds engagement)
@@ -35,23 +36,68 @@ class PostApiController extends Controller
             ->firstOrFail();
     }
 
+    /**
+     * Published posts. Every filter is optional and they combine:
+     *   ?category=news   ?tag=styling   ?author=Jane%20Doe   (case-insensitive)
+     *   ?exclude=slug-a,slug-b          leave these posts out (e.g. ones already featured)
+     *   ?sort=newest|oldest|popular|liked|title   (default newest; popular = most views)
+     * Paging — either pages:  ?page=2&per_page=12   (per_page ≤ 50, default 10)
+     *          or a range:    ?offset=24&limit=12   (limit ≤ 50)
+     * The response also lists `categories`: every category with published posts.
+     */
     public function index(string $siteName, Request $request): JsonResponse
     {
         $site = $this->site($siteName);
-        $posts = Post::where('site_id', $site->id)
-            ->where('status', 'published')
-            // Optional taxonomy filters: ?category=news / ?tag=hair-care
-            ->when($request->query('category'), fn ($q, $c) => $q->whereRaw('LOWER(category) = ?', [strtolower($c)]))
-            ->when($request->query('tag'), fn ($q, $t) => $q->whereJsonContains('tags', $t))
-            ->with('author:id,name')
-            ->orderByDesc('published_at')
-            ->paginate(min(50, max(1, (int) $request->query('per_page', 10))));
+        $published = Post::where('site_id', $site->id)->where('status', 'published');
+        // Public endpoint: only plain string params count (?x[]= arrays are ignored, never a 500).
+        $str = fn (string $key): ?string => is_string($v = $request->query($key)) && $v !== '' ? $v : null;
+
+        $query = (clone $published)
+            ->when($str('category'), fn ($q, $c) => $q->whereRaw('LOWER(category) = ?', [mb_strtolower($c)]))
+            ->when($str('tag'), fn ($q, $t) => $q->whereJsonContains('tags', $t))
+            ->when($str('author'), fn ($q, $a) => $q->whereHas('author',
+                fn ($u) => $u->whereRaw('LOWER(name) = ?', [mb_strtolower($a)])))
+            ->when($str('exclude'), fn ($q, $e) => $q->whereNotIn('slug',
+                array_slice(array_filter(array_map('trim', explode(',', $e))), 0, 50)))
+            ->with('author:id,name');
+
+        match ($str('sort') ?? 'newest') {
+            'oldest' => $query->orderBy('published_at'),
+            'popular' => $query->orderByDesc('views')->orderByDesc('published_at'),
+            'liked' => $query->orderByDesc('likes')->orderByDesc('published_at'),
+            'title' => $query->orderBy('title'),
+            default => $query->orderByDesc('published_at'),
+        };
+
+        $categories = (clone $published)->whereNotNull('category')->where('category', '!=', '')
+            ->distinct()->orderBy('category')->pluck('category')->values();
+
+        // Range mode: ?offset=&limit=
+        if ($request->filled('limit') || $request->filled('offset')) {
+            $limit = min(50, max(1, (int) ($str('limit') ?? 10)));
+            $offset = max(0, (int) ($str('offset') ?? 0));
+            $total = (clone $query)->count();
+            $posts = $query->skip($offset)->take($limit)->get();
+
+            return response()->json([
+                'posts' => $posts->map(fn (Post $p) => $this->summary($p)),
+                'total' => $total,
+                'offset' => $offset,
+                'limit' => $limit,
+                'page' => intdiv($offset, $limit) + 1,
+                'last_page' => max(1, (int) ceil($total / $limit)),
+                'categories' => $categories,
+            ]);
+        }
+
+        $posts = $query->paginate(min(50, max(1, (int) ($str('per_page') ?? 10))));
 
         return response()->json([
             'posts' => collect($posts->items())->map(fn (Post $p) => $this->summary($p)),
             'total' => $posts->total(),
             'page' => $posts->currentPage(),
             'last_page' => $posts->lastPage(),
+            'categories' => $categories,
         ]);
     }
 

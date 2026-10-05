@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\MarketplaceStore;
+use App\Livewire\MarketplaceTemplatePage;
 use App\Models\Site;
 use App\Models\Template;
 use App\Models\TemplateCreator;
@@ -172,4 +173,27 @@ test('store filters, sort, search, tab and page sync to the URL query string', f
         ->assertSet('sort', 'newest')
         ->assertSet('tab', 'library')
         ->assertSet('cats', ['Trades']);
+});
+
+test('the template page applies a library template straight to the site it was opened from', function () {
+    $owner = User::factory()->create();
+    $site = Site::factory()->create(['user_id' => $owner->id, 'template' => 'blank']);
+    $tpl = storeTemplate();
+    TemplateEntitlement::create(['user_id' => $owner->id, 'template_id' => $tpl->id, 'source' => 'free']);
+
+    Livewire\Livewire::actingAs($owner)->test(MarketplaceTemplatePage::class, ['site' => $site, 'slug' => $tpl->slug])
+        ->assertSee('Use on '.Illuminate\Support\Str::headline($site->name))
+        ->call('useOnThisSite')
+        ->assertRedirect(url($site->name.'/connect'));
+
+    expect($site->installedTemplates()->whereNotNull('applied_at')->where('template_id', $tpl->id)->exists())->toBeTrue();
+
+    Livewire\Livewire::actingAs($owner)->test(MarketplaceTemplatePage::class, ['site' => $site, 'slug' => $tpl->slug])
+        ->assertSee('Used on '.Illuminate\Support\Str::headline($site->name));
+
+    // Not in the library → refused, nothing applied.
+    $other = storeTemplate();
+    Livewire\Livewire::actingAs($owner)->test(MarketplaceTemplatePage::class, ['site' => $site, 'slug' => $other->slug])
+        ->call('useOnThisSite')->assertNoRedirect();
+    expect($site->installedTemplates()->where('template_id', $other->id)->exists())->toBeFalse();
 });

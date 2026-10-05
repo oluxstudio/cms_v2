@@ -19,5 +19,5 @@ const rows: ContactInfoRow[] = [
 // CMS-first: the "Contact Info" collection overrides the authored rows at runtime.
 export const useContactInfo = (): ContactInfoRow[] => {
   const cms = (useCms().items('contactInfo', []) as any[]).filter(r => r.label && r.value)
-  return cms.length ? (cms as ContactInfoRow[]) : rows
+  return (cms.length || useCms().isSite) ? (cms as ContactInfoRow[]) : rows
 }

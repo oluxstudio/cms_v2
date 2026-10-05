@@ -76,16 +76,11 @@ const tabLabel = { video: '▶ Watch', audio: '🎧 Listen', text: '✍ Read' } 
 <template>
   <div v-if="sermon">
     <SiteHeader />
-    <section class="page-hero">
-      <div class="container">
-        <BreadCrumbs :items="[{ label: 'Sermons', to: '/sermons' }, { label: sermon.title }]" />
-        <PageHeroContent>
-          <NuxtLink v-if="series" class="sd-series-badge" :to="`/sermons?series=${series.slug}`">📚 {{ series.name }}</NuxtLink>
-          <h1>{{ sermon.title }}</h1>
-          <p>🎙 {{ sermon.speaker }} · {{ sermon.date }}<template v-if="sermon.scripture"> · 📖 {{ sermon.scripture }}</template></p>
-        </PageHeroContent>
-      </div>
-    </section>
+    <PageHeroContent :crumbs="[{ label: 'Sermons', to: '/sermons' }, { label: sermon.title }]">
+      <NuxtLink v-if="series" class="sd-series-badge" :to="`/sermons?series=${series.slug}`">📚 {{ series.name }}</NuxtLink>
+      <h1>{{ sermon.title }}</h1>
+      <p>🎙 {{ sermon.speaker }} · {{ sermon.date }}<template v-if="sermon.scripture"> · 📖 {{ sermon.scripture }}</template></p>
+    </PageHeroContent>
 
     <section class="sd-view">
       <div class="container">

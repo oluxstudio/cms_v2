@@ -30,6 +30,7 @@ class ScheduleTracker
         'site:digest' => ['0 8 * * 1', 'Weekly site digest emails'],
         'signup:nudge' => ['30 9 * * *', 'Nudge people who started signing up'],
         'domains:renewal-sweep' => ['30 8 * * *', 'Warn site teams before domains expire'],
+        'email:purge-suspended' => ['15 4 * * *', 'Delete business email whose export window has ended'],
     ];
 
     public static function register(Schedule $schedule): void

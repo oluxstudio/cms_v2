@@ -34,7 +34,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['job_title','department','timezone','language','date_format','theme','notif_email','notif_inapp','notif_push','two_factor_enabled']);
+            $table->dropColumn(['job_title', 'department', 'timezone', 'language', 'date_format', 'theme', 'notif_email', 'notif_inapp', 'notif_push', 'two_factor_enabled']);
         });
         Schema::dropIfExists('api_tokens');
     }

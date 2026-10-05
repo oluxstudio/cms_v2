@@ -74,7 +74,7 @@
                     <div class="px-5 py-3.5 flex flex-wrap items-center gap-3 {{ $loop->last ? '' : 'border-b border-gray-100 dark:border-white/[0.05]' }}">
                         <div class="min-w-0 flex-1">
                             <p class="flex flex-wrap items-center gap-2">
-                                <span class="text-[14px] font-bold text-gray-900 dark:text-white truncate">{{ $p->template?->name ?? 'Deleted template' }}</span>
+                                <span class="text-[14px] font-bold text-gray-900 dark:text-white truncate">{{ $p->template?->name ?? $p->template_name ?? 'Deleted template' }}</span>
                                 <span class="text-[10.5px] font-extrabold px-2 py-0.5 rounded-full" style="background:{{ $pb }};color:{{ $pf }}">{{ $pl }}</span>
                                 @if ($p->payout_id)<span class="text-[10.5px] font-bold text-gray-500">paid out</span>@endif
                             </p>
@@ -104,7 +104,7 @@
                     @php $u = $c['user']; $connected = $u->stripe_account_id && $u->stripe_charges_enabled; @endphp
                     <div class="{{ $panel }} p-5">
                         <div class="flex flex-wrap items-center gap-4">
-                            <x-avatar :src="$u->avatar" :initials="strtoupper(substr($u->name, 0, 1))" size="w-11 h-11" textSize="text-sm font-bold" />
+                            <x-avatar :src="$u->avatarUrl()" :initials="strtoupper(substr($u->name, 0, 1))" size="w-11 h-11" textSize="text-sm font-bold" />
                             <div class="min-w-0 flex-1">
                                 <a href="{{ route('admin.account', $u->id) }}" wire:navigate class="block text-[15px] font-bold text-gray-900 dark:text-white truncate hover:underline">{{ $u->name }}</a>
                                 <p class="text-[12px] text-gray-500 dark:text-gray-400">

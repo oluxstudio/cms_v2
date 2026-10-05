@@ -212,7 +212,9 @@ class TemplateExtractor
         foreach (SfcParser::scalarStrings($sections['script']) as $var => $value) {
             $block['nodes'][] = [
                 'label' => Str::headline($var),
-                'type' => 'text',
+                // A media path (e.g. const heroVideo = '/assets/videos/x.mp4')
+                // is an asset field: the editor offers the Assets picker.
+                'type' => preg_match('#^/assets/.+\.(png|jpe?g|webp|svg|gif|avif|mp4|webm)$#i', $value) ? 'image' : 'text',
                 'value' => $value,
                 'kind' => 'const:'.$var,
                 'order' => $order++,

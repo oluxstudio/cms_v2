@@ -52,7 +52,7 @@ class BookingConfirmed extends Mailable implements ShouldQueue
     {
         $tpl = EmailTemplate::forKey($this->site, 'booking_confirmed');
 
-        return new Envelope(subject: EmailTemplate::fill($tpl['subject'], $this->ctx()));
+        return new Envelope(...$this->site->mailSender(), subject: EmailTemplate::fill($tpl['subject'], $this->ctx()));
     }
 
     public function content(): Content

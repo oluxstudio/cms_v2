@@ -88,6 +88,7 @@ services:
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            HOME: /tmp
         volumes:
             - '.:/var/www/html'
         networks:
@@ -95,6 +96,9 @@ services:
         depends_on:
             - mysql
             - redis
+        # The entrypoint override skips Sail's gosu drop to `sail`; run as the host
+        # user so files it writes (template builds, backups) stay editable by the app.
+        user: '${WWWUSER:-1000}:${WWWGROUP:-1000}'
         entrypoint: ['php', 'artisan', 'queue:work', '--sleep=2', '--tries=1', '--timeout=620', '--memory=512']
         restart: unless-stopped
 
@@ -111,12 +115,16 @@ services:
         environment:
             WWWUSER: '${WWWUSER}'
             LARAVEL_SAIL: 1
+            HOME: /tmp
         volumes:
             - '.:/var/www/html'
         networks:
             - sail
         depends_on:
             - mysql
+        # The entrypoint override skips Sail's gosu drop to `sail`; run as the host
+        # user so files it writes (template builds, backups) stay editable by the app.
+        user: '${WWWUSER:-1000}:${WWWGROUP:-1000}'
         entrypoint: ['php', 'artisan', 'schedule:work']
         restart: unless-stopped
 

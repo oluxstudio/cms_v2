@@ -18,6 +18,7 @@ class Form extends Model
 
     protected $fillable = [
         'site_id', 'name', 'title', 'description', 'fields', 'delivery', 'email_template', 'is_active',
+        'template_keys', 'template_active',
     ];
 
     protected $casts = [
@@ -25,7 +26,21 @@ class Form extends Model
         'delivery' => 'array',
         'email_template' => 'array',
         'is_active' => 'boolean',
+        'template_keys' => 'array',
+        'template_active' => 'boolean',
     ];
+
+    /** Accepting submissions: switched on by the owner AND not parked by a template switch. */
+    public function isLive(): bool
+    {
+        return $this->is_active && $this->template_active !== false;
+    }
+
+    /** Forms the live site may show / accept (see isLive()). */
+    public function scopeLive($q)
+    {
+        return $q->where('is_active', true)->where('template_active', true);
+    }
 
     /** Default delivery config for a form with none stored yet (email on, both parties notified). */
     public static function defaultDelivery(): array

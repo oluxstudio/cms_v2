@@ -22,7 +22,7 @@ class PublicPageController extends Controller
         $preview = $request->boolean('preview') && $site->accessibleBy(Auth::user());
         Page::where('site_id', $site->id)
             ->where('url', $url)
-            ->when(! $preview, fn ($q) => $q->where('is_published', true))
+            ->when(! $preview, fn ($q) => $q->where('is_published', true)->where('template_active', true))
             ->firstOrFail();
 
         $target = $site->previewUrl($url);

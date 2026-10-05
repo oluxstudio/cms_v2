@@ -33,7 +33,7 @@ return new class extends Migration
 
         Schema::table('services', function (Blueprint $t) {
             $t->foreignId('booking_type_id')->nullable()->after('kind')
-              ->constrained('booking_types')->nullOnDelete();
+                ->constrained('booking_types')->nullOnDelete();
             $t->unsignedInteger('deposit_cents')->nullable()->after('requires_payment');
             $t->unsignedSmallInteger('deposit_pct')->nullable()->after('deposit_cents'); // whole %
         });

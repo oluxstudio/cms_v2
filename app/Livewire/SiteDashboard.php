@@ -124,10 +124,18 @@ class SiteDashboard extends Component
         $this->openTasksCount = Todo::where('site_id', $site->id)
             ->whereIn('status', ['open', 'todo', 'pending', 'in_progress', 'backlog'])->count();
 
-        $this->team = $site->members()
-            ->get(['users.id', 'name'])
-            ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'initials' => $u->initials()])
-            ->toArray();
+        // Everyone on the site's team in the order they joined (owner first),
+        // so the avatar row reads oldest → newest, left to right.
+        $this->team = $site->teamUsers()
+            ->sortBy(fn ($t) => [$t['role'] === 'owner' ? 0 : 1, $t['joined_at']?->getTimestamp() ?? PHP_INT_MAX])
+            ->map(fn ($t) => [
+                'id' => $t['user']->id,
+                'name' => $t['user']->name,
+                'initials' => $t['user']->initials(),
+                'avatar' => $t['user']->avatarUrl(),
+                'role' => $t['role'] ? ucfirst((string) $t['role']) : null,
+            ])
+            ->values()->toArray();
 
         $this->recentContacts = $site->contacts()
             ->latest()

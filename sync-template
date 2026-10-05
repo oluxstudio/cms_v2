@@ -15,15 +15,17 @@ KEY="${1:?usage: ./sync-template <key> [extra template:deploy flags]}"; shift ||
 SRC="$HOME/development/olux-studio/templates/$KEY"
 [ -d "$SRC" ] || { echo "✗ no such template source: $SRC"; exit 1; }
 
+# Preflight: stray root-owned files (from any root-run deploy or build) make
+# the rsync below and the publish/build steps fail with EACCES — normalise
+# ownership BEFORE touching anything.
+docker exec backend-cms-app-1 sh -c "chown -R sail:sail /var/www/html/templates /var/www/html/resources/templates /var/www/html/storage/app/import-$KEY /var/www/html/public/nuxt-preview 2>/dev/null" || true
+
 rsync -a --delete \
   --exclude node_modules --exclude .nuxt --exclude .output --exclude .git \
   --exclude '.env*' --exclude .mcp.json --exclude scripts --exclude dist \
   --exclude pack --exclude '*Zone.Identifier' \
-  "$SRC/" "$HOME/development/olux-studio/backend/storage/app/import-$KEY/"
-
-# Preflight: stray root-owned files (from any root-run build) silently kill
-# the publish/build steps with EACCES — normalise ownership first.
-docker exec backend-cms-app-1 sh -c "chown -R sail:sail /var/www/html/templates /var/www/html/resources/templates /var/www/html/storage/app/import-$KEY 2>/dev/null" || true
+  "$SRC/" "$HOME/development/olux-studio/backend/storage/app/import-$KEY/" \
+  || { echo "✗ copy into the CMS import folder failed — nothing was deployed"; exit 1; }
 
 docker exec -u sail backend-cms-app-1 php artisan template:deploy "$KEY" \
   --from="/var/www/html/storage/app/import-$KEY" "$@"

@@ -6,6 +6,7 @@ use App\Livewire\Concerns\WithLayoutMode;
 use App\Livewire\Forms\PageForm;
 use App\Models\Page;
 use App\Models\Site;
+use App\Services\TemplateInstaller;
 use App\Services\TemplateScaffolder;
 use App\Support\TemplateLayouts;
 use Livewire\Component;
@@ -298,6 +299,15 @@ class PageComponent extends Component
     }
 
     /** Delete a page — confirmation happens in the shared modal (data-confirm). */
+    /** Bring a page parked by a template switch back — it is the owner's from now on (active under any template). */
+    public function activatePage(string $id): void
+    {
+        abort_unless($this->site->allowsPageEdit(auth()->user(), $id), 403);
+        $page = Page::where('site_id', $this->site->id)->findOrFail($id);
+        $page->forceFill(['template_keys' => array_values(array_unique([...(array) $page->template_keys, TemplateInstaller::OWNER_KEEP])), 'template_active' => true])->save();
+        $this->dispatch('toast', level: 'success', title: 'Page activated', message: $page->name.' is back on the site and stays whichever template you use.');
+    }
+
     public function deletePage(string $id): void
     {
         abort_unless($this->site->allowsPageEdit(auth()->user(), $id), 403);

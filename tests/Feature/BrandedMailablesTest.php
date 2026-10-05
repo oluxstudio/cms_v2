@@ -10,6 +10,11 @@ use App\Models\Invoice;
 use App\Models\Site;
 use App\Models\User;
 use App\Support\EmailTemplate;
+use App\Support\SiteProperties;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+
+// Site Names are unique across sites: keep each test's sites out of the next run.
+uses(DatabaseTransactions::class);
 
 function bmSite(): array
 {
@@ -101,8 +106,9 @@ test('the review request renders the button with its URL', function () {
 
 test('the estimate quote uses the site template but a per-estimator draft wins', function () {
     [, $site] = bmSite();
+    $ref = 'EST-'.strtoupper(substr(uniqid(), -6)); // unique: the testing DB persists between runs
     $estimate = Estimate::create([
-        'site_id' => $site->id, 'reference' => 'EST-9', 'customer_name' => 'Jo',
+        'site_id' => $site->id, 'reference' => $ref, 'customer_name' => 'Jo',
         'customer_email' => 'jo@example.com', 'trade' => 'plumbing',
         'cost_low_cents' => 0, 'cost_high_cents' => 0, 'inputs' => [], 'results' => [],
         'hours' => 1, 'completion' => 1, 'status' => 'new',
@@ -112,6 +118,16 @@ test('the estimate quote uses the site template but a per-estimator draft wins',
         ['key' => 'intro', 'enabled' => true, 'text' => 'Template intro for {name}.'],
     ]);
     $mail = new EstimateQuoteMail($site->fresh(), $estimate, [['label' => 'Estimated cost', 'formatted' => '£500']]);
-    expect($mail->envelope()->subject)->toBe('Quote EST-9 inside');
+    expect($mail->envelope()->subject)->toBe("Quote {$ref} inside");
     expect($mail->render())->toContain('Template intro for Jo.')->toContain('£500');
+});
+
+test('customer emails come from the business name and replies go to the business', function () {
+    [, $site] = bmSite();
+    SiteProperties::save($site, ['values' => ['site_name' => 'Grace Way', 'email_sender_name' => "Grace\r\nWay Bookings", 'reply_to' => 'bookings@gw.test']]);
+
+    $env = (new BookingConfirmed(bmBooking($site), $site->fresh()))->envelope();
+    expect($env->from->name)->toBe('Grace Way Bookings')               // header-safe
+        ->and($env->from->address)->toBe(config('mail.from.address'))  // platform address kept
+        ->and($env->replyTo[0]->address)->toBe('bookings@gw.test');
 });

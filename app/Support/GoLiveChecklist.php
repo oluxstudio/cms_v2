@@ -17,23 +17,50 @@ class GoLiveChecklist
      * @return list<array{key:string,label:string,description:string,state:string,tab:?string}>
      *                                                                                          state: done | working | active | todo
      */
-    public static function steps(Site $site): array
+    public static function steps(Site $site, ?string $flow = null, ?string $buyStage = null, ?string $buyDomain = null): array
     {
         $order = DomainOrder::where('site_id', $site->id)
-            ->whereIn('status', ['paid', 'pending'])
+            ->where('status', 'paid')   // paid, being registered (unpaid = `checkout`)
             ->where('type', 'register')->latest()->first();
         $buying = $order !== null && ! filled($site->domain);
 
+        // Buying through us: Site ready → Web address → Payment → Live
+        // (connecting is automatic, so the payment takes its place).
+        $bought = DomainOrder::where('site_id', $site->id)->where('type', 'register')
+            ->where('status', 'registered')->where('domain', $site->domain)->exists();
+        if (! $site->live && ($flow === 'buy' || $buying)) {
+            $chosen = $buying ? $order->domain : (in_array($buyStage, ['chosen', 'pay'], true) ? $buyDomain : null);
+            $steps = [
+                self::readyStep($site),
+                [
+                    'key' => 'domain',
+                    'label' => 'Web address',
+                    'description' => $chosen ?: 'Pick one option below',
+                    'done' => filled($chosen),
+                    'tab' => 'domain',
+                ],
+                [
+                    'key' => 'payment',
+                    'label' => 'Payment',
+                    'description' => $buying ? 'Paid · registering '.$order->domain.'…' : ($buyStage === 'pay' ? 'Pay securely below' : 'Card, Apple Pay or Google Pay'),
+                    'done' => false,
+                    'working' => $buying,
+                    'tab' => 'payment',
+                ],
+                [
+                    'key' => 'live',
+                    'label' => 'Live',
+                    'description' => 'Automatic once paid',
+                    'done' => false,
+                    'tab' => 'live',
+                ],
+            ];
+
+            return self::withStates($steps);
+        }
+
         $steps = [
-            [
-                'key' => 'template',
-                'label' => 'Site ready',
-                'description' => (filled($site->template) || $site->pages()->exists())
-                    ? 'Template chosen'
-                    : 'Pick a template in the Marketplace first',
-                'done' => filled($site->template) || $site->pages()->exists(),
-                'tab' => null,
-            ],
+            self::readyStep($site),
             [
                 'key' => 'domain',
                 'label' => 'Web address',
@@ -48,8 +75,7 @@ class GoLiveChecklist
                 'key' => 'dns',
                 'label' => 'Connected',
                 'description' => $site->domain_verified_at
-                    ? (DomainOrder::where('site_id', $site->id)->where('domain', $site->domain)->where('status', 'registered')->exists()
-                        ? 'Automatic' : 'Verified '.$site->domain_verified_at->diffForHumans())
+                    ? ($bought ? 'Automatic' : 'Verified '.$site->domain_verified_at->diffForHumans())
                     : 'We check everything for you',
                 'done' => $site->domain_verified_at !== null,
                 'tab' => 'connect',
@@ -63,7 +89,25 @@ class GoLiveChecklist
             ],
         ];
 
-        // First not-done step is ACTIVE ("You are here"); the rest stay todo.
+        return self::withStates($steps);
+    }
+
+    private static function readyStep(Site $site): array
+    {
+        $ready = filled($site->template) || $site->pages()->exists();
+
+        return [
+            'key' => 'template',
+            'label' => 'Site ready',
+            'description' => $ready ? 'Template chosen' : 'Pick a template in the Marketplace first',
+            'done' => $ready,
+            'tab' => null,
+        ];
+    }
+
+    /** First not-done step is ACTIVE ("You are here"); the rest stay todo. */
+    private static function withStates(array $steps): array
+    {
         $activeSeen = false;
 
         return array_map(function (array $s) use (&$activeSeen) {

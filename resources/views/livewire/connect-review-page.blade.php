@@ -57,6 +57,8 @@
                 if (d.type === 'olx-field-edit-idx') this.$wire.inlineFieldEditByIndex(d.key, d.field, d.value, d.index);
                 if (d.type === 'olx-link-edit') this.$wire.inlineLinkEdit(d.key, d.kind, d.labelField ?? '', d.label, d.href, d.index ?? null, d.oldLabel ?? '', d.oldHref ?? '');
                 if (d.type === 'olx-register') { this.$wire.registerMarkers(d.markers); this.sendTheme(); }
+                // The preview re-reads collections on olux:refresh — update them in place too.
+                if (d.type === 'olx-live-collections' && ! this.$wire.liveCollections) this.$wire.set('liveCollections', true, false);
                 if (d.type === 'olx-hover-field') this.hotNode(d.field);
             });
             // Renderer mode: after a save, tell the shell to re-fetch content
@@ -144,44 +146,7 @@
 }
 </style>
 
-    @assets
-    <script>
-        // Mini rich-text editor behaviour (used by partials/rich-text.blade.php).
-        // Zero-dependency: contenteditable + execCommand, syncing innerHTML to
-        // the Livewire path with a light sanitizer.
-        window.olxRich = (path) => ({
-            clean(html) {
-                return html
-                    {{-- no \1 backreferences here: Livewire injects @assets via preg_replace,
-                         which expands \1 in this text to the matched </head>. --}}
-                    .replace(/<script[\s\S]*?<\/script>/gi, '')
-                    .replace(/<style[\s\S]*?<\/style>/gi, '')
-                    .replace(/<\/(?:script|style)>/gi, '')
-                    .replace(/\son\w+="[^"]*"/gi, '')
-                    .replace(/\sstyle="[^"]*"/gi, '');
-            },
-            push(el) { this.$wire.set(path, this.clean(el.innerHTML), false); },
-            cmd(name) { document.execCommand(name, false); },
-            link() {
-                const url = prompt('Link URL (e.g. /contact or https://…)');
-                if (url) document.execCommand('createLink', false, url);
-            },
-            highlight() {
-                // Wrap the selection in the template's accent span (<span class="hl">).
-                const sel = window.getSelection();
-                if (!sel || sel.isCollapsed) return;
-                const span = document.createElement('span');
-                span.className = 'hl';
-                try { sel.getRangeAt(0).surroundContents(span); } catch (e) { /* partial-node selection */ }
-                this.push(this.$el.querySelector('.olx-rt-area'));
-            },
-            pastePlain(e) {
-                const text = e.clipboardData?.getData('text/plain') ?? '';
-                document.execCommand('insertText', false, text);
-            },
-        });
-    </script>
-    @endassets
+    @include('livewire.partials.olx-rich-assets')
     <style>
         /* Baseline frame size in CSS, not only in the Alpine :style — every
            Livewire morph resets the style attribute to the server-rendered one
@@ -199,24 +164,9 @@
             border: 1.5px solid rgba(255,255,255,.55); }
         .dark .olx-scroll::-webkit-scrollbar-thumb { background: #6b7280; border-color: rgba(0,0,0,.4); }
         .olx-scroll::-webkit-scrollbar-thumb:hover { background: #1f2937; }
-        .olx-in { width:100%; margin-top:2px; padding:.4rem .55rem; font-size:12px; border-radius:8px;
-                  background:rgba(0,0,0,.02); border:1px solid rgba(0,0,0,.1); color:inherit; }
-        .dark .olx-in { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
         .olx-save { margin-top:.75rem; width:100%; padding:.5rem; border-radius:12px; font-weight:700;
                     font-size:13px; color:#fff; background:var(--primary); }
         /* Mini rich-text editor (zero-dependency contenteditable) */
-        .olx-rt { margin-top:2px; border:1px solid rgba(0,0,0,.1); border-radius:8px; overflow:hidden; background:rgba(0,0,0,.02); }
-        .dark .olx-rt { border-color:rgba(255,255,255,.1); background:rgba(255,255,255,.04); }
-        .olx-rt-bar { display:flex; gap:2px; padding:3px 4px; border-bottom:1px solid rgba(0,0,0,.07); }
-        .dark .olx-rt-bar { border-color:rgba(255,255,255,.07); }
-        .olx-rt-bar button { min-width:22px; height:20px; border:0; border-radius:5px; background:transparent;
-            font:600 11px/1 system-ui; color:inherit; cursor:pointer; }
-        .olx-rt-bar button:hover { background:rgba(0,0,0,.08); }
-        .dark .olx-rt-bar button:hover { background:rgba(255,255,255,.1); }
-        .olx-rt-hl { background:var(--primary); color:#fff; border-radius:3px; padding:0 3px; font-size:9px; }
-        .olx-rt-area { min-height:5.2em; max-height:14em; overflow-y:auto; padding:.4rem .55rem; font-size:12px; outline:none; }
-        .olx-rt-area:focus { box-shadow:inset 0 0 0 2px rgba(99,102,241,.35); }
-        .olx-rt-area a { color:#6366f1; text-decoration:underline; }
         /* Readability: the editor panel runs larger than the utility classes
            sprinkled through its partials — override them here in one place
            instead of retouching every text-[10px]/text-xs in the blades. */
@@ -322,14 +272,42 @@
         {{-- The design was just applied; pages, forms and modules are being
              created by a background job. Poll until it flips to done/failed —
              the poll lives only in this branch, so it stops automatically. --}}
-        <div wire:poll.3s class="flex-1 grid place-items-center border border-dashed rounded-2xl px-6 text-center">
-            <div class="space-y-3">
-                <svg class="animate-spin h-8 w-8 mx-auto text-indigo-500" viewBox="0 0 24 24" fill="none">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                </svg>
-                <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Setting up your site…</p>
-                <p class="text-xs text-gray-400 max-w-sm mx-auto">Creating the template's pages and components, wiring up forms, bookings, shop &amp; orders, and applying the theme. This usually takes a few seconds — the preview appears here automatically.</p>
+        @php
+            $ip = $this->installProgress;
+            $steps = ['pages' => 'Pages & sections', 'layout' => 'Header & footer', 'forms' => 'Forms', 'collections' => 'Collections', 'theme' => 'Colours & fonts'];
+            $order = ['start', 'pages', 'layout', 'features', 'forms', 'collections', 'linking', 'booking', 'theme', 'done'];
+            $at = array_search($ip['step'], $order, true);
+        @endphp
+        <div wire:poll.1s class="flex-1 grid place-items-center border border-dashed rounded-2xl px-6 text-center">
+            <div class="w-full max-w-md space-y-4" role="status" aria-live="polite">
+                <p class="text-base font-bold text-gray-800 dark:text-gray-100">Setting up your site…</p>
+                {{-- Progress bar --}}
+                <div>
+                    <div class="h-3 w-full rounded-full bg-gray-100 dark:bg-white/[0.08] overflow-hidden" aria-hidden="true">
+                        <div class="h-full rounded-full transition-all duration-700 ease-out" style="width:{{ max(3, (int) $ip['percent']) }}%;background:var(--primary)"></div>
+                    </div>
+                    <div class="flex items-center justify-between mt-1.5 text-[12px]">
+                        <span class="text-gray-600 dark:text-gray-300 truncate">{{ $ip['label'] }}@if ($ip['total']) <span class="text-gray-400">· {{ $ip['done'] }} of {{ $ip['total'] }}</span>@endif</span>
+                        <span class="font-bold text-gray-800 dark:text-gray-100 tabular-nums">{{ (int) $ip['percent'] }}%</span>
+                    </div>
+                </div>
+                {{-- Step checklist --}}
+                <ul class="text-left inline-flex flex-col gap-1.5 text-[12.5px]">
+                    @foreach ($steps as $sk => $sl)
+                        @php $si = array_search($sk, $order, true); $state = $at === false ? 'todo' : ($si < $at ? 'done' : ($si === $at ? 'now' : 'todo')); @endphp
+                        <li class="flex items-center gap-2 {{ $state === 'todo' ? 'text-gray-400' : 'text-gray-700 dark:text-gray-200' }}">
+                            @if ($state === 'done')
+                                <span class="w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] grid place-items-center">✓</span>
+                            @elseif ($state === 'now')
+                                <span class="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--primary);border-top-color:transparent"></span>
+                            @else
+                                <span class="w-4 h-4 rounded-full border-2 border-gray-200 dark:border-white/[0.15]"></span>
+                            @endif
+                            {{ $sl }}
+                        </li>
+                    @endforeach
+                </ul>
+                <p class="text-[11.5px] text-gray-400">A fresh copy of the template: its pages, sections and sample text — none of its data. The preview appears here automatically.</p>
             </div>
         </div>
     @elseif ($this->installStatus === 'failed')
@@ -403,6 +381,16 @@
             {{-- The card scrolls its own list (auto overflow) so the long
                  pages + detail-pages index never stretches the layout --}}
             <div class="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#1d1e2a] p-2">
+                @if ($site->allows(auth()->user(), 'properties.manage'))
+                    @php $spOpen = ! empty($edit['siteProperties']) && $mode === 'edit'; @endphp
+                    <button wire:click="openSiteProperties"
+                            class="w-full text-left mb-2 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors border border-dashed
+                                   {{ $spOpen ? 'text-white border-transparent' : 'text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/[0.05]' }}"
+                            @if ($spOpen) style="background:var(--primary)" @endif>
+                        ⚙️ Site properties
+                        <span class="block text-[10px] font-normal {{ $spOpen ? 'text-white/75' : 'text-gray-400' }}">name, logo, contact, hours, SEO…</span>
+                    </button>
+                @endif
                 <p class="px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">Pages</p>
                 @foreach ($pages as $page)
                     <button wire:click="$set('previewPath', '{{ $page->url }}')"
@@ -419,15 +407,15 @@
                      studies, sermons…) — pulled from each route's data source --}}
                 @if ($this->dynamicPages !== [])
                     <p class="px-2 pt-3 pb-1.5 text-[11px] font-bold uppercase tracking-[.12em] text-gray-400 border-t border-gray-50 dark:border-white/[0.04] mt-2">Detail pages</p>
-                    @foreach ($this->dynamicPages as $group => $rows)
+                    @foreach ($this->dynamicPages as $group => $dpRows)
                         <div x-data="{ open: false }">
                             <button type="button" @click="open = ! open"
                                     class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/[0.05]">
-                                <span>{{ $group }} <span class="font-normal text-gray-300 dark:text-gray-500">({{ count($rows) }})</span></span>
+                                <span>{{ $group }} <span class="font-normal text-gray-300 dark:text-gray-500">({{ count($dpRows) }})</span></span>
                                 <svg class="w-3 h-3 opacity-50 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                             </button>
                             <div x-show="open" x-collapse x-cloak>
-                                @foreach ($rows as $row)
+                                @foreach ($dpRows as $row)
                                     <button wire:click="$set('previewPath', '{{ $row['url'] }}')"
                                             class="w-full text-left pl-5 pr-2.5 py-1.5 rounded-xl text-xs transition-colors
                                                    {{ $previewPath === $row['url']

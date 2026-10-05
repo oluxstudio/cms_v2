@@ -52,13 +52,14 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
                     @foreach($pages as $page)
                         <div x-on:click="window.location = '{{ url($site->name.'/pages/'.$page->id.'/details') }}'" role="button"
-                             class="group flex flex-col bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer">
+                             class="{{ $page->template_active === false ? 'opacity-80' : '' }} group flex flex-col bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer">
                             <div class="p-5 flex-1">
                                 <div class="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center">
                                     <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 </div>
                                 <p class="mt-3 text-base font-bold text-gray-900 dark:text-white">{{ $page->name }}</p>
                                 <p class="mt-1 inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 font-mono text-xs">{{ $page->url }}</p>
+                                @include('partials.template-inactive', ['item' => $page, 'action' => 'activatePage', 'noun' => 'page'])
                                 <div class="mt-3 flex flex-wrap gap-1">
                                     @foreach(array_slice(array_filter(array_map('trim', explode(',', $page->keywords))), 0, 4) as $kw)
                                         <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300">{{ $kw }}</span>
@@ -110,7 +111,9 @@
                         @forelse($pages as $page)
                             <tr x-on:click="window.location = '{{ url($site->name.'/pages/'.$page->id.'/details') }}'" role="button"
                                 class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer">
-                                <td class="{{ $pad }} font-medium text-gray-900 dark:text-white">{{ $page->name }}</td>
+                                <td class="{{ $pad }} font-medium text-gray-900 dark:text-white {{ $page->template_active === false ? 'opacity-70' : '' }}">{{ $page->name }}
+                                    @include('partials.template-inactive', ['item' => $page, 'action' => 'activatePage', 'noun' => 'page'])
+                                </td>
                                 <td class="{{ $pad }} text-gray-500 dark:text-gray-400 font-mono text-xs">{{ $page->url }}</td>
                                 @unless($compact)
                                     <td class="{{ $pad }}">

@@ -113,7 +113,7 @@ class TasksPage extends Component
     public function members()
     {
         return $this->site->teamUsers()
-            ->map(fn (array $t) => ['id' => $t['user']->id, 'name' => $t['user']->name, 'avatar' => $t['user']->avatar, 'role' => $t['role']])
+            ->map(fn (array $t) => ['id' => $t['user']->id, 'name' => $t['user']->name, 'avatar' => $t['user']->avatarUrl(), 'role' => $t['role']])
             ->sortBy('name')->values();
     }
 

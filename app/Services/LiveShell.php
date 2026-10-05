@@ -35,11 +35,37 @@ class LiveShell
             .self::trackingBeacon($site);
         $html = preg_replace('/<head>/', '<head>'.$inject, $html, 1);
 
+        // Site Properties output (icons, SEO, JSON-LD, analytics, consent,
+        // custom scripts) — the same for every template. Never breaks a page.
+        try {
+            $html = preg_replace('#</head>#i', SiteHead::head($site)."\n</head>", $html, 1);
+            $html = preg_replace('#</body>#i', SiteHead::bodyEnd($site)."\n</body>", $html, 1);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        // Free plan: a small "Made with Olux" badge (paid plans have none).
+        if ($site->user?->currentSubscription()->showsBadge()) {
+            $html = preg_replace('#</body>#i', self::badge()."\n</body>", $html, 1);
+        }
+
         return response($html, 200, [
             'Content-Type' => 'text/html; charset=utf-8',
             'Cache-Control' => 'no-cache, must-revalidate',
             'X-Olux-Live' => e($site->name),
         ]);
+    }
+
+    /** The Free-plan badge: fixed bottom-left, small, links to the Olux home page. */
+    private static function badge(): string
+    {
+        $href = e(rtrim((string) config('app.url'), '/').'/?ref=badge');
+
+        return '<a id="olux-badge" href="'.$href.'" target="_blank" rel="noopener" '
+            .'style="position:fixed;left:12px;bottom:12px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;'
+            .'padding:6px 10px;border-radius:999px;background:#111827;color:#fff;font:600 12px/1 system-ui,-apple-system,Segoe UI,sans-serif;'
+            .'text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.18);opacity:.92">'
+            .'<span style="width:8px;height:8px;border-radius:50%;background:#f97316"></span>Made with Olux</a>';
     }
 
     /**

@@ -6,7 +6,7 @@ const route = useRoute()
 const { events: authoredEvents } = useSiteContent()
 const rows = computed(() => {
   const cms = (useCms().items('events', []) as any[]).filter(e => e.title && e.img)
-  return cms.length ? cms : authoredEvents
+  return (cms.length || useCms().isSite) ? cms : authoredEvents
 })
 const event = computed(() => rows.value.find(e => (e.id ?? '') === route.params.slug))
 

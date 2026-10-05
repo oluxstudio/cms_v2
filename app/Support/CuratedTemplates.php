@@ -13,8 +13,11 @@ class CuratedTemplates
     /** @return list<array<string,mixed>> */
     public static function all(): array
     {
+        // Public apps only — never another account's upload or a private app.
+        $public = TemplateAccess::publicAppKeys();
+
         return collect(TemplateAppRegistry::all())
-            ->reject(fn ($t) => $t['key'] === TemplateAppRegistry::BLANK)
+            ->reject(fn ($t) => $t['key'] === TemplateAppRegistry::BLANK || ! in_array($t['key'], $public, true))
             ->map(fn ($t) => [
                 'key' => $t['key'],
                 'name' => $t['name'],

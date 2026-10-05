@@ -6,7 +6,6 @@ use App\Models\Site;
 use App\Models\Template;
 use App\Services\TemplateCatalog;
 use App\Services\TemplateInstaller;
-use App\Support\CuratedTemplates;
 use App\Support\TemplateCards;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -39,19 +38,20 @@ class TemplateGalleryPage extends Component
 
     public string $message = '';
 
-    /** Every browsable card, unfiltered — feeds both the grid and the sidebar counts. */
+    /**
+     * Every browsable card, unfiltered — feeds both the grid and the sidebar
+     * counts. Exactly the templates Admin › Templates has PUBLISHED and PUBLIC
+     * (Template::publiclyListed) — first-party ones included only when their
+     * catalog row is; nothing else shows up on the public page.
+     */
     #[Computed]
     public function pool(): array
     {
-        $curated = collect(CuratedTemplates::all())->map(fn ($t) => TemplateCards::fromCurated($t));
-
-        $catalog = app(TemplateCatalog::class)
-            ->browse([], 'popular', 60)
+        return app(TemplateCatalog::class)
+            ->browse([], 'popular', 200)
             ->getCollection()
-            ->reject(fn (Template $t) => $t->builtin_key && collect(CuratedTemplates::all())->firstWhere('key', $t->builtin_key))
-            ->map(fn (Template $t) => TemplateCards::fromCatalog($t));
-
-        return $curated->concat($catalog)->values()->all();
+            ->map(fn (Template $t) => TemplateCards::fromCatalog($t))
+            ->values()->all();
     }
 
     public function updatedSearch(): void
@@ -76,7 +76,7 @@ class TemplateGalleryPage extends Component
         $all = collect($this->pool);
         if ($this->search !== '') {
             $needle = mb_strtolower($this->search);
-            $all = $all->filter(fn ($c) => str_contains(mb_strtolower($c['name'].' '.$c['description']), $needle));
+            $all = $all->filter(fn ($c) => str_contains(mb_strtolower($c['name'].' '.$c['tagline'].' '.$c['description']), $needle));
         }
         if ($this->category !== 'all') {
             $all = $all->filter(fn ($c) => strcasecmp($c['category'], $this->category) === 0);

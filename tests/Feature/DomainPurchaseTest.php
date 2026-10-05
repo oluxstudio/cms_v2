@@ -7,7 +7,9 @@ use App\Models\Site;
 use App\Models\User;
 use App\Services\Domains\DomainPurchase;
 use App\Services\Domains\Registrar;
+use App\Services\PlatformBilling;
 use Livewire\Livewire;
+use Stripe\StripeClient;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 function domainSite(): array
@@ -171,4 +173,179 @@ test('the sweep ignores domains the site no longer uses', function () {
     $this->artisan('domains:renewal-sweep')->assertSuccessful();
 
     expect(Alert::where('site_id', $site->id)->where('type', 'domain')->count())->toBe(0);
+});
+
+// ─── On-page payment (Stripe Payment Element) ────────────────────
+
+/** A PlatformBilling whose Stripe client is an in-memory fake; returns the call log. */
+function fakeStripeBilling(string $intentStatus = 'succeeded', string $subStatus = 'active'): ArrayObject
+{
+    $log = new ArrayObject;
+    $o = fn (array $a) => json_decode(json_encode($a));
+    $svc = fn (array $methods) => new class($methods)
+    {
+        public function __construct(private array $m) {}
+
+        public function __call($name, $args)
+        {
+            return ($this->m[$name])(...$args);
+        }
+    };
+    $client = (object) [
+        'customers' => $svc(['create' => function ($p) use ($log, $o) {
+            $log[] = ['customers.create', $p];
+
+            return $o(['id' => 'cus_fake']);
+        }]),
+        'products' => $svc([
+            'retrieve' => fn ($id) => $o(['id' => $id]),
+            'create' => fn ($p) => $o(['id' => $p['id']]),
+        ]),
+        'paymentIntents' => $svc([
+            'create' => function ($p) use ($log, $o) {
+                $log[] = ['paymentIntents.create', $p];
+
+                return $o(['id' => 'pi_fake', 'client_secret' => 'pi_fake_secret_x', 'status' => 'requires_payment_method', 'amount' => $p['amount']]);
+            },
+            'retrieve' => fn ($id) => $o(['id' => $id, 'client_secret' => 'pi_fake_secret_x', 'status' => $intentStatus, 'amount' => 1200, 'customer' => 'cus_fake']),
+        ]),
+        'subscriptions' => $svc([
+            'create' => function ($p) use ($log, $o) {
+                $log[] = ['subscriptions.create', $p];
+
+                return $o(['id' => 'sub_fake', 'latest_invoice' => ['confirmation_secret' => ['client_secret' => 'pi_sub_secret_x']]]);
+            },
+            'retrieve' => fn ($id) => $o(['id' => $id, 'status' => $subStatus, 'customer' => 'cus_fake',
+                'latest_invoice' => ['status' => $subStatus === 'active' ? 'paid' : 'open', 'confirmation_secret' => ['client_secret' => 'pi_sub_secret_x']]]),
+        ]),
+    ];
+    $stripe = new class($client) extends StripeClient
+    {
+        public function __construct(private object $fake)
+        {
+            parent::__construct(['api_key' => 'sk_test_fake']);
+        }
+
+        public function __get($name)
+        {
+            return $this->fake->{$name};
+        }
+    };
+    app()->instance(PlatformBilling::class, new class($stripe) extends PlatformBilling
+    {
+        public function __construct(private StripeClient $fake) {}
+
+        public function configured(): bool
+        {
+            return true;
+        }
+
+        public function client(): StripeClient
+        {
+            return $this->fake;
+        }
+    });
+    app()->forgetInstance(DomainPurchase::class);
+
+    return $log;
+}
+
+test('choosing a domain opens the on-page payment step; nothing is registered until Stripe says it is paid', function () {
+    config(['domains.driver' => 'fake']);
+    [$owner, $site] = domainSite();
+    $owner->currentSubscription()->update(['plan' => 'starter', 'status' => 'active']);   // no plan to buy, no free domain
+    $log = fakeStripeBilling('requires_payment_method');
+
+    $lw = Livewire::actingAs($owner)->test(DomainSearch::class, ['site' => $site])
+        ->set('query', $label = 'pay-'.uniqid())->call('search')
+        ->call('select', $d = $label.'.co.uk')
+        ->assertDispatched('go-live-stage', stage: 'chosen', domain: $d)
+        ->call('continueToCheckout')
+        ->assertDispatched('go-live-stage', stage: 'pay', domain: $d)
+        ->assertSet('clientSecret', 'pi_fake_secret_x')
+        ->assertSet('payTotalCents', 1200)
+        ->assertSee('Pay £12.00')
+        ->assertSee('Due today');
+
+    $order = DomainOrder::where('site_id', $site->id)->sole();
+    expect($order->status)->toBe('checkout')
+        ->and($order->stripe_payment_intent_id)->toBe('pi_fake')
+        ->and(collect($log)->firstWhere(0, 'paymentIntents.create')[1]['metadata']['order_id'])->toBe($order->id);
+
+    // Not paid yet → an honest message, no registration.
+    $lw->call('paymentConfirmed')->assertSet('payError', fn ($m) => str_contains($m, "didn't go through"));
+    expect($order->fresh()->status)->toBe('checkout')->and($site->fresh()->live)->toBeFalse();
+
+    // Going back and paying again reuses the same order.
+    $lw->call('backToSearch')->assertSet('payOrderId', null)->call('continueToCheckout');
+    expect(DomainOrder::where('site_id', $site->id)->count())->toBe(1);
+
+    // Paid → registered, connected and live.
+    fakeStripeBilling('succeeded');
+    $lw->call('paymentConfirmed')->assertRedirect(route('site.publish', $site->name));
+    expect($order->fresh()->status)->toBe('registered')
+        ->and($site->fresh()->domain)->toBe($d)
+        ->and($site->fresh()->live)->toBeTrue();
+});
+
+test('domain + hosting plan is one payment: a subscription whose first invoice carries the domain', function () {
+    config(['domains.driver' => 'fake']);
+    [$owner, $site] = domainSite();
+    $log = fakeStripeBilling(subStatus: 'active');
+
+    Livewire::actingAs($owner)->test(DomainSearch::class, ['site' => $site])
+        ->set('query', $label = 'plan-'.uniqid())->call('search')
+        ->set('plan', 'starter')
+        ->call('buy', $d = $label.'.co.uk')
+        ->assertSet('clientSecret', 'pi_sub_secret_x')
+        ->assertSee('hosting plan')
+        ->call('paymentConfirmed')
+        ->assertRedirect(route('site.publish', $site->name));
+
+    $create = collect($log)->firstWhere(0, 'subscriptions.create')[1];
+    expect($create['payment_behavior'])->toBe('default_incomplete')
+        ->and($create['add_invoice_items'][0]['price_data']['unit_amount'])->toBe(1200)
+        ->and($create['customer'])->toBe('cus_fake');
+
+    $sub = $owner->fresh()->currentSubscription();
+    expect($sub->plan)->toBe('starter')->and($sub->status)->toBe('active')
+        ->and($sub->stripe_subscription_id)->toBe('sub_fake')
+        ->and(DomainOrder::where('domain', $d)->value('status'))->toBe('registered');
+});
+
+test('the webhook fulfils a paid domain order, and the bank-redirect return confirms it too', function () {
+    config(['domains.driver' => 'fake']);
+    [$owner, $site] = domainSite();
+    fakeStripeBilling('succeeded');
+
+    $order = DomainOrder::create(['user_id' => $owner->id, 'site_id' => $site->id, 'domain' => $d = 'hook-'.uniqid().'.co.uk',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1200, 'status' => 'checkout', 'stripe_payment_intent_id' => 'pi_hook']);
+    app(DomainPurchase::class)->fulfilFromPaymentIntent(json_decode(json_encode(['id' => 'pi_other', 'metadata' => ['kind' => 'domain', 'order_id' => $order->id]])));
+    expect($order->fresh()->status)->toBe('checkout');   // id mismatch → ignored
+    app(DomainPurchase::class)->fulfilFromPaymentIntent(json_decode(json_encode(['id' => 'pi_hook', 'customer' => 'cus_fake', 'metadata' => ['kind' => 'domain', 'order_id' => $order->id]])));
+    expect($order->fresh()->status)->toBe('registered');
+
+    $o2 = DomainOrder::create(['user_id' => $owner->id, 'site_id' => $site->id, 'domain' => 'return-'.uniqid().'.co.uk',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1200, 'status' => 'checkout', 'stripe_payment_intent_id' => 'pi_ret']);
+    $this->actingAs($owner)->get(route('site.domain.success', $site).'?order='.$o2->id.'&payment_intent=pi_ret')
+        ->assertRedirect(route('site.publish', $site->name));
+    expect($o2->fresh()->status)->toBe('registered');
+});
+
+test('renewals are paid on the page too', function () {
+    config(['domains.driver' => 'fake']);
+    [$owner, $site] = domainSite();
+    $registered = DomainOrder::create(['user_id' => $owner->id, 'site_id' => $site->id, 'domain' => $d = 'renewpay-'.uniqid().'.co.uk',
+        'type' => 'register', 'years' => 1, 'price_cents' => 1200, 'status' => 'registered', 'expires_at' => now()->addDays(20)]);
+    $site->update(['domain' => $d]);
+    fakeStripeBilling('succeeded');
+
+    Livewire::actingAs($owner)->test(DomainSearch::class, ['site' => $site])
+        ->call('renew', $registered->id)
+        ->assertSet('clientSecret', 'pi_fake_secret_x')
+        ->assertSee('renewal')
+        ->call('paymentConfirmed')
+        ->assertRedirect(route('site.publish', $site->name));
+
+    expect($registered->fresh()->expires_at->toDateString())->toBe(now()->addDays(20)->addYear()->toDateString());
 });

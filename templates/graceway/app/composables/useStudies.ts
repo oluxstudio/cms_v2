@@ -19,7 +19,21 @@ export interface Study {
 }
 
 // Single source of truth for all Bible studies — newest first.
-/** @olux-collection Bible Studies */
+/** @olux-collection Bible Studies
+ * @olux-field slug text required
+ * @olux-field title text required
+ * @olux-field passage textarea
+ * @olux-field excerpt textarea
+ * @olux-field summary textarea10
+ * @olux-field questions list
+ * @olux-field takeaway textarea10
+ * @olux-field memoryVerse textarea2 label="Memory verse"
+ * @olux-field audience select options=Everyone|Youth|Women|Men|Seniors
+ * @olux-field date date auto=created_at
+ * @olux-field videoUrl url label="Video URL"
+ * @olux-field audioUrl url label="Audio URL"
+ * @olux-field poster image
+ */
 const studies: Study[] = [
   {
     slug: 'rooted-week-4-fruit-that-lasts', title: 'Fruit That Lasts', series: 'Rooted', week: 'Week 4 of 4',
@@ -169,12 +183,12 @@ const studies: Study[] = [
     questions: ['What does stillness feel like in your body?', 'Which line of the psalm found you today?', 'When could Selah fit your daily rhythm?'],
     takeaway: 'Return to this recording once a day for three days and journal one word each time.',
     memoryVerse: 'Psalm 46:10', audience: 'Everyone', date: '2026-09-18',
-    audioUrl: '/assets/media/study-audio-1.wav', poster: '/assets/images/gallery-12.jpg',
+    audioUrl: '/assets/media/study-audio-1.mp4', poster: '/assets/images/gallery-12.jpg',
   },
 ]
 
 // CMS-first: the "Bible Studies" collection feeds the archive; authored rows seed it.
 export const useStudies = (): Study[] => {
   const rows = (useCms().items('bibleStudies', []) as any[]).filter(s => s.slug && s.title)
-  return rows.length ? rows.map(s => ({ ...studies.find(a => a.slug === s.slug), ...s }) as Study) : studies
+  return (rows.length || useCms().isSite) ? rows.map(s => ({ ...studies.find(a => a.slug === s.slug), ...s }) as Study) : studies
 }

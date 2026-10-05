@@ -87,8 +87,8 @@ test('a live domain serves the site shell with identity injected', function () {
     expect($response->getContent())->toContain('__OLUX_SITE__')
         ->and($response->getContent())->toContain($site->name);
 
-    // www. resolves to the same site.
-    $this->get("http://www.{$domain}/")->assertOk()->assertHeader('X-Olux-Live', $site->name);
+    // www. resolves to the same site — redirected to the preferred (apex by default) address.
+    $this->get("http://www.{$domain}/")->assertStatus(301)->assertRedirect("http://{$domain}/");
 });
 
 test('an offline or unknown domain never serves a site', function () {

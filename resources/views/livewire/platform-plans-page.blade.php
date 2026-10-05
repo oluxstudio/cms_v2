@@ -66,11 +66,17 @@
                             @if (! empty($t['limits']['marketplace']))<span>Sells templates</span>@endif
                             @if (! empty($t['domain_included']))<span>Domain included</span>@endif
                             <span>{{ ($t['limits']['ai_tokens_month'] ?? null) === null ? 'Unlimited AI' : number_format($t['limits']['ai_tokens_month']).' AI tokens/mo' }}</span>
+                            <span>{{ array_key_exists('mailboxes', $t['limits'] ?? []) && $t['limits']['mailboxes'] === null ? 'Mailboxes per account' : ((int) ($t['limits']['mailboxes'] ?? 0)).' mailboxes' }}</span>
+                            @if (array_key_exists('staff_calendars', $t['limits'] ?? []))<span>{{ ($t['limits']['staff_calendars'] ?? null) === null ? 'Unlimited' : $t['limits']['staff_calendars'] }} {{ Str::plural('calendar', (int) ($t['limits']['staff_calendars'] ?? 2)) }}</span>@endif
+                            @if (($t['limits']['bookings_month'] ?? null) !== null)<span>{{ $t['limits']['bookings_month'] }} bookings/mo</span>@endif
+                            @if (($t['limits']['payment_fee_pct'] ?? null) !== null)<span>{{ (float) $t['limits']['payment_fee_pct'] }}% payment fee</span>@endif
+                            @if (! empty($t['limits']['badge']))<span>Olux badge</span>@endif
                         </div>
                     </div>
                     <div class="text-right shrink-0">
                         <p class="font-display text-2xl font-extrabold text-gray-900 dark:text-white tabular-nums">{{ ($t['price_cents'] ?? 0) ? $gbp((int) $t['price_cents']) : 'Free' }}</p>
-                        <p class="text-[11.5px] text-gray-500 dark:text-gray-400">{{ ($t['price_cents'] ?? 0) ? 'per month' : '' }}</p>
+                        <p class="text-[11.5px] text-gray-500 dark:text-gray-400">{{ ($t['price_cents'] ?? 0) ? (! empty($t['price_prefix']) ? strtolower($t['price_prefix']).', ' : '').'per month' : '' }}</p>
+                        @if (! empty($t['annual_price_cents']))<p class="text-[11.5px] text-gray-500 dark:text-gray-400">{{ $gbp((int) $t['annual_price_cents']) }}/year</p>@endif
                     </div>
                 </div>
 
@@ -91,11 +97,31 @@
                             </button>
                         @endif
                         <button wire:click="edit('{{ $r['key'] }}')" class="{{ $btn }}" style="background:var(--primary);color:var(--on-primary)">Edit</button>
+                        @if ($r['key'] !== 'trial')
+                            <button wire:click="startDelete('{{ $r['key'] }}')" class="{{ $btnOutline }} !text-rose-600" aria-label="Delete {{ $t['name'] }}">Delete</button>
+                        @endif
                     </span>
                 </div>
             </div>
         @endforeach
     </div>
+
+    {{-- ═══ Deleted default plans (restorable) ═══ --}}
+    @if ($deletedPlans)
+        <div class="max-w-[52rem] mx-auto mt-6 rounded-2xl border border-dashed border-gray-300 dark:border-white/15 p-4">
+            <p class="text-sm font-extrabold text-gray-900 dark:text-white">Deleted plans</p>
+            <p class="text-[12px] text-gray-500 dark:text-gray-400 mb-2">Default plans you deleted. Restoring brings one back hidden, with its last settings.</p>
+            <div class="flex flex-wrap gap-2">
+                @foreach ($deletedPlans as $dk => $dn)
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/[0.06] text-[13px] font-semibold text-gray-700 dark:text-gray-200">
+                        {{ $dn }}
+                        <button wire:click="restorePlan('{{ $dk }}')" class="text-[12px] font-bold underline" style="color:var(--primary)">Restore</button>
+                    </span>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
 
     {{-- ══ RIGHT rail ══ --}}
     <x-slot:quick>
@@ -177,6 +203,17 @@
                     <span class="bkf-label">Tagline</span>
                     <input type="text" wire:model="form.tagline" maxlength="80" placeholder="For growing businesses" class="bkf-input w-full">
                 </label>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <label class="block">
+                        <span class="bkf-label">Annual price (£) <span class="font-normal text-gray-500">(shown only; empty = none)</span></span>
+                        <input type="number" step="0.01" min="0" wire:model="form.annual_price" @disabled($isTrial) placeholder="e.g. 390" class="bkf-input w-full disabled:opacity-60">
+                        @error('form.annual_price')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                    </label>
+                    <label class="block">
+                        <span class="bkf-label">Price prefix <span class="font-normal text-gray-500">(e.g. From)</span></span>
+                        <input type="text" wire:model="form.price_prefix" maxlength="12" class="bkf-input w-full">
+                    </label>
+                </div>
 
                 <fieldset class="rounded-2xl border border-gray-200 dark:border-white/[0.1] p-4">
                     <legend class="px-1 text-[12px] font-bold text-gray-700 dark:text-gray-200">Limits</legend>
@@ -198,7 +235,49 @@
                         @error('form.ai_tokens')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
                         <span class="block mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">A typical assistant turn uses 2,000–8,000 tokens.</span>
                     </label>
+                    <label class="block mt-4">
+                        <span class="bkf-label">Business email mailboxes (empty = set per account)</span>
+                        <input type="number" min="0" step="1" wire:model="form.mailboxes" placeholder="e.g. 10" class="bkf-input w-full">
+                        @error('form.mailboxes')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        <span class="block mt-1 text-[11.5px] text-gray-500 dark:text-gray-400">Empty = Enterprise-style: set per account in Admin › Accounts. Trial accounts never get mailboxes.</span>
+                    </label>
+                    <div class="mt-4 grid sm:grid-cols-2 gap-4">
+                        <label class="block">
+                            <span class="bkf-label">Online bookings / month (empty = unlimited)</span>
+                            <input type="number" min="0" wire:model="form.bookings_month" class="bkf-input w-full">
+                            @error('form.bookings_month')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        </label>
+                        <label class="block">
+                            <span class="bkf-label">Staff calendars (empty = unlimited)</span>
+                            <input type="number" min="0" wire:model="form.staff_calendars" class="bkf-input w-full">
+                            @error('form.staff_calendars')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        </label>
+                        <label class="block">
+                            <span class="bkf-label">Invoices / month (empty = unlimited, 0 = none)</span>
+                            <input type="number" min="0" wire:model="form.invoices_month" class="bkf-input w-full">
+                            @error('form.invoices_month')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        </label>
+                        <label class="block">
+                            <span class="bkf-label">Online payment fee % (on top of Stripe)</span>
+                            <input type="number" min="0" max="20" step="0.1" wire:model="form.payment_fee_pct" placeholder="e.g. 0.5" class="bkf-input w-full">
+                            @error('form.payment_fee_pct')<span class="text-[12px] font-semibold text-rose-600">{{ $message }}</span>@enderror
+                        </label>
+                        <label class="block sm:col-span-2">
+                            <span class="bkf-label">Free domain for year 1</span>
+                            <select wire:model="form.free_domain" class="bkf-input w-full">
+                                <option value="">None</option>
+                                <option value="co.uk">.co.uk only</option>
+                                <option value="uk">.uk only</option>
+                                <option value="com">.com only</option>
+                                <option value="any">Any domain</option>
+                            </select>
+                        </label>
+                    </div>
                     <div class="mt-4 grid sm:grid-cols-2 gap-3">
+                        <x-field.toggle model="form.deposits" text="Booking deposits" />
+                        <x-field.toggle model="form.recurring_invoices" text="Recurring invoices" />
+                        <x-field.toggle model="form.badge" text="Shows “Made with Olux” badge" />
+                        <x-field.toggle model="form.custom_domain" text="Own domain allowed" />
                         <x-field.toggle model="form.premium" text="Premium modules" />
                         <x-field.toggle model="form.marketplace" text="Can sell templates" />
                         <x-field.toggle model="form.domain_included" text="Domain included" />
@@ -239,11 +318,10 @@
                     </div>
                 </fieldset>
 
-                @if (! $isNew && ! \App\Support\PlanCatalog::isBuiltIn($editing))
+                @if (! $isNew && ! $isTrial)
                     <div class="rounded-2xl border border-rose-200 dark:border-rose-500/30 p-4">
-                        <p class="text-[12.5px] text-gray-700 dark:text-gray-200">Delete this plan. Only possible while no account is on it.</p>
-                        <button type="button" wire:click="deletePlan('{{ $editing }}')" data-confirm="Delete the {{ $form['name'] }} plan?"
-                                class="{{ $btn }} mt-2 bg-rose-600 text-white">Delete plan</button>
+                        <p class="text-[12.5px] text-gray-700 dark:text-gray-200">Delete this plan. Accounts on it move to a plan you choose.{{ \App\Support\PlanCatalog::isBuiltIn($editing) ? ' A default plan can be restored later.' : '' }}</p>
+                        <button type="button" wire:click="startDelete('{{ $editing }}')" class="{{ $btn }} mt-2 bg-rose-600 text-white">Delete plan…</button>
                     </div>
                 @endif
             </form>
@@ -259,4 +337,42 @@
             </x-slot:footer>
         </x-side-drawer>
     @endif
+    {{-- ═══ Delete a plan: move its accounts first ═══ --}}
+    @if ($deleting && ($dt = config("plans.tiers.{$deleting}")))
+        @php
+            $dAccounts = \App\Models\AccountSubscription::where('plan', $deleting)->count();
+            $dTargets = collect(config('plans.tiers'))->except($deleting)->sortBy('order');
+        @endphp
+        <x-lightbox close="cancelDelete" max-width="max-w-md" :title="'Delete '.$dt['name'].'?'">
+            <div class="space-y-3">
+                <p class="text-sm text-gray-700 dark:text-gray-200">
+                    {{ $dt['name'] }} disappears from every pricing page and plan picker.
+                    @if (\App\Support\PlanCatalog::isBuiltIn($deleting)) It's a default plan, so you can restore it later. @else This can't be undone. @endif
+                </p>
+                @if ($dAccounts > 0)
+                    <label class="block">
+                        <span class="bkf-label">Move its {{ $dAccounts }} {{ Str::plural('account', $dAccounts) }} to</span>
+                        <select wire:model.live="moveTo" class="bkf-input w-full">
+                            <option value="">Choose a plan…</option>
+                            @foreach ($dTargets as $tk => $tt)
+                                <option value="{{ $tk }}">{{ $tt['name'] }}{{ ! empty($tt['hidden']) ? ' (hidden)' : '' }}{{ ($tt['price_cents'] ?? 0) > 0 ? ' · £'.number_format($tt['price_cents'] / 100, 0).'/mo' : '' }}</option>
+                            @endforeach
+                        </select>
+                        @error('moveTo')<span class="text-[12px] font-semibold text-rose-600" role="alert">{{ $message }}</span>@enderror
+                    </label>
+                    <p class="text-[11.5px] text-gray-500 dark:text-gray-400">Accounts paying by card keep their current Stripe subscription and price until they change plan themselves.</p>
+                @else
+                    <p class="text-[12.5px] text-gray-500 dark:text-gray-400">No accounts are on this plan.</p>
+                @endif
+            </div>
+            <x-slot:footer>
+                <div class="flex justify-end gap-2">
+                    <button type="button" wire:click="cancelDelete" class="{{ $btnOutline }}">Cancel</button>
+                    <button type="button" wire:click="deletePlan" wire:loading.attr="disabled" @disabled($dAccounts > 0 && $moveTo === '')
+                            class="{{ $btn }} bg-rose-600 text-white disabled:opacity-50">Delete {{ $dt['name'] }}</button>
+                </div>
+            </x-slot:footer>
+        </x-lightbox>
+    @endif
+
 </x-tri-layout>

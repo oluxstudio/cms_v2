@@ -20,5 +20,5 @@ const fallback: Song[] = [
 export const useSongs = (): Song[] => {
   const { items } = useCms()
   const rows = (items('songs', []) as any[]).filter(s => s.title && s.url)
-  return rows.length ? rows as Song[] : fallback
+  return (rows.length || useCms().isSite) ? rows as Song[] : fallback
 }

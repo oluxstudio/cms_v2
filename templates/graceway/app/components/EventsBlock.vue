@@ -6,7 +6,7 @@ const oluxFb: Record<string, string> = {"Text":"Slide for more <span>\u2192</spa
 const { events: authoredEvents, eventsHead } = useSiteContent()
 const events = computed(() => {
   const rows = (useCms().items('events', []) as any[]).filter(e => e.title && e.img)
-  return rows.length ? rows : authoredEvents
+  return (rows.length || useCms().isSite) ? rows : authoredEvents
 })
 // featured card: the first primed/featured event (fallback: soonest upcoming)
 // carousel: upcoming events, soonest first, max 5, without the featured one

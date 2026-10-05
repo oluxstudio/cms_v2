@@ -14,8 +14,24 @@ trait HasFieldSchema
 {
     /** Canonical field types supported by the schema engine. */
     public const FIELD_TYPES = [
-        'text', 'email', 'tel', 'number', 'url', 'date', 'textarea', 'select', 'radio', 'checkbox',
+        'text', 'email', 'tel', 'number', 'url', 'date', 'textarea', 'textarea2', 'textarea6', 'textarea10', 'textarea15',
+        'select', 'radio', 'checkbox', 'toggle', 'slider',
     ];
+
+    /** Textarea field types and their visible rows (textareaN → N rows; plain textarea → 4). */
+    public const TEXTAREA_ROWS = ['textarea2' => 2, 'textarea' => 4, 'textarea6' => 6, 'textarea10' => 10, 'textarea15' => 15];
+
+    /** Yes/no field types: a checkbox, or a toggle switch (both store true/false). */
+    public static function isBooleanType(?string $type): bool
+    {
+        return in_array($type, ['checkbox', 'toggle'], true);
+    }
+
+    /** Rows for a textarea-type field, or null when the type isn't a textarea. */
+    public static function textareaRows(?string $type): ?int
+    {
+        return self::TEXTAREA_ROWS[(string) $type] ?? null;
+    }
 
     /**
      * Build a Laravel Validator rules array from the stored field definitions.
@@ -40,7 +56,7 @@ trait HasFieldSchema
             if ($type === 'url') {
                 $fieldRules[] = 'url';
             }
-            if ($type === 'number') {
+            if ($type === 'number' || $type === 'slider') {
                 $fieldRules[] = 'numeric';
             }
             if ($type === 'date') {
@@ -61,7 +77,7 @@ trait HasFieldSchema
                 $fieldRules[] = 'max:'.$max;
             }
 
-            if ($type === 'checkbox') {
+            if (self::isBooleanType($type)) {
                 $fieldRules = [$required ? 'required' : 'nullable', 'boolean'];
             }
 
@@ -110,7 +126,7 @@ trait HasFieldSchema
             'number' => ($parts[] = 'Numeric'),
             'date' => ($parts[] = 'Date'),
             'tel' => ($parts[] = 'Phone format'),
-            'checkbox' => ($parts[] = 'Boolean'),
+            'checkbox', 'toggle' => ($parts[] = 'Boolean'),
             default => null,
         };
 

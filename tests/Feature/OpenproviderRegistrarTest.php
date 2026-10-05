@@ -202,18 +202,32 @@ test('pointAt creates a DNS zone with apex A + www CNAME for an IP target', func
         && $req['records'][1]['type'] === 'CNAME' && $req['records'][1]['name'] === 'www');
 });
 
-test('pointAt falls back to replacing records when the zone already exists', function () {
+test('pointAt on an existing zone swaps only the web records — email records survive', function () {
     Http::fake([
         '*/auth/login' => Http::response(opLogin()),
+        '*/dns/zones/mysalon.com/records*' => Http::response(['code' => 0, 'data' => ['results' => [
+            ['name' => 'mysalon.com', 'type' => 'A', 'value' => '198.51.100.1', 'ttl' => 900],
+            ['name' => 'www.mysalon.com', 'type' => 'CNAME', 'value' => 'old.host', 'ttl' => 900],
+            ['name' => 'mysalon.com', 'type' => 'MX', 'value' => 'mx1.mail.test', 'prio' => 10, 'ttl' => 900],
+            ['name' => 'mysalon.com', 'type' => 'TXT', 'value' => 'v=spf1 include:_spf.mail.test ~all', 'ttl' => 900],
+        ]]]),
         '*/dns/zones/mysalon.com' => Http::response(['code' => 0, 'data' => []]),
         '*/dns/zones' => Http::response(['code' => 348, 'desc' => 'Zone already exists'], 400),
     ]);
 
     openprovider()->pointAt('mysalon.com', 'edge.olux.host');
 
-    Http::assertSent(fn ($req) => $req->method() === 'PUT'
-        && str_ends_with($req->url(), '/dns/zones/mysalon.com')
-        && $req['records']['replace'][0]['type'] === 'CNAME');
+    Http::assertSent(function ($req) {
+        if ($req->method() !== 'PUT' || ! str_ends_with($req->url(), '/dns/zones/mysalon.com')) {
+            return false;
+        }
+        $removed = collect($req['records']['remove'] ?? []);
+
+        return ! isset($req['records']['replace'])
+            && $removed->pluck('type')->sort()->values()->all() === ['A', 'CNAME']
+            && ! $removed->contains(fn ($r) => in_array($r['type'], ['MX', 'TXT'], true))
+            && collect($req['records']['add'])->pluck('name')->all() === ['', 'www'];
+    });
 });
 
 test('available() maps the purchase-seam bool shape', function () {

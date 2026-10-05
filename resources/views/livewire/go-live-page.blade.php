@@ -175,7 +175,8 @@
 
     {{-- ════════ STATE · BUY ════════ --}}
     @elseif ($pane === 'buy')
-        @unless ($ourOrder)
+        {{-- On the payment step the panel has its own "Change domain" back button. --}}
+        @unless ($ourOrder || $buyStage === 'pay')
             <button wire:click="backToOptions" class="fx inline-flex items-center gap-1.5 mb-3 min-h-[40px] px-3.5 rounded-xl text-[13px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 hover:border-gray-400">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 Back to options
@@ -423,6 +424,46 @@
                         <span class="block text-[10px] text-gray-400">free subdomain · always on</span>
                     </span>
                 </a>
+            @endif
+
+            {{-- Change the web address — the old one keeps redirecting --}}
+            @php($addrBase = (string) config('publishing.subdomain_base'))
+            @php($oldNames = $site->aliases()->latest()->pluck('name'))
+            @if ($addressOpen)
+                <form wire:submit="changeAddress" class="pt-2.5 border-t border-gray-50 dark:border-white/[0.04] space-y-2">
+                    <label for="new-address" class="block text-[12px] font-bold text-gray-800 dark:text-gray-100">New web address</label>
+                    <div class="flex items-stretch rounded-xl border border-gray-300 dark:border-white/15 bg-white dark:bg-[#15161f] focus-within:border-[color:var(--primary)] overflow-hidden">
+                        <input id="new-address" type="text" wire:model.live.debounce.400ms="newAddress" autocomplete="off" autocapitalize="none" spellcheck="false"
+                               class="min-w-0 flex-1 px-3 py-2 text-[13px] font-mono bg-transparent border-0 focus:ring-0 text-gray-900 dark:text-white">
+                        @if ($addrBase !== '')<span class="shrink-0 grid place-items-center px-2 text-[11.5px] font-mono text-gray-400 bg-gray-50 dark:bg-white/[0.04]">.{{ $addrBase }}</span>@endif
+                    </div>
+                    @if ($addressError)
+                        <p class="text-[11.5px] font-semibold text-rose-500" role="alert">{{ $addressError }}</p>
+                    @elseif ($newAddress !== '' && $newAddress !== $site->name)
+                        <p class="text-[11.5px] font-semibold text-emerald-600 dark:text-emerald-400">{{ $addrBase !== '' ? $newAddress.'.'.$addrBase : $newAddress }} is available.</p>
+                    @endif
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                        Links to <span class="font-mono">{{ $site->subdomainHost() ?: $site->name }}</span> will redirect to the new address, so nothing already shared breaks.
+                        Your Site Name doesn’t change.
+                    </p>
+                    <div class="flex gap-2">
+                        <button type="submit" wire:loading.attr="disabled" wire:target="changeAddress"
+                                @disabled($addressError !== '' || $newAddress === '' || $newAddress === $site->name)
+                                data-confirm="Change this site’s web address to {{ $newAddress }}? Old links will redirect to it."
+                                class="fx min-h-[38px] px-3.5 rounded-xl text-[12.5px] font-bold text-white disabled:opacity-50" style="background:var(--primary)">
+                            <span wire:loading.remove wire:target="changeAddress">Change address</span>
+                            <span wire:loading wire:target="changeAddress">Changing…</span>
+                        </button>
+                        <button type="button" wire:click="$set('addressOpen', false)"
+                                class="fx min-h-[38px] px-3.5 rounded-xl text-[12.5px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200">Cancel</button>
+                    </div>
+                </form>
+            @else
+                <button type="button" wire:click="openAddress"
+                        class="fx w-full min-h-[36px] rounded-xl text-[12px] font-bold border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 hover:border-gray-400">Change web address</button>
+            @endif
+            @if ($oldNames->isNotEmpty())
+                <p class="text-[10.5px] text-gray-400 leading-snug">Old {{ Str::plural('address', $oldNames->count()) }}, redirecting here: <span class="font-mono">{{ $oldNames->implode(', ') }}</span></p>
             @endif
             <a href="{{ $site->templatePreviewUrl() }}" target="_blank" rel="noopener" class="fx flex items-center gap-2.5 text-left">
                 <span class="shrink-0 w-2 h-2 rounded-full bg-sky-400"></span>

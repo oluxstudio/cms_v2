@@ -3,6 +3,8 @@
 //   1. Site theme → the template's CSS custom properties (only values the user
 //      changed from the template defaults are injected — a pristine site stays
 //      pixel-identical to the shipped app). Body font swaps load Google Fonts.
+//      `color-*` theme keys (the Properties page's Colours tab) map 1:1 onto
+//      the template's --color-* variables.
 //   2. Per-block Motion effects: hover (lift/glow/zoom/border) and scroll
 //      enter/leave animations for the olux-anim-* classes bound by blocks.
 // The theme variable map + template defaults live in ~/olux-theme (generated
@@ -77,6 +79,12 @@ export default defineNuxtPlugin(() => {
         decl.push(key === 'font' ? `${v}: '${value}', sans-serif` : `${v}: ${value}`)
       }
       if (key === 'font') fontFamily = value
+    }
+    // Per-variable colours from the Properties page (color-primary → --color-primary).
+    // Only owner overrides are stored, and they come last so they beat a role mapping.
+    for (const [key, raw] of Object.entries(theme)) {
+      const value = String(raw ?? '').trim()
+      if (/^color-[\w-]+$/.test(key) && value !== '' && !/[;{}<>]/.test(value)) decl.push(`--${key}: ${value}`)
     }
     const base = String(theme.base_size ?? '').trim()
     const baseDef = String((oluxThemeDefaults as Record<string, string>).base_size ?? '16px')

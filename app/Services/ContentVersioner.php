@@ -158,7 +158,8 @@ class ContentVersioner
     private function restoreCollection(Collection $collection, array $payload): void
     {
         $collection->update(['fields' => $payload['fields'] ?? []]);
-        $collection->items()->delete();
+        // Restoring a checkpoint REPLACES the entries — permanent, not trash.
+        $collection->items()->withTrashed()->forceDelete();
         foreach ($payload['items'] ?? [] as $item) {
             CollectionItem::create([
                 'collection_id' => $collection->id,

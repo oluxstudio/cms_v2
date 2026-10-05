@@ -61,6 +61,10 @@ class TemplateCommerceController extends Controller
     {
         $siteName = $request->query('site');
         $site = $siteName ? Site::where('name', $siteName)->first() : null;
+        // Only a site the buyer may manage designs on — never someone else's by name.
+        if ($site && ! ($request->user() && $site->allows($request->user(), 'addons.manage'))) {
+            $site = null;
+        }
 
         // If the webhook already granted the entitlement, finish the save so
         // the template is waiting in My Designs when the buyer lands there.

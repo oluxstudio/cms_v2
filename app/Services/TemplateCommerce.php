@@ -19,8 +19,13 @@ class TemplateCommerce
     /** May this user install the template? Free → always; paid → owns an entitlement. */
     public function entitled(?User $user, Template $template): bool
     {
+        if ($template->isPrivate()) {
+            // Private: only its own account and the accounts it's assigned to.
+            return $user !== null && ($template->user_id === $user->id || $user->isSuper()
+                || TemplateEntitlement::where('user_id', $user->id)->where('template_id', $template->id)->exists());
+        }
         if ($template->isFree()) {
-            return true;
+            return $template->status === 'published';
         }
         if (! $user) {
             return false;
@@ -92,6 +97,8 @@ class TemplateCommerce
     public function addFreeToLibrary(User $user, Template $template): TemplateEntitlement
     {
         abort_unless($template->isFree(), 422, 'This template is paid — buy it to add it to your library.');
+        // Private templates only arrive by assignment — never self-service.
+        abort_if($template->isPrivate() && ! $this->inLibrary($user, $template), 404);
 
         return TemplateEntitlement::firstOrCreate(
             ['user_id' => $user->id, 'template_id' => $template->id],
@@ -153,6 +160,7 @@ class TemplateCommerce
             [
                 'uuid' => (string) Str::uuid(),
                 'template_id' => $template->id,
+                'template_name' => $template->name,
                 'template_version_id' => $template->latest_version_id,
                 'user_id' => $user->id,
                 'creator_user_id' => $creatorId,

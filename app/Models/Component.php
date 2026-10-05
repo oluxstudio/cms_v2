@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasVisibilityRules;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,12 +16,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Component extends Model
 {
-    use \App\Models\Concerns\HasVisibilityRules;
     use HasUlids;
+    use HasVisibilityRules;
 
-    protected $fillable = ['site_id', 'site_template_id', 'collection_id', 'collection_order', 'name', 'author', 'created_by', 'source', 'description', 'tags', 'visibility'];
+    protected $fillable = ['site_id', 'site_template_id', 'collection_id', 'collection_order', 'collection_queries', 'name', 'author', 'created_by', 'source', 'description', 'tags', 'visibility'];
 
-    protected $casts = ['tags' => 'array', 'visibility' => 'array'];
+    protected $casts = ['tags' => 'array', 'visibility' => 'array', 'collection_queries' => 'array'];
+
+    protected static function booted(): void
+    {
+        // Per-request cache of blocks with collection queries (Collection::blockViews).
+        static::saved(fn (Component $c) => Collection::forgetBlockQueries($c->site_id));
+        static::deleted(fn (Component $c) => Collection::forgetBlockQueries($c->site_id));
+    }
 
     /** The user who created this component (null for legacy/system rows). */
     public function creator(): BelongsTo
@@ -51,6 +59,12 @@ class Component extends Model
         return $this->belongsToMany(Page::class, 'page_component')
             ->withPivot(['order', 'settings'])
             ->withTimestamps();
+    }
+
+    /** This block's saved query for one of its collections ([] = every item, manual order). */
+    public function collectionQuery(string $collectionId): array
+    {
+        return (array) (($this->collection_queries ?? [])[$collectionId] ?? []);
     }
 
     /** Collections referenced by this component's collection-typed nodes. */

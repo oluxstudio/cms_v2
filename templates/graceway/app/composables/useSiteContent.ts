@@ -26,8 +26,7 @@ export type Profile = {
   copyright: string
 }
 
-// service days & times now live in their own collection composable
-export type { Service } from './useServices'
+// service days & times live in their own collection composable
 import type { Service } from './useServices'
 
 export type ChurchEvent = {
@@ -74,16 +73,6 @@ export type SocialMedia = {
   tag?: string
 }
 
-export type HeroPill = {
-  key: string
-  label: string
-  desc: string
-  /** page the pill opens */
-  to: string
-  img: string
-  tint: string
-}
-
 export type HeroContent = {
   title: string
   /** the highlighted span inside the title */
@@ -91,7 +80,6 @@ export type HeroContent = {
   lead: string
   liveNote: string
   actions: LinkItem[]
-  pills: HeroPill[]
 }
 
 export type WelcomeContent = {
@@ -308,22 +296,10 @@ export type WorshipShowcaseContent = {
   libraryTitle: string
 }
 
-/** per-platform extras layered over the global `socials` entry with the same key */
-export type BroadcastChannelExtra = {
-  key: string
-  handle: string
-  followers: string
-  live: boolean
-  color: string
-  watch: string
-  blurb: string
-}
-
 export type BroadcastChannelsContent = {
   eyebrow: string
   title: string
   sub: string
-  channels: BroadcastChannelExtra[]
   join: { title: string; text: string; cta: LinkItem }
 }
 
@@ -443,6 +419,7 @@ export type SiteContent = {
   youthEvents: YouthEventsContent
   youthHighlights: YouthHighlightsContent
   communityCare: CommunityCareContent
+  mediaMinistry: MediaMinistryContent
   sermonsArchive: SermonsArchiveContent
 }
 
@@ -466,7 +443,7 @@ const siteProfileRows: Profile[] = [{
   ],
   copyright: '© 2026 Christ Apostolic Church, Blackburn. All rights reserved.',
 }]
-const profile: Profile = siteProfileRows[0]
+const profile: Profile = siteProfileRows[0]!
 
 // social media platforms — `available: false` renders grayed out wherever shown
 /** @olux-collection Socials */
@@ -517,21 +494,21 @@ const asBool = (v: any) => typeof v === 'boolean' ? v : v === 'true' || v === '1
 
 // ── CMS data-source seeds: each marked array becomes an editable collection ──
 /** @olux-collection About Story */
-const aboutStory = [
+const aboutStory: AboutContent['story'] = [
       { title: 'How we began', text: 'CAC Blackburn started in 1992 as a handful of families meeting in a living room on Riverside Avenue. What began with shared meals and simple prayer has grown into a church family of over four hundred — but the heart is unchanged: honest worship, open doors, and a seat at the table for everyone.' },
       { title: 'What we believe', text: 'We believe faith grows best in community. We hold to the historic Christian faith — the Bible as our guide, grace as our foundation, and love as our practice. "Let all that you do be done in love" (1 Corinthians 16:14) is more than a verse on our wall; it shapes how we worship, serve and disagree well.' },
       { title: 'Where we’re going', text: 'Our vision is a church for the whole community — students, families and neighbours alike. Through food drives, home groups, youth programs and city partnerships, we want Blackburn to be measurably better because this church is here.' },
     ]
 
 /** @olux-collection About Pillars */
-const aboutPillars = [
+const aboutPillars: AboutContent['pillars'] = [
       { chip: 'Mission Statement', title: 'Why we exist', text: 'To make Jesus known in Blackburn by loving God wholeheartedly, loving people unconditionally, and serving our city practically — one meal, one prayer, and one open door at a time.' },
       { chip: 'Our Vision', title: 'What we see ahead', text: 'A church family in every neighbourhood of Blackburn — where every generation worships together, every home has a group to belong to, and the city is measurably better because this church is here.' },
       { chip: 'Our Pledge', title: 'What you can count on', text: 'We pledge to keep our doors open to everyone, to handle every gift with integrity and transparency, to protect and nurture our children and youth, and to speak the truth in love — always.' },
     ]
 
 /** @olux-collection About Photos */
-const aboutPhotos = [
+const aboutPhotos: AboutContent['photos'] = [
       { img: '/assets/images/gallery-1.jpg', title: 'Sunday worship' },
       { img: '/assets/images/gallery-2.jpg', title: 'Community outreach' },
       { img: '/assets/images/gallery-3.jpg', title: 'Home groups' },
@@ -539,7 +516,7 @@ const aboutPhotos = [
     ]
 
 /** @olux-collection Ministries */
-const ministriesOverviewRows = [
+const ministriesOverviewRows: MinistryFeature[] = [
     {
       to: '/media-ministry',
       img: '/assets/images/event-3.jpg',
@@ -615,31 +592,16 @@ const ministriesOverviewRows = [
   ]
 
 /** @olux-collection Prayer Rhythms */
-const prayerRhythms = [
+const prayerRhythms: PrayerContent['rhythms'] = [
       { icon: '🌅', title: 'Morning Watch', when: 'Wednesdays 6:00 AM', where: 'The Chapel', text: 'Start the day in stillness — an hour of worship, scripture and intercession before the city wakes.' },
       { icon: '🙏', title: 'Pre-Service Prayer', when: 'Sundays 8:15 AM', where: 'Main Hall', text: 'We cover every service in prayer before the doors open. All welcome, no experience needed.' },
       { icon: '🕯', title: 'Night Vigil', when: 'First Friday · 10 PM', where: 'Main Hall', text: 'A monthly night of extended worship and prayer for the church, the city and the nations.' },
       { icon: '🏠', title: 'Pray From Home', when: 'Anytime', where: 'Weekly prayer list', text: 'Receive the weekly prayer list by email and stand with us from wherever you are.' },
     ]
 
-/** @olux-collection Broadcast Channels */
-const broadcastChannelRows = [
-      { key: 'youtube', handle: '@cacblackburn', color: '#d1242f', followers: '12.4k subscribers', live: true,
-        watch: 'https://youtube.com/@cacblackburn/live',
-        blurb: 'Full Sunday services, sermon replays and worship nights in HD.' },
-      { key: 'facebook', handle: 'CAC Blackburn', color: '#1d5fd1', followers: '8.9k followers', live: true,
-        watch: 'https://facebook.com/cacblackburn/live',
-        blurb: 'Live services with real-time chat, event updates and photo albums.' },
-      { key: 'instagram', handle: '@cacblackburn', color: '#c13584', followers: '6.2k followers', live: false,
-        watch: 'https://instagram.com/cacblackburn',
-        blurb: 'Daily encouragement, behind-the-scenes moments and reels from Sunday.' },
-      { key: 'tiktok', handle: '@cacblackburn', color: '#14181d', followers: 'Coming soon', live: false,
-        watch: 'https://tiktok.com/@cacblackburn/live',
-        blurb: 'Short worship clips and testimonies — launching this season.' },
-    ]
 
 /** @olux-collection Worship History */
-const worshipHistory = [
+const worshipHistory: WorshipSidebarContent['history'] = [
       { img: '/assets/images/event-2.jpg', text: 'Sunday recap uploaded', sub: 'By the media team', when: 'Just now' },
       { img: '/assets/images/gallery-5.jpg', text: 'New song added', sub: 'Firm Foundation', when: '1 hr ago' },
       { img: '/assets/images/gallery-9.jpg', text: 'Choir set recorded', sub: 'Live from 11 AM', when: '2 hrs ago' },
@@ -647,14 +609,14 @@ const worshipHistory = [
     ]
 
 /** @olux-collection Youth Events */
-const youthEventRows = [
+const youthEventRows: YouthEventsContent['events'] = [
       { id: 'lockin', day: '26', month: 'Sep', date: '2026-09-26T18:30:00', title: 'All-Night Lock-In', text: 'Games, films, pizza and a 2 AM worship moment. Bring a sleeping bag!', spots: 18 },
       { id: 'camp', day: '17', month: 'Oct', date: '2026-10-17T09:00:00', title: 'Autumn Youth Camp', text: 'A weekend away in the hills — campfires, big questions, no phones (mostly).', spots: 31 },
       { id: 'serve', day: '07', month: 'Nov', date: '2026-11-07T09:00:00', title: 'City Serve Day', text: 'Food bank shift in the morning, milkshakes after. Serve your city with your crew.', spots: 12 },
     ]
 
 /** @olux-collection Care Impact */
-const careImpact = [
+const careImpact: CommunityCareContent['impact'] = [
       { value: '4,800+', label: 'meals shared this year' },
       { value: '120', label: 'families helped monthly' },
       { value: '85', label: 'volunteers involved' },
@@ -662,14 +624,14 @@ const careImpact = [
     ]
 
 /** @olux-collection Care Involvement */
-const careInvolve = [
+const careInvolve: CommunityCareContent['involve'] = [
       { icon: '🙋', title: 'Volunteer', text: "An hour a week changes someone's whole week. Every programme has a role that fits you.", cta: { label: 'Sign Up', to: '/contact' } },
       { icon: '💝', title: 'Give', text: 'Fund the pantry shelves, the flasks and the school fees. Every gift stays with the work.', cta: { label: 'Donate', to: '/contact' } },
       { icon: '🙏', title: 'Pray', text: 'Join the Wednesday Morning Watch as we pray for our town by name, street by street.', cta: { label: 'Prayer Watch', to: '/prayer' } },
     ]
 
 /** @olux-collection Media Roles */
-const mediaRoles = [
+const mediaRoles: MediaMinistryContent['roles'] = [
       { icon: '📹', title: 'Camera Operators', text: 'Frame the service from the floor and the balcony — steady hands, good eyes, full training given.' },
       { icon: '🎚', title: 'Sound & Audio', text: 'Mix the room and the stream — mics, monitors and the broadcast feed from the sound desk.' },
       { icon: '🖥', title: 'Stream Directors', text: 'Cut between cameras, run titles and keep the livestream healthy across every platform.' },
@@ -679,7 +641,7 @@ const mediaRoles = [
     ]
 
 /** @olux-collection Media Gallery Items */
-const mediaGalleryRows = [
+const mediaGalleryRows: MediaMinistryContent['gallery'] = [
       { img: '/assets/images/gallery-9.jpg', title: 'At the sound desk' },
       { img: '/assets/images/gallery-5.jpg', title: 'Sunday livestream' },
       { img: '/assets/images/gallery-7.jpg', title: 'Recording the choir' },
@@ -687,7 +649,7 @@ const mediaGalleryRows = [
     ]
 
 /** @olux-collection Faqs */
-const joinFaqs = [
+const joinFaqs: JoinContent['faqs'] = [
       { q: 'Do I have to be baptised to join?', a: 'No — everyone is welcome to belong and take part from day one. Baptism and formal membership are steps we\'ll walk with you when you\'re ready, never a condition for a seat at the table.' },
       { q: 'What should I expect on a first visit?', a: 'About 90 minutes of music, a message and a warm welcome. Kids have their own program during both services, parking is free, and nobody will single you out or ask you to stand up.' },
       { q: 'Is there anything for my children?', a: 'Yes — Kids Church runs during both Sunday services for nursery through grade 6, with trained and vetted leaders. Teens have their own Friday-night youth ministry.' },
@@ -695,7 +657,7 @@ const joinFaqs = [
     ]
 
 /** @olux-collection Join Perks */
-const joinPerks = [
+const joinPerks: { text: string }[] = [
   { text: 'A personal welcome from our pastoral team' },
   { text: 'Weekly newsletter with sermons, events and prayer points' },
   { text: 'An invitation to the next newcomers\' lunch' },
@@ -703,7 +665,7 @@ const joinPerks = [
 ]
 
 /** @olux-collection About Facts */
-const aboutFacts = [
+const aboutFacts: AboutContent['facts'] = [
       { icon: '⛪', label: 'Founded', value: '1992 — over thirty years serving Blackburn' },
       { icon: '👥', label: 'Our Family', value: '400+ members across all generations' },
       { icon: '📍', label: 'Where We Gather', value: '121 Wallstreet street' },
@@ -711,7 +673,7 @@ const aboutFacts = [
     ]
 
 /** @olux-collection Join Steps */
-const joinSteps = [
+const joinSteps: JoinContent['steps'] = [
       { n: '01', title: 'Plan a visit', text: 'Come to any Sunday service — 9:00 AM & 11:00 AM. No dress code, no pressure; just come as you are and say hello at the welcome desk.' },
       { n: '02', title: 'Newcomers\' lunch', text: 'Once a month the pastors host lunch for new faces. Hear the story of the church, ask anything, and meet others who are new too.' },
       { n: '03', title: 'Membership class', text: 'A relaxed two-session class on what we believe, how the church is led, and what belonging here means. Runs every other month.' },
@@ -719,21 +681,21 @@ const joinSteps = [
     ]
 
 /** @olux-collection Giving Ways */
-const givingWays = [
+const givingWays: GivingContent['ways'] = [
       { icon: '🏦', title: 'Bank transfer', text: 'CAC Blackburn · Sort 20-45-45 · Account 1234 5678\nReference: your name or "Tithe".' },
       { icon: '🧺', title: 'In person', text: 'The offering basket at any Sunday service, or the giving box by the welcome desk.' },
       { icon: '📝', title: 'Gift Aid', text: 'UK taxpayer? A Gift Aid declaration adds 25p to every £1 at no cost to you — ask at the office.' },
     ]
 
 /** @olux-collection Worship Times */
-const worshipTimes = [
+const worshipTimes: WorshipSidebarContent['times'] = [
       { label: 'Sunday services', value: '9:00 AM & 11:00 AM' },
       { label: 'Worship night', value: 'First Friday, 7:00 PM' },
       { label: 'Team rehearsal', value: 'Thursdays, 7:00 PM' },
     ]
 
 /** @olux-collection Ministry Pages */
-const ministryPages = [
+const ministryPages: (MinistryDetailEntry & { path: string })[] = [
   { path: '/kids',
       img: '/assets/images/circle-3.jpg', alt: 'Kids ministry',
       text: 'A safe, joyful world from nursery to grade six — stories, songs and play while parents worship.',
@@ -752,7 +714,7 @@ const ministryPages = [
 ]
 
 /** @olux-collection Legal Sections */
-const legalSections = [
+const legalSections: (LegalDoc['sections'][number] & { page: string })[] = [
   { page: 'privacy', heading: '1. Information we collect', body: 'We may collect your name, email address, phone number and any message you send us through our contact, prayer, giving or membership forms. We also collect basic, anonymous usage data (such as pages visited) to help us improve the site.' },
   { page: 'privacy', heading: '2. How we use your information', body: 'We use your information to respond to your enquiries, welcome you to the church, process donations, send newsletters you have signed up for, and keep appropriate records of church membership. We never sell your data.' },
   { page: 'privacy', heading: '3. Legal basis', body: 'We process personal data on the basis of your consent, our legitimate interest in running the church and its ministries, and, where applicable, legal obligations (for example Gift Aid records).' },
@@ -784,19 +746,19 @@ export const useSiteContent = (): SiteContent => {
   // below seed each collection and carry any CMS-unreachable render.
   const cms = <T>(slug: string, fallback: T[]): T[] => {
     const rows = items(slug, []) as any[]
-    return rows.length ? (rows as T[]) : fallback
+    return (rows.length || useCms().isSite) ? (rows as T[]) : fallback
   }
   const legalRows = items('legalSections', []) as any[]
   const legalFor = (page: string, fb: { heading: string; body: string }[]) => {
     const rows = legalRows.filter(r => r.page === page)
-    return rows.length ? rows : fb
+    return (rows.length || useCms().isSite) ? rows : fb
   }
   const mergedServices: Service[] = useServices()
   // AUTHORED-FIRST (for now): the array above is the source of truth for the
   // social pills — order, presence and flags. To hand control back to the CMS
   // "Socials" collection, swap mergedSocials for the commented overlay below.
   const cmsSocials = (items('socials', []) as any[]).filter(s => s.key)
-  const mergedSocials: SocialMedia[] = cmsSocials.length
+  const mergedSocials: SocialMedia[] = (cmsSocials.length || useCms().isSite)
     ? cmsSocials.map(s => ({ ...socials.find(a => a.key === s.key), ...s, available: asBool(s.available) } as SocialMedia))
     : socials
   const profileRow = (items('siteProfile', []) as any[])[0]
@@ -837,15 +799,7 @@ export const useSiteContent = (): SiteContent => {
       { label: '▶ Watch Live', to: '/broadcast' },
       { label: 'Join the Church', to: '/newsletter' },
     ],
-    pills: [
-      { key: 'store', label: 'Store', desc: 'Books, music and church merchandise — every purchase supports our outreach.', to: '/store', img: '/assets/images/circle-1.jpg', tint: 'tint-yellow' },
-      { key: 'events', label: 'Events', desc: 'Picnics, food drives, worship nights — life together beyond Sunday.', to: '/events', img: '/assets/images/event-1.jpg', tint: 'tint-red' },
-      { key: 'bible', label: 'Bible Study', desc: 'Midweek studies and small groups digging deeper into the Word.', to: '/bible-study', img: '/assets/images/circle-2.jpg', tint: 'tint-gold' },
-      { key: 'sermons', label: 'Sermons & Blog', desc: 'Catch up on recent messages and read reflections from our pastors.', to: '/sermons', img: '/assets/images/event-2.jpg', tint: 'tint-blue' },
-      { key: 'youth', label: 'Youth Ministry', desc: 'A place for teens to ask big questions and build real friendships.', to: '/youth', img: '/assets/images/circle-3.jpg', tint: 'tint-teal' },
-      { key: 'worship', label: 'Worship', desc: `Join us Sundays at ${sundayTimesLong} for music, prayer and teaching.`, to: '/worship', img: '/assets/images/event-3.jpg', tint: 'tint-green' },
-    ],
-  },
+  }, 
   welcome: {
     eyebrow: 'Who we are',
     title: 'A church for the whole community',
@@ -1150,10 +1104,9 @@ rhythms: cms('prayerRhythms', prayerRhythms),
     eyebrow: 'Live broadcast',
     title: 'Worship with us, wherever you are',
     sub: 'Every Sunday service streams live. Pick your platform — follow the profile, or jump straight into the stream.',
-channels: cms('broadcastChannels', broadcastChannelRows).map(c => ({ ...c, live: asBool(c.live) })),
     join: {
       title: 'Watched online long enough?',
-      text: `You're always welcome in the room. Plan a visit, meet the family, and make ${profile.shortName} your church home.`,
+      text: "You're always welcome in the room. Plan a visit, meet the family, and make CAC Blackburn your church home.",
       cta: { label: 'Join the Church', to: '/newsletter' },
     },
   },

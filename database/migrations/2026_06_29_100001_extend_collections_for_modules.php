@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * Grow Collections from a metadata stub into the declarative-module data store:
@@ -20,9 +21,9 @@ return new class extends Migration
         });
 
         // Backfill slugs for any existing rows, then enforce uniqueness per site.
-        foreach (\DB::table('collections')->whereNull('slug')->get() as $row) {
-            \DB::table('collections')->where('id', $row->id)
-                ->update(['slug' => \Illuminate\Support\Str::slug($row->name) ?: ('collection-' . $row->id)]);
+        foreach (DB::table('collections')->whereNull('slug')->get() as $row) {
+            DB::table('collections')->where('id', $row->id)
+                ->update(['slug' => Str::slug($row->name) ?: ('collection-'.$row->id)]);
         }
 
         Schema::table('collections', function (Blueprint $table) {

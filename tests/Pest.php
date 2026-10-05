@@ -2,6 +2,8 @@
 
 use App\Models\ApiToken;
 use App\Models\Site;
+use App\Models\Template;
+use App\Models\User;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -68,4 +70,30 @@ function connectToken(Site $site, array $abilities = ['connect:ingest', 'content
     ]);
 
     return $raw;
+}
+
+/**
+ * Publish a first-party template (resources/templates/{key}) in the catalog,
+ * the way Admin › Templates does — the public gallery and /designs pages only
+ * show published + public catalog rows. Idempotent across test runs.
+ */
+function publishBuiltinTemplate(string $key = 'verita'): Template
+{
+    $tpl = Template::where('builtin_key', $key)->first();
+    if ($tpl) {
+        $tpl->update(['status' => 'published', 'visibility' => 'public']);
+
+        return $tpl->fresh();
+    }
+
+    return Template::create([
+        'uuid' => (string) Str::uuid(),
+        'user_id' => User::factory()->create()->id,
+        'name' => Str::headline($key),
+        'slug' => Template::where('slug', $key)->exists() ? $key.'-'.uniqid() : $key,
+        'description' => 'A ready-made '.Str::headline($key).' design.',
+        'short_description' => 'A ready-made '.Str::headline($key).' design',
+        'category' => 'Business', 'status' => 'published', 'visibility' => 'public',
+        'price_cents' => 0, 'currency' => 'gbp', 'source' => 'builtin', 'builtin_key' => $key, 'published_at' => now(),
+    ]);
 }

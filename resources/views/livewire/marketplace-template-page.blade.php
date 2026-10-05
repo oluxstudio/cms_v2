@@ -1,7 +1,7 @@
 @php
     $money = fn ($cents, $cur = 'gbp') => ($cur === 'gbp' ? '£' : strtoupper($cur).' ').number_format($cents / 100, $cents % 100 ? 2 : 0);
-    $preview = $template->live_preview_url ?: (is_file(public_path('nuxt-preview/'.($template->builtin_key ?: $template->slug).'/index.html'))
-        ? url('nuxt-preview/'.($template->builtin_key ?: $template->slug).'/') : null);
+    // previewUrl() signs private previews (this page is already access-checked).
+    $preview = $template->live_preview_url ?: $template->previewUrl();
 @endphp
 <x-tri-layout :title="$template->name" :subtitle="'by '.($template->creator?->name ?? 'Olux Studio').($template->category ? ' · '.$template->category : '')"
     :labels="['📊 Facts', '🖼 Template', '🛒 Get it']" quick-width="lg:!w-[350px] xl:!w-[350px] lg:!max-w-[350px]">
@@ -150,15 +150,23 @@
             <div class="mt-3 space-y-2">
                 @if ($inLibrary)
                     <div class="w-full min-h-[48px] rounded-xl grid place-items-center text-[14px] font-bold bg-emerald-500 text-white">In library ✓</div>
-                    <a href="{{ route('marketplace', $site->name) }}?tab=library" class="fx block w-full min-h-[44px] leading-[44px] text-center rounded-xl text-[13px] font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] text-gray-700 dark:text-gray-200">Use on a site</a>
+                    @if ($usedHere)
+                        <div class="w-full min-h-[44px] rounded-xl grid place-items-center text-[13px] font-bold border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 bg-white dark:bg-white/[0.05]">Used on {{ Str::headline($site->name) }} ✓</div>
+                    @elseif ($canUse)
+                        <button wire:click="useOnThisSite" wire:loading.attr="disabled" wire:target="useOnThisSite"
+                                data-confirm="Use {{ $template->name }} on {{ Str::headline($site->name) }}? Its pages and design are added to the site. You can restore the current design from the Design page."
+                                class="fx w-full min-h-[44px] rounded-xl text-[13px] font-bold shadow-sm disabled:opacity-60" style="background:var(--primary);color:var(--on-primary)">
+                            <span wire:loading.remove wire:target="useOnThisSite">Use on {{ Str::headline($site->name) }}</span>
+                            <span wire:loading wire:target="useOnThisSite">Applying…</span>
+                        </button>
+                    @endif
+                    <a href="{{ route('marketplace', $site->name) }}?tab=library" class="fx block w-full min-h-[44px] leading-[44px] text-center rounded-xl text-[13px] font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] text-gray-700 dark:text-gray-200">Use on another site</a>
                 @elseif ($template->isFree())
                     <button wire:click="addToLibrary" class="fx w-full min-h-[48px] rounded-xl text-[14px] font-bold shadow-sm" style="background:var(--primary);color:var(--on-primary)">Add to library</button>
                 @else
                     <button wire:click="buy" class="fx w-full min-h-[48px] rounded-xl text-[14px] font-bold shadow-sm" style="background:var(--primary);color:var(--on-primary)">Buy and add to library</button>
                 @endif
-                @if ($preview)
-                    <x-preview-button :href="$preview" label="Live preview" class="w-full" />
-                @endif
+                <x-preview-button :href="$preview" label="Live preview" class="w-full" empty-hint="This template has no live preview yet" />
             </div>
             <p class="mt-3 text-[11px] text-gray-400">{{ $licence }}</p>
         </div>

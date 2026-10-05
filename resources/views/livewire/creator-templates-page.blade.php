@@ -44,7 +44,7 @@
     @unless ($this->canPublish)
         <div class="mb-4 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-sm text-indigo-800 dark:text-indigo-300">
             <strong>Publishing is a Business-plan feature.</strong> Upgrade to publish and sell your templates on the marketplace.
-            <a href="{{ route('account.subscription', ['plan' => 'business']) }}" class="font-bold underline">See the Business plan →</a>
+            <a href="{{ route('account.subscription', ['plan' => 'pro']) }}" class="font-bold underline">See the Pro plan →</a>
         </div>
     @endunless
 

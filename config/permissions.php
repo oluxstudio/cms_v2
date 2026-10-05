@@ -56,6 +56,7 @@ return [
             'addons.manage' => 'Enable / configure add-ons',
             'publish.manage' => 'Put the site live / manage domain',
             'properties.manage' => 'Edit site properties (name, logo, contacts, variables)',
+            'email.manage' => 'Manage business email mailboxes',
             'team.manage' => 'Manage team & roles',
         ],
     ],
@@ -89,6 +90,7 @@ return [
         'designs' => 'builder.manage',
         'publish' => 'publish.manage',
         'properties' => 'properties.manage',
+        'mailboxes' => 'email.manage',
         'team' => 'team.manage',
     ],
 

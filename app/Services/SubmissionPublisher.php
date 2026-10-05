@@ -333,6 +333,14 @@ class SubmissionPublisher
             ->all();
         File::put("$dir/tokens/variables.json", json_encode($variables ?: new \stdClass, JSON_PRETTY_PRINT));
 
+        // The template's own colour variables (--color-primary …) with their
+        // :root defaults — the Properties page offers a picker per variable
+        // and templates apply the owner's choices (site theme) at runtime.
+        $cssColors = collect($manifest['theme'] ?? [])
+            ->filter(fn ($v, $k) => str_starts_with($k, 'color-') && is_string($v))
+            ->all();
+        File::put("$dir/tokens/css-colors.json", json_encode($cssColors ?: new \stdClass, JSON_PRETTY_PRINT));
+
         // Data-source collections and authored forms. Hand-curated entries win
         // by name, but entries the PIPELINE extracted on a previous publish
         // (tagged by their generated description) must follow the sources —

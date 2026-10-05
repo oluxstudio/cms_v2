@@ -49,6 +49,7 @@
         ],
         'Site' => [
             $link('properties', 'Properties', 'sliders'),
+            $link('mailboxes', 'Business email', 'envelope'),
             $link('design', 'Design', 'template'),
             $link('addons', 'Add-ons', 'puzzle'),
             $link('analytics', 'Analytics', 'graph-up'),

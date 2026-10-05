@@ -52,7 +52,8 @@ await cms.items(collection.id).add({ name: 'Ada', role: 'Stylist' })
 await cms.posts.create({ title: 'Hello', body: '<p>…</p>',
   category: 'News', tags: ['styling', 'tips'], status: 'published' }) // tags: array or 'a, b' string
 await cms.posts.list()                    // → each post carries category + tags
-// filter reads: /api/sites/{s}/posts?category=news or ?tag=styling
+// filter reads: /api/sites/{s}/posts?category=news · ?tag=styling · ?author=Jane · ?exclude=a,b
+//   · ?sort=newest|oldest|popular|liked|title · ?page=2&per_page=12 or ?offset=24&limit=12
 await cms.forms.create({ name: 'quote', title: 'Get a quote',
   fields: [{ key: 'email', label: 'Email', type: 'email', required: true }] })
 await cms.booking.services.create({ name: 'Haircut', duration_min: 45, price_cents: 3800 })

@@ -583,6 +583,34 @@ test('display-form field names (Headline, CTA Label) register once and never loo
         ->and($cta->nodes()->pluck('label')->sort()->values()->all())->toBe(['Cta Label', 'Headline', 'Text']);
 });
 
+test('camelCase field keys (titleHighlight) match their extracted field instead of duplicating it', function () {
+    [$user, $site] = previewSite();
+    Page::factory()->create(['site_id' => $site->id, 'name' => 'Home', 'url' => '/']);
+    $marker = ['kind' => 'component', 'key' => 'hero',
+        'fields' => [['field' => 'title', 'type' => 'text', 'value' => 'Connecting believers,']]];
+
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site]);
+    $lw->call('registerMarkers', [$marker]);
+    $hero = $site->contentComponents()->where('name', 'Hero')->first();
+    // the extractor's two-word labels, as a template apply creates them
+    $hero->nodes()->create(['label' => 'Title Highlight', 'type' => 'text', 'value' => 'strengthening faith', 'parent' => '0', 'order' => 1]);
+    $hero->nodes()->create(['label' => 'Join Cta Label', 'type' => 'text', 'value' => 'Join the Church', 'parent' => '0', 'order' => 2]);
+
+    $before = $hero->nodes()->count();
+
+    // The rewriter marks those fields as data-olx-field="titleHighlight" etc.
+    $marker['fields'][] = ['field' => 'titleHighlight', 'type' => 'text', 'value' => 'strengthening faith'];
+    $marker['fields'][] = ['field' => 'joinCtaLabel', 'type' => 'text', 'value' => 'Join the Church ↗'];
+    $lw->call('registerMarkers', [$marker]);
+    expect($hero->nodes()->count())->toBe($before)
+        ->and($hero->nodes()->pluck('label')->all())->not->toContain('Titlehighlight')->not->toContain('Joinctalabel');
+
+    // An inline edit on the marker updates the existing field.
+    $lw->call('inlineFieldEdit', $hero->id, null, 'component', 'titleHighlight', 'growing together');
+    expect($hero->nodes()->count())->toBe($before)
+        ->and($hero->nodes()->where('label', 'Title Highlight')->value('value'))->toBe('growing together');
+});
+
 test('a collection resolves across separator drift (bible_studies vs bible-studies)', function () {
     [$user, $site] = previewSite();
     $col = Collection::create(['site_id' => $site->id, 'name' => 'Bible Studies', 'slug' => 'bible_studies',

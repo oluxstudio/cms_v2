@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Livewire\Concerns\WithLayoutMode;
+use App\Livewire\Concerns\WithVisibilityFields;
 use App\Models\Component;
 use App\Models\Node;
 use App\Models\Site;
@@ -17,9 +18,8 @@ use Livewire\Component as LivewireComponent;
  */
 class ComponentsPage extends LivewireComponent
 {
-    use \App\Livewire\Concerns\WithVisibilityFields;
-
     use WithLayoutMode;
+    use WithVisibilityFields;
 
     public Site $site;
 

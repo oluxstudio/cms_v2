@@ -12,13 +12,14 @@
         },
         add(d) {
             const id = Date.now() + Math.random();
-            const t  = { id, level: d.level || 'info', title: d.title || 'Notice', message: d.message || '', timeout: d.timeout || 4500 };
+            const t  = { id, level: d.level || 'info', title: d.title || 'Notice', message: d.message || '', link: d.link || null, timeout: d.timeout || 4500 };
             this.toasts.push(t);
             setTimeout(() => this.remove(id), t.timeout);
         },
         remove(id) { this.toasts = this.toasts.filter(t => t.id !== id); },
      }"
      @toast.window="add($event.detail)"
+     @if (session('toast')) x-init="$nextTick(() => add(@js(session('toast'))))" @endif
      class="fixed top-4 right-4 z-[9998] w-[340px] max-w-[calc(100vw-2rem)] space-y-2.5 pointer-events-none">
 
     <template x-for="t in toasts" :key="t.id">
@@ -43,6 +44,7 @@
                 <div class="min-w-0">
                     <p class="text-sm font-bold leading-tight" :style="'color:'+meta[t.level].color" x-text="t.title"></p>
                     <p class="text-sm text-gray-600 dark:text-gray-300 leading-snug mt-0.5 break-words" x-text="t.message"></p>
+                    <a x-show="t.link" :href="t.link" class="inline-block mt-1 text-[12.5px] font-bold" :style="'color:'+meta[t.level].color">View →</a>
                 </div>
             </div>
 

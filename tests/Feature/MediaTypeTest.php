@@ -1,4 +1,5 @@
 <?php
+
 use App\Models\Media;
 use App\Models\Site;
 use App\Models\User;
@@ -22,7 +23,7 @@ test('media type detection buckets svg, fonts and audio correctly', function () 
 test('an uploaded svg is stored as an image asset (previewable)', function () {
     Storage::fake('public');
     $owner = User::factory()->create();
-    $site = Site::create(['user_id'=>$owner->id,'name'=>'mt-'.uniqid(),'domain'=>'mt.test','owner'=>$owner->name,'description'=>'t']);
+    $site = Site::create(['user_id' => $owner->id, 'name' => 'mt-'.uniqid(), 'domain' => 'mt.test', 'owner' => $owner->name, 'description' => 't']);
 
     $svg = UploadedFile::fake()->createWithContent('mark.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
     $media = app(MediaStore::class)->store($site, $svg);

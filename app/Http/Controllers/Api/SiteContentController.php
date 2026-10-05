@@ -12,7 +12,9 @@ use App\Models\Post;
 use App\Models\Site;
 use App\Services\BlockTreeService;
 use App\Support\RichText;
+use App\Support\SiteContentCache;
 use App\Support\SiteProperties;
+use App\Support\SiteTokens;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -29,13 +31,38 @@ class SiteContentController extends Controller
         $site = Site::where('name', $siteName)
             ->firstOrFail();
 
-        return response()->json([
+        return $this->cached(request(), $site, 'content', fn () => [
             'site' => $this->siteMeta($site),
-            'pages' => $site->livePages()->get()->map(fn ($page) => $this->pagePayload($page, $site))->values(),
+            'pages' => $site->livePages()->get()->map(fn ($page) => $this->pagePayload($page, $site))->values()->all(),
             // Full site-wide sets so a client has everything to join by id.
             'collections' => $this->siteCollections($site),
             'forms' => $this->siteForms($site),
         ]);
+    }
+
+    /**
+     * Serve a site payload from the versioned content cache, with an ETag so
+     * browsers / a CDN can revalidate cheaply (304 when nothing changed).
+     * Keyed by host too: some URLs in the payload are absolute.
+     */
+    private function cached(Request $request, Site $site, string $variant, callable $build): JsonResponse
+    {
+        $variant = $variant.'|'.$request->getSchemeAndHttpHost();
+        $etag = SiteContentCache::etag($site->id, $variant);
+        $headers = [
+            'ETag' => $etag,
+            'Cache-Control' => 'public, max-age='.(int) config('content_cache.max_age', 30)
+                .', stale-while-revalidate='.(int) config('content_cache.stale_while_revalidate', 300),
+            'Vary' => 'Accept-Encoding',
+        ];
+        if (trim((string) $request->header('If-None-Match')) === $etag) {
+            return response()->json(null, 304, $headers);
+        }
+
+        // {{tokens}} (Site Properties + custom variables) resolve here, before caching.
+        $payload = SiteContentCache::remember($site->id, $variant, fn () => json_decode(json_encode(SiteTokens::apply($site, $build())), true));
+
+        return response()->json($payload, 200, $headers);
     }
 
     /**
@@ -50,9 +77,10 @@ class SiteContentController extends Controller
 
         $page = Page::where('site_id', $site->id)
             ->where('url', $url)
+            ->where('template_active', true)   // a non-current template's page is parked
             ->firstOrFail();
 
-        return response()->json([
+        return $this->cached($request, $site, 'page:'.$url, fn () => [
             'site' => $this->siteMeta($site),
             'page' => $this->pagePayload($page, $site),
             'collections' => $this->siteCollections($site),
@@ -69,17 +97,17 @@ class SiteContentController extends Controller
     {
         $site = Site::where('name', $siteName)->firstOrFail();
 
-        return response()->json([
+        return response()->json(SiteTokens::apply($site, json_decode(json_encode([
             'site' => $this->siteMeta($site),
             'components' => $site->contentComponents()->with('nodes')->get()
                 ->map(fn ($c) => $c->payload())->values(),
             'collections' => $site->collections()->with('items')->get()
                 ->map(fn (Collection $c) => $c->toApiArray())->values(),
-            'forms' => $site->forms()->where('is_active', true)->get()
+            'forms' => $site->forms()->live()->get()
                 ->map(fn (Form $f) => $f->toApiArray())->values(),
             'posts' => Post::where('site_id', $site->id)->where('status', 'published')
                 ->latest('published_at')->get()->map(fn ($p) => $p->toApiArray())->values(),
-        ]);
+        ]), true)));
     }
 
     private function siteMeta(Site $site): array
@@ -107,7 +135,7 @@ class SiteContentController extends Controller
 
     private function pagePayload(Page $page, Site $site): array
     {
-        $components = $page->components()->with('nodes')->get();
+        $components = $page->activeComponents()->with('nodes')->get();
 
         return [
             'name' => $page->name,
@@ -151,10 +179,16 @@ class SiteContentController extends Controller
         // The template's chrome (header/nav + footer) wraps EVERY page —
         // site-level components tagged by TemplateScaffolder::applyChrome().
         static $chrome = [];
-        $chrome[$site->id] ??= $site->contentComponents()->whereNull('collection_id')->with('nodes')->get()
+        // Chrome is picked by its tag alone: a header/footer linked to its data
+        // source (Site Header → Navigation) is still chrome and must render.
+        $chrome[$site->id] ??= $site->contentComponents()->with('nodes')->get()
             ->groupBy(fn ($c) => collect($c->tags ?? [])->first(fn ($t) => str_starts_with((string) $t, 'chrome:')) ?: '');
         $header = $chrome[$site->id]->get('chrome:header', collect());
         $footer = $chrome[$site->id]->get('chrome:footer', collect());
+        // Site Properties rides along on every page too, so any template can
+        // read it with useOluxContent('site-properties').
+        $props = $chrome[$site->id]->get('', collect())
+            ->filter(fn ($c) => $c->collection_id === null && SiteProperties::isComponent($c))->take(1);
 
         $entry = fn ($c) => [
             'type' => "app:{$key}:".Str::slug($c->name),
@@ -175,6 +209,7 @@ class SiteContentController extends Controller
         return $header->map($entry)
             ->concat($components->map($entry))
             ->concat($footer->map($entry))
+            ->concat($props->map($entry))
             ->values()->all();
     }
 
@@ -224,7 +259,7 @@ class SiteContentController extends Controller
         }
         $names = $blockIds->map(fn ($id) => 'blockkit-'.$id);
 
-        return Form::where('site_id', $site->id)->whereIn('name', $names)->get()
+        return Form::where('site_id', $site->id)->whereIn('name', $names)->live()->get()
             ->map(fn (Form $f) => $f->toApiArray())->values()->all();
     }
 
@@ -236,7 +271,7 @@ class SiteContentController extends Controller
 
     private function siteForms(Site $site): array
     {
-        return $site->forms()->where('is_active', true)->get()
+        return $site->forms()->live()->get()
             ->map(fn (Form $f) => $f->toApiArray())->values()->all();
     }
 

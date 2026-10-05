@@ -38,7 +38,7 @@ class RepublishPageJsons implements ShouldBeUnique, ShouldQueue
     public function handle(PageJsonPublisher $publisher): void
     {
         $pages = Page::where('site_id', $this->siteId)
-            ->whereNotNull('page_json_path')
+            ->whereNotNull('page_json_path')->where('template_active', true)
             ->get();
 
         foreach ($pages as $page) {

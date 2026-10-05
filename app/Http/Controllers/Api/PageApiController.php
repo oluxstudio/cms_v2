@@ -35,7 +35,7 @@ class PageApiController extends Controller
             'keywords' => $page->keywords,
             'is_published' => (bool) $page->is_published,
             'attributes' => $page->attrMap(),
-            'components' => $page->components()->count(),
+            'components' => $page->activeComponents()->count(),
             'created_at' => $page->created_at?->toIso8601String(),
             'updated_at' => $page->updated_at?->toIso8601String(),
         ];
@@ -46,13 +46,13 @@ class PageApiController extends Controller
         $site = $this->publicSite($siteName);
 
         return response()->json([
-            'pages' => $site->pages()->orderBy('id')->get()->map(fn (Page $p) => $this->record($p))->values(),
+            'pages' => $site->pages()->where('template_active', true)->orderBy('id')->get()->map(fn (Page $p) => $this->record($p))->values(),
         ]);
     }
 
     public function show(string $siteName, string $id): JsonResponse
     {
-        return response()->json(['page' => $this->record($this->publicSite($siteName)->pages()->findOrFail($id))]);
+        return response()->json(['page' => $this->record($this->publicSite($siteName)->pages()->where('template_active', true)->findOrFail($id))]);
     }
 
     private function validated(Request $request, bool $creating): array

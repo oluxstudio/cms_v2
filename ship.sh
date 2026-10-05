@@ -124,7 +124,9 @@ done
 [ "$code" = "200" ] || fail "$PROD_URL/login answered $code after 2 minutes"
 ok "$PROD_URL is up ($code)"
 
-unhealthy=$($SSH "docker ps --filter name=cms_v2 --format '{{.Names}} {{.Status}}' | grep -v '(healthy)' | grep -vE 'redis|mysql'" || true)
+# Containers without a health check (redis, template-builder) show a plain "Up …" — only
+# a failing, restarting or stopped container counts.
+unhealthy=$($SSH "docker ps -a --filter name=cms_v2 --format '{{.Names}} {{.Status}}' | grep -E '\(unhealthy\)|Restarting|Exited|Dead'" || true)
 [ -z "$unhealthy" ] || fail "unhealthy containers: $unhealthy"
 ok "containers healthy"
 

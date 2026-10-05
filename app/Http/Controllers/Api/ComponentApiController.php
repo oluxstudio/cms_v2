@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
+use App\Models\Collection;
 use App\Models\Component;
 use App\Models\Node;
 use App\Models\Site;
@@ -23,8 +24,9 @@ use Illuminate\Http\Request;
  *   DELETE /api/sites/{site}/components/{id}   → delete        (Bearer token)
  *
  * Writes accept: name, description, nodes[] ({label,type,value,parent?,order?,
- * description?}) and page_ids[] to sync page attachments. Nodes are replaced
- * wholesale when a nodes array is present.
+ * description?}), page_ids[] to sync page attachments, and collection_id to
+ * link the component to its data-source collection (null unlinks). Nodes are
+ * replaced wholesale when a nodes array is present.
  */
 class ComponentApiController extends Controller
 {
@@ -62,6 +64,7 @@ class ComponentApiController extends Controller
             'description' => $data['description'] ?? null,
             'tags' => $data['tags'] ?? null,
             'visibility' => $data['visibility'] ?? null,
+            'collection_id' => $this->dataSource($site, $data),
         ]);
         $this->syncNodes($component, $data['nodes'] ?? []);
         $this->syncPages($site, $component, $data['page_ids'] ?? null);
@@ -88,6 +91,9 @@ class ComponentApiController extends Controller
         }
         if (array_key_exists('visibility', $data)) {
             $attrs['visibility'] = $data['visibility'] ?: null;
+        }
+        if (array_key_exists('collection_id', $data)) {
+            $attrs['collection_id'] = $this->dataSource($site, $data);
         }
         if ($attrs !== []) {
             $component->update($attrs);
@@ -139,7 +145,20 @@ class ComponentApiController extends Controller
             'nodes.*.description' => ['nullable', 'string', 'max:255'],
             'page_ids' => ['sometimes', 'nullable', 'array'],
             'page_ids.*' => ['string'],
+            'collection_id' => ['sometimes', 'nullable', 'string'],
         ]);
+    }
+
+    /** The payload's data-source collection id, verified to belong to the site (null = unlinked). */
+    private function dataSource(Site $site, array $data): ?string
+    {
+        $id = $data['collection_id'] ?? null;
+        if ($id === null) {
+            return null;
+        }
+        abort_unless(Collection::where('site_id', $site->id)->whereKey($id)->exists(), 422, 'collection_id is not a collection of this site.');
+
+        return $id;
     }
 
     /**

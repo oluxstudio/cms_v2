@@ -121,6 +121,30 @@
             @endif
         </div>
 
+        {{-- Made for you: private templates assigned to this account --}}
+        @if ($exclusive->isNotEmpty())
+            <div class="mb-5 rounded-[1.75rem] p-5 border border-gray-100 dark:border-white/[0.06] shadow-sm" style="background:var(--primary-soft)">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-[10px] font-extrabold tracking-wider px-2 py-0.5 rounded" style="background:var(--primary);color:var(--on-primary)">PRIVATE</span>
+                    <h2 class="text-[15px] font-bold text-gray-900 dark:text-white">Made for you</h2>
+                    <span class="text-[12px] text-gray-500 dark:text-gray-400">Only your account can see these.</span>
+                </div>
+                <div class="grid sm:grid-cols-2 gap-3">
+                    @foreach ($exclusive as $x)
+                        <a href="{{ route('marketplace.template', [$site->name, $x->slug]) }}" class="fx flex items-center gap-3 rounded-2xl p-3 bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06]">
+                            <div class="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/[0.05] shrink-0">
+                                @if ($x->thumbnail_url)<img src="{{ $x->thumbnail_url }}" alt="" class="w-full h-full object-cover">@endif
+                            </div>
+                            <span class="min-w-0">
+                                <span class="block text-[14px] font-bold text-gray-900 dark:text-white truncate">{{ $x->name }}</span>
+                                <span class="block text-[12px] text-gray-500 dark:text-gray-400 truncate">{{ $x->short_description ?: $x->category }}</span>
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         {{-- grid --}}
         <div wire:loading.class="opacity-50" class="grid sm:grid-cols-2 gap-4">
             @forelse ($templates as $t)
@@ -137,14 +161,12 @@
                         <p class="text-[11px] text-gray-400">by {{ $t->creator?->name ?? 'Olux Studio' }}{{ $t->category ? ' · '.$t->category : '' }}</p>
                         <p class="text-[12.5px] text-gray-600 dark:text-gray-300 mt-1.5 line-clamp-2 flex-1">{{ $t->short_description }}</p>
                         @php
-                            $cardPreview = $t->live_preview_url ?: (is_file(public_path('nuxt-preview/'.($t->builtin_key ?: $t->slug).'/index.html'))
-                                ? url('nuxt-preview/'.($t->builtin_key ?: $t->slug).'/') : null);
+                            // previewUrl() knows both shell homes (built-ins and admin uploads).
+                            $cardPreview = $t->live_preview_url ?: $t->previewUrl();
                         @endphp
                         <div class="flex items-center gap-2 mt-3">
                             <a href="{{ route('marketplace.template', [$site->name, $t->slug]) }}" class="fx flex-1 text-center min-h-[40px] leading-[40px] rounded-xl text-[12.5px] font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.05] text-gray-700 dark:text-gray-200">View</a>
-                            @if ($cardPreview)
-                                <x-preview-button :href="$cardPreview" label="Live preview" small class="flex-1" />
-                            @endif
+                            <x-preview-button :href="$cardPreview" label="Live preview" small class="flex-1" empty-hint="This template has no live preview yet" />
                         </div>
                         @if ($isOwned)<p class="mt-2 text-[11px] font-bold text-emerald-600">In your library ✓</p>@endif
                     </div>

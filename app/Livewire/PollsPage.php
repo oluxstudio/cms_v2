@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Poll;
 use App\Models\PollVote;
 use App\Models\Site;
+use App\Services\TemplateScaffolder;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -120,7 +121,7 @@ class PollsPage extends Component
         }
         try {
             if (! $this->site->pages()->where('url', '/polls')->exists()) {
-                app(\App\Services\TemplateScaffolder::class)->applyPages($this->site, [[
+                app(TemplateScaffolder::class)->applyPages($this->site, [[
                     'name' => 'Polls',
                     'url' => '/polls',
                     'keywords' => 'polls, vote',

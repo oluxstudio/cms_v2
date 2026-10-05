@@ -68,7 +68,7 @@ test('a new plan can be created, hidden from pricing, and deleted while unused',
     expect(PlanCatalog::publicTiers()->has($key))->toBeFalse()
         ->and(PlanCatalog::publicTiers($key)->has($key))->toBeTrue(); // current subscribers still see it
 
-    Livewire::actingAs(plSuper())->test(PlatformPlansPage::class)->call('deletePlan', $key);
+    Livewire::actingAs(plSuper())->test(PlatformPlansPage::class)->call('startDelete', $key)->call('deletePlan');
     expect(config("plans.tiers.{$key}"))->toBeNull();
 });
 
@@ -89,4 +89,49 @@ test('trial length is editable', function () {
 
     PlanCatalog::refresh();
     expect(config('plans.trial_days'))->toBe(21);
+});
+
+test('deleting a plan with accounts on it moves them to a chosen plan first', function () {
+    $key = 'gone_'.uniqid();
+    PlanCatalog::save($key, ['name' => 'Gone soon', 'price_cents' => 1500, 'limits' => ['sites' => 1]]);
+    $user = User::factory()->create();
+    $user->currentSubscription()->update(['plan' => $key, 'status' => 'active']);
+
+    $page = Livewire::actingAs(plSuper())->test(PlatformPlansPage::class)
+        ->call('startDelete', $key)
+        ->assertSee('Move its 1 account to')
+        ->call('deletePlan')->assertHasErrors('moveTo');          // must say where they go
+    expect(config("plans.tiers.{$key}"))->not->toBeNull();
+
+    $page->set('moveTo', 'growth')->call('deletePlan')->assertHasNoErrors()->assertSet('deleting', null);
+    expect(config("plans.tiers.{$key}"))->toBeNull()
+        ->and($user->fresh()->currentSubscription()->plan)->toBe('growth');
+});
+
+test('a default plan can be deleted (gone from every pricing page) and restored; the trial cannot', function () {
+    $before = MembershipPlan::where('key', 'starter')->value('data');
+    try {
+        $page = Livewire::actingAs(plSuper())->test(PlatformPlansPage::class)
+            ->call('startDelete', 'starter')->set('moveTo', 'growth')->call('deletePlan')->assertHasNoErrors();
+        expect(config('plans.tiers.starter'))->toBeNull()
+            ->and(PlanCatalog::publicTiers()->has('starter'))->toBeFalse()
+            ->and(PlanCatalog::deletedBuiltIns())->toHaveKey('starter');
+        $page->assertSee('Deleted plans');
+
+        Livewire::actingAs(plSuper())->test(PlatformPlansPage::class)->call('restorePlan', 'starter');
+        expect(config('plans.tiers.starter'))->not->toBeNull()
+            ->and(config('plans.tiers.starter.hidden'))->toBeTrue()          // back hidden — Show when ready
+            ->and(PlanCatalog::deletedBuiltIns())->not->toHaveKey('starter');
+
+        Livewire::actingAs(plSuper())->test(PlatformPlansPage::class)->call('startDelete', 'trial')->assertStatus(422);
+    } finally {
+        $before === null ? MembershipPlan::where('key', 'starter')->delete() : MembershipPlan::where('key', 'starter')->update(['data' => $before]);
+        PlanCatalog::refresh();
+    }
+});
+
+test('every plan action re-checks super admin, not just the page load', function () {
+    $component = Livewire::actingAs(plSuper())->test(PlatformPlansPage::class);
+    $this->actingAs(User::factory()->create());   // session changes hands mid-way
+    $component->call('startDelete', 'pro')->assertForbidden();
 });

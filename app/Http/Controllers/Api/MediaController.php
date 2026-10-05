@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\PlanLimitReached;
 use App\Http\Controllers\Api\Concerns\ResolvesApiSite;
 use App\Http\Controllers\Controller;
 use App\Models\Media;
@@ -112,7 +113,11 @@ class MediaController extends Controller
         ]);
 
         if ($request->hasFile('file')) {
-            $media = app(MediaStore::class)->store($site, $request->file('file'));
+            try {
+                $media = app(MediaStore::class)->store($site, $request->file('file'));
+            } catch (PlanLimitReached $e) {
+                return response()->json(['message' => $e->getMessage(), 'error' => 'storage_full'], 422);
+            }
             $media->update(array_filter(['name' => $data['name'] ?? null, 'alt_text' => $data['alt'] ?? null]));
         } else {
             $media = Media::create([

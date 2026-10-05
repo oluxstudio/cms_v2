@@ -215,7 +215,7 @@ class PageDetailPage extends Component
     /** Summary tiles for the Content tab's left rail. */
     public function getSummaryProperty(): array
     {
-        $components = $this->page->components()->withCount('nodes')->get();
+        $components = $this->page->activeComponents()->withCount('nodes')->get();
 
         return [
             'components' => $components->count(),

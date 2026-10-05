@@ -8,6 +8,7 @@ use App\Services\TemplateCommerce;
 use App\Services\TemplateInstaller;
 use App\Support\TemplateCards;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
@@ -17,10 +18,13 @@ use Livewire\Component;
  */
 class TemplateDetailPage extends Component
 {
+    #[Locked]
     public string $urlKey = '';
 
+    #[Locked]
     public array $card = [];
 
+    #[Locked]
     public ?string $templateId = null;
 
     public string $message = '';

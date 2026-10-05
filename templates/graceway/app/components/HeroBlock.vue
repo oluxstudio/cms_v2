@@ -1,8 +1,16 @@
 <script setup lang="ts">
 const oluxCms = useOluxContent('hero')
 const oluxFb: Record<string, string> = {}
-// all copy and pills come from the global data source
+// copy comes from the global data source; pills from the Hero Pills collection
+// @olux-source hero-pills
 const { hero } = useSiteContent()
+// three collage columns, filled in order; computed so connect-editor saves
+// re-render in place (useCms data is reactive)
+const columns = computed(() => {
+  const pills = useHeroPills()
+  const per = Math.max(1, Math.ceil(pills.length / 3))
+  return [0, 1, 2].map(c => pills.slice(c * per, (c + 1) * per))
+})
 </script>
 
 <template>
@@ -27,9 +35,10 @@ const { hero } = useSiteContent()
         <span class="dot d3"></span>
       </div>
 
-      <div class="hero-collage">
-        <div v-for="(col, c) in [hero.pills.slice(0, 2), hero.pills.slice(2, 4), hero.pills.slice(4, 6)]" :key="c" class="col" :class="`col-${['a','b','c'][c]}`">
+      <div class="hero-collage" data-olx-panel="hero-pills">
+        <div v-for="(col, c) in columns" :key="c" class="col" :class="`col-${['a','b','c'][c]}`">
           <NuxtLink
+            data-olx-item
             v-for="p in col" :key="p.key"
             class="pill" :class="p.tint" :to="p.to"
             :aria-label="`Open the ${p.label} page`"

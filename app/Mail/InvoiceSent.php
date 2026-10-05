@@ -74,7 +74,7 @@ class InvoiceSent extends Mailable implements ShouldQueue
     {
         $tpl = EmailTemplate::forKey($this->site, 'invoice_sent');
 
-        return new Envelope(subject: EmailTemplate::fill($tpl['subject'], $this->ctx()));
+        return new Envelope(...$this->site->mailSender(), subject: EmailTemplate::fill($tpl['subject'], $this->ctx()));
     }
 
     public function content(): Content

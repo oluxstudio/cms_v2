@@ -52,7 +52,7 @@ class EstimateQuoteMail extends Mailable implements ShouldQueue
         $subject = $this->estimate->estimator?->email_subject
             ?: EmailTemplate::forKey($this->site, 'estimate_quote')['subject'];
 
-        return new Envelope(subject: EmailTemplate::fill($subject, $this->ctx()));
+        return new Envelope(...$this->site->mailSender(), subject: EmailTemplate::fill($subject, $this->ctx()));
     }
 
     public function content(): Content

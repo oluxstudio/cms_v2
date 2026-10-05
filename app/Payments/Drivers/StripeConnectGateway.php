@@ -69,8 +69,9 @@ class StripeConnectGateway implements PaymentGateway
             $params['phone_number_collection'] = ['enabled' => true];
         }
 
-        // Optional platform fee on every sale (percent of the total).
-        $feePct = (float) config('payments.connect_fee_percent', 0);
+        // Platform fee on every sale (percent of the total): the site owner's
+        // plan rate (Starter 1%, Growth 0.5%, Pro 0%), else the global default.
+        $feePct = (float) ($site->user?->currentSubscription()->paymentFeePct() ?? config('payments.connect_fee_percent', 0));
         if ($feePct > 0) {
             $total = array_sum(array_map(fn ($l) => $l->unitAmountCents * max(1, $l->quantity), $request->lines));
             $params['payment_intent_data'] = ['application_fee_amount' => (int) round($total * $feePct / 100)];

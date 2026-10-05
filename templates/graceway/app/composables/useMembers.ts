@@ -21,13 +21,13 @@ export interface MemberProfileExtras {
 // Shared profile extras rendered on every leadership profile page;
 // per-member values can replace this when the CMS is wired up.
 /** @olux-collection Profile Stats */
-const profileStats = [
+const profileStats: MemberProfileExtras['stats'] = [
     { value: '15+', label: 'Years Serving' },
     { value: '6', label: 'Ministries Led' },
     { value: '1k+', label: 'Lives Touched' },
   ]
 /** @olux-collection Profile Skills */
-const profileSkills = [
+const profileSkills: MemberProfileExtras['skills'] = [
     { icon: '📖', name: 'Teaching & Preaching', pct: 95 },
     { icon: '🙏', name: 'Pastoral Care', pct: 90 },
     { icon: '🎵', name: 'Worship Leading', pct: 75 },
@@ -42,8 +42,8 @@ export const useMemberExtras = (): MemberProfileExtras => {
   const stats = items('profileStats', []) as any[]
   const skills = items('profileSkills', []) as any[]
   return {
-    stats: stats.length ? stats as MemberProfileExtras['stats'] : profileStats,
-    skills: skills.length ? skills as MemberProfileExtras['skills'] : profileSkills,
+    stats: (stats.length || useCms().isSite) ? stats as MemberProfileExtras['stats'] : profileStats,
+    skills: (skills.length || useCms().isSite) ? skills as MemberProfileExtras['skills'] : profileSkills,
   }
 }
 
@@ -104,5 +104,5 @@ const members: Member[] = [
 export const useMembers = (): Member[] => {
   const { items } = useCms()
   const rows = (items('leadership', []) as any[]).filter(m => m.name && m.slug)
-  return rows.length ? rows.map(m => ({ ...members.find(a => a.slug === m.slug), ...m }) as Member) : members
+  return (rows.length || useCms().isSite) ? rows.map(m => ({ ...members.find(a => a.slug === m.slug), ...m }) as Member) : members
 }

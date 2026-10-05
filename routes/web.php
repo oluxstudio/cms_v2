@@ -20,6 +20,7 @@ use App\Http\Controllers\TemplateCommerceController;
 use App\Http\Controllers\TemplateRepoWebhookController;
 use App\Http\Middleware\ServeLiveSite;
 use App\Models\Announcement;
+use App\Models\DomainOrder;
 use App\Models\Site;
 use App\Models\User;
 use App\Payments\SitePaymentOnboarding;
@@ -383,8 +384,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/{site}/domain/success', function (Request $request, Site $site) {
         abort_unless($site->allows($request->user(), 'publish.manage'), 403);
         try {
-            app(DomainPurchase::class)
-                ->fulfilFromSession($request->user(), (string) $request->query('session_id'));
+            if ($request->filled('order')) {
+                // Payment Element return (after a bank redirect, e.g. 3-D Secure).
+                $order = DomainOrder::where('site_id', $site->id)->findOrFail((string) $request->query('order'));
+                $state = app(DomainPurchase::class)->completePayment($order);
+                session()->flash('toast', match ($state) {
+                    'paid' => ['level' => 'success', 'title' => 'Payment received', 'message' => "We're registering {$order->domain} now."],
+                    'processing' => ['level' => 'info', 'title' => 'Payment processing', 'message' => "We'll finish setting up {$order->domain} as soon as your bank confirms."],
+                    default => ['level' => 'error', 'title' => 'Payment not completed', 'message' => 'Nothing was charged. You can try again.'],
+                });
+            } else {
+                app(DomainPurchase::class)
+                    ->fulfilFromSession($request->user(), (string) $request->query('session_id'));
+            }
         } catch (Throwable $e) {
             report($e);
         }
@@ -483,6 +495,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/pages', [SiteController::class, 'pages'])->middleware('perm:pages.view')->name('pages');
     Route::get('/{siteID}/pages/{page}/details', [SiteController::class, 'pageDetail'])->middleware('perm:pages.view')->name('site.page.detail');
     Route::get('/{siteID}/collections', [SiteController::class, 'collections'])->middleware('perm:collections.view')->name('collections');
+    // A collection's own page (entries: add / edit / reorder / delete) — the "Source ↗" target on the Edit page.
+    Route::get('/{siteID}/collections/{collection}', [SiteController::class, 'collectionDetail'])->middleware('perm:collections.view')->name('collections.show');
     Route::get('/{siteID}/components', function ($siteID) {
         $site = Site::where('name', $siteID)->firstOrFail();
         abort_unless($site->allows(Auth::user(), 'components.view'), 403);
@@ -518,6 +532,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/publish', [SiteController::class, 'publish'])->middleware('perm:publish.manage')->name('site.publish');
     Route::get('/{siteID}/api-docs', [SiteController::class, 'apiDocs'])->name('site.apidocs');
     Route::get('/{siteID}/api-keys', [SiteController::class, 'apiKeys'])->name('site.apikeys');
+    Route::get('/{siteID}/mailboxes', [SiteController::class, 'mailboxes'])->middleware('perm:email.manage')->name('site.mailboxes');
     Route::get('/{siteID}/properties', [SiteController::class, 'properties'])->middleware('perm:properties.manage')->name('site.properties');
     Route::get('/{siteID}/emails', [SiteController::class, 'emails'])->middleware('perm:forms.view')->name('site.emails');
     Route::get('/{siteID}/team', [SiteController::class, 'team'])->middleware('perm:team.manage')->name('site.team');

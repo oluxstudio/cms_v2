@@ -11,6 +11,9 @@ use App\Models\Post;
 use App\Models\Service;
 use App\Models\Site;
 use App\Services\BookingService;
+use App\Support\CollectionQuery;
+use App\Support\SiteProperties;
+use App\Support\SiteTokens;
 use Illuminate\Support\Str;
 
 /**
@@ -42,7 +45,7 @@ class PageJsonGenerator
         $site = $page->site;
         $version ??= (int) $page->page_json_version;
 
-        $components = $page->components()->with('nodes')->get();
+        $components = $page->activeComponents()->with('nodes')->get();
 
         // Cross-type page order: components then collections then forms then
         // posts, each in its own order — a single increasing `position`
@@ -76,17 +79,19 @@ class PageJsonGenerator
             ->map(fn (Post $p) => $this->post($p, $site))
             ->values()->all();
 
-        return [
+        // {{tokens}} (Site Properties + custom variables) resolve in the exported content.
+        return SiteTokens::apply($site, [
             'schemaVersion' => (int) config('site_connect.schema_version', 2),
             'siteData' => [
                 'name' => $site->name,
                 'domain' => $site->domain,
-                'logo' => $this->siteAsset($site, 'logo'),
-                'icon' => $this->siteAsset($site, 'favicon') ?? $this->siteAsset($site, 'icon'),
+                'logo' => ($props = SiteProperties::payload($site))['logo'] ?? $this->siteAsset($site, 'logo'),
+                'icon' => ($props['icons'][32] ?? $props['icons'][48] ?? null) ?? $props['icon'] ?? $this->siteAsset($site, 'favicon') ?? $this->siteAsset($site, 'icon'),
                 'description' => $site->description,
                 'theme' => $this->theme($site),
                 'nav' => $this->nav($site),
                 'currency' => $site->currency,
+                'properties' => $props,
                 'version' => $version,
                 'generatedAt' => now()->toIso8601String(),
             ],
@@ -109,7 +114,7 @@ class PageJsonGenerator
             'formData' => $formEntries,
             'bookingData' => $this->bookings($site),
             'postData' => $postEntries,
-        ];
+        ]);
     }
 
     /** A site branding asset (logo/favicon/icon) from attributes, @media-resolved. */
@@ -199,7 +204,7 @@ class PageJsonGenerator
             'id' => $c->id,
             'key' => $this->key($c->name),
             'position' => $position,
-            'fields' => $this->nodesToFields(Component::buildNodeTree($c->nodes), $site),
+            'fields' => $this->nodesToFields(Component::buildNodeTree($c->nodes), $site, (array) ($c->collection_queries ?? [])),
         ];
     }
 
@@ -267,7 +272,7 @@ class PageJsonGenerator
      * Leaf scalars → value; image → {src, alt}; a node WITH children → nested
      * object (e.g. cta → {label, href}).
      */
-    private function nodesToFields(array $nodeTree, Site $site): array
+    private function nodesToFields(array $nodeTree, Site $site, array $queries = []): array
     {
         $fields = [];
         foreach ($nodeTree as $node) {
@@ -277,18 +282,18 @@ class PageJsonGenerator
             }
 
             if (! empty($node['children'])) {
-                $fields[$key] = $this->nodesToFields($node['children'], $site);
+                $fields[$key] = $this->nodesToFields($node['children'], $site, $queries);
 
                 continue;
             }
 
-            $fields[$key] = $this->nodeValue($node, $site);
+            $fields[$key] = $this->nodeValue($node, $site, $queries);
         }
 
         return $fields;
     }
 
-    private function nodeValue(array $node, Site $site): mixed
+    private function nodeValue(array $node, Site $site, array $queries = []): mixed
     {
         return match ($node['type'] ?? 'text') {
             'image' => $this->image($site, $node['value'] ?? ''),
@@ -298,15 +303,20 @@ class PageJsonGenerator
             // items as an ARRAY field, so a component can carry a list (the
             // client renders it with a [data-olx-item] template inside the
             // field element, exactly like a standalone collection).
-            'collection' => $this->linkedItems($site, (string) ($node['value'] ?? '')),
+            'collection' => $this->linkedItems($site, (string) ($node['value'] ?? ''), (array) ($queries[(string) ($node['value'] ?? '')] ?? [])),
             // Text/url nodes can hold a media path pasted from the picker —
             // absolutise it like image nodes, or it 404s on client domains.
             default => $this->absolutizeStorage($node['value'] ?? ''),
         };
     }
 
-    /** @return array<int,array<string,mixed>> published items of a linked collection (site-scoped). */
-    private function linkedItems(Site $site, string $collectionId): array
+    /**
+     * Published items of a linked collection (site-scoped), in manual order,
+     * narrowed by the owning block's saved query (how many / sort / search).
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function linkedItems(Site $site, string $collectionId, array $query = []): array
     {
         if ($collectionId === '') {
             return [];
@@ -314,7 +324,7 @@ class PageJsonGenerator
         $collection = Collection::where('site_id', $site->id)->find($collectionId);
 
         return $collection
-            ? $collection->items()->where('status', 'published')->orderBy('id')->get()
+            ? CollectionQuery::apply($collection, $query)
                 ->map(fn ($i) => ['id' => $i->id] + ($i->data ?? []))->values()->all()
             : [];
     }
@@ -362,7 +372,7 @@ class PageJsonGenerator
      *  association is added in Stage 3); documented in docs/site-connect.md. */
     private function pageForms(Site $site)
     {
-        return $site->forms()->where('is_active', true)->get();
+        return $site->forms()->live()->get();
     }
 
     /** Posts surfaced on the page. v1: the site's published posts. */

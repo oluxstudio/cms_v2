@@ -5,11 +5,14 @@ namespace App\Livewire;
 use App\Jobs\BuildTemplateShell;
 use App\Models\DomainOrder;
 use App\Models\Site;
+use App\Services\AccountActivity;
 use App\Services\Domains\DomainVerifier;
 use App\Services\TaskLogger;
 use App\Support\GoLiveChecklist;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -26,6 +29,18 @@ class GoLivePage extends Component
     public string $domain = '';
 
     public string $errorMessage = '';
+
+    /** Where the Buy path is (search | chosen | pay) and the domain picked — drives the stepper. */
+    public string $buyStage = 'search';
+
+    public ?string $buyDomain = null;
+
+    /** Change-of-address form (the {name}.{base} web address). */
+    public bool $addressOpen = false;
+
+    public string $newAddress = '';
+
+    public string $addressError = '';
 
     /** choose | buy | connect — null = derive from the tenant's state. */
     public ?string $flow = null;
@@ -84,14 +99,28 @@ class GoLivePage extends Component
     public function ourOrder(): ?DomainOrder
     {
         return DomainOrder::where('site_id', $this->site->id)
-            ->whereIn('status', ['registered', 'paid', 'pending'])
+            ->whereIn('status', ['registered', 'paid'])
             ->where('type', 'register')
             ->latest()->first();
+    }
+
+    /** Free plans stay on the olux subdomain: own domains need Starter or above. */
+    private function ownDomainAllowed(): bool
+    {
+        if ($this->site->user?->currentSubscription()->allowsCustomDomain() ?? true) {
+            return true;
+        }
+        $this->dispatch('upgrade-required',
+            reason: 'Your own domain (and no Olux badge) comes with Starter and above. Your site keeps working on its free olux address meanwhile.',
+            cta: 'See plans');
+
+        return false;
     }
 
     public function chooseBuy(): void
     {
         $this->guard();
+        // Free accounts may buy: the domain search makes them pick a paid plan with it.
         // One active path per tenant: switching to Buy discards a saved manual
         // domain (the blade confirms via data-confirm before calling this).
         if (filled($this->site->domain) && $this->ourOrder()?->domain !== $this->site->domain) {
@@ -103,6 +132,9 @@ class GoLivePage extends Component
     public function chooseConnect(): void
     {
         $this->guard();
+        if (! $this->ownDomainAllowed()) {
+            return;
+        }
         $this->flow = 'connect';
         $this->ensureVerifyToken();
     }
@@ -136,6 +168,9 @@ class GoLivePage extends Component
     public function saveDomain(): void
     {
         $this->guard();
+        if (! $this->ownDomainAllowed()) {
+            return;
+        }
         $this->errorMessage = '';
         $this->dnsFound = null;
 
@@ -365,9 +400,58 @@ class GoLivePage extends Component
                 : 'The domain shows nothing until you go live again.');
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Web address ({name}.{base}) — old one keeps redirecting
+    // ─────────────────────────────────────────────────────────────
+
+    public function openAddress(): void
+    {
+        $this->guard();
+        $this->addressOpen = true;
+        $this->newAddress = $this->site->name;
+        $this->addressError = '';
+    }
+
+    public function updatedNewAddress(): void
+    {
+        $this->newAddress = Str::slug($this->newAddress);
+        $this->addressError = $this->newAddress === '' || $this->newAddress === $this->site->name
+            ? '' : (string) $this->site->addressError($this->newAddress);
+    }
+
+    public function changeAddress()
+    {
+        $this->guard();
+        $label = Str::slug($this->newAddress);
+        $old = $this->site->name;
+
+        try {
+            $this->site->changeAddress($label);
+        } catch (\InvalidArgumentException $e) {
+            $this->addressError = $e->getMessage();
+
+            return null;
+        }
+
+        AccountActivity::record($this->site->user_id, 'site.address_changed', "Changed site address from {$old} to {$label}",
+            ['actor_id' => Auth::id(), 'category' => 'Sites']);
+        session()->flash('toast', ['level' => 'success', 'title' => 'Web address changed',
+            'message' => 'Your site is now at '.($this->site->subdomainHost() ?: $label).'. Old links to '.$old.' redirect here.']);
+
+        return redirect()->route('site.publish', $label);
+    }
+
+    #[On('go-live-stage')]
+    public function setBuyStage(string $stage, ?string $domain = null): void
+    {
+        $this->buyStage = in_array($stage, ['search', 'chosen', 'pay'], true) ? $stage : 'search';
+        $this->buyDomain = $domain;
+    }
+
     public function render()
     {
-        $orders = DomainOrder::where('site_id', $this->site->id)
+        // Unpaid on-page checkouts aren't orders yet — keep them out of the lists.
+        $orders = DomainOrder::where('site_id', $this->site->id)->where('status', '!=', 'checkout')
             ->latest()->limit(6)->get();
 
         return view('livewire.go-live-page', [
@@ -379,7 +463,7 @@ class GoLivePage extends Component
             'hasBuild' => $this->site->liveShell() !== null,
             // Hosting space: auto-queue the template shell build when missing.
             'hostingState' => BuildTemplateShell::ensure($this->site),
-            'checklist' => GoLiveChecklist::steps($this->site),
+            'checklist' => GoLiveChecklist::steps($this->site, $this->currentFlow(), $this->buyStage, $this->buyDomain),
             'checklistProgress' => GoLiveChecklist::progress($this->site),
             'orders' => $orders,
             'nextExpiry' => $orders->where('status', 'registered')->where('type', 'register')

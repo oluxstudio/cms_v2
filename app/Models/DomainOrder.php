@@ -13,7 +13,7 @@ class DomainOrder extends Model
 
     protected $fillable = [
         'user_id', 'site_id', 'domain', 'type', 'years', 'price_cents', 'plan', 'status',
-        'stripe_session_id', 'registrar_ref', 'error', 'expires_at',
+        'stripe_session_id', 'stripe_payment_intent_id', 'stripe_subscription_id', 'registrar_ref', 'error', 'expires_at',
     ];
 
     protected $casts = ['expires_at' => 'datetime'];

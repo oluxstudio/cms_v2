@@ -80,17 +80,17 @@
                        class="group block alt rounded-2xl p-3 shadow-sm hover:-translate-y-0.5 transition-all">
                         <div class="rounded-xl overflow-hidden border border-gray-200/70 dark:border-white/[0.08]">
                             @if ($c['screenshots'])
-                                <img src="{{ $c['screenshots'][0] }}" alt="{{ $c['name'] }}" class="w-full aspect-[15/16] object-cover object-top">
+                                <img src="{{ $c['screenshots'][0] }}" alt="{{ $c['name'] }}" class="w-full aspect-square object-cover object-top">
                             @elseif ($c['thumbnail'])
-                                <img src="{{ $c['thumbnail'] }}" alt="{{ $c['name'] }}" class="w-full aspect-[15/16] object-cover object-top">
+                                <img src="{{ $c['thumbnail'] }}" alt="{{ $c['name'] }}" class="w-full aspect-square object-cover object-top">
                             @else
-                                <div class="w-full aspect-[15/16] grid place-items-center text-4xl font-black text-white" style="background:{{ $c['accent'] }}">{{ strtoupper(substr($c['name'], 0, 1)) }}</div>
+                                <div class="w-full aspect-square grid place-items-center text-4xl font-black text-white" style="background:{{ $c['accent'] }}">{{ strtoupper(substr($c['name'], 0, 1)) }}</div>
                             @endif
                         </div>
                         <div class="flex items-start justify-between gap-3 mt-3 px-1 pb-1">
                             <div class="min-w-0">
                                 <p class="text-sm font-bold text-gray-900 dark:text-white truncate group-hover:underline">{{ $c['name'] }}</p>
-                                <p class="text-xs text-gray-400 truncate mt-0.5">{{ \Illuminate\Support\Str::limit($c['description'], 60) ?: 'Ready-made design' }}</p>
+                                <p class="text-xs text-gray-400 truncate mt-0.5">{{ $c['tagline'] ?: 'Ready-made design' }}</p>
                             </div>
                             <span class="shrink-0 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] text-[11px] font-semibold {{ $c['priceCents'] > 0 ? 'text-gray-600 dark:text-gray-300' : 'text-gray-500' }}">
                                 {{ $c['priceCents'] > 0 ? $c['priceLabel'] : $c['category'] }}

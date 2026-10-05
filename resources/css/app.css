@@ -178,11 +178,12 @@ input, select, textarea, button { font-family: inherit; }
     position: relative;
     isolation: isolate;
     background:
-        radial-gradient(120% 90% at 50% 0%,
-            color-mix(in srgb, var(--tertiary) 16%, var(--background)) 0%, transparent 55%),
+        radial-gradient(100% 90% at 50% 0%,
+            color-mix(in srgb, var(--tertiary) 30%, var(--background)) 20%, transparent 40%),
         linear-gradient(180deg,
             var(--background) 0%,
-            color-mix(in srgb, var(--tertiary) 10%, var(--tertiary)) 100%);
+            color-mix(in srgb, color-mix(in srgb, var(--tertiary) 30%, transparent) 10%, color-mix(in srgb, var(--tertiary) 0%, transparent)) 100%);
+			/* color-mix(in srgb, alpha(from var(--tertiary) / 50%) 10%, var(--tertiary)) 100%); */
     /* Long pages: pin the gradient to the viewport so it never restarts/repeats
        over the scrolled overflow area. */
     background-repeat: no-repeat;
@@ -257,7 +258,7 @@ label:has(> .sr-only) { position: relative; }
     position: absolute;
     transform: translate(-50%, -50%); /* top/left address the element's CENTER */
     border-radius: 90%;               /* soft-cornered square */
-    opacity: .21;
+    opacity: .1;
     filter: blur(3px);
     transition:
         top 8s cubic-bezier(.45, .05, .35, 1),

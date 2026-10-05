@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\TemplateSubmission;
 use App\Services\TemplateInstaller;
+use App\Services\TemplateLint;
 use App\Services\TemplateRepoIngest;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
@@ -78,7 +79,7 @@ class TemplateDeploy extends Command
             $this->warn('⚠ No extraction manifest — fidelity lint skipped.');
         }
         if ($manifest !== []) {
-            $lint = app(\App\Services\TemplateLint::class)->analyze($manifest, base_path("templates/{$key}"));
+            $lint = app(TemplateLint::class)->analyze($manifest, base_path("templates/{$key}"));
             foreach ($lint['findings'] as $finding) {
                 $line = "[{$finding['area']}] {$finding['message']}";
                 match ($finding['level']) {

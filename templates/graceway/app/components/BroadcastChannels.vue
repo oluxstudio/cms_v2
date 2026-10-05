@@ -2,13 +2,19 @@
 const oluxCms = useOluxContent('broadcast-channels')
 const oluxFb: Record<string, string> = {}
 /** Social platform pills — view the profile or jump straight into the live stream. */
+// @olux-source broadcast-channels
 // platform identity (name, profile href, icon) comes from the global `socials`
-// array; broadcast-only extras (handle, followers, live, watch, blurb) layer on top
-const { socials, broadcastChannels } = useSiteContent()
-const channels = broadcastChannels.channels.map((c) => {
-  const social = socials.find(s => s.key === c.key)
-  // `available` in the socials data source is the single switch for active/live
-  return { ...c, live: social?.available ?? c.live, name: social?.name ?? c.key, profile: social?.href ?? c.watch, icon: social?.icon ?? '' }
+// array; broadcast-only extras (handle, followers, live, watch, blurb) come from
+// the Broadcast Channels collection and layer on top
+const { broadcastChannels } = useSiteContent()
+// computed so connect-editor saves re-render in place (useCms data is reactive)
+const channels = computed(() => {
+  const { socials } = useSiteContent()
+  return useBroadcastChannels().map((c) => {
+    const social = socials.find(s => s.key === c.key)
+    // `available` in the socials data source is the single switch for active/live
+    return { ...c, live: social?.available ?? c.live, name: social?.name ?? c.key, profile: social?.href ?? c.watch, icon: social?.icon ?? '' }
+  })
 })
 </script>
 
@@ -22,8 +28,8 @@ const channels = broadcastChannels.channels.map((c) => {
       </div>
 
       <!-- platform pills -->
-      <div class="bcx-grid">
-        <article v-for="c in channels" :key="c.key" class="bcx-pill" :style="{ '--pc': c.color }">
+      <div class="bcx-grid" data-olx-panel="broadcast-channels">
+        <article data-olx-item v-for="c in channels" :key="c.key" class="bcx-pill" :style="{ '--pc': c.color }">
           <div class="bcx-head">
             <span class="bcx-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path :d="c.icon"/></svg></span>
             <div class="bcx-id">
@@ -42,13 +48,12 @@ const channels = broadcastChannels.channels.map((c) => {
       </div>
 
       <!-- join the church CTA -->
-      <div class="bcx-join">
-        <div>
-          <h2 data-olx-field="joinTitle">{{ oluxCms.t('Join Title', broadcastChannels.join.title) }}</h2>
-          <p>{{ broadcastChannels.join.text }}</p>
-        </div>
-        <NuxtLink class="btn bcx-join-btn" :to="oluxCms.t('Join Cta To', broadcastChannels.join.cta.to)" data-olx-field="joinCtaLabel">{{ oluxCms.t('Join Cta Label', broadcastChannels.join.cta.label) }} <span class="arrow">↗</span></NuxtLink>
-      </div>
+      <BroadcastJoin
+        :title="oluxCms.t('Join Title', broadcastChannels.join.title)"
+        :text="oluxCms.t('Join Text', broadcastChannels.join.text)"
+        :cta-label="oluxCms.t('Join Cta Label', broadcastChannels.join.cta.label)"
+        :cta-to="oluxCms.t('Join Cta To', broadcastChannels.join.cta.to)"
+      />
     </div>
   </section>
 </template>
@@ -71,7 +76,7 @@ const channels = broadcastChannels.channels.map((c) => {
 .bcx-id h3 { font-size: 1.15rem; color: var(--color-secondary); }
 .bcx-id p { font-size: 17px; color: #55606b; }
 .bcx-live { flex: none; font-size: .8rem; font-weight: 800; letter-spacing: .04em; color: #d1242f;
-  background: #fdeef3; border-radius: 999px; padding: .35rem .8rem; animation: bcx-pulse 1.8s ease-in-out infinite; }
+  background: var(--primary-soft); border-radius: 999px; padding: .35rem .8rem; animation: bcx-pulse 1.8s ease-in-out infinite; }
 @keyframes bcx-pulse { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
 
 .bcx-blurb { font-size: 17px; color: #55606b; line-height: 1.6; margin-top: 1rem; }
@@ -80,16 +85,7 @@ const channels = broadcastChannels.channels.map((c) => {
 .bcx-actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1.3rem; }
 .bcx-watch { background: var(--pc); }
 
-/* join CTA */
-.bcx-join { margin-top: 2.4rem; background: var(--color-secondary); border-radius: 26px; padding: 2.4rem;
-  display: flex; align-items: center; justify-content: space-between; gap: 2rem;
-  box-shadow: 0 14px 32px rgba(20, 24, 29, .12); }
-.bcx-join h2 { color: #fff; }
-.bcx-join p { font-size: 17px; color: #d5dce2; margin-top: .5rem; max-width: 480px; }
-.bcx-join-btn { flex: none; }
-
 @media (max-width: 820px) {
   .bcx-grid { grid-template-columns: 1fr; }
-  .bcx-join { flex-direction: column; text-align: center; }
 }
 </style>

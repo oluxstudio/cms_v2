@@ -95,7 +95,7 @@ const play = () => {
   background: linear-gradient(rgba(10, 12, 16, .06), rgba(10, 12, 16, .55)); }
 
 .mp-play { position: absolute; top: 50%; left: 50%; width: 124px; height: 124px;
-  transform: translate(-50%, -50%); filter: drop-shadow(0 10px 24px rgba(255, 45, 108, .5));
+  transform: translate(-50%, -50%); filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--color-primary) 50%, transparent));
   transition: transform .25s ease; }
 .mp-facade:hover .mp-play, .mp-facade:focus-visible .mp-play { transform: translate(-50%, -50%) scale(1.14); }
 .mp-play svg { width: 100%; height: 100%; }

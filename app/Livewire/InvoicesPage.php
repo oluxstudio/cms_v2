@@ -354,6 +354,24 @@ class InvoicesPage extends Component
             'recurInterval' => 'nullable|in:,weekly,monthly,quarterly,yearly',
         ]);
 
+        // Plan limits: invoices per month (new ones only) and recurring invoices
+        // (an invoice that already repeats may keep repeating).
+        $sub = $this->site->user?->currentSubscription();
+        $existing = $this->editingId ? Invoice::where('site_id', $this->site->id)->find($this->editingId) : null;
+        if ($sub && ! $existing && ! $sub->canCreateInvoice()) {
+            $cap = (int) $sub->limit('invoices_month');
+            $this->dispatch('upgrade-required', cta: 'See plans', reason: $cap === 0
+                ? 'Invoicing comes with Starter and above.'
+                : "Your plan includes {$cap} invoices a month and they're all used. Upgrade to Growth for unlimited invoices.");
+
+            return;
+        }
+        if ($sub && $this->recurInterval && ! $sub->allowsRecurringInvoices() && ! $existing?->recur_interval) {
+            $this->dispatch('upgrade-required', reason: 'Recurring invoices come with Pro and above.', cta: 'See plans');
+
+            return;
+        }
+
         $cfg = $this->site->feature('invoices');
         $attrs = [
             'customer_name' => $this->customerName,

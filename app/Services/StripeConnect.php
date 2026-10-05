@@ -98,6 +98,7 @@ class StripeConnect
         $purchase = TemplatePurchase::create([
             'uuid' => (string) Str::uuid(),
             'template_id' => $template->id,
+            'template_name' => $template->name,
             'template_version_id' => $template->latest_version_id,
             'user_id' => $buyer->id,
             'price_cents' => $price,

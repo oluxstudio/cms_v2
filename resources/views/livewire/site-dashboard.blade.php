@@ -26,25 +26,41 @@
 
         <div class="hidden md:flex items-center gap-2">
             <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{ $siteTitle }}</p>
-            <x-preview-button :href="$site->templatePreviewUrl()" small />
+            <x-preview-button :href="$site->visitorPreviewUrl()" small />
         </div>
 
         <div class="flex items-center gap-2">
             <span class="text-xs font-medium text-gray-400 mr-1">Team</span>
-            <div class="flex -space-x-2">
-                @foreach (array_slice($team, 0, 3) as $m)
-                    <div class="w-8 h-8 rounded-full ring-2 ring-white flex items-center justify-center text-[10px] font-bold text-white"
-                         style="background:{{ $cardColors[$loop->index % count($cardColors)] }}" title="{{ $m['name'] }}">
-                        {{ $m['initials'] }}
-                    </div>
-                @endforeach
-                @if (count($team) > 3)
-                    <div class="w-8 h-8 rounded-full ring-2 ring-white bg-gray-900 text-white flex items-center justify-center text-[10px] font-bold">+{{ count($team) - 3 }}</div>
-                @endif
-                <a href="{{ url($site->name.'/team') }}"
-                   class="w-8 h-8 rounded-full ring-2 ring-white bg-white text-gray-500 hover:text-indigo-600 flex items-center justify-center shadow-sm" title="Manage team">
+            {{-- One stack, read from the + button leftwards: the grey + (add
+                 member) in front on the right, the owner beside it, then each
+                 member in the order they joined; anyone past five becomes a +N
+                 chip at the far left. Each circle sits behind the one to its right. --}}
+            @php
+                $shown = array_slice($team, 0, 5);
+                $more = array_slice($team, 5);
+                $top = count($shown) + 2; // the + circle's layer; each step left goes one further back
+                $face = 'relative w-9 h-9 rounded-full ring-2 ring-white dark:ring-[#1d1e2a] grid place-items-center shrink-0';
+            @endphp
+            <div class="flex flex-row-reverse items-center">
+                <a href="{{ url($site->name.'/team') }}" title="Add a team member"
+                   class="{{ $face }} bg-gray-200 text-gray-600 hover:text-gray-900 dark:bg-white/10 dark:text-gray-200 transition-colors" style="z-index:{{ $top }}">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 </a>
+                @foreach ($shown as $m)
+                    <a href="{{ url($site->name.'/team') }}" title="{{ $m['name'] }}{{ $m['role'] ? ' · '.$m['role'] : '' }}"
+                       class="{{ $face }} -mr-3 pr-3 overflow-hidden text-[11px] font-bold text-white hover:!z-20 hover:-translate-y-0.5 transition-transform"
+                       style="z-index:{{ $top - 1 - $loop->index }};background:{{ $cardColors[$loop->index % count($cardColors)] }}">
+                        {{ $m['initials'] }}
+                        @if ($m['avatar'])
+                            <img src="{{ $m['avatar'] }}" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">
+                        @endif
+                    </a>
+                @endforeach
+                @if ($more)
+                    <a href="{{ url($site->name.'/team') }}" title="{{ collect($more)->pluck('name')->implode(', ') }}"
+                       class="{{ $face }} -mr-3 pr-3 text-[11px] font-extrabold bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-200"
+                       style="z-index:0">+{{ count($more) }}</a>
+                @endif
             </div>
         </div>
     </div>
@@ -108,7 +124,7 @@
                         'href' => url($site->name.'/'.$t['seg']), 'icon' => $t['icon']], $commerceTiles),
                     ['accent' => 'lavender', 'value' => $mediaCount, 'label' => 'Assets', 'sub' => 'images & files', 'href' => url($site->name.'/media'),
                         'icon' => 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'],
-                    ['accent' => 'rose', 'value' => count($team) + 1, 'label' => 'Team', 'sub' => count($team) ? 'incl. owner' : 'just you', 'href' => url($site->name.'/team'),
+                    ['accent' => 'rose', 'value' => count($team), 'label' => 'Team', 'sub' => count($team) > 1 ? 'incl. owner' : 'just you', 'href' => url($site->name.'/team'),
                         'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z'],
                 ]));
 
@@ -247,8 +263,8 @@
                     </div>
                 @endforeach
                 <div class="flex items-center gap-2 mt-3">
-                    <x-preview-button :href="$site->templatePreviewUrl()" small />
-                    <a href="{{ url($site->name.'/connect') }}" class="fx px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200">Edit site</a>
+                    <x-preview-button :href="$site->visitorPreviewUrl()" small />
+                    <a href="{{ url($site->name.'/connect') }}" class="fx shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200">Edit site</a>
                 </div>
             </div>
 

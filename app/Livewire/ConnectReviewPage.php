@@ -16,8 +16,14 @@ use App\Models\Post;
 use App\Models\Site;
 use App\Services\CollectionSourceExtractor;
 use App\Services\ContentVersioner;
+use App\Services\InstallProgress;
 use App\Services\SiteConnect\AssetImporter;
 use App\Services\SiteConnect\PageJsonPublisher;
+use App\Support\CollectionFieldShape;
+use App\Support\CollectionQuery;
+use App\Support\MediaValue;
+use App\Support\SiteContentCache;
+use App\Support\SiteProperties;
 use App\Support\TemplatePaths;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -54,6 +60,13 @@ class ConnectReviewPage extends LivewireComponent
     /** Path of the page shown in the preview iframe ('/' = home). */
     public string $previewPath = '/';
 
+    /**
+     * The preview announced (olx-live-collections) that it re-reads collection
+     * rows on olux:refresh — collection edits then update in place, like
+     * block fields, instead of reloading the iframe.
+     */
+    public bool $liveCollections = false;
+
     /** Selected content: kind (component|collection|form|post) + id. */
     public ?string $selectedKind = null;
 
@@ -73,6 +86,28 @@ class ConnectReviewPage extends LivewireComponent
         abort_unless($site->allows(Auth::user(), 'components.view'), 403);
         $this->clientUrl = (string) $site->getAttr('client_url', '');
         $this->urlInput = $this->clientUrl;
+
+        // ?properties=1 (from the Properties page) opens the Site Properties component.
+        if (request()->boolean('properties') && $site->allows(Auth::user(), 'properties.manage')) {
+            $this->openSiteProperties();
+        } elseif (($cid = (string) request()->query('component')) !== ''
+            && Component::where('site_id', $site->id)->whereKey($cid)->exists()) {
+            // ?component={id} (e.g. a collection page's "Used by") opens that block.
+            $this->select('component', $cid);
+        }
+    }
+
+    /** Open the site's Site Properties component (the same data as the Properties page). */
+    public function openSiteProperties(): void
+    {
+        abort_unless($this->site->allows(Auth::user(), 'properties.manage'), 403);
+        $this->select('component', SiteProperties::component($this->site)->id);
+    }
+
+    /** Is the component being edited the Site Properties one? */
+    private function editingSiteProperties(): bool
+    {
+        return ($this->edit['type'] ?? null) === 'component' && ! empty($this->edit['siteProperties']);
     }
 
     /** Save the client site URL to embed in the preview iframe. */
@@ -95,6 +130,12 @@ class ConnectReviewPage extends LivewireComponent
         return (string) $this->site->getAttr('template_install', '');
     }
 
+    /** Live install progress for the "Setting up your site" screen. */
+    public function getInstallProgressProperty(): array
+    {
+        return InstallProgress::read($this->site) ?? ['percent' => 1, 'label' => 'Getting started', 'step' => 'start', 'done' => 0, 'total' => 0];
+    }
+
     /** Re-run the background install for the currently applied design. */
     public function retryInstall(): void
     {
@@ -104,7 +145,8 @@ class ConnectReviewPage extends LivewireComponent
             return;
         }
         $this->site->setAttr('template_install', 'installing');
-        InstallTemplateJob::dispatch($this->site->id, $row->id);
+        $this->site->setAttr(InstallProgress::ATTR, json_encode(['percent' => 1, 'label' => 'Getting started', 'step' => 'start', 'done' => 0, 'total' => 0]));
+        InstallTemplateJob::dispatch($this->site->id, $row->id, Auth::id());
     }
 
     /**
@@ -322,7 +364,7 @@ class ConnectReviewPage extends LivewireComponent
         $match = fn (Component $c) => strtolower(Str::camel($c->name)) === $lkey || Str::slug($c->name) === $lkey;
 
         $page = $this->site->livePages()->where('url', '/'.ltrim($this->previewPath, '/'))->first();
-        if ($page && ($hit = $page->components()->with('nodes')->get()->first($match))) {
+        if ($page && ($hit = $page->activeComponents()->with('nodes')->get()->first($match))) {
             return $hit;
         }
 
@@ -333,6 +375,9 @@ class ConnectReviewPage extends LivewireComponent
     #[On('media-picked')]
     public function onMediaPicked(array $context = [], string $mediaRef = '', string $url = ''): void
     {
+        if ($this->nestedMediaPicked($context, $url)) {
+            return;
+        }
         // New-schema-field default value (collection editor's "+ Add field").
         if (($context['scope'] ?? '') === 'connect-new-field') {
             $this->newField['default'] = str_starts_with($url, '/') ? url($url) : $url;
@@ -522,26 +567,183 @@ class ConnectReviewPage extends LivewireComponent
         $c = Component::with('nodes')->where('site_id', $this->site->id)->find($id);
         if ($c) {
             $this->edit = ['type' => 'component', 'id' => $c->id, 'name' => $c->name, 'removedNodes' => [],
+                'siteProperties' => SiteProperties::isComponent($c),
                 'nodes' => $c->nodes->map(fn (Node $n) => ['id' => $n->id, 'label' => $n->label, 'type' => $n->type, 'value' => (string) $n->value])->all()];
 
-            // Data-source grid: a component fed by a collection (Pastors →
-            // Leadership) shows that collection's entries in the panel.
-            if ($c->collection_id && ($col = Collection::withCount('items')->where('site_id', $this->site->id)->find($c->collection_id))) {
-                $this->edit['collection'] = [
-                    'id' => $col->id, 'name' => $col->name, 'count' => $col->items_count,
-                    'items' => $col->items()->limit(12)->get()->map(function ($i) {
-                        $d = (array) ($i->data ?? []);
-                        $img = (string) ($d['img'] ?? $d['image'] ?? $d['photo'] ?? '');
-
-                        return [
-                            'id' => $i->id,
-                            'label' => (string) ($d['name'] ?? $d['title'] ?? array_values(array_filter($d, 'is_string'))[0] ?? '…'),
-                            'img' => $img !== '' ? Media::resolveRef($this->site->id, '@media/'.basename($img)) : '',
-                        ];
-                    })->all(),
-                ];
+            // Collection grids inside this component: its data source (Pastors →
+            // Leadership) plus every collection-type field (Hero → Hero Words),
+            // each previewed as a grid of its entries, keyed by collection id.
+            $listIds = collect([$c->collection_id])
+                ->merge($c->nodes->where('type', 'collection')->pluck('value'))
+                ->filter()->map(fn ($id) => (string) $id)->unique()->values();
+            $this->edit['lists'] = [];
+            $this->edit['queries'] = [];
+            foreach (Collection::withCount('items')->where('site_id', $this->site->id)->whereIn('id', $listIds)->get() as $col) {
+                // Which entries THIS block shows (how many / order / search / filter) — editable.
+                $this->edit['queries'][$col->id] = self::queryForm($c->collectionQuery((string) $col->id));
+                $this->edit['lists'][$col->id] = $this->collectionCard($col, $this->edit['queries'][$col->id]);
+            }
+            // The data source keeps its own card under the fields.
+            if ($c->collection_id && isset($this->edit['lists'][(string) $c->collection_id])) {
+                $this->edit['collection'] = $this->edit['lists'][(string) $c->collection_id];
             }
         }
+    }
+
+    /** A collection previewed as a grid card: name, count and its first entries. */
+    /** Every key the "Items in this block" form binds to, with defaults. */
+    private static function queryForm(array $q): array
+    {
+        return [
+            'limit' => isset($q['limit']) ? (string) $q['limit'] : '',
+            'sort' => (string) ($q['sort'] ?? 'manual'),
+            'field' => (string) ($q['field'] ?? ''),
+            'dir' => (string) ($q['dir'] ?? 'asc'),
+            'search' => (string) ($q['search'] ?? ''),
+            'filter_field' => (string) ($q['filter_field'] ?? ''),
+            'filter_value' => (string) ($q['filter_value'] ?? ''),
+            'order' => array_values((array) ($q['order'] ?? [])),
+            'exclude' => array_values((array) ($q['exclude'] ?? [])),
+        ];
+    }
+
+    // ── Per-block reorder / hide (the collection itself is never changed) ──
+
+    /**
+     * The block's full current order — its sort (or custom order) applied,
+     * hidden entries out, but limit/search/filter ignored so moves are stable.
+     *
+     * @return list<string>
+     */
+    private function blockFullOrder(Collection $col, array $form): array
+    {
+        $base = array_intersect_key($form, array_flip(['sort', 'field', 'dir', 'order', 'exclude']));
+
+        return CollectionQuery::apply($col, $base)->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+    }
+
+    /**
+     * Drag-and-drop: $visibleIds is the new order of the rows shown in the
+     * panel. They're slotted back into the positions those rows held in the
+     * block's full order (rows hidden by limit/search keep their places), and
+     * the block switches to manual order.
+     */
+    public function blockReorder(string $collectionId, array $visibleIds): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        $full = $this->blockFullOrder($col, $form);
+        $visibleIds = array_values(array_filter(array_map('strval', $visibleIds), fn ($id) => in_array($id, $full, true)));
+        $slots = array_keys(array_filter($full, fn ($id) => in_array($id, $visibleIds, true)));
+        if (count($slots) !== count($visibleIds)) {
+            return; // stale panel — ignore
+        }
+        foreach ($slots as $n => $slot) {
+            $full[$slot] = $visibleIds[$n];
+        }
+        $form['order'] = $full;
+        $form['sort'] = 'manual';
+        $this->setBlockQuery($col, $form);
+    }
+
+    /** Move an entry up (-1) / down (+1) in THIS block's order. */
+    public function blockMove(string $collectionId, string $itemId, int $dir): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        $ids = $this->blockFullOrder($col, $form);
+        $i = array_search($itemId, $ids, true);
+        $j = $i === false ? false : $i + ($dir < 0 ? -1 : 1);
+        if ($i === false || $j < 0 || $j >= count($ids)) {
+            return;
+        }
+        [$ids[$i], $ids[$j]] = [$ids[$j], $ids[$i]];
+        $form['order'] = $ids;
+        $form['sort'] = 'manual';
+        $this->setBlockQuery($col, $form);
+    }
+
+    /** Hide an entry from THIS block only — it stays in the collection. */
+    public function blockHide(string $collectionId, string $itemId): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        $form['exclude'] = array_values(array_unique([...($form['exclude'] ?? []), $itemId]));
+        $this->setBlockQuery($col, $form);
+    }
+
+    /** Show a hidden entry in this block again (null = all of them). */
+    public function blockUnhide(string $collectionId, ?string $itemId = null): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        $form['exclude'] = $itemId === null ? [] : array_values(array_diff($form['exclude'] ?? [], [$itemId]));
+        $this->setBlockQuery($col, $form);
+    }
+
+    /** Back to the collection's own order for this block. */
+    public function blockResetOrder(string $collectionId): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        $form['order'] = [];
+        $this->setBlockQuery($col, $form);
+    }
+
+    /** @return array{0: Collection, 1: array} */
+    private function blockQueryTarget(string $collectionId): array
+    {
+        abort_unless(($this->edit['type'] ?? null) === 'component' && isset($this->edit['queries'][$collectionId]), 404);
+
+        return [Collection::where('site_id', $this->site->id)->findOrFail($collectionId), (array) $this->edit['queries'][$collectionId]];
+    }
+
+    private function setBlockQuery(Collection $col, array $form): void
+    {
+        $this->edit['queries'][$col->id] = $form;
+        $this->edit['lists'][$col->id] = $this->collectionCard($col, $form);
+        if ((string) ($this->edit['collection']['id'] ?? '') === (string) $col->id) {
+            $this->edit['collection'] = $this->edit['lists'][$col->id];
+        }
+    }
+
+    /**
+     * A collection grid card. Inside a component it previews exactly what
+     * the block shows (its query applied); `fields` feeds the sort/filter selects.
+     */
+    private function collectionCard(Collection $col, array $query = []): array
+    {
+        $published = $col->items()->where('status', 'published')->get();
+        $keys = CollectionQuery::fieldKeys($col);
+        $q = CollectionQuery::normalize($query, $keys);
+        $shown = CollectionQuery::apply($col, $q, $published);
+
+        return [
+            'id' => $col->id, 'name' => $col->name, 'count' => $col->items_count ?? $col->items()->count(),
+            'total' => $published->count(),
+            'shown' => $shown->count(),
+            'filtered' => $q !== [],
+            'summary' => CollectionQuery::summary($q, $published->count(), $shown->count()),
+            'fields' => $keys,
+            'manual' => ($q['sort'] ?? 'manual') === 'manual',
+            'customOrder' => ! empty($q['order']),
+            'hidden' => $published->whereIn('id', $q['exclude'] ?? [])->map(fn ($i) => [
+                'id' => (string) $i->id,
+                'label' => (string) (data_get($i->data, 'name') ?? data_get($i->data, 'title') ?? collect((array) $i->data)->first(fn ($v) => is_string($v)) ?? '…'),
+            ])->values()->all(),
+            'items' => $shown->take(24)->map(function ($i) {
+                $d = (array) ($i->data ?? []);
+                // Thumbnail: the first field holding an image (any field name).
+                $img = (string) (collect($d)->map(fn ($v) => MediaValue::detect($v, $this->site->id))
+                    ->first(fn ($m) => $m && $m['kind'] === 'image')['url'] ?? '');
+
+                return [
+                    'id' => $i->id,
+                    'label' => (string) ($d['name'] ?? $d['title'] ?? array_values(array_filter($d, 'is_string'))[0] ?? '…'),
+                    'img' => $img,
+                ];
+            })->all(),
+        ];
     }
 
     private function loadCollection(string $id): void
@@ -550,8 +752,24 @@ class ConnectReviewPage extends LivewireComponent
         if ($col) {
             $this->edit = ['type' => 'collection', 'id' => $col->id, 'name' => $col->name,
                 'schema' => collect($col->fields ?? [])->map(fn ($f) => $f['name'] ?? $f['key'] ?? null)->filter()->unique()->values()->all(),
-                'items' => $col->items->map(fn (CollectionItem $i) => ['id' => $i->id, 'data' => $i->data ?? []])->all()];
+                // Field shapes, so nested lists (list/rows/group, galleries, tags)
+                // edit structurally even when empty; label + required for the card.
+                'fieldDefs' => collect($col->fields ?? [])->mapWithKeys(fn ($f) => [($f['name'] ?? $f['key'] ?? '') => [
+                    'type' => (string) ($f['type'] ?? 'text'),
+                    'label' => (string) ($f['label'] ?? ''),
+                    'required' => (bool) ($f['required'] ?? false),
+                    'fields' => array_values(array_filter(array_map(fn ($s) => $s['key'] ?? $s['name'] ?? null, (array) ($f['fields'] ?? [])))),
+                ]])->except([''])->all(),
+                'items' => $col->items->map(fn (CollectionItem $i) => ['id' => $i->id, 'data' => CollectionFieldShape::shape($i->data ?? [], (array) ($col->fields ?? []))])->all()];
         }
+    }
+
+    /** Open a collection on a specific entry (a tile clicked in a component's grid card). */
+    public function openCollectionItem(string $collectionId, int $index): void
+    {
+        $col = Collection::where('site_id', $this->site->id)->findOrFail($collectionId);
+        $this->select('collection', $col->id);
+        $this->dispatch('olx-editor-focus', target: 'item', index: $index);
     }
 
     /**
@@ -598,7 +816,9 @@ class ConnectReviewPage extends LivewireComponent
 
     private function guard(): void
     {
-        abort_unless($this->site->allows(Auth::user(), 'components.manage'), 403);
+        // The Site Properties component follows the Properties page's permission.
+        $perm = $this->editingSiteProperties() ? 'properties.manage' : 'components.manage';
+        abort_unless($this->site->allows(Auth::user(), $perm), 403);
     }
 
     // --- in-preview editing (connect.js postMessage bridge) -----------------
@@ -978,7 +1198,7 @@ class ConnectReviewPage extends LivewireComponent
             $parent = '0';
             if (count($segments) === 2) {
                 $parentNode = $this->nodeByFieldKey($component, $segments[0])
-                    ?? $component->nodes()->create(['label' => Str::headline(Str::slug($segments[0])), 'type' => 'text',
+                    ?? $component->nodes()->create(['label' => Str::headline($segments[0]), 'type' => 'text',
                         'value' => '', 'parent' => '0', 'order' => (int) $component->nodes()->max('order') + 1]);
                 $parent = $parentNode->id;
             }
@@ -986,7 +1206,7 @@ class ConnectReviewPage extends LivewireComponent
             if (! in_array($type, ['text', 'url', 'image', 'number', 'boolean', 'color'], true)) {
                 $type = 'text';
             }
-            $component->nodes()->create(['label' => Str::headline(Str::slug(end($segments))), 'type' => $type,
+            $component->nodes()->create(['label' => Str::headline(end($segments)), 'type' => $type,
                 'value' => Str::limit((string) ($spec['value'] ?? ''), 5000, ''),
                 'parent' => $parent, 'order' => (int) $component->nodes()->max('order') + 1]);
             $added++;
@@ -1015,10 +1235,12 @@ class ConnectReviewPage extends LivewireComponent
 
         $current = null;
         foreach (explode('.', $field) as $seg) {
-            // Markers may carry the display form ("Headline", "CTA Label") —
-            // normalise to the generator's camel key before comparing, or the
-            // register loop re-adds the same field on every preview reload.
-            $seg = Str::camel(Str::slug($seg));
+            // Markers may carry the display form ("Headline", "CTA Label") or
+            // the camel key ("titleHighlight") — normalise to the generator's
+            // camel key before comparing, or the register loop re-adds the
+            // same field on every preview reload. headline() first: slug()
+            // alone lowercases camelCase without splitting the words.
+            $seg = Str::camel(Str::slug(Str::headline($seg)));
             $pool = $current
                 ? $nodes->filter(fn (Node $n) => $n->parent === $current->id)
                 : $nodes->filter($isRoot);
@@ -1043,7 +1265,8 @@ class ConnectReviewPage extends LivewireComponent
     public array $newField = ['label' => '', 'type' => 'text', 'default' => ''];
 
     /** Item field types the collection editor offers. */
-    public const ITEM_FIELD_TYPES = ['text', 'textarea', 'image', 'url', 'number', 'date'];
+    /** `list` is a nested list (one value per line) inside each entry. */
+    public const ITEM_FIELD_TYPES = ['text', 'textarea', 'image', 'url', 'number', 'date', 'list'];
 
     /**
      * Extend the selected collection's item schema with a new field — works
@@ -1072,6 +1295,10 @@ class ConnectReviewPage extends LivewireComponent
 
         $type = in_array($this->newField['type'] ?? 'text', self::ITEM_FIELD_TYPES, true) ? $this->newField['type'] : 'text';
         $default = (string) ($this->newField['default'] ?? '');
+        if ($type === 'list') {
+            // A nested list: the default's lines (or commas) are its starting entries.
+            $default = array_values(array_filter(array_map('trim', preg_split('/\r?\n|,/', $default)), fn ($v) => $v !== ''));
+        }
         if ($type === 'image' && $default !== '') {
             $default = app(AssetImporter::class)->importNodeValue($this->site, $default);
         }
@@ -1097,7 +1324,12 @@ class ConnectReviewPage extends LivewireComponent
     private function schemaDefaults(Collection $col): array
     {
         return collect($col->fields ?? [])
-            ->mapWithKeys(fn ($f) => [($f['name'] ?? $f['key'] ?? '') => (string) ($f['default'] ?? '')])
+            ->mapWithKeys(fn ($f) => [($f['name'] ?? $f['key'] ?? '') => match ($f['type'] ?? 'text') {
+                // Nested fields start empty but keep their shape.
+                'list', 'rows' => is_array($f['default'] ?? null) ? $f['default'] : [],
+                'group' => array_fill_keys(array_filter(array_map(fn ($s) => $s['key'] ?? $s['name'] ?? null, (array) ($f['fields'] ?? []))), ''),
+                default => is_array($f['default'] ?? null) ? $f['default'] : (string) ($f['default'] ?? ''),
+            }])
             ->except([''])->all();
     }
 
@@ -1111,6 +1343,9 @@ class ConnectReviewPage extends LivewireComponent
     public function removeNode(int $i): void
     {
         $node = $this->edit['nodes'][$i] ?? null;
+        if ($node && $this->editingSiteProperties() && SiteProperties::isSchemaLabel((string) $node['label']) && SiteProperties::repeaterMatch((string) $node['label']) === null) {
+            return; // built-in property fields stay; clear the value instead
+        }
         if ($node && ! empty($node['id'])) {
             $this->edit['removedNodes'][] = $node['id'];
         }
@@ -1125,7 +1360,19 @@ class ConnectReviewPage extends LivewireComponent
         if (! $component) {
             return;
         }
+        $isProperties = SiteProperties::isComponent($component);
+        if ($isProperties) {
+            $nameLabel = config('site-properties.fields.site_name.label');
+            $newName = collect($this->edit['nodes'] ?? [])->firstWhere('label', $nameLabel)['value'] ?? '';
+            if (SiteProperties::renameTaken($this->site, (string) $newName)) {
+                $this->dispatch('toast', level: 'error', title: 'Site name taken',
+                    message: 'Another site is already called “'.trim((string) $newName).'”. Pick a different name.');
+
+                return;
+            }
+        }
         app(ContentVersioner::class)->capture($component, Auth::user()?->name);
+        $oldIcon = $isProperties ? SiteProperties::value($this->site, 'square_icon') : '';
         foreach ($this->edit['removedNodes'] ?? [] as $removedId) {
             // Delete the node and any children nested under it.
             Node::where('component_id', $component->id)
@@ -1165,8 +1412,22 @@ class ConnectReviewPage extends LivewireComponent
                     ->update(['value' => $value, 'label' => $node['label']]);
             }
         }
+        // Per-grid selections ("Items in this block"), only for collections this block reads.
+        $queries = [];
+        foreach ((array) ($this->edit['queries'] ?? []) as $colId => $form) {
+            $col = Collection::where('site_id', $this->site->id)->find($colId);
+            if ($col && ($q = CollectionQuery::normalize((array) $form, CollectionQuery::fieldKeys($col))) !== []) {
+                $queries[(string) $colId] = $q;
+            }
+        }
+        if ($queries !== (array) ($component->collection_queries ?? [])) {
+            $component->update(['collection_queries' => $queries ?: null]);
+        }
+        if ($isProperties) {
+            SiteProperties::afterSave($this->site, $oldIcon);
+        }
         $this->loadEdit();
-        $this->refreshPreview('Component saved');
+        $this->refreshPreview($isProperties ? 'Site properties saved' : 'Component saved');
     }
 
     public function addItem(): void
@@ -1235,6 +1496,18 @@ class ConnectReviewPage extends LivewireComponent
      */
     public function updated(string $prop): void
     {
+        // "Items in this block" settings: re-preview that grid as you type.
+        if (($this->edit['type'] ?? null) === 'component' && preg_match('/^edit\.queries\.([^.]+)\./', $prop, $m)) {
+            $col = Collection::where('site_id', $this->site->id)->find($m[1]);
+            if ($col) {
+                $this->edit['lists'][$col->id] = $this->collectionCard($col, (array) ($this->edit['queries'][$col->id] ?? []));
+                if ((string) ($this->edit['collection']['id'] ?? '') === (string) $col->id) {
+                    $this->edit['collection'] = $this->edit['lists'][$col->id];
+                }
+            }
+
+            return;
+        }
         if (($this->edit['type'] ?? null) !== 'collection' || ! preg_match('/^edit\.items\.(\d+)\./', $prop, $m)) {
             return;
         }
@@ -1253,6 +1526,17 @@ class ConnectReviewPage extends LivewireComponent
                 'image' => (string) ($d['image'] ?? ''),
             ]);
             $this->dispatch('olx-reload-frame');
+
+            return;
+        }
+        // Required fields (declared by the template) must not be saved empty.
+        $fields = (array) (Collection::where('site_id', $this->site->id)->whereKey($this->edit['id'] ?? null)->value('fields') ?? []);
+        if (is_string($fields)) {
+            $fields = (array) json_decode($fields, true);
+        }
+        if ($missing = CollectionFieldShape::missingRequired($d, $fields)) {
+            $this->dispatch('toast', level: 'error', title: 'Required field empty',
+                message: implode(', ', $missing).' can\'t be empty — the entry wasn\'t saved.');
 
             return;
         }
@@ -1430,6 +1714,9 @@ class ConnectReviewPage extends LivewireComponent
      */
     private function refreshPreview(string $what = 'Saved', bool $reloadFrame = true, bool $silent = false): void
     {
+        // Some edits here are bulk updates (no model events): retire the cached content explicitly.
+        SiteContentCache::bump($this->site->id);
+
         // Renderer mode: the shell reads /api/sites/{name}/content once at
         // boot — reload the iframe so the fresh edit shows. Live-app-derived
         // templates ALSO read page.json for their own field() bindings, so
@@ -1445,7 +1732,7 @@ class ConnectReviewPage extends LivewireComponent
             // setup — the in-place content refetch can't re-render them, so
             // item adds/removes/edits need a real frame reload. Block FIELD
             // edits stay in-place (reactive through useOluxContent).
-            if ($reloadFrame && ($this->edit['type'] ?? null) === 'collection') {
+            if ($reloadFrame && ! $this->liveCollections && ($this->edit['type'] ?? null) === 'collection') {
                 $this->dispatch('olx-reload-frame');
                 if (! $silent) {
                     $this->dispatch('toast', level: 'success', title: $what, message: 'The preview is reloading with your changes.');

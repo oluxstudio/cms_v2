@@ -48,7 +48,8 @@ trait WithNestedFields
         abort(403, 'Path not editable.');
     }
 
-    public function nestedAdd(string $path): void
+    /** @param  array<int,string>  $keys  sub-fields for a new row when the list is empty (schema) */
+    public function nestedAdd(string $path, array $keys = []): void
     {
         $this->nestedGuardPath($path);
         $list = (array) data_get($this, $path, []);
@@ -56,8 +57,34 @@ trait WithNestedFields
             return; // groups have a fixed shape
         }
         $first = $list[0] ?? null;
-        $list[] = is_array($first) ? array_fill_keys(array_keys($first), '') : '';
+        $keys = array_values(array_filter($keys, fn ($k) => is_string($k) && preg_match('/^[A-Za-z0-9_-]{1,60}$/', $k)));
+        $list[] = is_array($first) ? array_fill_keys(array_keys($first), '') : ($keys !== [] ? array_fill_keys($keys, '') : '');
         data_set($this, $path, $list);
+    }
+
+    /**
+     * Media picked for a NESTED value (gallery "+ Add", or a picker next to a
+     * leaf inside a list/group). Returns true when handled. Context:
+     * {scope:'nested-media', path:'itemForm.images', append:true|false}
+     */
+    protected function nestedMediaPicked(array $context, string $url): bool
+    {
+        if (($context['scope'] ?? '') !== 'nested-media' || ! is_string($path = $context['path'] ?? null) || $url === '') {
+            return false;
+        }
+        $this->nestedGuardPath($path);
+        if (! empty($context['append'])) {
+            $list = (array) data_get($this, $path, []);
+            if (! array_is_list($list)) {
+                return true;
+            }
+            $list[] = $url;
+            data_set($this, $path, $list);
+        } else {
+            data_set($this, $path, $url);
+        }
+
+        return true;
     }
 
     public function nestedRemove(string $path, int $j): void

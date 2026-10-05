@@ -221,6 +221,8 @@ class SiteTemplatesPage extends Component
         $this->site->update(['template' => TemplateAppRegistry::BLANK]);
         $this->site->installedTemplates()->update(['applied_at' => null]);
         $this->site->refresh();
+        // No template now → every parked page/section/form is active again.
+        app(TemplateInstaller::class)->syncActivation($this->site);
         $this->loadInstalled();
         $this->dispatch('toast', level: 'success', title: 'Design cleared', message: 'The site is back on the generic renderer.');
     }
