@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Template;
+use App\Models\TemplateVersion;
 use App\Templates\TemplateContract;
 use App\Templates\TemplatePackage;
 use Illuminate\Support\Facades\File;
@@ -62,8 +63,40 @@ class TemplateCatalogWriter
         ], $overrides))->save();
 
         // 4. Upsert the version + point latest at it.
+        $this->writeVersion($template, $contract, $contract->version(), $manifest, $pages);
+
+        return $template->fresh();
+    }
+
+    /**
+     * A NEW VERSION of a template that's already in the catalog, from its
+     * contract — without touching the catalog row's admin-edited fields
+     * (name, tagline, thumbnail, status…). Used by the built-in "Update
+     * template" button. $extraManifest is merged in (e.g. source_hash).
+     */
+    public function publishVersion(Template $template, TemplateContract $contract, string $label, array $extraManifest = []): TemplateVersion
+    {
+        $assetMap = $this->publishAssets($contract, $contract->key());
+        $pages = $this->rewritePages($contract->pages(), $assetMap);
+        $manifest = [
+            'name' => $contract->name(),
+            'description' => $contract->description(),
+            'category' => $contract->category(),
+            'accentColor' => $contract->accentColor(),
+            'gradientClass' => $contract->gradientClass(),
+            'author' => $contract->author(),
+            'tags' => $contract->tags(),
+            'features' => $contract->features(),
+            'createdAt' => $contract->createdAt(),
+        ] + $extraManifest;
+
+        return $this->writeVersion($template, $contract, $label, $manifest, $pages);
+    }
+
+    private function writeVersion(Template $template, TemplateContract $contract, string $label, array $manifest, array $pages): TemplateVersion
+    {
         $version = $template->versions()->updateOrCreate(
-            ['version' => $contract->version()],
+            ['version' => $label],
             [
                 'manifest' => $manifest,
                 'payload' => [
@@ -77,7 +110,7 @@ class TemplateCatalogWriter
         );
         $template->update(['latest_version_id' => $version->id]);
 
-        return $template->fresh();
+        return $version;
     }
 
     /** Copy a package's assets to the disk; return [ "assets/rel" => absolute URL ]. */

@@ -120,6 +120,10 @@
                                 <span class="flex items-center gap-1 text-[11px] {{ $built ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600' }}" title="{{ $built ? 'Built site files exist' : 'Not built yet' }}">
                                     <span class="w-1.5 h-1.5 rounded-full {{ $built ? 'bg-emerald-500' : 'bg-rose-500' }}"></span>{{ $built ? 'Built' : 'Not built' }}
                                 </span>
+                                @if ($t->pending_update)
+                                    <span class="text-[10.5px] font-extrabold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
+                                          title="The CMS repo has a newer copy of this template (deployed {{ \Illuminate\Support\Carbon::parse($t->pending_update['detected_at'] ?? now())->diffForHumans() }})">↑ Update available</span>
+                                @endif
                             </p>
                             <p class="text-[12px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                                 {{ $t->status === 'private' ? ($t->user?->name ?? 'Client') : ($t->creator?->name ?? $sourceLabel($t->source)) }}
@@ -147,6 +151,12 @@
                                         @if ($t->status !== 'published') style="background:var(--primary);color:var(--on-primary)" @endif>
                                     {{ $t->status === 'published' ? 'Unpublish' : 'Publish' }}
                                 </button>
+                            @endif
+                            @if (\App\Livewire\PlatformTemplatesPage::isRepoBuiltin($t))
+                                <button wire:click="applyBuiltinUpdate('{{ $t->id }}')" wire:loading.attr="disabled" wire:target="applyBuiltinUpdate('{{ $t->id }}')"
+                                        title="Publish the copy of {{ $t->name }} from the deployed CMS code as its next version"
+                                        class="{{ $t->pending_update ? $btn : $btnOutline }} disabled:opacity-60"
+                                        @if ($t->pending_update) style="background:var(--primary);color:var(--on-primary)" @endif><svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v5h5M20 20v-5h-5M5.6 15A7 7 0 0018.4 15M18.4 9A7 7 0 005.6 9"/></svg>Update template</button>
                             @endif
                             @if (\App\Livewire\PlatformTemplatesPage::canNewVersion($t))
                                 @if ($t->source_repo)
@@ -703,6 +713,21 @@
                         </p>
                         <button wire:click="updateSites('{{ $opened->id }}')" data-confirm="Move {{ $detail['outdated'] }} {{ Str::plural('site', $detail['outdated']) }} to the latest version of {{ $opened->name }}?"
                                 class="{{ $btn }}" style="background:var(--primary);color:var(--on-primary)">Update sites</button>
+                    </div>
+                @endif
+
+                @if (\App\Livewire\PlatformTemplatesPage::isRepoBuiltin($opened))
+                    <div class="rounded-2xl {{ $opened->pending_update ? 'bg-sky-50 dark:bg-sky-500/10' : 'bg-gray-50 dark:bg-white/[0.04]' }} p-4 space-y-2">
+                        <p class="text-[12.5px] text-gray-600 dark:text-gray-300">
+                            Ships with the CMS code (<span class="font-mono">resources/templates/{{ $opened->builtin_key }}</span>).
+                            @if ($opened->pending_update)
+                                <b>A newer copy was deployed</b> — press <b>Update template</b> to publish it as the next version, then <b>Update sites</b> to move sites onto it.
+                            @else
+                                Deploy changes with <span class="font-mono">./ship.sh</span>; they show here as “Update available”.
+                            @endif
+                        </p>
+                        <button wire:click="applyBuiltinUpdate('{{ $opened->id }}')" wire:loading.attr="disabled" wire:target="applyBuiltinUpdate('{{ $opened->id }}')"
+                                class="{{ $btn }} disabled:opacity-60" style="background:var(--primary);color:var(--on-primary)">Update template</button>
                     </div>
                 @endif
 

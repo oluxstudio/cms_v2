@@ -41,6 +41,9 @@ $COMPOSE exec -T app php artisan migrate --force
 $COMPOSE exec -T app php artisan optimize:clear
 $COMPOSE exec -T app php artisan optimize
 $COMPOSE exec -T app php artisan queue:restart
+# Built-in templates ship in this repo: flag any that changed so Admin ›
+# Templates offers "Update template" (never changes a template by itself).
+$COMPOSE exec -T app php artisan templates:check-updates || echo "· template update check skipped"
 docker image prune -f
 
 # ── Health check on the env-driven bind (defaults mirror the compose file).

@@ -20,6 +20,9 @@ php artisan pail      # Tail application logs
 npm run dev           # Vite dev server (admin assets) only
 npm run build         # Build admin assets
 ./vendor/bin/pint     # Lint/format (Laravel Pint) — the project's code style tool
+./ship.sh production "msg"  # commit all → push main → CI tests → deploy production → verify
+./ship.sh local "msg"       # commit all → push `develop` (CI tests, no deploy) → apply to the local app
+./scripts/apply-local.sh    # apply the current code to the local app (composer, migrate, vite, caches, queue, template check)
 ```
 
 Tests use an in-memory `testing` DB with sync queue (see `phpunit.xml`). The framework is **Pest**, not plain PHPUnit — write tests in Pest style.
@@ -59,6 +62,9 @@ Stripe Checkout via `app/Services/Stripe/StripeGateway.php`, used by `StoreFront
 
 ### Static export
 `SiteFileGenerator` bakes a Site into a complete **Nuxt 4** app under `public/sites/{folder}/`, copying from the canonical `nuxt-template/` and writing all site data into `public/content.json` so the built site renders without the live API. `GithubExporter` then pushes that bundle to a per-site GitHub repo using the **GitHub REST/Git Data API** (blobs → tree → commit → ref) — no `git` binary required. Heavy generation/export work runs through queued **Jobs** (`app/Jobs/`); run a queue worker locally.
+
+### Built-in template updates
+Built-in templates ship in this repo (`resources/templates/{key}` package + `templates/{key}` Nuxt source → built into `public/nuxt-preview/{key}`, committed because production has no node). `ship.sh` rebuilds a changed template's site before committing. After every deploy `templates:check-updates` (`BuiltinTemplateUpdates`) flags changed ones as `pending_update`; Admin › Templates › **Update template** publishes the repo copy as the next version without touching admin-edited catalog fields, and **Update sites** moves sites onto it. GitHub-sourced templates (Church Template, Portfolio) use **Update from GitHub** instead.
 
 ### Routing order matters
 `routes/web.php` is order-sensitive: static feature segments (store/donate/feed) are declared **before** the `/preview/{siteName}/{pageUrl}` catch-all (`PublicPageController`), and `auth.php` is required first. Keep new public routes above the catch-all.

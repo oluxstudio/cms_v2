@@ -14,6 +14,7 @@ use App\Models\TemplatePurchase;
 use App\Models\TemplateUpload;
 use App\Models\User;
 use App\Services\AccountActivity;
+use App\Services\BuiltinTemplateUpdates;
 use App\Services\InstallProgress;
 use App\Services\SiteToTemplate;
 use App\Services\TemplatePublisher;
@@ -309,6 +310,29 @@ class PlatformTemplatesPage extends Component
     }
 
     /** Store templates built from an upload can take a new version (same key, rebuilt). */
+    /** A built-in template whose source ships inside the CMS repo (resources/templates/{key}). */
+    public static function isRepoBuiltin(Template $t): bool
+    {
+        return $t->source === 'builtin' && TemplateRegistry::find((string) ($t->builtin_key ?: $t->slug)) !== null;
+    }
+
+    /**
+     * "Update template" for a built-in: publish the deployed CMS code's copy
+     * as its next version. Sites move onto it with "Update sites".
+     */
+    public function applyBuiltinUpdate(string $id, BuiltinTemplateUpdates $updates): void
+    {
+        abort_unless(Auth::user()?->isSuper(), 403);
+        $t = Template::findOrFail($id);
+        abort_unless(self::isRepoBuiltin($t), 422);
+        $before = $t->latest_version_id;
+        $version = $updates->apply($t);
+        $this->dispatch('toast', level: 'success', title: $t->name.' updated',
+            message: $version->id === $before
+                ? 'Already up to date with the deployed code (version '.$version->version.').'
+                : 'Version '.$version->version.' is published. Use “Update sites” to move sites using it onto this version.');
+    }
+
     public static function canNewVersion(Template $t): bool
     {
         return $t->source === 'upload' && $t->status !== 'private'

@@ -2,9 +2,18 @@
 # ── Ship: local → repo → production ─────────────────────────────────────────
 # Runs ON YOUR DEV MACHINE. One command to publish everything:
 #
-#   ./ship.sh "Commit message"        # commit all changes, push, deploy, verify
-#   ./ship.sh                         # nothing new to commit: re-deploy HEAD
-#   NO_WAIT=1 ./ship.sh "msg"         # push and exit without watching CI
+#   ./ship.sh production "Commit message"  # commit all, push main → CI tests → deploy, verify
+#   ./ship.sh local "Commit message"       # commit all, push the `develop` branch (CI tests,
+#                                          # NO deploy) and apply the changes to the local app
+#   ./ship.sh "Commit message"             # same as `production` (the original form)
+#   ./ship.sh                              # nothing new to commit: re-deploy HEAD
+#   NO_WAIT=1 ./ship.sh production "msg"   # push and exit without watching CI
+#
+# Built-in templates (graceway, hairco, tekstack, v2hairco, verita) live in
+# this repo. If a ship touches one's app source (templates/{key}), its site is
+# rebuilt here first (production has no node) and committed with the rest.
+# After the deploy, Admin › Templates shows "Update available" on it — the
+# "Update template" button publishes it; "Update sites" moves sites onto it.
 #
 # What it does, in order:
 #   1. Scans .env.example for anything that looks like a REAL secret (aborts).
@@ -20,6 +29,12 @@
 # "origin" on github.com/oluxstudio/cms_v2. The server side stays deploy.sh.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+TARGET=production
+case "${1:-}" in
+    local|production) TARGET="$1"; shift ;;
+esac
+LOCAL_APP="backend-cms-app-1"   # the local Sail container
 
 PROD_HOST="root@72.61.17.72"
 PROD_KEY="$HOME/.ssh/v2hairco_deploy"
@@ -43,20 +58,45 @@ if [ -n "$leaks" ]; then
 fi
 ok "clean"
 
+# ── 2a. Rebuild the sites of built-in templates whose app source changed ────
+changed_templates=$( { git status --porcelain -- templates | sed 's/^...//'; \
+    git diff --name-only "origin/main...HEAD" -- templates 2>/dev/null || true; } \
+    | awk -F/ '$1=="templates" && $2!="" {print $2}' | sort -u)
+for key in $changed_templates; do
+    [ -d "templates/$key" ] && [ -d "resources/templates/$key" ] || continue
+    say "Rebuilding the $key template site (its source changed)"
+    skip=""; [ -d "templates/$key/node_modules" ] && skip="--skip-install"
+    docker exec -u sail "$LOCAL_APP" php artisan nuxt:preview-build --template="$key" $skip \
+        || fail "the $key template failed to build — fix it before shipping"
+    ok "public/nuxt-preview/$key rebuilt"
+done
+
 # ── 2. Commit & push ────────────────────────────────────────────────────────
-say "Committing and pushing"
+say "Committing and pushing ($TARGET)"
 branch=$(git rev-parse --abbrev-ref HEAD)
-[ "$branch" = "main" ] || fail "on branch '$branch' — ship from main."
+if [ "$TARGET" = "production" ]; then
+    [ "$branch" = "main" ] || fail "on branch '$branch' — ship production from main."
+fi
 
 if [ -n "$(git status --porcelain)" ]; then
     msg="${1:-}"
-    [ -n "$msg" ] || fail "there are uncommitted changes — pass a commit message: ./ship.sh \"...\""
+    [ -n "$msg" ] || fail "there are uncommitted changes — pass a commit message: ./ship.sh $TARGET \"...\""
     git add -A
     git commit -m "$msg"
     ok "committed $(git rev-parse --short HEAD)"
 else
     echo "· working tree clean — shipping HEAD ($(git rev-parse --short HEAD))"
 fi
+if [ "$TARGET" = "local" ]; then
+    # `develop` runs the CI test suite on push but never deploys production.
+    git push origin "HEAD:develop" || fail "push to develop was rejected — pull/merge origin/develop first."
+    ok "pushed $(git rev-parse --short HEAD) to develop (CI tests run there; production untouched)"
+    say "Applying the changes to the local app"
+    ./scripts/apply-local.sh
+    say "Shipped $(git rev-parse --short HEAD) locally ✓"
+    exit 0
+fi
+
 git push origin main
 sha=$(git rev-parse HEAD)
 ok "pushed $sha"
@@ -133,5 +173,13 @@ ok "containers healthy"
 pending=$($SSH "timeout 30 docker exec cms_v2-app-1 php artisan migrate:status 2>/dev/null | grep -ci pending" || true)
 [ "${pending:-0}" = "0" ] || fail "$pending migration(s) still pending on production"
 ok "migrations up to date"
+
+updates=$($SSH "timeout 60 docker exec cms_v2-app-1 php artisan templates:check-updates 2>/dev/null | grep '↑'" || true)
+if [ -n "$updates" ]; then
+    echo "$updates"
+    echo "· open $PROD_URL/admin/templates and press Update template on these"
+else
+    ok "built-in templates: nothing new to publish"
+fi
 
 say "Shipped $(git rev-parse --short HEAD) to production 🚀"
