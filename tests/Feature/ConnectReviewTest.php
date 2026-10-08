@@ -467,7 +467,7 @@ test('picking an asset applies immediately — no separate save needed', functio
     // Collection item pick persists immediately too.
     $lw->call('select', 'collection', $services->id)
         ->call('onMediaPicked', ['scope' => 'connect', 'itemIndex' => 0, 'itemKey' => 'photo'], '@media/new.jpg', '/storage/x/new.jpg');
-    expect($item->fresh()->data['photo'])->toBe(url('/storage/x/new.jpg'));
+    expect($item->fresh()->data['photo'])->toBe('@media/new.jpg'); // the portable ref, resolved on output
 });
 
 test('preview row clicks match the entry by visible text, not DOM position', function () {
@@ -623,4 +623,112 @@ test('a collection resolves across separator drift (bible_studies vs bible-studi
 
     // A key that matches nothing tells the user instead of silently no-oping.
     $lw->call('onEditSelect', null, 'ghost-panel', 'collection')->assertDispatched('toast');
+});
+
+test('the collection editor hides hidden fields, renders selects, and shows a sub-field only when its condition holds', function () {
+    [$user, $site] = previewSite();
+    $col = Collection::create(['site_id' => $site->id, 'name' => 'Events', 'type' => 'grid', 'is_public' => true, 'fields' => [
+        ['key' => 'id', 'label' => 'Id', 'type' => 'text', 'hidden' => true],
+        ['key' => 'when', 'label' => 'When', 'type' => 'datetime'],
+        ['key' => 'featured', 'label' => 'Featured', 'type' => 'select', 'options' => ['yes', 'no']],
+        ['key' => 'media', 'label' => 'Media', 'type' => 'rows', 'fields' => [
+            ['key' => 'type', 'type' => 'select', 'options' => ['image', 'video', 'audio']],
+            ['key' => 'img', 'type' => 'image', 'label' => 'Image / poster'],
+            ['key' => 'src', 'type' => 'media', 'label' => 'Source file', 'show' => ['field' => 'type', 'in' => ['audio', 'video']]],
+        ]],
+    ]]);
+    \App\Models\CollectionItem::create(['collection_id' => $col->id, 'site_id' => $site->id, 'status' => 'published', 'position' => 0,
+        'data' => ['id' => 'secret-id-xyz', 'when' => '2026-10-18T19:00', 'featured' => 'yes',
+            'media' => [['type' => 'image', 'img' => '', 'src' => ''], ['type' => 'video', 'img' => '', 'src' => '']]]]);
+
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site]);
+    $lw->call('select', 'collection', $col->id);
+    $html = $lw->html();
+
+    expect($html)->not->toContain('edit.items.0.data.id"')                   // hidden field not rendered
+        ->and($html)->toContain('type="datetime-local"')
+        ->and($html)->toContain('<option value="yes">')
+        ->and($html)->toContain('Image / poster')
+        // Source shows for the video row only
+        ->and(substr_count($html, 'Source file'))->toBe(1)
+        ->and($html)->toContain('edit.items.0.data.media.1.src')
+        ->and($html)->not->toContain('edit.items.0.data.media.0.src');
+});
+
+test('a preview element can open Site Properties on just its fields, prefilled from the Site Profile, and saving syncs it back', function () {
+    [$user, $site] = previewSite();
+    $profile = Collection::create(['site_id' => $site->id, 'name' => 'Site Profile', 'slug' => '', 'type' => 'grid', 'is_public' => true,
+        'fields' => [['key' => 'logoText', 'type' => 'textarea'], ['key' => 'logoSub', 'type' => 'text']]]);
+    $row = $profile->items()->create(['site_id' => $site->id, 'status' => 'published', 'data' => ['logoText' => "CAC\nMount Zion", 'logoSub' => 'Blackburn.']]);
+    App\Support\SiteProperties::component($site);
+
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('onEditSelect', null, 'site-properties', 'collection', null, null, 'logo,logo_text,logo_subtext');
+    expect($lw->get('edit.siteProperties'))->toBeTrue()
+        ->and($lw->get('edit.focus'))->toBe(['logo', 'logo_text', 'logo_subtext']);
+    $html = $lw->html();
+    expect($html)->toContain('Logo Text')->toContain('Logo Subtext')->toContain('Show all site properties')
+        ->not->toContain('Legal Name');                           // other tabs stay out of the focused panel
+
+    // prefilled from the Site Profile
+    $i = collect($lw->get('edit.nodes'))->search(fn ($n) => $n['label'] === 'Logo Text');
+    expect($lw->get("edit.nodes.$i.value"))->toBe("CAC\nMount Zion");
+
+    $lw->set("edit.nodes.$i.value", "Grace Way\nChurch")->call('saveComponent');
+    expect($row->fresh()->data['logoText'])->toBe("Grace Way\nChurch")
+        ->and($lw->get('edit.focus'))->toBe(['logo', 'logo_text', 'logo_subtext']);   // panel stays focused after save
+
+    $lw->call('showAllProperties');
+    expect($lw->get('edit'))->not->toHaveKey('focus');
+    expect($lw->html())->toContain('Legal Name');
+});
+
+test('clearing Logo Subtext in the focused Site Properties panel clears it on the site', function () {
+    [$user, $site] = previewSite();
+    $profile = Collection::create(['site_id' => $site->id, 'name' => 'Site Profile', 'slug' => '', 'type' => 'grid', 'is_public' => true,
+        'fields' => [['key' => 'logoSub', 'type' => 'text']]]);
+    $row = $profile->items()->create(['site_id' => $site->id, 'status' => 'published', 'data' => ['logoSub' => 'Blackburn.']]);
+    App\Support\SiteProperties::component($site);
+
+    $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('onEditSelect', null, 'site-properties', 'collection', null, null, 'logo_subtext');
+    $i = collect($lw->get('edit.nodes'))->search(fn ($n) => $n['label'] === 'Logo Subtext');
+    expect($lw->get("edit.nodes.$i.value"))->toBe('Blackburn.');
+    $lw->set("edit.nodes.$i.value", '')->call('saveComponent');
+
+    expect($row->fresh()->data['logoSub'])->toBe('');
+    $j = collect($lw->get('edit.nodes'))->search(fn ($n) => $n['label'] === 'Logo Subtext');
+    expect($lw->get("edit.nodes.$j.value"))->toBe('');   // the panel no longer refills the old value
+});
+
+test('a select fed by another collection shows that collection\'s entries in both editors', function () {
+    [$user, $site] = previewSite();
+    $series = Collection::create(['site_id' => $site->id, 'name' => 'Sermon Series', 'slug' => '', 'type' => 'grid', 'is_public' => true, 'fields' => []]);
+    $series->items()->create(['site_id' => $site->id, 'status' => 'published', 'data' => ['slug' => 'rooted', 'name' => 'Rooted Series']]);
+    $sermons = Collection::create(['site_id' => $site->id, 'name' => 'Sermons', 'slug' => '', 'type' => 'grid', 'is_public' => true, 'fields' => [
+        ['key' => 'title', 'type' => 'text'],
+        ['key' => 'seriesSlug', 'label' => 'Series', 'type' => 'select', 'optionsFrom' => ['collection' => 'sermon-series', 'value' => 'slug', 'label' => 'name']],
+    ]]);
+    $item = $sermons->items()->create(['site_id' => $site->id, 'status' => 'published', 'data' => ['title' => 'T', 'seriesSlug' => '']]);
+
+    Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('select', 'collection', $sermons->id)
+        ->assertSee('<option value="rooted">Rooted Series</option>', false);
+
+    Livewire::actingAs($user)->test(App\Livewire\CollectionsPage::class, ['site' => $site])
+        ->call('viewEntries', $sermons->id)->call('openItem', $item->id)
+        ->assertSee('<option value="rooted">Rooted Series</option>', false);
+});
+
+test('editing an entry in the editor fills its system fields (a slug from the title)', function () {
+    [$user, $site, , $services] = previewSite();
+    $services->update(['fields' => array_merge((array) $services->fields, [['key' => 'slug', 'name' => 'slug', 'type' => 'slug', 'auto' => 'slug:title']])]);
+    $first = $services->items()->orderBy('position')->first();
+
+    Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('select', 'collection', $services->id)
+        ->set('edit.items.0.data.title', 'Wash & Blow Dry');
+
+    expect($first->fresh()->data['title'])->toBe('Wash & Blow Dry')
+        ->and($first->fresh()->data['slug'])->toBe('wash-blow-dry');
 });

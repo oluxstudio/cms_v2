@@ -10,6 +10,7 @@
         {
             "type": "app:graceway:page-hero-content",
             "name": "Page Hero Content",
+            "perPage": true,
             "nodes": []
         },
         {

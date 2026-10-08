@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -108,13 +109,17 @@ class MediaPage extends Component
     /** Auto-process files as soon as they're dropped/selected. */
     public function updatedUploads(): void
     {
-        $this->validate([
-            'uploads' => ['array'],
-            'uploads.*' => ['file', 'max:51200'], // 50 MB each
-        ], [
-            'uploads.*.max' => 'Each file must be 50 MB or smaller.',
-        ]);
+        // The dropzone's progress panel waits for one of these two events.
+        try {
+            $this->validateUploads();
+        } catch (ValidationException $e) {
+            // Show the errors without throwing — a thrown exception drops the event.
+            $this->uploads = [];
+            $this->setErrorBag($e->validator->errors());
+            $this->dispatch('media-upload-failed');
 
+            return;
+        }
         $store = app(MediaStore::class);
         $sub = $this->site->user->currentSubscription();
         $count = 0;
@@ -131,6 +136,7 @@ class MediaPage extends Component
         }
 
         $this->uploads = [];
+        $this->dispatch('media-uploaded', count: $count, skipped: $skipped);
         if ($count > 0) {
             $this->successMessage = $count.' '.str('file')->plural($count).' uploaded.';
         }
@@ -141,6 +147,16 @@ class MediaPage extends Component
                     ($limit === null ? 'unlimited storage' : $limit.' MB of asset storage').' and it\'s full. Upgrade for more space, or remove some assets.',
                 cta: 'Get more storage');
         }
+    }
+
+    private function validateUploads(): void
+    {
+        $this->validate([
+            'uploads' => ['array'],
+            'uploads.*' => ['file', 'max:51200'], // 50 MB each
+        ], [
+            'uploads.*.max' => 'Each file must be 50 MB or smaller.',
+        ]);
     }
 
     public function render()

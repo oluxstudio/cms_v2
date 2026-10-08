@@ -133,3 +133,67 @@ TS);
         ->and($f['featured']['type'])->toBe('toggle')
         ->and($f['date']['type'])->toBe('date')->and($f['date']['auto'])->toBe('created_at');
 });
+
+it('reads hidden fields, datetime and typed, conditional sub-fields of a rows field', function () {
+    $root = storage_path('framework/testing/declared-rows-'.uniqid());
+    File::ensureDirectoryExists("$root/app/composables");
+    File::put("$root/app/composables/useEvents.ts", <<<'TS'
+/** @olux-collection Events
+ * @olux-field id text hidden
+ * @olux-field date datetime
+ * @olux-field media rows
+ * @olux-field media.type select options=image|video|audio
+ * @olux-field media.img image label="Image / poster"
+ * @olux-field media.src media label="Source" show=type:audio|video
+ * @olux-field featured select options=yes|no
+ */
+const events = [
+	{ id: 'a', date: '2026-10-18T19:00', title: 'One', featured: 'yes', media: [ { type: 'image', title: 'Pic', img: '/a.jpg' }, { type: 'video', title: 'Clip', img: '/p.jpg', src: '/v.mp4' } ] },
+]
+TS);
+    $cols = collect(app(CollectionSourceExtractor::class)->fromSources($root))->keyBy('name');
+    File::deleteDirectory($root);
+
+    $f = collect($cols['Events']['fields'])->keyBy('key');
+    expect($f['id']['hidden'])->toBeTrue()
+        ->and($f['date']['type'])->toBe('datetime')
+        ->and($f['featured']['options'])->toBe(['yes', 'no'])
+        ->and($f['media']['type'])->toBe('rows');
+
+    $sub = collect($f['media']['fields'])->keyBy('key');
+    // declared sub-fields first, in order, then the inferred rest (title)
+    expect(collect($f['media']['fields'])->pluck('key')->all())->toBe(['type', 'img', 'src', 'title'])
+        ->and($sub['type']['type'])->toBe('select')->and($sub['type']['options'])->toBe(['image', 'video', 'audio'])
+        ->and($sub['img']['type'])->toBe('image')->and($sub['img']['label'])->toBe('Image / poster')
+        ->and($sub['src']['type'])->toBe('media')
+        ->and($sub['src']['show'])->toBe(['field' => 'type', 'in' => ['audio', 'video']]);
+});
+
+it('reads a select whose choices come from another collection, and lists that collection\'s entries', function () {
+    $root = storage_path('framework/testing/declared-from-'.uniqid());
+    File::ensureDirectoryExists("$root/app/composables");
+    File::put("$root/app/composables/useSermons.ts", <<<'TS'
+/** @olux-collection Sermons
+ * @olux-field seriesSlug select from=sermon-series:slug:name label="Series"
+ */
+const sermons = [
+	{ title: 'One', seriesSlug: 'rooted' },
+	{ title: 'Two', seriesSlug: 'rooted' },
+	{ title: 'Three', seriesSlug: 'rooted' },
+]
+TS);
+    $cols = collect(app(CollectionSourceExtractor::class)->fromSources($root))->keyBy('name');
+    File::deleteDirectory($root);
+    $f = collect($cols['Sermons']['fields'])->firstWhere('key', 'seriesSlug');
+    expect($f['optionsFrom'])->toBe(['collection' => 'sermon-series', 'value' => 'slug', 'label' => 'name'])
+        ->and($f)->not->toHaveKey('options');   // no stale guessed list
+
+    $site = \App\Models\Site::factory()->create();
+    $series = \App\Models\Collection::create(['site_id' => $site->id, 'name' => 'Sermon Series', 'slug' => '', 'type' => 'grid', 'fields' => []]);
+    $series->items()->create(['site_id' => $site->id, 'status' => 'published', 'position' => 0, 'data' => ['slug' => 'rooted', 'name' => 'Rooted']]);
+    $series->items()->create(['site_id' => $site->id, 'status' => 'published', 'position' => 1, 'data' => ['name' => 'Grace in the Psalms']]); // name only
+    $series->items()->create(['site_id' => $site->id, 'status' => 'published', 'position' => 2, 'data' => ['name' => '']]);                    // blank: skipped
+
+    expect(\App\Support\CollectionFieldOptions::for($site->id, $f))
+        ->toBe(['rooted' => 'Rooted', 'grace-in-the-psalms' => 'Grace in the Psalms']);
+});

@@ -77,7 +77,12 @@ class MediaPicker extends Component
         $this->open = false;
     }
 
-    /** Drag-drop / file-select upload directly inside the picker. */
+    /**
+     * Drag-drop / file-select upload directly inside the picker. The file
+     * lands in the Assets library AND is picked straight into the field that
+     * opened the picker — a gallery (append) takes every uploaded file, a
+     * single-value field the first.
+     */
     public function updatedUploads(): void
     {
         $this->validate(
@@ -86,15 +91,24 @@ class MediaPicker extends Component
         );
         $site = Site::findOrFail($this->siteId);
         $store = app(MediaStore::class);
+        $stored = [];
         try {
             foreach ($this->uploads as $file) {
-                $store->store($site, $file);
+                $stored[] = $store->store($site, $file);
             }
         } catch (PlanLimitReached $e) {
             $this->dispatch('upgrade-required', reason: $e->getMessage(), cta: $e->cta);
         }
         $this->uploads = [];
         $this->resetPage();
+
+        if ($stored === []) {
+            return;
+        }
+        foreach (! empty($this->context['append']) ? $stored : [$stored[0]] as $media) {
+            $this->dispatch('media-picked', context: $this->context, mediaRef: $media->ref(), url: $media->url);
+        }
+        $this->open = false;
     }
 
     public function render()

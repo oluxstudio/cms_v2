@@ -228,7 +228,7 @@ class PageJsonGenerator
             'schema' => $schema,
             'items' => $collection->items
                 ->where('status', 'published')
-                ->map(fn ($i) => ['id' => $i->id] + ($i->data ?? []))
+                ->map(fn ($i) => ['id' => $i->id] + Media::resolveDeep($collection->site_id, $i->data ?? []))
                 ->values()->all(),
         ];
     }
@@ -240,7 +240,7 @@ class PageJsonGenerator
             'slug' => $p->slug,
             'title' => $p->title,
             'excerpt' => $p->excerpt,
-            'body' => (string) $p->body,
+            'body' => Media::resolveHtml($site->id, $p->body),
             'publishedAt' => $p->published_at?->toIso8601String(),
             'featuredImage' => $this->image($site, $p->cover_image),
         ];
@@ -325,7 +325,7 @@ class PageJsonGenerator
 
         return $collection
             ? CollectionQuery::apply($collection, $query)
-                ->map(fn ($i) => ['id' => $i->id] + ($i->data ?? []))->values()->all()
+                ->map(fn ($i) => ['id' => $i->id] + Media::resolveDeep($site->id, $i->data ?? []))->values()->all()
             : [];
     }
 

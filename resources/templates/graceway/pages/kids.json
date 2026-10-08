@@ -10,11 +10,13 @@
         {
             "type": "app:graceway:page-hero-content",
             "name": "Page Hero Content",
+            "perPage": true,
             "nodes": []
         },
         {
             "type": "app:graceway:ministry-detail",
             "name": "Ministry Detail",
+            "perPage": true,
             "nodes": [
                 {
                     "label": "Headline",

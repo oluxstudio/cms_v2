@@ -6,9 +6,7 @@ use App\Mail\SubmissionReceipt;
 use App\Models\Form;
 use App\Models\Site;
 use App\Models\User;
-use Illuminate\Http\Testing\File;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 function receiptSite(): array
@@ -90,15 +88,15 @@ test('the emails editor saves subject + sections and requires forms.manage', fun
     Livewire::actingAs($outsider)->test(SiteEmailsPage::class, ['site' => $site])->assertStatus(403);
 });
 
-test('uploading a logo on the emails page stores it in the asset library', function () {
+test('the emails logo comes from the asset picker URL', function () {
     [$owner, $site] = receiptSite();
-    Storage::fake('public');
+    $url = 'https://cdn.example.test/logo.png';
 
     Livewire::actingAs($owner)->test(SiteEmailsPage::class, ['site' => $site])
-        ->set('logoUpload', File::image('logo.png', 120, 40));
+        ->set('logo', $url)
+        ->call('saveLogo');
 
-    expect($site->media()->count())->toBe(1)               // landed in Assets
-        ->and($site->getAttr('email.logo'))->not->toBeEmpty(); // applied to the receipt
+    expect($site->getAttr('email.logo'))->toBe($url); // applied to the receipt
 });
 
 test('the template can weave in submitted field values via {field:key} and {fields}', function () {

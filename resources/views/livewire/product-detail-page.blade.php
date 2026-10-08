@@ -12,7 +12,7 @@
             <div class="w-full lg:w-56 shrink-0">
                 <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/[0.04]">
                     @if($product->image)
-                        <img src="{{ Storage::url($product->image) }}" class="w-full h-full object-cover">
+                        <img src="{{ $product->image_url }}" class="w-full h-full object-cover">
                     @else
                         <div class="w-full h-full flex items-center justify-center text-5xl">🛍️</div>
                     @endif
@@ -193,16 +193,14 @@
             <div>
                 <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Image</label>
                 <div class="flex items-center gap-3">
-                    @if($photo)
-                        <img src="{{ $photo->temporaryUrl() }}" class="w-14 h-14 rounded-xl object-cover">
-                    @elseif($product->image)
-                        <img src="{{ Storage::url($product->image) }}" class="w-14 h-14 rounded-xl object-cover">
+                    @if($imageUrl)
+                        <img src="{{ \App\Models\Media::resolveRef($site->id, $imageUrl) }}" alt="" class="w-14 h-14 rounded-xl object-cover shrink-0">
                     @else
                         <div class="w-14 h-14 rounded-xl bg-gray-100 dark:bg-white/[0.06] flex items-center justify-center text-xl">🛍️</div>
                     @endif
-                    <input wire:model="photo" type="file" accept="image/*" class="text-xs text-gray-500 dark:text-gray-400">
+                    <x-asset-picker model="imageUrl" :site="$site" type="image" placeholder="Image URL, or pick from assets" />
                 </div>
-                @error('photo') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                @error('imageUrl') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
             </div>
             <x-field.textarea label="Description" model="description" rows="3" class="resize-none" />
             <x-field.check model="is_active" text="Active (visible in storefront)" />

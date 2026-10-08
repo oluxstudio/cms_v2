@@ -2,9 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Exceptions\PlanLimitReached;
 use App\Models\Site;
-use App\Services\MediaStore;
 use App\Support\PropertyLinks;
 use App\Support\SiteColors;
 use App\Support\SiteProperties;
@@ -13,7 +11,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 
 /**
  * Site properties — the business profile templates read (see SiteProperties
@@ -23,8 +20,6 @@ use Livewire\WithFileUploads;
  */
 class SitePropertiesPage extends Component
 {
-    use WithFileUploads;
-
     public Site $site;
 
     /** @var array<string,string> field key => value */
@@ -49,9 +44,6 @@ class SitePropertiesPage extends Component
 
     /** Custom scripts — premium plans, owners/admins only; never in the content payload. */
     public array $scripts = ['head' => '', 'body' => ''];
-
-    /** Transient uploads: fields.{key}, rows.{repeater}.{i}.{sub}, variables.{i} */
-    public array $uploads = [];
 
     public function mount(Site $site): void
     {
@@ -121,7 +113,6 @@ class SitePropertiesPage extends Component
     {
         unset($this->rows[$key][$i]);
         $this->rows[$key] = array_values($this->rows[$key] ?? []);
-        $this->uploads = [];
     }
 
     public function addVariable(string $type = 'text'): void
@@ -135,7 +126,6 @@ class SitePropertiesPage extends Component
     {
         unset($this->variables[$i]);
         $this->variables = array_values($this->variables);
-        $this->uploads = [];
     }
 
     public function moveVariable(int $i, int $dir): void
@@ -159,29 +149,6 @@ class SitePropertiesPage extends Component
     {
         $this->values['registered_office'] = collect(['address_street', 'address_town', 'address_county', 'address_postcode', 'address_country'])
             ->map(fn ($k) => trim($this->values[$k] ?? ''))->filter()->implode(', ');
-    }
-
-    // ── Uploads (land in the site's Assets library) ────────────────
-
-    public function updatedUploads($file, string $path): void
-    {
-        $this->validate(["uploads.$path" => ['file', 'mimes:jpg,jpeg,png,webp,gif,svg', 'max:8192']]);
-        try {
-            $url = app(MediaStore::class)->store($this->site, $file)->publicUrl();
-        } catch (PlanLimitReached $e) {
-            $this->dispatch('upgrade-required', reason: $e->getMessage(), cta: $e->cta);
-
-            return;
-        }
-
-        $parts = explode('.', $path);
-        match ($parts[0]) {
-            'fields' => $this->values[$parts[1]] = $url,
-            'rows' => $this->rows[$parts[1]][(int) $parts[2]][$parts[3]] = $url,
-            'variables' => $this->variables[(int) $parts[1]] = ['type' => 'image', 'value' => $url] + $this->variables[(int) $parts[1]],
-            default => null,
-        };
-        data_forget($this->uploads, $path);
     }
 
     // ── Save ───────────────────────────────────────────────────────
@@ -209,9 +176,12 @@ class SitePropertiesPage extends Component
 
         $oldIcon = SiteProperties::value($this->site, 'square_icon');
         $before = SiteProperties::get($this->site);
+        // What the site showed (stored value, else the template's content) — so
+        // clearing a prefilled optional value (e.g. Logo Subtext) is a change.
+        $shownBefore = PropertyLinks::shown($this->site, $before['values'], $before['rows']);
         SiteProperties::save($this->site, ['values' => $this->values, 'rows' => $this->rows, 'variables' => $this->variables], Auth::user()?->name);
         // …and into the template's own content (contact rows, profile entry, header fields) — added where missing.
-        $synced = PropertyLinks::push($this->site, $this->linkedValues($before['values'], $before['rows']), $this->linkedValues(), Auth::user()?->name);
+        $synced = PropertyLinks::push($this->site, $shownBefore, $this->linkedValues(), Auth::user()?->name);
         if ($synced !== []) {
             SiteProperties::republish($this->site);
         }

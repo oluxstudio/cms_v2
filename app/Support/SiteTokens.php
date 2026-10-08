@@ -19,7 +19,7 @@ class SiteTokens
     /** token => [label, property key | callable] for the built-ins (order = display order). */
     private const BUILT_IN = [
         'site_name' => 'Site name', 'short_name' => 'Short name', 'tagline' => 'Tagline',
-        'logo' => 'Logo (image URL)', 'logo_light' => 'Light logo (image URL)', 'favicon' => 'Favicon (image URL)', 'share_image' => 'Share image (URL)',
+        'logo' => 'Logo (image URL)', 'logo_text' => 'Logo text', 'logo_subtext' => 'Logo subtext', 'logo_light' => 'Light logo (image URL)', 'favicon' => 'Favicon (image URL)', 'share_image' => 'Share image (URL)',
         'email' => 'Email', 'phone' => 'Main phone', 'whatsapp' => 'WhatsApp',
         'address' => 'Full address', 'address_street' => 'Street', 'address_town' => 'Town', 'address_postcode' => 'Postcode', 'address_country' => 'Country',
         'hours' => 'Opening hours (summary)',

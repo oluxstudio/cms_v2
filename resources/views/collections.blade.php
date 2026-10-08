@@ -1,4 +1,4 @@
 <x-layouts.selected :site-name="$site->name" :site-id="$site->id">
     <x-slot:title>{{ $site->name }} | Collections</x-slot>
-    <livewire:collections-page :site="$site"/>
+    <livewire:collections-page :site="$site" :screen="$screen ?? null" :collection="$collection ?? null"/>
 </x-layouts.selected>

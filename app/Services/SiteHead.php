@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Media;
 use App\Models\Site;
 use App\Support\SiteProperties;
 use Illuminate\Http\Request;
@@ -22,6 +23,9 @@ class SiteHead
         $request ??= request();
         $p = SiteProperties::payload($site);
         $origin = self::origin($site, $request);
+        // The page being served: its own meta tags (Pages › page › Page
+        // attributes & meta tags) win over the site-wide defaults below.
+        $pm = self::pageMeta($site, $request);
         $out = [];
 
         // Icons + manifest
@@ -42,27 +46,38 @@ class SiteHead
             $out[] = '<meta name="theme-color" content="'.$color.'">';
         }
 
-        // Search + social defaults (templates' own per-page tags still apply)
-        $description = $p['seo']['meta_description'] ?: ($p['business']['description'] ?: $p['tagline']);
+        // Search + social: the page's own tags, else the site defaults.
+        $description = $pm['description'] ?: ($p['seo']['meta_description'] ?: ($p['business']['description'] ?: $p['tagline']));
         if ($description) {
-            $out[] = '<meta name="description" content="'.e($description).'" data-olux-default>';
-            $out[] = '<meta property="og:description" content="'.e($description).'">';
+            $out[] = '<meta name="description" content="'.e($description).'"'.($pm['description'] ? '' : ' data-olux-default').'>';
+        }
+        if ($ogDescription = $pm['og_description'] ?: $description) {
+            $out[] = '<meta property="og:description" content="'.e($ogDescription).'">';
+        }
+        if ($ogTitle = $pm['og_title'] ?: $pm['title']) {
+            $out[] = '<meta property="og:title" content="'.e($ogTitle).'">';
+        }
+        if ($pm['keywords']) {
+            $out[] = '<meta name="keywords" content="'.e($pm['keywords']).'">';
         }
         $out[] = '<meta property="og:site_name" content="'.e($p['name']).'">';
         $out[] = '<meta property="og:type" content="website">';
         $out[] = '<meta property="og:url" content="'.e($origin.'/'.ltrim($request->path(), '/')).'">';
-        if ($p['share_image']) {
-            $out[] = '<meta property="og:image" content="'.e($p['share_image']).'">';
+        if ($image = $pm['og_image'] ?: $p['share_image']) {
+            $out[] = '<meta property="og:image" content="'.e($image).'">';
             $out[] = '<meta name="twitter:card" content="summary_large_image">';
         }
+        // Site-wide "hide from search" always wins; otherwise the page's own robots.
         if ($p['seo']['noindex']) {
             $out[] = '<meta name="robots" content="noindex, nofollow">';
+        } elseif ($pm['robots']) {
+            $out[] = '<meta name="robots" content="'.e($pm['robots']).'">';
         }
         $token = SiteProperties::value($site, 'search_console_token');
         if (preg_match('/^[A-Za-z0-9_\-]{10,100}$/', $token)) {
             $out[] = '<meta name="google-site-verification" content="'.$token.'">';
         }
-        $out[] = '<link rel="canonical" href="'.e($origin.($request->path() === '/' ? '/' : '/'.$request->path())).'">';
+        $out[] = '<link rel="canonical" href="'.e($pm['canonical'] ?: $origin.($request->path() === '/' ? '/' : '/'.$request->path())).'">';
 
         // Structured data
         $ld = SiteProperties::schemaOrg($site, $p, $origin.'/');
@@ -83,6 +98,38 @@ class SiteHead
         }
 
         return implode("\n", $out);
+    }
+
+    /**
+     * The served page's own meta settings (blank = use the site default).
+     *
+     * @return array{title:string,description:string,og_title:string,og_description:string,og_image:string,keywords:string,robots:string,canonical:string}
+     */
+    public static function pageMeta(Site $site, ?Request $request = null): array
+    {
+        $request ??= request();
+        $path = '/'.trim($request->path(), '/');
+        $page = $site->livePages()->get()->first(fn ($pg) => ('/'.trim((string) $pg->url, '/')) === $path);
+        $a = $page ? $page->attrMap() : [];
+        $val = fn (string $k) => trim((string) ($a[$k] ?? ''));
+        $image = $val('og_image');
+        if ($image !== '') {
+            // Asset-picker refs and /storage paths → absolute URLs for crawlers.
+            $image = Media::resolveAbsolute($site->id, $image);
+        }
+        $canonical = $val('canonical_url');
+        $robots = strtolower($val('robots'));
+
+        return [
+            'title' => $val('title'),
+            'description' => $val('description'),
+            'og_title' => $val('og_title'),
+            'og_description' => $val('og_description'),
+            'og_image' => preg_match('#^https?://#i', $image) ? $image : '',
+            'keywords' => trim((string) ($page?->keywords ?? '')),
+            'robots' => preg_match('/^(no)?index\s*,\s*(no)?follow$/', $robots) ? $robots : '',
+            'canonical' => preg_match('#^https?://#i', $canonical) ? $canonical : '',
+        ];
     }
 
     /** Before </body>: the cookie banner (when on) and custom body scripts. */

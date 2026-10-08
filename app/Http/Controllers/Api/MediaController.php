@@ -74,6 +74,8 @@ class MediaController extends Controller
             'name' => $m->name,
             'type' => $m->file_type,
             'url' => $m->publicUrl(),
+            // What asset pickers store: the portable "@media/{filename}" reference.
+            'ref' => $m->ref(),
             'size' => $m->size,
             'alt' => $m->alt_text,
             'site' => $m->site?->name,

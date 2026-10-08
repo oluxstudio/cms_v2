@@ -20,6 +20,7 @@ use App\Services\TemplatePublisher;
 use App\Services\TemplateUploads\GithubTemplateFetcher;
 use App\Support\TemplateAccess;
 use App\Support\TemplatePaths;
+use App\Templates\TemplateAppRegistry;
 use App\Templates\TemplateRegistry;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -174,6 +175,7 @@ class PlatformTemplatesPage extends Component
             'visibility' => $t->isPrivate() ? 'private' : 'public',
             'source_repo' => (string) $t->source_repo,
             'source_branch' => (string) $t->source_branch,
+            'reset_collections' => array_values((array) $t->reset_collections),
         ];
         $this->assignEmail = '';
         $this->thumbnail = null;
@@ -200,6 +202,8 @@ class PlatformTemplatesPage extends Component
                 }
             }],
             'edit.source_branch' => ['nullable', 'string', 'max:100', 'regex:#^[A-Za-z0-9._/-]+$#'],
+            'edit.reset_collections' => ['array'],
+            'edit.reset_collections.*' => ['string', 'max:120'],
             'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ], ['edit.name.required' => 'Give the template a name.', 'thumbnail.max' => 'The image is too large (4 MB max).']);
         $t = Template::findOrFail($this->editingId);
@@ -218,6 +222,8 @@ class PlatformTemplatesPage extends Component
             'tags' => collect(explode(',', $this->edit['tags']))->map(fn ($s) => trim($s))->filter()->unique()->values()->all(),
             'required_features' => array_values(array_unique($this->edit['features'])),
             'visibility' => $visibility,
+            // Only names the template really declares.
+            'reset_collections' => array_values(array_intersect(self::collectionNames($t), (array) ($this->edit['reset_collections'] ?? []))) ?: null,
         ]);
         if (self::canNewVersion($t)) {
             $repo = trim((string) ($this->edit['source_repo'] ?? ''));
@@ -229,6 +235,28 @@ class PlatformTemplatesPage extends Component
         Cache::forget('template_catalog_categories');
         $this->editingId = null;
         $this->dispatch('toast', level: 'success', title: 'Saved', message: $t->name.' updated.');
+    }
+
+    /**
+     * The collections a template declares (its published manifest, else its
+     * latest version's payload): name => number of template entries.
+     *
+     * @return array<string,int>
+     */
+    public static function templateCollections(Template $t): array
+    {
+        $key = (string) ($t->builtin_key ?: $t->slug);
+        $defs = TemplateAppRegistry::find($key)['manifest']['collections']
+            ?? ($t->latestVersion?->payload['collections'] ?? []);
+
+        return collect((array) $defs)->filter(fn ($c) => filled($c['name'] ?? null))
+            ->mapWithKeys(fn ($c) => [(string) $c['name'] => count((array) ($c['items'] ?? []))])->all();
+    }
+
+    /** @return list<string> */
+    private static function collectionNames(Template $t): array
+    {
+        return array_keys(self::templateCollections($t));
     }
 
     /** Give a private template to an account (by the account owner's email). */
@@ -691,6 +719,7 @@ class PlatformTemplatesPage extends Component
     /** Move every site using the template onto its latest version and re-run their install. */
     public function updateSites(string $id): void
     {
+        abort_unless(Auth::user()?->isSuper(), 403);
         $t = Template::findOrFail($id);
         $rows = SiteTemplate::where('template_id', $t->id)->whereNotNull('applied_at')->whereHas('site')
             ->where(fn ($q) => $q->whereNull('template_version_id')->orWhere('template_version_id', '!=', $t->latest_version_id))
@@ -699,7 +728,7 @@ class PlatformTemplatesPage extends Component
             $row->update(['template_version_id' => $t->latest_version_id]);
             $row->site?->setAttr('template_install', 'installing');
             $row->site?->setAttr(InstallProgress::ATTR, json_encode(['percent' => 1, 'label' => 'Getting started', 'step' => 'start', 'done' => 0, 'total' => 0]));
-            InstallTemplateJob::dispatch($row->site_id, $row->id);
+            InstallTemplateJob::dispatch($row->site_id, $row->id, refresh: true);
         }
         $this->dispatch('toast', level: 'success', title: 'Updating sites',
             message: $rows->count().' '.Str::plural('site', $rows->count()).' moving to the latest version of '.$t->name.'. Their content is kept.');

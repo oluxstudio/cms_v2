@@ -20,17 +20,21 @@
         // tablet/mobile emulate real device widths. Zooming out renders a
         // proportionally wider viewport scaled down INSIDE the frame — the
         // frame's box never changes, the site just zooms browser-style.
+        // Desktop is never narrower than a real desktop window (1280px): a narrower
+        // panel renders the desktop layout scaled down, so it matches the live site
+        // instead of falling into the template's tablet layout (burger menu …).
+        deviceW() {
+            return this.device === 'mobile' ? 390 : (this.device === 'tablet' ? 768 : Math.max(this.cw || 1024, 1280));
+        },
         logicalW() {
-            const base = this.device === 'mobile' ? 390 : (this.device === 'tablet' ? 768 : (this.cw || 1024));
-            return Math.round(base * 100 / this.zoom);
+            return Math.round(this.deviceW() * 100 / this.zoom);
         },
         frameScale() {
-            if (this.device === 'desktop') return this.zoom / 100;
-            const fit = this.cw ? Math.min(1, this.cw / (this.device === 'mobile' ? 390 : 768)) : 1;
+            const fit = this.cw ? Math.min(1, this.cw / this.deviceW()) : 1;
             return fit * this.zoom / 100;
         },
         frameStyle() {
-            if (this.device === 'desktop' && this.zoom === 100) return 'border:0; width:100%; height:100%';
+            if (this.device === 'desktop' && this.zoom === 100 && this.cw >= 1280) return 'border:0; width:100%; height:100%';
             const w = this.logicalW(), s = this.frameScale() || 1, h = (this.ch || 600) / s;
             return `border:0; width:${w}px; height:${h}px; transform:scale(${s}); transform-origin: top center; position:relative; left:50%; margin-left:-${w / 2}px`;
         },
@@ -42,7 +46,7 @@
                 if (e.origin !== this.$root.dataset.olxOrigin) return;
                 const d = e.data;
                 if (!d || d.source !== 'olx-connect') return;
-                if (d.type === 'olx-edit-select') this.$wire.onEditSelect(d.id, d.key, d.kind, d.itemIndex ?? null, d.itemText ?? null)
+                if (d.type === 'olx-edit-select') this.$wire.onEditSelect(d.id, d.key, d.kind, d.itemIndex ?? null, d.itemText ?? null, d.fields ?? null)
                     .then(() => {
                         document.getElementById('olx-frame')?.contentWindow?.postMessage({ source: 'olx-cms', type: 'olx-edit-opened' }, '*');
                         // A clicked FIELD lights up its input in the freshly loaded panel.

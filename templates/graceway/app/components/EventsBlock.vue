@@ -3,21 +3,13 @@ const oluxCms = useOluxContent('events')
 const oluxFb: Record<string, string> = {"Text":"Slide for more <span>\u2192</span>"}
 // authored rows come from the global data source; the CMS "Events"
 // collection (shared with the events page) overrides when populated
-const { events: authoredEvents, eventsHead } = useSiteContent()
-const events = computed(() => {
-  const rows = (useCms().items('events', []) as any[]).filter(e => e.title && e.img)
-  return (rows.length || useCms().isSite) ? rows : authoredEvents
-})
-// featured card: the first primed/featured event (fallback: soonest upcoming)
-// carousel: upcoming events, soonest first, max 5, without the featured one
-const now = new Date().toISOString()
-const byDate = computed(() => [...events.value].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')))
-const featured = computed(() =>
-  byDate.value.find(e => e.featured && (e.date ?? '') >= now)
-  ?? byDate.value.find(e => e.featured)
-  ?? byDate.value.find(e => (e.date ?? '') >= now))
-const upcoming = computed(() =>
-  byDate.value.filter(e => (e.date ?? '') >= now && e !== featured.value).slice(0, 5))
+const { eventsHead } = useSiteContent()
+// upcoming only — past events live in the archive
+const events = computed(() => upcomingEvents(useEventRows()))
+// featured card: the soonest upcoming event marked featured, else the soonest one
+// carousel: the next upcoming events, max 5, without the featured one
+const featured = computed(() => events.value.find(e => e.featured) ?? events.value[0])
+const upcoming = computed(() => events.value.filter(e => e !== featured.value).slice(0, 5))
 </script>
 
 <template>
@@ -29,12 +21,12 @@ const upcoming = computed(() =>
       </div>
 
       <!-- featured/primed event as the big horizontal card -->
-      <EventCard v-if="featured" v-bind="featured" horizontal cta="Join This Event" to="/contact" class="featured" />
+      <EventCard v-if="featured" v-bind="featured" horizontal :to="eventPath(featured)" class="featured" />
 
       <!-- upcoming events (max 5): horizontal carousel, 3-up on desktop / 1-up on mobile -->
       <div class="event-carousel">
         <div class="event-card-row" data-olx-panel="events">
-          <EventCard data-olx-item v-for="e in upcoming" :key="e.title" v-bind="e" cta="Join This Event" to="/contact" />
+          <EventCard data-olx-item v-for="e in upcoming" :key="e.id" v-bind="e" :to="eventPath(e)" />
         </div>
         <p data-olx-field="text" class="carousel-hint" aria-hidden="true" v-html="oluxCms.t('Text', oluxFb['Text'])"></p>
       </div>

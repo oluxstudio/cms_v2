@@ -25,10 +25,13 @@ export function useCmsForm(formName: string) {
     sending.value = true
     error.value = ''
     try {
-      const pub: any = (useRuntimeConfig() as any).public || {}
-      const site = pub.cmsSite || pub.oluxSite || 'graceway'
-      const base = pub.bookingApiBase || pub.cmsApiBase || ''
-      const res = await fetch(`${base || window.location.origin}/api/sites/${encodeURIComponent(site)}/form/${formName}`, {
+      // the site being shown (its domain, or ?site=… in a CMS preview) — never a default
+      const { site, apiBase } = useOluxSite()
+      if (!site) {
+        error.value = 'This is a template preview — forms are sent from a real site.'
+        return false
+      }
+      const res = await fetch(`${apiBase || window.location.origin}/api/sites/${encodeURIComponent(site)}/form/${formName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ device: deviceDetails(), page: window.location.pathname, ...fields, _hp: '' }),

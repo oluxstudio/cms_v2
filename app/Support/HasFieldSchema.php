@@ -14,8 +14,8 @@ trait HasFieldSchema
 {
     /** Canonical field types supported by the schema engine. */
     public const FIELD_TYPES = [
-        'text', 'email', 'tel', 'number', 'url', 'date', 'textarea', 'textarea2', 'textarea6', 'textarea10', 'textarea15',
-        'select', 'radio', 'checkbox', 'toggle', 'slider',
+        'text', 'email', 'tel', 'number', 'url', 'date', 'datetime', 'textarea', 'textarea2', 'textarea6', 'textarea10', 'textarea15',
+        'select', 'radio', 'checkbox', 'toggle', 'slider', 'media',
     ];
 
     /** Textarea field types and their visible rows (textareaN → N rows; plain textarea → 4). */
@@ -59,7 +59,7 @@ trait HasFieldSchema
             if ($type === 'number' || $type === 'slider') {
                 $fieldRules[] = 'numeric';
             }
-            if ($type === 'date') {
+            if ($type === 'date' || $type === 'datetime') {
                 $fieldRules[] = 'date';
             }
             if ($type === 'tel') {

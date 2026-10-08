@@ -79,11 +79,16 @@ const tabLabel = { video: '▶ Watch', audio: '🎧 Listen', text: '✍ Read' } 
     <PageHeroContent :crumbs="[{ label: 'Sermons', to: '/sermons' }, { label: sermon.title }]">
       <NuxtLink v-if="series" class="sd-series-badge" :to="`/sermons?series=${series.slug}`">📚 {{ series.name }}</NuxtLink>
       <h1>{{ sermon.title }}</h1>
-      <p>🎙 {{ sermon.speaker }} · {{ sermon.date }}<template v-if="sermon.scripture"> · 📖 {{ sermon.scripture }}</template></p>
+      <p>By {{ sermon.speaker }} · Published {{ publishedOn(sermon.date) }}<template v-if="sermon.scripture"> · 📖 {{ sermon.scripture }}</template></p>
     </PageHeroContent>
 
     <section class="sd-view">
       <div class="container">
+        <ContentDetails
+          kind="Sermon" :title="sermon.title" :author="sermon.speaker" :date="sermon.date" :description="sermon.summary"
+          :facts="[{ label: 'Series', value: series?.name }, { label: 'Scripture', value: sermon.scripture }]"
+        />
+
         <!-- media tabs -->
         <div v-if="tabs.length > 1" class="sd-tabs" role="tablist">
           <button
@@ -93,8 +98,12 @@ const tabLabel = { video: '▶ Watch', audio: '🎧 Listen', text: '✍ Read' } 
           >{{ tabLabel[t] }}</button>
         </div>
 
-        <!-- video: lazy facade until clicked -->
-        <div v-if="tab === 'video' && sermon.videoId" class="sermon-media video sd-media">
+        <!-- uploaded video file (from Assets) -->
+        <div v-if="tab === 'video' && sermon.videoFile" class="sermon-media video sd-media">
+          <video :src="sermon.videoFile" :poster="sermon.poster || sermonThumb(sermon)" controls playsinline></video>
+        </div>
+        <!-- YouTube video: lazy facade until clicked -->
+        <div v-else-if="tab === 'video' && sermon.videoId" class="sermon-media video sd-media">
           <button v-if="!videoActive" type="button" class="sd-facade" :aria-label="`Play ${sermon.title}`" @click="videoActive = true">
             <img :src="sermonThumb(sermon)" :alt="sermon.title">
             <span class="thumb-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span>
@@ -165,7 +174,7 @@ const tabLabel = { video: '▶ Watch', audio: '🎧 Listen', text: '✍ Read' } 
                 <span v-if="sermonSeriesOf(s)" class="series-badge">{{ sermonSeriesOf(s)!.name }}</span>
               </div>
               <div class="sermon-body">
-                <p class="meta">{{ s.date }}</p>
+                <p class="meta">{{ publishedOn(s.date) }}</p>
                 <h3>{{ s.title }}</h3>
                 <p class="preacher">🎙 {{ s.speaker }}</p>
               </div>

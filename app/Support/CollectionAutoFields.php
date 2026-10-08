@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\Auth;
  *   number                    1, 2, 3… in the order entries are added
  *   property:{token}          a Site Property / variable — stored as {{token}}
  *                             so it always shows the current value
+ *   slug:{field}+{field}…     a web-address slug made from other fields of the
+ *                             entry (dates as Y-m-d): "slug:title+date" →
+ *                             "worship-night-2026-10-18"; unique within the
+ *                             collection (-2, -3 … added) and rebuilt on save
  * Filled whenever an entry is created or its data changes (any path: editor,
  * API, submissions, the agent), never typed by hand. Separate from `hidden`
  * (kept out of the edit form, still sent to the website).
@@ -43,13 +47,36 @@ class CollectionAutoFields
 
     public static function valid(?string $source): bool
     {
-        return $source !== null && (isset(self::SOURCES[$source]) || preg_match('/^property:[a-z0-9_.-]+$/', $source) === 1);
+        return $source !== null && (isset(self::SOURCES[$source]) || preg_match('/^property:[a-z0-9_.-]+$/', $source) === 1
+            || self::slugSources($source) !== []);
+    }
+
+    /** The fields a `slug:a+b` source is built from ([] when $source is not a slug source). @return list<string> */
+    public static function slugSources(?string $source): array
+    {
+        if (! preg_match('/^slug:([A-Za-z][\w-]*(?:\+[A-Za-z][\w-]*)*)$/', (string) $source, $m)) {
+            return [];
+        }
+
+        return array_values(array_unique(explode('+', $m[1])));
+    }
+
+    /** A slug source for these field keys (null when none). */
+    public static function slugSource(array $keys): ?string
+    {
+        $keys = array_values(array_unique(array_filter($keys, fn ($k) => is_string($k) && preg_match('/^[A-Za-z][\w-]*$/', $k))));
+
+        return $keys === [] ? null : 'slug:'.implode('+', $keys);
     }
 
     public static function label(?string $source): string
     {
         if (isset(self::SOURCES[(string) $source])) {
             return self::SOURCES[$source];
+        }
+
+        if (($from = self::slugSources($source)) !== []) {
+            return 'Slug from '.implode(' + ', array_map(fn ($k) => \Illuminate\Support\Str::headline($k), $from));
         }
 
         return str_starts_with((string) $source, 'property:') ? 'Site property {{'.substr($source, 9).'}}' : '';
@@ -93,6 +120,7 @@ class CollectionAutoFields
                 $source === 'updated_by' => $backfill ? ($empty ? 'System' : $current) : $actor,
                 $source === 'number' => $empty ? self::nextNumber($item, $key) : $current,
                 str_starts_with($source, 'property:') => '{{'.substr($source, 9).'}}',
+                str_starts_with($source, 'slug:') => self::uniqueSlug($item, $key, self::slugFrom($data, self::slugSources($source), $collection)) ?: $current,
                 default => $current,
             };
         }
@@ -115,6 +143,53 @@ class CollectionAutoFields
                     $item->saveQuietly();
                 }
             });
+    }
+
+    /**
+     * The slug for $data from its $from fields: each value slugified, dates
+     * (date / datetime fields, or any "2026-10-18T19:00"-style value) as
+     * Y-m-d, empty values skipped. "" when every source is empty.
+     */
+    public static function slugFrom(array $data, array $from, ?Collection $collection = null): string
+    {
+        $types = collect($collection?->fields ?? [])->mapWithKeys(fn ($f) => [(string) ($f['key'] ?? '') => (string) ($f['type'] ?? 'text')]);
+        $parts = [];
+        foreach ($from as $k) {
+            $v = $data[$k] ?? null;
+            if (! is_scalar($v) || trim((string) $v) === '' || is_bool($v)) {
+                continue;
+            }
+            $v = trim((string) $v);
+            if (in_array($types[$k] ?? '', ['date', 'datetime'], true) || preg_match('/^\d{4}-\d{2}-\d{2}([T ]|$)/', $v)) {
+                try {
+                    $v = \Illuminate\Support\Carbon::parse($v)->format('Y-m-d');
+                } catch (\Throwable) {
+                    // not a date after all — slugified as text
+                }
+            }
+            $parts[] = \Illuminate\Support\Str::slug($v);
+        }
+
+        return trim(implode('-', array_filter($parts, 'strlen')), '-');
+    }
+
+    /** $base, or $base-2, -3 … — the first no other entry of the collection (deleted ones too) uses for $key. */
+    private static function uniqueSlug(CollectionItem $item, string $key, string $base): string
+    {
+        if ($base === '') {
+            return '';
+        }
+        $taken = CollectionItem::withTrashed()->where('collection_id', $item->collection_id)
+            ->when($item->exists, fn ($q) => $q->whereKeyNot($item->getKey()))
+            ->pluck('data')
+            ->map(fn ($d) => (is_array($d) ? $d : (json_decode((string) $d, true) ?: []))[$key] ?? null)
+            ->filter(fn ($v) => is_string($v) && $v !== '')->flip();
+        $slug = $base;
+        for ($n = 2; $taken->has($slug); $n++) {
+            $slug = $base.'-'.$n;
+        }
+
+        return $slug;
     }
 
     private static function actor(): string

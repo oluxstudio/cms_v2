@@ -9,7 +9,8 @@ use Illuminate\Support\Str;
  * Extracts CMS form definitions from a template's authored <form> markup so
  * every form the template ships exists as a real, submittable site form —
  * no hand-curation needed. Fields come from the inputs/textareas/selects
- * inside each form (label text, name attribute, html type, required flag).
+ * inside each form (label text, name attribute, html type, required flag);
+ * named hidden inputs become hidden fields (stored, never shown).
  *
  * The form's name comes from a `data-olx-form="…"` attribute when the
  * author sets one, else from the component/page file name. Forms that are
@@ -70,7 +71,17 @@ class FormSourceExtractor
         preg_match_all('#<(input|textarea|select)\b([^>]*)/?>#', $body, $m, PREG_SET_ORDER);
         foreach ($m as [$tag, $el, $attrs]) {
             $type = strtolower(preg_match('#\btype="([\w-]+)"#', $attrs, $t) ? $t[1] : 'text');
-            if (in_array($type, ['submit', 'button', 'hidden', 'password', 'search'], true)) {
+            if (in_array($type, ['submit', 'button', 'password', 'search'], true)) {
+                continue;
+            }
+            // A NAMED hidden input is part of what's sent (e.g. which leader a message
+            // is for): a hidden field — stored with each submission, never shown.
+            if ($type === 'hidden') {
+                if (! preg_match('#\bname="([\w-]+)"#', $attrs, $hn) || isset($fields[$k = Str::slug($hn[1], '_')])) {
+                    continue;
+                }
+                $fields[$k] = ['key' => $k, 'label' => Str::headline($k), 'type' => 'text', 'required' => false, 'hidden' => true];
+
                 continue;
             }
             // Key: the name attribute, else v-model tail, else the html type.

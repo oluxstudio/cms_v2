@@ -6,129 +6,199 @@
             "name": "Site Header",
             "nodes": [
                 {
-                    "label": "Phone",
+                    "label": "About Child 1 Label",
                     "type": "text",
-                    "value": "+1 705 55 50 000",
+                    "value": "Our Story",
                     "order": 0,
-                    "description": "text"
+                    "description": "item:label"
                 },
                 {
-                    "label": "Phone Link",
-                    "type": "url",
-                    "value": "tel:+17055550000",
-                    "order": 1,
-                    "description": "attr:href"
-                },
-                {
-                    "label": "Caption",
+                    "label": "About Child 1 To",
                     "type": "text",
-                    "value": "121 Wallstreet street, NY York, USA",
-                    "order": 2,
-                    "description": "text"
+                    "value": "/about",
+                    "order": 1,
+                    "description": "item:to"
                 },
                 {
-                    "label": "Image",
-                    "type": "image",
-                    "value": "/assets/images/logo.png",
+                    "label": "About Child 2 Label",
+                    "type": "text",
+                    "value": "Leadership",
+                    "order": 2,
+                    "description": "item:label"
+                },
+                {
+                    "label": "About Child 2 To",
+                    "type": "text",
+                    "value": "/leadership",
                     "order": 3,
-                    "description": "attr:src"
+                    "description": "item:to"
+                },
+                {
+                    "label": "About Child 3 Label",
+                    "type": "text",
+                    "value": "Announcements",
+                    "order": 4,
+                    "description": "item:label"
+                },
+                {
+                    "label": "About Child 3 To",
+                    "type": "text",
+                    "value": "/announcements",
+                    "order": 5,
+                    "description": "item:to"
+                },
+                {
+                    "label": "About Child 4 Label",
+                    "type": "text",
+                    "value": "Media & Broadcast",
+                    "order": 6,
+                    "description": "item:label"
+                },
+                {
+                    "label": "About Child 4 To",
+                    "type": "text",
+                    "value": "/media-ministry",
+                    "order": 7,
+                    "description": "item:to"
+                },
+                {
+                    "label": "About Child 5 Label",
+                    "type": "text",
+                    "value": "Prayer Watch",
+                    "order": 8,
+                    "description": "item:label"
+                },
+                {
+                    "label": "About Child 5 To",
+                    "type": "text",
+                    "value": "/prayer",
+                    "order": 9,
+                    "description": "item:to"
+                },
+                {
+                    "label": "Ministry Page 1 Label",
+                    "type": "text",
+                    "value": "Men's Ministry",
+                    "order": 10,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Ministry Page 1 To",
+                    "type": "text",
+                    "value": "/mens-ministry",
+                    "order": 11,
+                    "description": "item:to"
+                },
+                {
+                    "label": "Ministry Page 2 Label",
+                    "type": "text",
+                    "value": "Women's Ministry",
+                    "order": 12,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Ministry Page 2 To",
+                    "type": "text",
+                    "value": "/womens-ministry",
+                    "order": 13,
+                    "description": "item:to"
                 },
                 {
                     "label": "Menu Link 1 Label",
                     "type": "text",
                     "value": "Home",
-                    "order": 4,
+                    "order": 14,
                     "description": "item:label"
                 },
                 {
                     "label": "Menu Link 1 To",
                     "type": "text",
                     "value": "/",
-                    "order": 5,
+                    "order": 15,
                     "description": "item:to"
                 },
                 {
                     "label": "Menu Link 2 Label",
                     "type": "text",
                     "value": "About Us",
-                    "order": 6,
+                    "order": 16,
                     "description": "item:label"
                 },
                 {
                     "label": "Menu Link 2 To",
                     "type": "text",
                     "value": "/about",
-                    "order": 7,
+                    "order": 17,
                     "description": "item:to"
                 },
                 {
                     "label": "Menu Link 3 Label",
                     "type": "text",
                     "value": "Ministries",
-                    "order": 8,
+                    "order": 18,
                     "description": "item:label"
                 },
                 {
                     "label": "Menu Link 3 To",
                     "type": "text",
                     "value": "/ministries",
-                    "order": 9,
+                    "order": 19,
                     "description": "item:to"
                 },
                 {
                     "label": "Menu Link 4 Label",
                     "type": "text",
                     "value": "Events",
-                    "order": 10,
+                    "order": 20,
                     "description": "item:label"
                 },
                 {
                     "label": "Menu Link 4 To",
                     "type": "text",
                     "value": "/events",
-                    "order": 11,
+                    "order": 21,
                     "description": "item:to"
                 },
                 {
                     "label": "Menu Link 5 Label",
                     "type": "text",
                     "value": "Sermons",
-                    "order": 12,
+                    "order": 22,
                     "description": "item:label"
                 },
                 {
                     "label": "Menu Link 5 To",
                     "type": "text",
                     "value": "/sermons",
-                    "order": 13,
+                    "order": 23,
                     "description": "item:to"
                 },
                 {
                     "label": "Menu Link 6 Label",
                     "type": "text",
                     "value": "Store",
-                    "order": 14,
+                    "order": 24,
                     "description": "item:label"
                 },
                 {
                     "label": "Menu Link 6 To",
                     "type": "text",
                     "value": "/store",
-                    "order": 15,
+                    "order": 25,
                     "description": "item:to"
                 },
                 {
                     "label": "Menu Link 7 Label",
                     "type": "text",
                     "value": "Contact Us",
-                    "order": 16,
+                    "order": 26,
                     "description": "item:label"
                 },
                 {
                     "label": "Menu Link 7 To",
                     "type": "text",
                     "value": "/contact",
-                    "order": 17,
+                    "order": 27,
                     "description": "item:to"
                 }
             ]

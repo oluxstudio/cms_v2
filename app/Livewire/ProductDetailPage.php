@@ -6,7 +6,6 @@ use App\Models\Product;
 use App\Models\Site;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 
 /**
  * Dedicated admin page for one product: full editing, inventory history,
@@ -15,8 +14,6 @@ use Livewire\WithFileUploads;
  */
 class ProductDetailPage extends Component
 {
-    use WithFileUploads;
-
     /** Order statuses that count as revenue. */
     private const PAID = ['paid', 'shipped', 'delivered', 'fulfilled'];
 
@@ -39,7 +36,8 @@ class ProductDetailPage extends Component
 
     public bool $is_active = true;
 
-    public $photo;
+    /** Product picture — a URL from the asset picker (or pasted). */
+    public string $imageUrl = '';
 
     public bool $showForm = false;
 
@@ -67,6 +65,8 @@ class ProductDetailPage extends Component
         $this->category = (string) ($p->category ?? '');
         $this->tagsInput = implode(', ', $p->tags ?? []);
         $this->is_active = $p->is_active;
+        // The field shows what is stored (an @media ref); legacy upload paths show as their URL.
+        $this->imageUrl = str_starts_with((string) $p->image, '@media/') ? (string) $p->image : (string) $p->image_url;
     }
 
     public function getCurrencyProperty(): string
@@ -84,7 +84,6 @@ class ProductDetailPage extends Component
     public function edit(): void
     {
         $this->fillForm();
-        $this->photo = null;
         $this->showForm = true;
     }
 
@@ -101,7 +100,7 @@ class ProductDetailPage extends Component
             'price' => ['required', 'numeric', 'min:0'],
             'inventory' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['boolean'],
-            'photo' => ['nullable', 'image', 'max:4096'],
+            'imageUrl' => ['nullable', 'string', 'max:2048'],
         ]);
 
         $data = [
@@ -114,9 +113,7 @@ class ProductDetailPage extends Component
             'category' => trim($this->category) !== '' ? trim($this->category) : null,
             'tags' => collect(explode(',', $this->tagsInput))->map(fn ($t) => trim($t))->filter()->unique()->values()->all() ?: null,
         ];
-        if ($this->photo) {
-            $data['image'] = $this->photo->store('products', 'public');
-        }
+        $data['image'] = trim($this->imageUrl) !== '' ? trim($this->imageUrl) : null;
 
         $old = $this->product->inventory;
         $this->product->update($data);
@@ -131,7 +128,6 @@ class ProductDetailPage extends Component
             ]);
         }
 
-        $this->photo = null;
         $this->product->refresh();
         $this->fillForm();
         $this->showForm = false;

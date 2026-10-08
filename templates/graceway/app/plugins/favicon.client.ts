@@ -31,7 +31,8 @@ export default defineNuxtPlugin(() => {
   watch(data, v => apply(v?.siteData?.icon), { immediate: true, deep: false })
 
   // 2. pristine template / direct deploys: fetch the published page.json ourselves
-  fetch(`${apiBase || window.location.origin}/api/v1/sites/${encodeURIComponent(site)}/pages/index.json`)
+  //    (a shared preview without ?site= names no site — keep the template's icon)
+  if (site) fetch(`${apiBase || window.location.origin}/api/v1/sites/${encodeURIComponent(site)}/pages/index.json`)
     .then(r => (r.ok ? r.json() : null))
     .then(b => apply(b?.siteData?.icon))
     .catch(() => { /* CMS unreachable — static favicon carries on */ })

@@ -447,6 +447,8 @@ class SiteProperties
             'tagline' => $v['tagline'] ?: null,
             'logo' => $abs($v['logo']),
             'logo_light' => $abs($v['logo_light']),
+            'logo_text' => ($v['logo_text'] ?? '') ?: null,
+            'logo_subtext' => ($v['logo_subtext'] ?? '') ?: null,
             'icon' => $abs($v['square_icon']),
             'icons' => array_map($abs, $icons),
             'share_image' => $abs($v['share_image']),

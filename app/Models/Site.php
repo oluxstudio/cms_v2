@@ -506,7 +506,8 @@ class Site extends Model
     /** Logo for branded output: the email-specific one, else the site's property logo. */
     public function brandLogo(): string
     {
-        return (string) ($this->getAttr('email.logo') ?: SiteProperties::imageUrl($this, SiteProperties::value($this, 'logo')));
+        // Mail clients need an absolute URL; @media refs resolve to the file's location.
+        return Media::resolveAbsolute($this->id, (string) ($this->getAttr('email.logo') ?: SiteProperties::value($this, 'logo')));
     }
 
     /** All attributes as a flat [key => value] array. */

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Media;
 use App\Models\Module;
 use App\Models\Site;
 use App\Services\TaskLogger;
@@ -57,7 +58,7 @@ class ModuleController extends Controller
             ->latest()
             ->limit(200)
             ->get(['id', 'data', 'created_at'])
-            ->map(fn ($i) => ['id' => $i->id, 'data' => $i->data, 'created_at' => $i->created_at?->toIso8601String()]);
+            ->map(fn ($i) => ['id' => $i->id, 'data' => Media::resolveDeep($i->site_id, $i->data ?? []), 'created_at' => $i->created_at?->toIso8601String()]);
 
         return response()->json([
             'fields' => FieldSchemaPresenter::fields($module->collection->fields ?? []),
@@ -72,7 +73,7 @@ class ModuleController extends Controller
 
         $item = $module->collection->items()->where('status', 'published')->findOrFail($id);
 
-        return response()->json(['id' => $item->id, 'data' => $item->data, 'created_at' => $item->created_at?->toIso8601String()]);
+        return response()->json(['id' => $item->id, 'data' => Media::resolveDeep($item->site_id, $item->data ?? []), 'created_at' => $item->created_at?->toIso8601String()]);
     }
 
     /** Create an entry (validated against the collection schema). */

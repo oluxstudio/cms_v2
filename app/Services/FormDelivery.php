@@ -75,6 +75,8 @@ class FormDelivery
                         $form->displayTitle().' form',
                         $fields,
                         route('site.forms.response', [$site->name, $response->id]),
+                        collect((array) ($form->fields ?? []))->filter(fn ($f) => filled($f['key'] ?? null))
+                            ->mapWithKeys(fn ($f) => [$f['key'] => (string) ($f['label'] ?? \Illuminate\Support\Str::headline($f['key']))])->all(),
                     ));
                 } catch (\Throwable $e) {
                     report($e);

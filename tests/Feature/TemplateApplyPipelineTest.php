@@ -3,6 +3,7 @@
 use App\Jobs\InstallTemplateJob;
 use App\Livewire\ConnectReviewPage;
 use App\Livewire\PageComponent;
+use App\Livewire\PlatformTemplatesPage;
 use App\Livewire\SiteTemplatesPage;
 use App\Models\CollectionItem;
 use App\Models\Contact;
@@ -12,14 +13,27 @@ use App\Models\Node;
 use App\Models\Post;
 use App\Models\Site;
 use App\Models\SiteAttribute;
+use App\Models\Template;
 use App\Models\Todo;
 use App\Models\User;
 use App\Services\InstallProgress;
 use App\Services\TemplateInstaller;
+use App\Services\TwoFactor;
 use App\Support\CuratedTemplates;
+use App\Templates\TemplateAppRegistry;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+
+/** Mark a first-party template's collections as "reset" (start empty on each site); [] = all of them. */
+function resetTemplateCollections(string $key, ?array $names = null): void
+{
+    $names ??= array_column((array) (TemplateAppRegistry::find($key)['manifest']['collections'] ?? []), 'name');
+    publishBuiltinTemplate($key)->update(['reset_collections' => $names]);
+}
+
+// Reset settings live on shared catalog rows — clear them so other tests see the defaults.
+afterEach(fn () => Template::whereIn('builtin_key', ['hairco', 'v2hairco', 'verita'])->update(['reset_collections' => null]));
 
 function pipelineSite(): array
 {
@@ -344,7 +358,8 @@ test('Add item in the preview clones a new row onto a node-based list', function
         ->and($target->nodes()->count())->toBe($before + $rowFields);
 });
 
-test('a fresh copy creates the template\'s collections EMPTY; adding/removing entries works by marker key', function () {
+test('a RESET collection starts empty, the others carry the template\'s entries; adding/removing entries works by marker key', function () {
+    resetTemplateCollections('hairco', ['About Points']);
     [$owner, $site] = pipelineSite();
     $installer = app(TemplateInstaller::class);
     $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
@@ -353,7 +368,11 @@ test('a fresh copy creates the template\'s collections EMPTY; adding/removing en
     expect($col)->not->toBeNull()
         ->and($col->is_public)->toBeTrue()
         ->and($col->fields)->not->toBeEmpty()          // the structure…
-        ->and($col->items()->count())->toBe(0);        // …but none of the template's entries
+        ->and($col->items()->count())->toBe(0);        // …reset: none of the template's entries
+
+    // Not reset → loads as in the template.
+    $templateServices = collect(TemplateAppRegistry::find('hairco')['manifest']['collections'])->firstWhere('name', 'Services');
+    expect($site->collections()->where('slug', 'services')->first()->items()->count())->toBe(count($templateServices['items']));
 
     // Public collections API serves it (the shell's items() source → falls back to the template samples).
     $this->getJson("/api/sites/{$site->name}/collections")->assertOk()
@@ -382,6 +401,7 @@ test('curated gallery cards carry the real manifest description after the regist
 });
 
 test('a fresh copy keeps pages, sections, layout, theme and form definitions — and none of the template\'s data', function () {
+    resetTemplateCollections('hairco');   // every collection reset → no template entries at all
     [$owner, $site] = pipelineSite();
     $installer = app(TemplateInstaller::class);
     $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
@@ -432,6 +452,8 @@ test('installing reports progress step by step, and the setup screen shows a pro
 });
 
 test('switching templates imports no template data or assets; the site keeps its own data and the new template uses it', function () {
+    resetTemplateCollections('hairco');
+    resetTemplateCollections('v2hairco');
     [$owner, $site] = pipelineSite();
     $installer = app(TemplateInstaller::class);
     $installer->apply($site, $installer->saveCuratedToSite($site, 'hairco'));
@@ -565,4 +587,45 @@ test('only the current template\'s pages, sections and forms are active; the oth
     Livewire\Livewire::actingAs($owner)->test(SiteTemplatesPage::class, ['site' => $site->fresh()])->call('stopUsing');
     expect($site->pages()->where('template_active', false)->count())->toBe(0)
         ->and($site->forms()->where('template_active', false)->count())->toBe(0);
+});
+
+test('template content loads only into collections that never held an entry — owner deletions never come back', function () {
+    resetTemplateCollections('hairco', ['Services']);
+    [$owner, $site] = pipelineSite();
+    $installer = app(TemplateInstaller::class);
+    $row = $installer->saveCuratedToSite($site, 'hairco');
+    $installer->apply($site, $row);
+
+    $team = $site->collections()->where('slug', 'team')->firstOrFail();
+    $loaded = $team->items()->count();
+    expect($loaded)->toBeGreaterThan(0)                                         // template content
+        ->and($site->collections()->where('slug', 'services')->first()->items()->count())->toBe(0); // reset
+
+    // The owner clears Team and edits Pricing; a re-apply / update changes neither.
+    $team->items()->get()->each->delete();
+    $pricing = $site->collections()->where('slug', 'pricing')->firstOrFail();
+    $first = $pricing->items()->orderBy('position')->first();
+    $first->update(['data' => ['title' => 'Owner price']]);
+    $pricingCount = $pricing->items()->count();
+
+    $installer->apply($site->fresh(), $row->fresh());
+    $installer->refreshAppliedSites('hairco');
+    expect($team->items()->count())->toBe(0)
+        ->and($pricing->items()->count())->toBe($pricingCount)
+        ->and($first->fresh()->data['title'])->toBe('Owner price');
+});
+
+test('Admin › Templates lists the template\'s collections and saves which ones reset', function () {
+    $tpl = publishBuiltinTemplate('hairco');
+    $super = User::factory()->create(['is_super' => true]);
+    app(TwoFactor::class)->issueSecret($super);
+    $super->forceFill(['two_factor_confirmed_at' => now(), 'two_factor_enabled' => true])->save();
+
+    Livewire\Livewire::actingAs($super->refresh())->test(PlatformTemplatesPage::class)
+        ->call('startEdit', $tpl->id)
+        ->assertSee('Collections when a site uses this template')->assertSee('About Points')
+        ->set('edit.reset_collections', ['About Points', 'Team', 'Not A Collection'])
+        ->call('saveEdit')->assertHasNoErrors();
+
+    expect($tpl->fresh()->reset_collections)->toBe(['About Points', 'Team']);   // unknown names dropped
 });

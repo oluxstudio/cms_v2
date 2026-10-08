@@ -30,7 +30,7 @@
             <a href="{{ url($site->name.'/store/'.$p->slug) }}" class="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                 <div class="aspect-square bg-gray-100">
                     @if($p->image)
-                        <img src="{{ Storage::url($p->image) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        <img src="{{ $p->image_url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                     @else
                         <div class="w-full h-full flex items-center justify-center text-5xl">🛍️</div>
                     @endif

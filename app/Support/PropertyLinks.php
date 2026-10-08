@@ -40,7 +40,11 @@ class PropertyLinks
      */
     public const PROPS = [
         'site_name' => ['keys' => ['site_name', 'business_name', 'brand', 'brand_name', 'company_name', 'organisation', 'organization', 'church_name'],
-            'profileKeys' => ['name'], 'labels' => ['site name', 'business name', 'brand', 'brand name', 'logo text', 'company name', 'church name']],
+            'profileKeys' => ['name'], 'labels' => ['site name', 'business name', 'brand', 'brand name', 'company name', 'church name']],
+        // The wordmark beside the logo image, and the small line under it (Site Profile logoText / logoSub).
+        // clearable: optional — emptying the property empties the template's copy too.
+        'logo_text' => ['keys' => ['logo_text', 'wordmark'], 'profileKeys' => ['logoText'], 'labels' => ['logo text', 'wordmark'], 'clearable' => true],
+        'logo_subtext' => ['keys' => ['logo_subtext', 'logo_sub'], 'profileKeys' => ['logoSub'], 'labels' => ['logo subtext', 'logo small line'], 'clearable' => true],
         'tagline' => ['keys' => ['tagline', 'slogan', 'strapline'], 'labels' => ['tagline', 'slogan', 'strapline']],
         'logo' => ['keys' => ['logo', 'logo_url', 'brand_logo', 'site_logo'], 'labels' => ['logo', 'site logo', 'logo image', 'brand logo']],
         'square_icon' => ['keys' => ['favicon', 'site_icon', 'favicon_url', 'app_icon'], 'labels' => ['favicon', 'site icon', 'app icon']],
@@ -73,6 +77,33 @@ class PropertyLinks
      *
      * @return array<string, list<array{kind: string, id: string, field: string, link: ?string, where: string, value: string}>>
      */
+    /**
+     * What the site SHOWS for each linked property: the stored value, else
+     * what the template's own content holds (the Properties page prefill).
+     * Pass as push()'s $old so clearing a prefilled value counts as a change.
+     */
+    public static function shown(Site $site, array $values, array $rows): array
+    {
+        $out = self::linkedValues($values, $rows);
+        foreach (self::fills($site, $out) as $prop => $fill) {
+            if (trim((string) ($out[$prop] ?? '')) === '') {
+                $out[$prop] = (string) $fill['value'];
+            }
+        }
+
+        return $out;
+    }
+
+    /** The linked properties as one map (phone = the first phone number, hours = the summary). */
+    public static function linkedValues(array $values, array $rows): array
+    {
+        $out = array_intersect_key($values, self::PROPS);
+        $out['phone'] = (string) ($rows['phones'][0]['value'] ?? '');
+        $out['hours'] = SiteTokens::hoursSummary($values);
+
+        return $out;
+    }
+
     public static function discover(Site $site): array
     {
         $out = array_fill_keys(array_keys(self::PROPS), []);
@@ -192,8 +223,15 @@ class PropertyLinks
 
         foreach (self::PROPS as $prop => $p) {
             $value = trim((string) ($new[$prop] ?? ''));
-            if ($value === '' || $value === trim((string) ($old[$prop] ?? ''))) {
-                continue; // unchanged or cleared — never blank out the template's content
+            $was = trim((string) ($old[$prop] ?? ''));
+            // Cleared: only optional (clearable) properties blank the template's
+            // copies — anything else keeps the template's content.
+            $clearing = $value === '' && $was !== '' && ! empty($p['clearable']);
+            if ($value === $was || ($value === '' && ! $clearing)) {
+                continue;
+            }
+            if ($clearing && $slots[$prop] === []) {
+                continue; // nothing to clear
             }
             $link = isset($p['link']) ? $p['link'].($p['link'] === 'tel:' || $p['link'] === 'https://wa.me/' ? preg_replace('/[^\d+]/', '', $value) : $value) : null;
 

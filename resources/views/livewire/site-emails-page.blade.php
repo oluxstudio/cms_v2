@@ -46,22 +46,16 @@
         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Logo — on every email</label>
         <div class="flex items-start gap-3">
             <div class="w-14 h-14 rounded-xl border border-gray-200 dark:border-white/[0.08] grid place-items-center overflow-hidden bg-gray-50 dark:bg-white/[0.04] shrink-0">
-                @if($logo)<img src="{{ $logo }}" alt="logo" class="max-w-full max-h-full object-contain">@else<span class="text-xs text-gray-400">None</span>@endif
+                @if($logo)<img src="{{ \App\Models\Media::resolveRef($site->id, $logo) }}" alt="logo" class="max-w-full max-h-full object-contain">@else<span class="text-xs text-gray-400">None</span>@endif
             </div>
             <div class="flex-1 min-w-0 space-y-2">
                 <x-asset-picker model="logo" :site="$site" type="image" placeholder="Logo URL, or pick from assets" />
                 <div class="flex items-center gap-3 flex-wrap">
-                    <label class="text-xs font-semibold cursor-pointer" style="color:var(--primary)">
-                        <span wire:loading.remove wire:target="logoUpload">⬆ Upload</span>
-                        <span wire:loading wire:target="logoUpload">Uploading…</span>
-                        <input type="file" wire:model="logoUpload" accept="image/*" class="hidden">
-                    </label>
                     <button wire:click="saveLogo" class="text-xs font-semibold text-gray-500 hover:underline">Save</button>
                     @if($logo)<button wire:click="removeLogo" class="text-xs font-semibold text-rose-500 hover:text-rose-600">Remove</button>@endif
                 </div>
             </div>
         </div>
-        @error('logoUpload')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
     </div>
     </x-slot:rail>
 

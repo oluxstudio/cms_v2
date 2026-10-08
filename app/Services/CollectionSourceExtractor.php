@@ -96,7 +96,9 @@ class CollectionSourceExtractor
         foreach ($scan as $entry) {
             $file = $entry['file'];
             $code = (string) File::get($file);
-            if (str_contains($code, 'useCms') || str_contains($code, '@olux-collection')) {
+            // `// @olux-rows`: the block's arrays are its OWN editable rows
+            // (e.g. a carousel's slides) — never auto-collections.
+            if (str_contains($code, 'useCms') || str_contains($code, '@olux-collection') || str_contains($code, '@olux-rows')) {
                 continue;
             }
             $section = $entry['kind'] === 'component'
@@ -319,12 +321,15 @@ class CollectionSourceExtractor
     }
 
     /** Field types a template may declare with @olux-field. */
-    public const DECLARED_TYPES = ['text', 'textarea', 'textarea2', 'textarea6', 'textarea10', 'textarea15', 'url', 'email', 'tel', 'number', 'date', 'select',
-        'checkbox', 'toggle', 'image', 'images', 'tags', 'list'];
+    public const DECLARED_TYPES = ['text', 'textarea', 'textarea2', 'textarea6', 'textarea10', 'textarea15', 'url', 'email', 'tel', 'number', 'date', 'datetime', 'select',
+        'checkbox', 'toggle', 'image', 'images', 'media', 'tags', 'list', 'rows', 'slug'];
 
     /**
      * `@olux-field <key> <type> [required] [options=a|b|c] [label="Shown label"] [auto=created_at]`
      *   auto=  a system-filled source (created_at, updated_at, created_by, number, …)
+     *   slug   a web-address slug built from other fields: `slug slug from=title+date`
+     *          (filled automatically, unique in the collection — see CollectionAutoFields)
+     *   was=   the field's previous key: installs rename it on existing sites, data included
      * lines from a collection's docblock → [key => partial field definition].
      *   images  a gallery (list of asset paths)    tags  a list of short words
      *   image   one asset                          textarea / url / number / date / select / …
@@ -335,23 +340,54 @@ class CollectionSourceExtractor
     {
         $out = [];
         // Type = letters then digits (textarea10, textarea2 …), so a size suffix is never split off.
-        preg_match_all('#@olux-field\s+([A-Za-z][\w-]*)\s+([a-z]+\d*)\b([^\n]*)#', $doc, $m, PREG_SET_ORDER);
+        // A dotted key ("media.type") declares a sub-field of a rows field.
+        preg_match_all('#@olux-field\s+([A-Za-z][\w-]*(?:\.[A-Za-z][\w-]*)?)\s+([a-z]+\d*)\b([^\n]*)#', $doc, $m, PREG_SET_ORDER);
+        $sub = [];
         foreach ($m as [$_, $key, $type, $rest]) {
             if (! in_array($type, self::DECLARED_TYPES, true)) {
                 continue;
             }
             $field = ['type' => $type, 'required' => (bool) preg_match('#\brequired\b#', $rest)];
+            // Kept out of the edit form (still stored and sent to the website).
+            if (preg_match('#\bhidden\b#', $rest)) {
+                $field['hidden'] = true;
+            }
+            // Shown only when a sibling field has one of these values: show=type:audio|video
+            if (preg_match('#\bshow=([A-Za-z][\w-]*):([^\s]+)#', $rest, $sm)) {
+                $field['show'] = ['field' => $sm[1], 'in' => array_values(array_filter(explode('|', $sm[2]), 'strlen'))];
+            }
             if (preg_match('#label="([^"]{1,60})"#', $rest, $lm)) {
                 $field['label'] = $lm[1];
             }
             if (preg_match('#options=([^\s]+)#', $rest, $om)) {
                 $field['options'] = array_values(array_filter(array_map('trim', explode('|', $om[1])), 'strlen'));
             }
-            // System-filled source (auto=created_at, auto=number, …) — see CollectionAutoFields.
-            if (preg_match('#auto=([\w:.-]+)#', $rest, $am) && CollectionAutoFields::valid($am[1])) {
+            if ($type === 'slug') {
+                // Built from other fields: from=title+date (default: the title).
+                $sources = preg_match('#\bfrom=([\w+-]+)#', $rest, $fm) ? explode('+', $fm[1]) : ['title'];
+                $field['auto'] = CollectionAutoFields::slugSource($sources) ?? 'slug:title';
+            } elseif (preg_match('#\bfrom=([\w:-]+)#', $rest, $fm) && ($from = \App\Support\CollectionFieldOptions::parseFrom($fm[1]))) {
+                // Choices from another collection: from=sermon-series:slug:name
+                $field['optionsFrom'] = $from;
+            }
+            // System-filled source (auto=created_at, auto=number, auto=slug:title+date …) — see CollectionAutoFields.
+            if (preg_match('#auto=([\w:.+-]+)#', $rest, $am) && CollectionAutoFields::valid($am[1])) {
                 $field['auto'] = $am[1];
             }
+            // Renamed field: was=id — existing sites move the old key's values here.
+            if (preg_match('#\bwas=([A-Za-z][\w-]*)#', $rest, $wm) && $wm[1] !== $key) {
+                $field['was'] = $wm[1];
+            }
+            if (str_contains($key, '.')) {
+                [$parent, $child] = explode('.', $key, 2);
+                $sub[$parent][] = ['key' => $child, 'label' => $field['label'] ?? Str::headline($child)] + $field;
+
+                continue;
+            }
             $out[$key] = $field;
+        }
+        foreach ($sub as $parent => $fields) {
+            $out[$parent] = ($out[$parent] ?? []) + ['subFields' => $fields];
         }
 
         return $out;
@@ -379,7 +415,9 @@ class CollectionSourceExtractor
             if ($samples->isNotEmpty()) {
                 $first = $samples->first();
                 if (array_is_list($first)) {
-                    $subKeys = is_array($first[0] ?? null) ? array_keys($first[0]) : [];
+                    // every sub key used by ANY row (image rows may lack a video's src)
+                    $subKeys = $samples->flatten(1)->filter(fn ($r) => is_array($r) && ! array_is_list($r))
+                        ->flatMap(fn ($r) => array_keys($r))->unique()->values()->all();
                     $fields[] = $subKeys === []
                         ? ['key' => $key, 'label' => Str::headline($key), 'type' => 'list']
                         : ['key' => $key, 'label' => Str::headline($key), 'type' => 'rows',
@@ -411,12 +449,31 @@ class CollectionSourceExtractor
         foreach ($declared as $key => $decl) {
             $at = collect($fields)->search(fn ($f) => $f['key'] === $key);
             $base = $at === false ? ['key' => $key, 'label' => Str::headline($key)] : $fields[$at];
+            $subFields = $decl['subFields'] ?? null;
+            unset($decl['subFields']);
             $field = array_merge(array_diff_key($base, array_flip(['fields', 'options'])), $decl, ['declared' => true]);
+            if ($subFields !== null) {
+                // declared sub-fields first (in declared order), then the inferred rest
+                $inferred = collect($base['fields'] ?? [])->keyBy('key');
+                $field['type'] = $decl['type'] ?? 'rows';
+                $field['fields'] = collect($subFields)->map(fn ($f) => $f + ($inferred[$f['key']] ?? []) + ['declared' => true])
+                    ->concat($inferred->except(collect($subFields)->pluck('key')->all())->values())
+                    ->values()->all();
+            } elseif (isset($base['fields']) && in_array($field['type'] ?? '', ['rows', 'group'], true)) {
+                $field['fields'] = $base['fields'];
+            }
             if ($at === false) {
                 $fields[] = $field;
             } else {
                 $fields[$at] = $field;
             }
+        }
+
+        // Declared fields lead, in declaration order (the template decides how
+        // its editor reads); everything inferred follows in source order.
+        if ($declared !== []) {
+            $order = array_flip(array_keys($declared));
+            usort($fields, fn ($a, $b) => [! isset($order[$a['key']]), $order[$a['key']] ?? 0] <=> [! isset($order[$b['key']]), $order[$b['key']] ?? 0]);
         }
 
         return [

@@ -25,7 +25,7 @@ const { sermonsHead } = useSiteContent()
             <span v-if="sermonSeriesOf(s)" class="series-badge">{{ sermonSeriesOf(s)!.name }}</span>
           </div>
           <div class="sermon-body">
-            <p class="meta">{{ s.date }}<template v-if="s.scripture"> · 📖 {{ s.scripture }}</template></p>
+            <p class="meta">{{ publishedOn(s.date) }}<template v-if="s.scripture"> · 📖 {{ s.scripture }}</template></p>
             <h3>{{ s.title }}</h3>
             <p class="preacher">🎙 {{ s.speaker }}</p>
             <p class="summary">{{ s.summary }}</p>

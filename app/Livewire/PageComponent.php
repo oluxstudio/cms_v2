@@ -5,10 +5,13 @@ namespace App\Livewire;
 use App\Livewire\Concerns\WithLayoutMode;
 use App\Livewire\Forms\PageForm;
 use App\Models\Page;
+use App\Models\PageAttribute;
 use App\Models\Site;
 use App\Services\TemplateInstaller;
 use App\Services\TemplateScaffolder;
 use App\Support\TemplateLayouts;
+use Illuminate\Support\Carbon;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class PageComponent extends Component
@@ -138,7 +141,7 @@ class PageComponent extends Component
     public function mount(Site $site): void
     {
         $this->site = $site;
-        $this->initLayout('pages', 'list');
+        $this->initLayout('pages', 'grid');
     }
 
     public function openPicker(string $pageId): void
@@ -196,28 +199,116 @@ class PageComponent extends Component
         }
     }
 
+    /** List filter: all | live | hidden | inactive | attention. */
+    #[Url(except: 'all')]
+    public string $filter = 'all';
+
+    /** List order: menu | name | updated | sections. */
+    #[Url(except: 'menu')]
+    public string $sort = 'menu';
+
+    private const FILTERS = ['all', 'live', 'hidden', 'inactive', 'attention'];
+
+    private const SORTS = ['menu', 'name', 'updated', 'sections'];
+
+    public function setFilter(string $filter): void
+    {
+        $this->filter = in_array($filter, self::FILTERS, true) ? $filter : 'all';
+    }
+
+    public function updatedSort(): void
+    {
+        if (! in_array($this->sort, self::SORTS, true)) {
+            $this->sort = 'menu';
+        }
+    }
+
+    public function resetFilters(): void
+    {
+        $this->reset(['search', 'filter', 'sort']);
+    }
+
     public function render()
     {
-        $pages = Page::where('site_id', $this->site->id)
-            ->when($this->search, fn ($q) => $q->where(function ($q) {
-                $q->where('name', 'like', '%'.$this->search.'%')
-                    ->orWhere('url', 'like', '%'.$this->search.'%')
-                    ->orWhere('keywords', 'like', '%'.$this->search.'%');
-            }))
-            ->latest()
+        // One query for every page + its section count/names, layout and the
+        // newest section edit; SEO descriptions in one more grouped read.
+        $all = Page::where('site_id', $this->site->id)
+            ->withCount(['components as sections_count' => fn ($q) => $q->where('page_component.active', true)])
+            ->withMax('components', 'updated_at')
+            ->with([
+                'activeComponents' => fn ($q) => $q->select('components.id', 'components.name'),
+                'blockLayout:id,name',
+            ])
             ->get();
 
-        $total = Page::where('site_id', $this->site->id)->count();
-        $thisWeek = Page::where('site_id', $this->site->id)
-            ->where('created_at', '>=', now()->startOfWeek())->count();
-        $avgKeywords = Page::where('site_id', $this->site->id)->get()
-            ->avg(fn ($p) => count(array_filter(explode(',', $p->keywords))));
+        $described = PageAttribute::whereIn('page_id', $all->pluck('id'))
+            ->where('key', 'description')
+            ->whereNotNull('value')->where('value', '!=', '')
+            ->pluck('page_id')->map(fn ($id) => (string) $id)->flip();
+
+        $all->each(function (Page $p) use ($described) {
+            $p->is_home = $p->url === '/';
+            // Builder internals: layout-region shadow pages and archived copies.
+            $p->is_system = str_starts_with((string) $p->url, '/_layout-') || str_starts_with((string) $p->url, '/_archived-');
+            $p->is_inactive = $p->template_active === false;
+            $p->is_live = ! $p->is_inactive && ! $p->is_system && (bool) $p->is_published;
+            $p->is_hidden = ! $p->is_inactive && ! $p->is_system && ! $p->is_published;
+            $p->in_nav = ! $p->is_inactive && ! $p->is_system;
+            $p->has_seo = isset($described[(string) $p->id]);
+            $p->is_empty = (int) $p->sections_count === 0;
+            $p->issues = ($p->is_inactive || $p->is_system) ? [] : array_values(array_filter([
+                $p->is_empty ? 'No sections' : null,
+                $p->has_seo ? null : 'No SEO description',
+            ]));
+            $p->needs_attention = $p->issues !== [];
+            $sectionEdit = $p->components_max_updated_at ? Carbon::parse($p->components_max_updated_at) : null;
+            $p->last_edited = $sectionEdit && $sectionEdit->gt($p->updated_at) ? $sectionEdit : $p->updated_at;
+        });
+
+        $needle = mb_strtolower(trim($this->search));
+        $pages = $all
+            ->when($needle !== '', fn ($c) => $c->filter(fn ($p) => str_contains(mb_strtolower($p->name.' '.$p->url.' '.$p->keywords), $needle)))
+            ->filter(fn ($p) => match ($this->filter) {
+                'live' => $p->is_live,
+                'hidden' => $p->is_hidden,
+                'inactive' => $p->is_inactive,
+                'attention' => $p->needs_attention,
+                default => true,
+            });
+        $pages = (match ($this->sort) {
+            'name' => $pages->sortBy(fn ($p) => mb_strtolower($p->name)),
+            'updated' => $pages->sortByDesc(fn ($p) => $p->last_edited?->getTimestamp() ?? 0),
+            'sections' => $pages->sortByDesc('sections_count'),
+            // Menu order = the site nav's order: home first, then as created.
+            default => $pages->sort(fn ($a, $b) => [(int) ! $a->is_home, (int) $a->is_system, $a->created_at?->getTimestamp() ?? 0, (string) $a->id]
+                <=> [(int) ! $b->is_home, (int) $b->is_system, $b->created_at?->getTimestamp() ?? 0, (string) $b->id]),
+        })->values();
+
+        $total = $all->count();
+        $real = $all->reject(fn ($p) => $p->is_system || $p->is_inactive);
+        $stats = [
+            'live' => $all->where('is_live', true)->count(),
+            'hidden' => $all->where('is_hidden', true)->count(),
+            'inactive' => $all->where('is_inactive', true)->count(),
+            'system' => $all->filter(fn ($p) => $p->is_system && ! $p->is_inactive)->count(),
+            'inNav' => $all->where('in_nav', true)->count(),
+            'noSeo' => $real->where('has_seo', false)->count(),
+            'empty' => $real->where('is_empty', true)->count(),
+            'attention' => $all->where('needs_attention', true)->count(),
+            'sections' => (int) $real->sum('sections_count'),
+            'avgSections' => $real->count() ? round($real->avg('sections_count'), 1) : 0,
+            'thisWeek' => $all->where('created_at', '>=', now()->startOfWeek())->count(),
+            'layouts' => $all->map(fn ($p) => $p->blockLayout?->name ?? 'Blank')->unique()->count(),
+            'attentionList' => $all->where('needs_attention', true)->values(),
+            'inactiveList' => $all->where('is_inactive', true)->values(),
+            'biggest' => $real->where('sections_count', '>', 0)->sortByDesc('sections_count')->take(5)->values(),
+            'recent' => $all->reject(fn ($p) => $p->is_system)->sortByDesc(fn ($p) => $p->last_edited?->getTimestamp() ?? 0)->take(4)->values(),
+        ];
 
         return view('livewire.page-component', [
             'pages' => $pages,
             'total' => $total,
-            'thisWeek' => $thisWeek,
-            'avgKeywords' => round($avgKeywords ?? 0),
+            'stats' => $stats,
         ]);
     }
 

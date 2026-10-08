@@ -21,7 +21,7 @@ class Template extends Model
     use HasUlids;
 
     protected $fillable = [
-        'uuid', 'user_id', 'creator_id', 'name', 'slug', 'description', 'short_description', 'category', 'tags', 'required_features', 'live_preview_url',
+        'uuid', 'user_id', 'creator_id', 'name', 'slug', 'description', 'short_description', 'category', 'tags', 'required_features', 'reset_collections', 'live_preview_url',
         'status', 'status_before_hide', 'visibility', 'price_cents', 'currency', 'source', 'builtin_key', 'source_repo', 'source_branch',
         'accent_color', 'gradient_class', 'thumbnail_url', 'latest_version_id',
         'installs_count', 'rating_avg', 'rating_count',
@@ -31,6 +31,7 @@ class Template extends Model
     protected $casts = [
         'tags' => 'array',
         'required_features' => 'array',
+        'reset_collections' => 'array',
         'published_at' => 'datetime',
         'submitted_at' => 'datetime',
         'rating_avg' => 'float',

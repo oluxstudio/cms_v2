@@ -15,8 +15,10 @@ const { contact } = useSiteContent()
 // info card grids are CMS collections; computed so connect-editor saves
 // re-render in place (useCms data is reactive)
 const info = computed(() => useContactInfo())
-// social platforms (RSS is broadcast-only)
-const socials = computed(() => useSiteContent().socials.filter(s => s.key !== 'zoom'))
+// social platforms whose `available` is true in the Socials collection
+const socials = computed(() => useSiteContent().socials.filter(s => s.available === true))
+console.log(socials);
+
 </script>
 
 <template>
@@ -41,7 +43,7 @@ const socials = computed(() => useSiteContent().socials.filter(s => s.key !== 'z
           </div>
 
           <!-- social media -->
-          <div class="ct-social">
+          <div v-if="socials.length" class="ct-social">
             <b data-olx-field="followLabel">{{ oluxCms.t('Follow Label', contact.followLabel) }}</b>
             <div class="ct-social-links" data-olx-panel="socials">
               <a

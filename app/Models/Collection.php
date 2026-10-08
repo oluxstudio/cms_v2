@@ -101,10 +101,9 @@ class Collection extends Model
             $items = $everything ? $this->items : $this->items->where('status', 'published')->values();
             $out['items'] = $items->map(fn (CollectionItem $i) => [
                 'id' => $i->id,
-                // @media/… refs in item fields resolve to served URLs.
-                'data' => collect($i->data ?? [])->map(fn ($v) => is_string($v) && str_starts_with($v, '@media/')
-                    ? Media::resolveRef($this->site_id, $v)
-                    : $v)->all(),
+                // @media/… refs anywhere in the entry (galleries and nested
+                // rows too) resolve to served URLs.
+                'data' => Media::resolveDeep($this->site_id, $i->data ?? []),
                 'status' => $i->status,
                 'created_at' => $i->created_at?->toIso8601String(),
             ])->values()->all();
@@ -120,7 +119,8 @@ class Collection extends Model
      * Per-block selections: blocks that read this collection with a saved
      * query (Edit page → "Items in this block") get the ids they show, keyed
      * by the block's slug ("Events Grid" → "events-grid", which templates
-     * derive from EventsGridBlock.vue). The full items list is unchanged.
+     * derive from EventsGridBlock.vue) and by its id ("#01h…", for blocks with
+     * one copy per page). The full items list is unchanged.
      *
      * @return array<string, array{block: string, ids: list<string>, query: array}>
      */
@@ -153,11 +153,15 @@ class Collection extends Model
             if ($q === []) {
                 continue;
             }
-            $views[Str::slug($c->name)] = [
+            $view = [
                 'block' => $c->name,
                 'ids' => CollectionQuery::apply($this, $q, $published)->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
                 'query' => $q,
             ];
+            $views[Str::slug($c->name)] = $view;
+            // also by the block's id: copies of one block on several pages (a per-page
+            // block like a ministry page's) each keep their own selection
+            $views['#'.$c->id] = $view;
         }
 
         return $views;

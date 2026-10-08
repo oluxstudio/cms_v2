@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const oluxCms = useOluxContent('page-hero-content')
 const oluxFb: Record<string, string> = {}
+// @olux-per-page — each page keeps its own copy of this block (its content is per route)
 // Self-contained page hero: the magenta banner + breadcrumbs + copy.
 // Content comes from useHeroCopy() by route (survives the CMS page rewrite,
 // which drops slots/props); a slot, when present, overrides the map copy.

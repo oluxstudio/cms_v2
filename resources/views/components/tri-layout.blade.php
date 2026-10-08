@@ -35,7 +35,10 @@
         </x-carousel.slide>
 
         {{-- CENTER: the page's essence --}}
-        <x-carousel.slide class="lg:flex-1 px-3 lg:px-5 pb-24 lg:pb-8 overflow-y-auto no-scrollbar main-body">
+        {{-- Every middle rail is capped at 56rem and centred (pages may cap narrower).
+             Applied to the slot's top-level elements — no wrapper, so h-full
+             centres (Messages) keep their height; fixed overlays are skipped. --}}
+        <x-carousel.slide class="lg:flex-1 px-3 lg:px-5 pb-24 lg:pb-8 overflow-y-auto no-scrollbar main-body [&>*:not(.fixed)]:mx-auto [&>*:not(.fixed)]:max-w-[56rem]">
             {{ $slot }}
         </x-carousel.slide>
 

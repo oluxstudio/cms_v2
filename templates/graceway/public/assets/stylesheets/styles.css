@@ -112,8 +112,17 @@ h3 { font-weight: 700; }
 .logo { font-family: var(--font-heading); font-weight: 800; font-size: 1.35rem; color: var(--color-secondary); display: flex; align-items: center; gap: .5rem; }
 .logo .mark { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffc46b, var(--color-primary)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 18%, transparent); }
 .logo .dot { color: var(--color-primary); }
-.logo .logo-img { width: 144px; height: 144px; object-fit: contain; }
+.logo .logo-img { width: 114px; height: 114px; object-fit: contain; }
 .site-nav { display: flex; gap: 2rem; margin: 0 auto; font-weight: 600; font-size: 1.25rem; color: #454e58; }
+.site-nav a, .header-cta .btn { white-space: nowrap; }
+/* a second logo in the header (Site Profile › Second logo): tighter header between the burger breakpoint and wide screens */
+@media (min-width: 1231px) and (max-width: 1500px) {
+  .site-header .container:has(.logo-second) { gap: 1.1rem; }
+  .site-header .container:has(.logo-second) .logo { font-size: 1.1rem; }
+  .site-header .container:has(.logo-second) .logo .logo-img { width: 100px; height: 100px; }
+  .site-header .container:has(.logo-second) .site-nav { gap: clamp(1rem, 1.5vw, 1.6rem); font-size: clamp(1.05rem, 1.45vw, 1.25rem); }
+  .site-header .container:has(.logo-second) .header-cta .btn { font-size: 1rem; padding-left: 1.1rem; padding-right: 1.1rem; }
+}
 .site-nav a:hover { color: var(--color-primary); }
 .site-nav a.active { color: var(--color-primary); }
 .header-cta { margin-left: auto; }
@@ -784,40 +793,75 @@ box-shadow: 0 0 10px -5px;
 .sermon .body { padding: 1.3rem 1.5rem 1.6rem; }
 .sermon .meta { font-size: .85rem; color: #8b949e; margin-bottom: .4rem; }
 
-/* ── Reusable event card: white rounded card, photo, tag chips, pill CTA ── */
-.event-card { background: #fff; border-radius: 24px; padding: 1.4rem; box-shadow: 0 18px 40px rgba(20, 24, 29, .1);
-  display: flex; flex-direction: column; gap: 1.2rem; }
-.event-card-img { border-radius: 18px; overflow: hidden; }
-.event-card-img img { width: 100%; height: 100%; aspect-ratio: 16 / 10; object-fit: cover; transition: transform .35s ease; }
-.event-card:hover .event-card-img img { transform: scale(1.04); }
-.event-card-body { display: flex; flex-direction: column; align-items: flex-start; gap: .6rem; }
-.event-card-body h3 { font-size: 1.4rem; }
-.event-card-body .desc { font-size: .95rem; color: #55606b; }
-.event-card .tags { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem; }
-.event-card .tags li { border: 1.5px solid var(--color-primary); color: var(--color-primary); font-weight: 600; font-size: .8rem;
-  padding: .22rem .95rem; border-radius: 999px; }
-.event-card-cta { display: block; width: 100%; margin-top: .6rem; text-align: center; background: var(--color-primary); color: #fff;
-  font-weight: 700; font-size: 1rem; padding: .8rem 1.5rem; border-radius: 999px; transition: background .2s, transform .15s; }
-.event-card-cta:hover { background: #d97e10; transform: translateY(-2px); }
-/* horizontal variant: image left, content right */
-.event-card.horizontal { flex-direction: row; align-items: center; }
-.event-card.horizontal .event-card-img { flex: 0 0 46%; }
-.event-card.horizontal .event-card-body { flex: 1; }
-@media (max-width: 720px) { .event-card.horizontal { flex-direction: column; } .event-card.horizontal .event-card-img { flex: none; width: 100%; } }
+/* ── Reusable event card: a poster (picture + date) over the essentials, "View Event" pill ── */
+.event-card { position: relative; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 18px 40px rgba(20, 24, 29, .1);
+  display: flex; flex-direction: column; transition: transform .25s ease, box-shadow .25s ease; }
+.event-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px rgba(20, 24, 29, .14); }
+.ec-poster { position: relative; display: block; aspect-ratio: 16 / 10; overflow: hidden; background: var(--color-secondary); }
+.ec-poster img { width: 100%; height: 100%; object-fit: cover; transition: transform .45s ease; }
+.event-card:hover .ec-poster img { transform: scale(1.05); }
+/* no picture: the page-hero look — primary into near-black, dotted */
+.ec-poster.is-plain { background:
+  radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .14) 1px, transparent 0) 0 0 / 18px 18px,
+  linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 35%, var(--color-secondary)) 70%, var(--color-secondary)); }
+.ec-poster-plain { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: .6rem;
+  color: #fff; text-align: center; padding: 1rem; }
+.ec-poster-plain .event-icon { opacity: .9; }
+.ec-poster-plain span { font-family: var(--font-heading); font-size: 1.15rem; letter-spacing: .04em; }
+.ec-date { position: absolute; top: .9rem; left: .9rem; display: grid; justify-items: center; gap: .2rem; min-width: 58px;
+  padding: .55rem .7rem .5rem; border-radius: 14px; background: #fff; color: var(--color-secondary); line-height: 1;
+  box-shadow: 0 8px 20px rgba(20, 24, 29, .18); }
+.ec-date b { font-family: var(--font-heading); font-size: 1.6rem; color: var(--color-primary); }
+.ec-date span { font-size: .7rem; font-weight: 800; letter-spacing: .14em; }
+.ec-countdown, .ec-featured { position: absolute; display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .75rem;
+  border-radius: 999px; font-size: .76rem; font-weight: 800; line-height: 1.3; box-shadow: 0 6px 16px rgba(20, 24, 29, .16); }
+.ec-countdown { top: .9rem; right: .9rem; background: var(--color-primary); color: #fff; }
+.ec-featured { bottom: .9rem; left: .9rem; background: #fff; color: var(--color-primary); }
+.ec-body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: .55rem; padding: 1.3rem 1.4rem 1.5rem; }
+.ec-type { font-size: .74rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--color-primary); line-height: 1.2; }
+.ec-body h3 { font-size: 1.4rem; line-height: 1.15; }
+.ec-body h3 a { color: inherit; }
+.ec-body h3 a:hover { color: var(--color-primary); }
+.ec-desc { font-size: .95rem; line-height: 1.6; color: #55606b; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ec-meta { list-style: none; padding: .75rem 0 0; margin: .15rem 0 0; width: 100%; display: grid; gap: .45rem; border-top: 1.5px dashed #ece5da; margin-bottom: .6rem; }
+.ec-meta li { display: flex; align-items: center; gap: .55rem; font-size: .9rem; font-weight: 600; line-height: 1.35; color: var(--color-secondary); }
+.ec-meta .event-icon { color: var(--color-primary); }
+.ec-cta { margin-top: auto; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; width: 100%;
+  background: var(--color-primary); color: #fff; font-weight: 700; font-size: 1rem; padding: .8rem 1.5rem; border-radius: 999px;
+  transition: background .2s, transform .15s; }
+.ec-cta:hover { background: color-mix(in srgb, var(--color-primary) 82%, #000); transform: translateY(-2px); }
+.ec-cta .event-icon { transition: transform .2s; }
+.ec-cta:hover .event-icon { transform: translateX(3px); }
+/* horizontal variant (the featured event): poster left, details right */
+.event-card.horizontal { display: grid; grid-template-columns: 1.15fr 1fr; }
+.event-card.horizontal .ec-poster { aspect-ratio: auto; min-height: 100%; }
+.event-card.horizontal .ec-poster img { position: absolute; inset: 0; }
+.event-card.horizontal .ec-body { padding: 2rem 2.2rem; justify-content: center; }
+.event-card.horizontal .ec-body h3 { font-size: 1.9rem; }
+.event-card.horizontal .ec-desc { -webkit-line-clamp: 4; line-clamp: 4; font-size: 1rem; }
+.event-card.horizontal .ec-cta { width: auto; margin-top: .4rem; }
+@media (max-width: 760px) {
+  .event-card.horizontal { grid-template-columns: 1fr; }
+  .event-card.horizontal .ec-poster { aspect-ratio: 16 / 10; min-height: 0; }
+  .event-card.horizontal .ec-body { padding: 1.3rem 1.4rem 1.5rem; }
+  .event-card.horizontal .ec-body h3 { font-size: 1.5rem; }
+  .event-card.horizontal .ec-cta { width: 100%; }
+}
 
 .events .featured { margin-bottom: 1.6rem; }
 
 /* Event carousel: 3-up desktop, 1-up mobile, horizontal scroll with snap */
 .event-carousel { position: relative; }
 .event-card-row { display: flex; gap: 1.6rem; overflow-x: auto; scroll-snap-type: x mandatory;
-  padding-bottom: 1rem; -webkit-overflow-scrolling: touch; scrollbar-color: var(--color-primary) #eceef1; scrollbar-width: thin; }
+  /* room for the cards' shadows (a scroller clips them), pulled back so the layout doesn't move */
+  padding: 1rem .5rem 3rem; margin: -1rem -.5rem -2rem; scroll-padding-left: .5rem; -webkit-overflow-scrolling: touch; scrollbar-color: var(--color-primary) #eceef1; scrollbar-width: thin; }
 .event-card-row::-webkit-scrollbar { height: 6px; }
 .event-card-row::-webkit-scrollbar-track { background: #eceef1; border-radius: 999px; }
 .event-card-row::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 999px; }
 .event-card-row .event-card { flex: 0 0 calc((100% - 3.2rem) / 3); scroll-snap-align: start; }
 /* right-edge fade hints that more cards continue off-screen */
 .event-carousel::after { content: ''; position: absolute; right: 0; top: 0; bottom: 1rem; width: 70px; pointer-events: none;
-  background: linear-gradient(to right, transparent, #fff); }
+  background: linear-gradient(to right, transparent, var(--color-bg)); }
 .carousel-hint { display: flex; align-items: center; justify-content: flex-end; gap: .4rem;
   font-size: .85rem; font-weight: 700; color: var(--color-primary); margin-top: .3rem; }
 .carousel-hint span { animation: hint-nudge 1.4s ease-in-out infinite; }
@@ -989,6 +1033,9 @@ label { font-size: .85rem; font-weight: 700; color: var(--color-secondary); disp
 .rsvp-btn:hover { background: var(--primary-soft); }
 .rsvp-btn.on { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
 .rsvp-count { font-size: .82rem; font-weight: 700; color: #55606b; }
+.yv-details { margin-left: auto; font-size: .85rem; font-weight: 700; color: var(--color-secondary); }
+.yv-details:hover { color: var(--color-primary); }
+.yv-empty { text-align: center; color: #55606b; margin: 1rem 0 2rem; }
 
 /* highlight reels */
 .yv-reel-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; max-width: 56rem; margin: 0 auto; }
@@ -1412,6 +1459,9 @@ a.ys-leader:hover .ys-leader-go { transform: translateX(3px); color: var(--color
 .sm-search { flex: 1; min-width: 220px; max-width: 420px; font: inherit; font-size: .92rem; padding: .6rem 1rem;
   border: 1.5px solid #d9d2c6; border-radius: 999px; background: #fff; outline: none; }
 .sm-search:focus { border-color: var(--color-primary); }
+/* the global `select { width: 100% }` would push each dropdown onto its own row */
+.sm-filters .gallery-sort { width: auto; flex: 0 0 auto; font-size: .92rem; padding: .6rem 2.2rem .6rem 1rem; border-radius: 999px; }
+@media (max-width: 560px) { .sm-search, .sm-filters .gallery-sort { flex: 1 1 100%; max-width: none; } }
 .sm-clear { font: inherit; font-size: .82rem; font-weight: 700; color: var(--color-primary); background: none; border: 0; cursor: pointer; }
 .sm-empty { text-align: center; padding: 3rem 0; color: #55606b; }
 .sm-empty button { font: inherit; color: var(--color-primary); font-weight: 700; background: none; border: 0; cursor: pointer; text-decoration: underline; }
@@ -1588,3 +1638,18 @@ a.ys-leader:hover .ys-leader-go { transform: translateX(3px); color: var(--color
 .hero-live { display: flex; align-items: center; gap: .6rem; margin-bottom: 1.7rem; font-weight: 700; font-size: .95rem; color: #f3e6d8; }
 .hero-live-dot { width: 10px; height: 10px; border-radius: 50%; background: #05ec3f; box-shadow: 0 0 0 4px rgba(4, 235, 81, 0.25); animation: hero-live-pulse 1.6s ease-in-out infinite; }
 @keyframes hero-live-pulse { 50% { box-shadow: 0 0 0 8px rgba(255, 77, 77, .08); } }
+
+/* sermon / study pages: the description above the media, uploaded video files */
+.sd-summary { font-size: 1.15rem; line-height: 1.6; color: #55606b; max-width: 760px; margin: 0 0 1.6rem; }
+.sd-media video { width: 100%; height: 100%; display: block; background: #000; border-radius: inherit; }
+.study-byline { font-size: .85rem; color: #8a929b; margin-top: .4rem; }
+
+/* ── Ministry page sidebar components (Ministry Leaders / Events / Verse / Prayer) ── */
+.ms-block:not(.ms-inline) { display: contents; }
+.ms-inline { padding: 0 0 3rem; }
+.ms-inline .ms-card { max-width: 420px; margin: 0 auto; }
+.ms-card { background: #fff; border-radius: 22px; padding: 1.5rem 1.4rem; box-shadow: 0 14px 34px rgba(20, 24, 29, .08); }
+.ms-title { font-family: var(--font-heading); font-size: 1.25rem; color: var(--color-secondary); margin-bottom: .9rem; }
+.ms-link { display: inline-flex; align-items: center; gap: .35rem; margin-top: .7rem; font-weight: 700; color: var(--color-primary); }
+.ms-empty { border: 2px dashed color-mix(in srgb, var(--color-primary) 45%, transparent); box-shadow: none; background: #fff; }
+.ms-empty-note { font-size: .9rem; line-height: 1.5; color: #8a929b; }

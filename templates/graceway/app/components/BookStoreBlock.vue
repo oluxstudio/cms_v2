@@ -11,13 +11,15 @@ const { bookStore } = useSiteContent()
 const authored: Book[] = bookStore.books
 
 const books = ref<Book[]>(authored)
+// the site being shown (its domain, or ?site=… in a CMS preview) — never a default
 const apiBase = () => {
-  const pub: any = (useRuntimeConfig() as any).public || {}
-  return { base: pub.bookingApiBase || window.location.origin, site: pub.cmsSite || 'graceway' }
+  const { site, apiBase: base } = useOluxSite()
+  return { base: base || window.location.origin, site }
 }
 onMounted(async () => {
   try {
     const { base, site } = apiBase()
+    if (!site) return // template preview: the sample books
     const res = await fetch(`${base}/api/sites/${encodeURIComponent(site)}/products`)
     if (!res.ok) return
     const body = await res.json()

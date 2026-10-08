@@ -4,6 +4,62 @@
 export type HeroCopy = { eyebrow: string; title: string; text: string; crumbs: { label: string; to?: string }[] }
 
 export const useHeroCopy = (): Record<string, HeroCopy> => ({
+  "/mens-ministry": {
+    "eyebrow": "Ministries",
+    "title": "Men's Ministry",
+    "text": "Brothers growing in faith together — breakfasts, Bible study and serving side by side.",
+    "crumbs": [
+      {
+        "label": "Ministries",
+        "to": "/ministries"
+      },
+      {
+        "label": "Men's Ministry"
+      }
+    ]
+  },
+  "/womens-ministry": {
+    "eyebrow": "Ministries",
+    "title": "Women's Ministry",
+    "text": "Women of every age and season encouraging one another, studying the Word and serving together.",
+    "crumbs": [
+      {
+        "label": "Ministries",
+        "to": "/ministries"
+      },
+      {
+        "label": "Women's Ministry"
+      }
+    ]
+  },
+  "/leadership": {
+    "eyebrow": "About Us",
+    "title": "Our Leadership",
+    "text": "The pastors and ministry leaders who serve, teach and shepherd our church family.",
+    "crumbs": [
+      {
+        "label": "About Us",
+        "to": "/about"
+      },
+      {
+        "label": "Leadership"
+      }
+    ]
+  },
+  "/announcements": {
+    "eyebrow": "About Us",
+    "title": "Announcements",
+    "text": "Church news, notices and what is coming up — the latest from CAC Blackburn.",
+    "crumbs": [
+      {
+        "label": "About Us",
+        "to": "/about"
+      },
+      {
+        "label": "Announcements"
+      }
+    ]
+  },
   "/event-archive": {
     "eyebrow": "Events",
     "title": "Event Archive",
@@ -19,13 +75,13 @@ export const useHeroCopy = (): Record<string, HeroCopy> => ({
     ]
   },
   "/media-ministry": {
-    "eyebrow": "Ministries",
+    "eyebrow": "About Us",
     "title": "Media & Broadcast",
     "text": "Cameras, sound and livestreams \u2014 carrying every service to those worshipping from home.",
     "crumbs": [
       {
-        "label": "Ministries",
-        "to": "/ministries"
+        "label": "About Us",
+        "to": "/about"
       },
       {
         "label": "Media & Broadcast"
@@ -165,13 +221,13 @@ export const useHeroCopy = (): Record<string, HeroCopy> => ({
     ]
   },
   "/prayer": {
-    "eyebrow": "Ministries",
+    "eyebrow": "About Us",
     "title": "Prayer Ministry",
     "text": "Intercessors praying for the church, the city and every request received \u2014 join the Wednesday 6 AM watch or pray from home.",
     "crumbs": [
       {
-        "label": "Ministries",
-        "to": "/ministries"
+        "label": "About Us",
+        "to": "/about"
       },
       {
         "label": "Prayer"

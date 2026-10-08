@@ -6,6 +6,7 @@ use App\Models\Page;
 use App\Models\Post;
 use App\Models\Site;
 use App\Models\Visit;
+use Illuminate\Support\Carbon;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -27,7 +28,7 @@ class PageDetailPage extends Component
 
     public Page $page;
 
-    /** edit | meta */
+    /** edit | meta | sources */
     #[Url(as: 'tab')]
     public string $tab = 'edit';
 
@@ -65,7 +66,8 @@ class PageDetailPage extends Component
         abort_unless($page->site_id === $site->id, 404);
         $this->site = $site;
         $this->page = $page;
-        if (! in_array($this->tab, ['edit', 'meta', 'content', 'sources'], true)) {
+        // The old Content tab moved to the Edit site page ("Edit content").
+        if (! in_array($this->tab, ['edit', 'meta', 'sources'], true)) {
             $this->tab = 'edit';
         }
         $this->fill_();
@@ -97,7 +99,7 @@ class PageDetailPage extends Component
 
     public function setTab(string $tab): void
     {
-        $this->tab = in_array($tab, ['edit', 'meta', 'content', 'sources'], true) ? $tab : 'edit';
+        $this->tab = in_array($tab, ['edit', 'meta', 'sources'], true) ? $tab : 'edit';
         if ($this->tab === 'sources') {
             $this->fillSources();
         }
@@ -212,19 +214,49 @@ class PageDetailPage extends Component
         $this->successMessage = 'Content sources saved.';
     }
 
-    /** Summary tiles for the Content tab's left rail. */
+    /** Everything the three rails show about this page. */
     public function getSummaryProperty(): array
     {
         $components = $this->page->activeComponents()->withCount('nodes')->get();
+        $path = rtrim($this->page->url, '/') ?: '/';
+        $visits = fn ($from, $to) => Visit::forSite($this->site->id)->humans()
+            ->where('path', $path)->where('created_at', '>=', $from)->where('created_at', '<', $to)->count();
+        $cfg = json_decode((string) $this->page->getAttr('content_sources'), true) ?: [];
+        $lastSection = $components->max('updated_at');
 
         return [
             'components' => $components->count(),
             'fields' => (int) $components->sum('nodes_count'),
-            'visits_30d' => Visit::forSite($this->site->id)->humans()
-                ->where('created_at', '>=', now()->subDays(30))
-                ->where('path', rtrim($this->page->url, '/') ?: '/')
-                ->count(),
-            'updated' => $this->page->updated_at,
+            'sections' => $components->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'fields' => (int) $c->nodes_count])->values()->all(),
+            'visits_30d' => $visits(now()->subDays(30), now()->addMinute()),
+            'visits_prev' => $visits(now()->subDays(60), now()->subDays(30)),
+            'updated' => collect([$this->page->updated_at, $lastSection ? Carbon::parse($lastSection) : null])->filter()->max(),
+            'sources' => $this->page->collections()->count()
+                + (int) (bool) ($cfg['posts']['enabled'] ?? false)
+                + (int) (bool) ($cfg['products']['enabled'] ?? false),
+            'collections' => $this->page->collections()->orderBy('name')->get(['collections.id', 'collections.name']),
+            'layout' => $this->page->blockLayout?->name,
+            'inactive' => $this->page->template_active === false,
+        ];
+    }
+
+    /**
+     * SEO checklist for the right rail — each check: [label, ok, hint].
+     *
+     * @return list<array{0:string,1:bool,2:string}>
+     */
+    public function getSeoChecksProperty(): array
+    {
+        $attrs = $this->page->attrMap();
+        $desc = trim((string) ($attrs['description'] ?? ''));
+        $len = mb_strlen($desc);
+
+        return [
+            ['Meta title', trim((string) ($attrs['title'] ?? '')) !== '', 'Falls back to the page name — a custom title ranks better.'],
+            ['Meta description', $len >= 50 && $len <= 160, $len === 0 ? 'Missing — search engines will guess a snippet.' : $len.' characters — aim for 50–160.'],
+            ['Social image', trim((string) ($attrs['og_image'] ?? '')) !== '', 'Shown when the link is shared on WhatsApp, Facebook…'],
+            ['Keywords', trim((string) $this->page->keywords) !== '', 'Helps on-site search and your own organisation.'],
+            ['Indexable', ! str_contains((string) ($attrs['robots'] ?? ''), 'noindex'), 'Robots is set to noindex — the page is hidden from search.'],
         ];
     }
 

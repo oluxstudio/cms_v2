@@ -1,0 +1,37 @@
+{
+    "name": "Announcements",
+    "url": "/announcements",
+    "layout": "default",
+    "keywords": "announcements",
+    "attributes": {
+        "title": "Announcements \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "perPage": true,
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:announcements-list",
+            "name": "Announcements List",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "All",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Text B",
+                    "type": "text",
+                    "value": "No announcements right now \u2014 check back soon.",
+                    "order": 1,
+                    "description": "text"
+                }
+            ]
+        }
+    ]
+}

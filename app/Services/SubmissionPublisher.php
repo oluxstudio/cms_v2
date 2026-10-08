@@ -350,9 +350,9 @@ class SubmissionPublisher
             || str_contains((string) ($c['description'] ?? ''), 'components read it live');
         foreach (['collections', 'forms'] as $k) {
             $fresh = collect((array) ($manifest[$k] ?? []));
-            $kept = collect((array) ($carried[$k] ?? []))
-                ->reject(fn ($c) => $wasExtracted($c)
-                    && $fresh->contains(fn ($f) => strtolower((string) ($f['name'] ?? '')) === strtolower((string) ($c['name'] ?? ''))));
+            // Previously EXTRACTED entries all give way to this extraction — one the
+            // author removed from the sources is gone, not carried on forever.
+            $kept = collect((array) ($carried[$k] ?? []))->reject(fn ($c) => $wasExtracted($c));
             $merged = $kept->concat($fresh)
                 ->unique(fn ($c) => strtolower((string) ($c['name'] ?? '')))
                 ->values()->all();
@@ -414,9 +414,10 @@ class SubmissionPublisher
         // every scaffolded site is branded with ITS name (logo, hero, copyright).
         $brand = $this->manifestName ?? null;
 
-        return [
+        return array_filter([
             'type' => "app:{$templateKey}:{$block['blockKey']}",
             'name' => $block['name'],
+            'perPage' => ! empty($block['perPage']) ? true : null,
             'nodes' => array_map(fn ($n) => [
                 'label' => $n['label'],
                 'type' => $n['type'],
@@ -428,7 +429,7 @@ class SubmissionPublisher
                 // so the canvas preview can rank fields by meaning.
                 'description' => $n['kind'] ?? '',
             ], $block['nodes']),
-        ];
+        ], fn ($v) => $v !== null);
     }
 
     /** One pages/{slug}.json — CONTENT blocks only; chrome lives in the layout. */

@@ -25,7 +25,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <div class="aspect-square rounded-2xl bg-gray-100 overflow-hidden">
                 @if($product->image)
-                    <img src="{{ Storage::url($product->image) }}" class="w-full h-full object-cover">
+                    <img src="{{ $product->image_url }}" class="w-full h-full object-cover">
                 @else
                     <div class="w-full h-full flex items-center justify-center text-6xl">🛍️</div>
                 @endif

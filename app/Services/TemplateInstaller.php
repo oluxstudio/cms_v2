@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\InstallTemplateJob;
+use App\Models\Collection;
 use App\Models\Component;
 use App\Models\Node;
 use App\Models\Site;
@@ -202,10 +203,12 @@ class TemplateInstaller
         $appKey = $this->resolveAppKey($row);
         $progress = new InstallProgress($site);
 
-        // A FRESH copy: pages, their sections + sample text, the header/footer
-        // layout, theme, forms (definitions) and empty collections. Never the
-        // template's data — no collection entries, posts, products, booking
-        // services, assets, contacts, tasks or messages.
+        // A copy of the TEMPLATE: pages, their sections + sample text, the
+        // header/footer layout, theme, forms (definitions) and its collections —
+        // those marked "reset" (Admin › Templates: e.g. Bible Studies, Sermons)
+        // start empty, the rest carry the template's entries. Never the
+        // template's posts, products, booking services, assets, contacts, tasks
+        // or messages.
 
         // 1. Content: pages + components (skips existing URLs — safe re-apply).
         $contract = $row->toContract();
@@ -215,6 +218,12 @@ class TemplateInstaller
             $this->scaffolder->applyPages($site, $pages,
                 fn (int $done, string $name) => $progress->step('pages', 'Creating “'.$name.'” and its sections', $done, count($pages)),
                 topUp: $refresh);
+        }
+
+        // Pages a template update just added are published straight away, or the
+        // live site's menu links to pages it cannot load yet.
+        if ($refresh) {
+            $this->publishNewPages($site);
         }
 
         // 1a. Chrome: the layout's header/nav + footer blocks wrap every page
@@ -255,9 +264,9 @@ class TemplateInstaller
         //     already has (e.g. from its previous template) is REUSED with its
         //     entries; only missing ones are created, empty. Collections the
         //     new template doesn't use are left alone and still served.
-        $progress->step('collections', 'Creating empty collections');
+        $progress->step('collections', 'Setting up collections');
         $manifest = TemplateAppRegistry::find($appKey)['manifest'] ?? [];
-        $this->applyCollections($site, (array) ($manifest['collections'] ?? $row->payload['collections'] ?? []), $refresh);
+        $this->applyCollections($site, (array) ($manifest['collections'] ?? $row->payload['collections'] ?? []), $refresh, $this->resetCollections($row, $appKey));
 
         // 3a1b. Wire components to the collection that feeds them (static scan
         //       of the published app) — the connect editor then shows the
@@ -381,6 +390,24 @@ class TemplateInstaller
     }
 
     /**
+     * Publish the site's never-published pages (no page.json yet) — only on a
+     * site that already publishes, so nothing goes out on a site that never
+     * has; a page never published holds no owner drafts to leak.
+     */
+    public function publishNewPages(Site $site): int
+    {
+        if (! $site->pages()->whereNotNull('page_json_path')->exists()) {
+            return 0;
+        }
+        $pages = $site->pages()->whereNull('page_json_path')->where('is_published', true)->where('template_active', true)->get();
+        foreach ($pages as $page) {
+            app(\App\Services\SiteConnect\PageJsonPublisher::class)->publish($page);
+        }
+
+        return $pages->count();
+    }
+
+    /**
      * Re-run the (idempotent) install on every site whose APPLIED design
      * renders with this template key — new pages/blocks/chrome/collections/
      * forms/services/assets appear, owner content is never touched. Used by
@@ -415,7 +442,37 @@ class TemplateInstaller
      * Matched by name — the site's existing collections (and their data) are
      * kept and their declared field types synced; missing ones are created empty.
      */
-    private function applyCollections(Site $site, array $collections, bool $refresh = false): void
+    /**
+     * The template's collections that RESET for each site (start empty — the
+     * site's own data), as set in Admin › Templates › Edit. Lower-cased names.
+     *
+     * @return list<string>
+     */
+    private function resetCollections(SiteTemplate $row, string $appKey): array
+    {
+        $tpl = $row->template_id ? Template::find($row->template_id) : null;
+        $tpl ??= Template::where('builtin_key', $appKey)->orWhere('slug', $appKey)->first();
+
+        return array_map(fn ($n) => mb_strtolower(trim((string) $n)), (array) ($tpl?->reset_collections ?? []));
+    }
+
+    /**
+     * Template content: a collection that is NOT reset gets the template's
+     * entries — but only while it has never held any (soft-deleted ones count),
+     * so nothing the owner removed comes back and their own entries are never touched.
+     */
+    private function seedTemplateEntries(Collection $col, array $def, array $reset): void
+    {
+        if (in_array(mb_strtolower($col->name), $reset, true) || empty($def['items'])
+            || $col->items()->withTrashed()->exists()) {
+            return;
+        }
+        foreach (array_values((array) $def['items']) as $i => $data) {
+            $col->items()->create(['site_id' => $col->site_id, 'data' => (array) $data, 'position' => $i, 'status' => 'published']);
+        }
+    }
+
+    private function applyCollections(Site $site, array $collections, bool $refresh = false, array $reset = []): void
     {
         foreach ($collections as $def) {
             if (empty($def['name'])) {
@@ -423,15 +480,22 @@ class TemplateInstaller
             }
             $existing = $site->collections()->where('name', $def['name'])->first();
             if ($existing && ! $refresh) {
-                continue; // the site's collection — its fields and entries are the owner's
+                // The site's collection — its fields and entries are the owner's;
+                // a never-used one still gets the template's content.
+                $this->seedTemplateEntries($existing, $def, $reset);
+
+                continue;
             }
             if ($existing) {
+                // Fields the template renamed (@olux-field … was=old) — key and values move first.
+                $this->renameDeclaredFields($existing, $def);
+                $existing->refresh();
                 // Template gained fields → merge them in additively so the
                 // editor renders the new keys (owner fields/order untouched).
                 $have = collect($existing->fields ?? [])->pluck('key')->filter()->all();
                 $missing = collect((array) ($def['fields'] ?? []))
                     ->map(fn ($f) => ['key' => $f['key'] ?? $f['name'] ?? '', 'name' => $f['key'] ?? $f['name'] ?? '',
-                        'label' => $f['label'] ?? ucfirst((string) ($f['key'] ?? '')), 'type' => $f['type'] ?? 'text'] + array_intersect_key($f, array_flip(['fields', 'options', 'required', 'auto'])))
+                        'label' => $f['label'] ?? ucfirst((string) ($f['key'] ?? '')), 'type' => $f['type'] ?? 'text'] + array_intersect_key($f, array_flip(['fields', 'options', 'required', 'auto', 'hidden', 'show', 'optionsFrom'])))
                     ->filter(fn ($f) => $f['key'] !== '' && ! in_array($f['key'], $have, true))
                     ->values()->all();
                 // Fields the template DECLARES (@olux-field) keep their type,
@@ -455,17 +519,35 @@ class TemplateInstaller
                     // A declared system source (auto=created_at) is template intent; an
                     // owner-set source on a field the template leaves manual stays.
                     isset($d['auto']) ? $f['auto'] = $d['auto'] : null;
+                    // Declared visibility and conditions follow the template.
+                    ! empty($d['hidden']) ? $f['hidden'] = true : null;
+                    isset($d['show']) ? $f['show'] = $d['show'] : null;
+                    if (isset($d['optionsFrom'])) {
+                        $f['optionsFrom'] = $d['optionsFrom'];
+                        unset($f['options']); // choices come from that collection, not a fixed list
+                    }
+                    // A declared rows/group schema (typed sub-fields) replaces the guessed one.
+                    if (! empty($d['fields']) && collect($d['fields'])->contains(fn ($s) => ! empty($s['declared']))) {
+                        $f['fields'] = $d['fields'];
+                    }
 
                     return $f;
                 })->all();
                 if ($missing !== [] || $synced !== (array) $existing->fields) {
                     $oldAuto = CollectionAutoFields::autoFields($existing);
+                    $oldTypes = collect((array) $existing->fields)->mapWithKeys(fn ($f) => [(string) ($f['key'] ?? '') => $f['type'] ?? 'text']);
                     $existing->update(['fields' => array_merge($synced, $missing)]);
+                    // A field whose type changed: stored values follow ("yes" → on for a toggle, "12" → 12).
+                    $retyped = collect($synced)->filter(fn ($f) => isset($oldTypes[$f['key'] ?? '']) && $oldTypes[$f['key']] !== ($f['type'] ?? 'text'))->values()->all();
+                    if ($retyped !== []) {
+                        \App\Support\CollectionFieldShape::coerceEntries($existing, $retyped);
+                    }
                     // Fields that just got a system source are filled on the existing entries.
                     if (CollectionAutoFields::autoFields($existing) !== $oldAuto) {
                         CollectionAutoFields::backfill($existing->fresh());
                     }
                 }
+                $this->seedTemplateEntries($existing->fresh(), $def, $reset);
 
                 continue;
             }
@@ -478,11 +560,71 @@ class TemplateInstaller
                     'name' => $f['key'] ?? $f['name'] ?? '',
                     'label' => $f['label'] ?? ucfirst((string) ($f['key'] ?? '')),
                     'type' => $f['type'] ?? 'text',
-                ] + array_intersect_key($f, array_flip(['fields', 'options', 'required', 'auto'])))->filter(fn ($f) => $f['key'] !== '')->values()->all(),
+                ] + array_intersect_key($f, array_flip(['fields', 'options', 'required', 'auto', 'hidden', 'show', 'optionsFrom'])))->filter(fn ($f) => $f['key'] !== '')->values()->all(),
                 'is_public' => true,
             ]);
-            // Fresh copy: the collection's fields only — never the template's sample
-            // entries. Until the owner adds some, the template shows its built-in samples.
+            // Reset collections start empty (the site's own data); the rest load
+            // with the template's entries, as in its preview.
+            $this->seedTemplateEntries($col, $def, $reset);
+        }
+    }
+
+    /**
+     * `@olux-field slug slug was=id`: the site's `id` field becomes `slug` —
+     * same place in the form, the template's definition — and every entry's
+     * value moves with it (kept where the new key already has a value).
+     */
+    private function renameDeclaredFields(\App\Models\Collection $collection, array $def): void
+    {
+        $fields = (array) ($collection->fields ?? []);
+        $keys = collect($fields)->pluck('key')->filter()->all();
+        $moves = [];
+        foreach ((array) ($def['fields'] ?? []) as $d) {
+            $new = (string) ($d['key'] ?? '');
+            $was = (string) ($d['was'] ?? '');
+            if ($new === '' || $was === '' || ! in_array($was, $keys, true)) {
+                continue;
+            }
+            if (in_array($new, $keys, true)) {
+                // Both keys exist (e.g. an earlier update added the new one alongside):
+                // rename only while no entry holds a value under the new key.
+                $used = $collection->items()->withTrashed()->get()->contains(fn ($i) => ! in_array(data_get($i->data, $new), [null, '', []], true));
+                if ($used) {
+                    continue;
+                }
+                $fields = array_values(array_filter($fields, fn ($f) => ($f['key'] ?? '') !== $new));
+            }
+            foreach ($fields as $i => $f) {
+                if (($f['key'] ?? '') === $was) {
+                    $fields[$i] = ['key' => $new, 'name' => $new, 'label' => $d['label'] ?? \Illuminate\Support\Str::headline($new), 'type' => $d['type'] ?? 'text']
+                        + array_intersect_key($d, array_flip(['fields', 'options', 'required', 'auto', 'hidden', 'show', 'optionsFrom']));
+                }
+            }
+            $moves[$was] = $new;
+        }
+        if ($moves === []) {
+            return;
+        }
+        $collection->update(['fields' => $fields]);
+        $collection->items()->withTrashed()->get()->each(function ($item) use ($moves) {
+            $data = (array) ($item->data ?? []);
+            foreach ($moves as $was => $new) {
+                if (! array_key_exists($was, $data)) {
+                    continue;
+                }
+                if (($data[$new] ?? '') === '' || ($data[$new] ?? null) === null) {
+                    $data[$new] = $data[$was];
+                }
+                unset($data[$was]);
+            }
+            if ($data !== $item->data) {
+                $item->data = $data;
+                $item->saveQuietly();
+            }
+        });
+        // A renamed field that is system-filled (a slug) is filled on every entry now.
+        if (collect($fields)->contains(fn ($f) => in_array($f['key'] ?? '', $moves, true) && CollectionAutoFields::valid($f['auto'] ?? null))) {
+            CollectionAutoFields::backfill($collection->fresh());
         }
     }
 

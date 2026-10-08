@@ -10,7 +10,10 @@
 <div class="rounded-lg border border-gray-100 dark:border-white/[0.06] p-2" wire:key="node-{{ $node['id'] ?? 'new-'.$i }}"
      data-node-field="{{ \Illuminate\Support\Str::camel(\Illuminate\Support\Str::slug($node['label'])) }}">
     <div class="flex items-center gap-1.5">
-        @if (empty($node['id']))
+        @if (! empty($rowField))
+            {{-- one field of a repeatable row: the row card names the row --}}
+            <span class="flex-1 text-[11px] text-gray-400">{{ $rowField }} <span class="opacity-60">({{ $node['type'] }})</span></span>
+        @elseif (empty($node['id']))
             <input wire:model="edit.nodes.{{ $i }}.label" class="olx-in !mt-0" placeholder="Field label">
             {{-- .live so switching type immediately swaps the input (asset picker / collection link) --}}
             <select wire:model.live="edit.nodes.{{ $i }}.type" class="olx-in !mt-0 !w-24">
@@ -21,7 +24,7 @@
         @else
             <span class="flex-1 text-[11px] text-gray-400" @if ($def && ($def['display'] ?? null)) title="{{ $node['label'] }}" @endif>{{ ($def['repeaterRow'] ?? false) ? $node['label'] : ($def['display'] ?? $node['label']) }} @unless ($def)<span class="opacity-60">({{ $node['type'] }})</span>@endunless</span>
         @endif
-        @unless ($builtIn)
+        @unless ($builtIn || ! empty($rowField))
             <button wire:click="removeNode({{ $i }})" class="text-[11px] text-rose-500 shrink-0">Remove</button>
         @endunless
     </div>

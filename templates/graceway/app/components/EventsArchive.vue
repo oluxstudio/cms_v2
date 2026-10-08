@@ -3,15 +3,9 @@ const oluxCms = useOluxContent('events-archive')
 const oluxFb: Record<string, string> = {}
 // Past-events gallery — everything before today, newest first, from the
 // global events data source (CMS "Events" collection overrides at runtime).
-const { events: authoredEvents, eventsArchive } = useSiteContent()
-const rows = computed(() => {
-  const cms = (useCms().items('events', []) as any[]).filter(e => e.title && e.img)
-  return (cms.length || useCms().isSite) ? cms : authoredEvents
-})
-const now = new Date().toISOString()
-const past = computed(() => rows.value
-  .filter(e => (e.date ?? '') && e.date < now)
-  .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')))
+const { eventsArchive } = useSiteContent()
+// past events only, newest first — upcoming ones are on the events page
+const past = computed(() => pastEvents(useEventRows()))
 
 const when = (iso: string) => {
   const d = new Date(iso)
@@ -39,7 +33,8 @@ const when = (iso: string) => {
           :to="`/event-archive/${e.id}`" :aria-label="`View ${e.title}`"
         >
           <div class="eva-photo">
-            <img :src="e.img" :alt="e.title" loading="lazy">
+            <img v-if="e.img" :src="e.img" :alt="e.title" loading="lazy">
+            <span v-else class="eva-noimg" aria-hidden="true">{{ new Date(e.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) }}</span>
             <span class="eva-date">📅 {{ when(e.date) }}</span>
           </div>
           <div class="eva-body">
@@ -72,6 +67,9 @@ const when = (iso: string) => {
 
 .eva-photo { position: relative; }
 .eva-photo img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; }
+/* events without an image: a primary-tinted tile with the date */
+.eva-noimg { display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 10; background: var(--primary-soft);
+  color: var(--color-primary); font-family: var(--font-heading); font-size: 2rem; }
 .eva-date { position: absolute; left: .8rem; bottom: .8rem; background: var(--color-primary); color: #fff;
   font-size: .78rem; font-weight: 700; padding: .4rem .8rem; border-radius: 999px; }
 

@@ -86,6 +86,34 @@ export default defineNuxtPlugin(() => {
       outline:2px dashed rgba(99,102,241,.8);outline-offset:2px;cursor:pointer;border-radius:6px}
     [data-olx-item].olx-item-active{outline:3px solid var(--olx-primary,#6366f1) !important;outline-offset:2px;border-radius:6px}
     .olx-item-x:hover{background:#e38704;color:#fff}
+    /* COLLECTION sections (data-olx-kind="collection" hosts and data-olx-panel
+       grids) stay highlighted the whole time: a tinted fill (inset shadow —
+       paints under the content, never changes layout), a solid edge and a
+       corner badge saying the list takes items. */
+    .olx-coll{outline:2px dashed color-mix(in srgb, var(--olx-primary,#6366f1) 70%, transparent) !important;outline-offset:-2px;
+      box-shadow:inset 0 0 0 100vmax color-mix(in srgb, var(--olx-primary,#6366f1) 8%, transparent) !important;border-radius:8px}
+    .olx-coll:hover{box-shadow:inset 0 0 0 100vmax color-mix(in srgb, var(--olx-primary,#6366f1) 14%, transparent) !important}
+    .olx-coll-rel{position:relative}
+    .olx-coll-tag{position:absolute;bottom:6px;right:6px;z-index:2147483001;display:flex;align-items:center;gap:6px;
+      padding:4px 4px 4px 10px;border-radius:999px;background:#fff;color:#1f2937;
+      box-shadow:0 2px 10px rgba(0,0,0,.18);font:600 11px/1 system-ui,sans-serif;white-space:nowrap;
+      grid-column:auto;flex-basis:auto;width:max-content;max-width:calc(100% - 12px)}
+    .olx-coll-tag span{overflow:hidden;text-overflow:ellipsis}
+    .olx-coll-tag i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--olx-primary,#6366f1)}
+    .olx-coll-tag em{font-style:normal;font-weight:500;color:#6b7280}
+    .olx-coll-tag button{border:0;border-radius:999px;padding:6px 10px;cursor:pointer;
+      background:var(--olx-primary,#6366f1);color:#fff;font:700 11px/1 system-ui,sans-serif}
+    .olx-coll-tag button:hover{filter:brightness(1.1)}
+    /* Empty list: an in-place card where the first entry will appear. */
+    .olx-coll-empty{grid-column:1/-1;flex-basis:100%;width:100%;box-sizing:border-box;min-height:140px;margin:8px 0;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px 16px;
+      border:2px dashed color-mix(in srgb, var(--olx-primary,#6366f1) 60%, transparent);border-radius:12px;
+      background:color-mix(in srgb, var(--olx-primary,#6366f1) 10%, #fff);color:#374151;cursor:pointer;
+      font:500 13px/1.4 system-ui,sans-serif;text-align:center}
+    .olx-coll-empty:hover{background:color-mix(in srgb, var(--olx-primary,#6366f1) 18%, #fff)}
+    .olx-coll-empty b{font-size:15px;color:#111827}
+    .olx-coll-empty .olx-coll-plus{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      background:var(--olx-primary,#6366f1);color:#fff;font:700 20px/1 system-ui}
   `
   document.head.appendChild(style)
 
@@ -171,13 +199,89 @@ export default defineNuxtPlugin(() => {
     } catch { /* content not loaded yet */ }
     return []
   }
+  const addItem = (key: string) => post({ type: 'olx-item-add', id: null, key, componentKey: null, field: null })
+  const listName = (key: string) => key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  // Highlight every collection section: tint + corner badge with an always-
+  // visible "＋ Add" button, and an in-place "add the first one" card while
+  // the list is empty (a freshly reset collection renders nothing otherwise).
+  let fetchedSlugs: Set<string> | null = null
+  let slugFetch = false
+  const collectionSlugs = (): Set<string> | null => {
+    try {
+      const list = useState<any>('olux-content-data').value?.collections
+      if (Array.isArray(list) && list.length) return new Set(list.map((c: any) => String(c?.slug ?? '')))
+    } catch { /* content not loaded yet */ }
+    // Live-app templates read collections through their own composables —
+    // ask the content API once for the site's collection slugs.
+    if (!slugFetch) {
+      slugFetch = true
+      const site = new URLSearchParams(window.location.search).get('site')
+      if (site) {
+        fetch(`/api/sites/${encodeURIComponent(site)}/content`, { cache: 'no-store' })
+          .then((r) => r.ok ? r.json() : null)
+          .then((d) => { if (Array.isArray(d?.collections)) fetchedSlugs = new Set(d.collections.map((c: any) => String(c?.slug ?? ''))) })
+          .catch(() => { /* no panel highlights without the slug list */ })
+      }
+    }
+    return fetchedSlugs
+  }
+  const decorateCollections = () => {
+    // Panels also mark plain sections (data-olx-panel="donate-cta") — only
+    // those naming a real collection are lists that take items.
+    const slugs = collectionSlugs()
+    const hosts = [...document.querySelectorAll('[data-olx-kind="collection"][data-olx-key], [data-olx-panel], [olx-panel]')] as HTMLElement[]
+    hosts.forEach((host) => {
+      if (host.hasAttribute('data-olx-item')) return // the row IS the panel — rows aren't lists
+      if (host.parentElement?.closest('.olx-coll')) return // nested inside an already-marked list
+      if (inFixedChrome(host)) return // navbars must not gain badges/placeholders
+      const key = host.getAttribute('data-olx-panel') || host.getAttribute('olx-panel') || host.getAttribute('data-olx-key') || ''
+      if (!key) return
+      const isList = host.getAttribute('data-olx-kind') === 'collection'
+      if (!isList && (!slugs || !slugs.has(key))) return
+      host.classList.add('olx-coll')
+      if (getComputedStyle(host).position === 'static') host.classList.add('olx-coll-rel')
+
+      if (!host.querySelector(':scope > .olx-coll-tag')) {
+        const tag = document.createElement('div')
+        tag.className = 'olx-coll-tag'
+        tag.setAttribute('contenteditable', 'false')
+        const label = document.createElement('span')
+        label.innerHTML = `<i></i>${listName(key)} <em>· click an item to edit</em>`
+        const btn = document.createElement('button')
+        btn.type = 'button'
+        btn.className = 'olx-coll-add'
+        btn.textContent = '＋ Add item'
+        btn.title = `Add a new item to ${listName(key)}`
+        btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); addItem(key) })
+        tag.append(label, btn)
+        host.appendChild(tag)
+      }
+
+      const empty = host.querySelector(':scope > .olx-coll-empty')
+      // Empty = no rows AND nothing rendered (a single-record list may show
+      // its fields without row markers).
+      const hasItems = host.querySelector('[data-olx-item]') !== null || textOf(host) !== ''
+      if (hasItems && empty) empty.remove()
+      if (!hasItems && !empty) {
+        const card = document.createElement('div')
+        card.className = 'olx-coll-empty'
+        card.setAttribute('contenteditable', 'false')
+        card.innerHTML = `<span class="olx-coll-plus">＋</span><b>No ${listName(key)} yet</b><span>Click here to add the first item — it appears on this page once saved.</span>`
+        card.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); addItem(key) })
+        host.insertBefore(card, host.querySelector(':scope > .olx-coll-tag'))
+      }
+    })
+  }
+
   const injectAdders = () => {
+    decorateCollections()
     // Marked COLLECTIONS (data-olx-kind="collection" + data-olx-item rows):
     // add via the CMS collection machinery; ✕ removes a row by position.
     document.querySelectorAll('[data-olx-kind="collection"][data-olx-key]').forEach((el) => {
       const host = el as HTMLElement
       const key = host.getAttribute('data-olx-key') || ''
-      if (!host.querySelector('.olx-add-item')) {
+      // Decorated lists carry their add button in the corner badge.
+      if (!host.classList.contains('olx-coll') && !host.querySelector('.olx-add-item')) {
         const btn = document.createElement('button')
         // ALWAYS a float overlay: an in-flow button changes the block's height
         // and the whole page drifts from the original (hero left the topbar).
@@ -234,7 +338,7 @@ export default defineNuxtPlugin(() => {
   // never leak into saved content or empty-checks. (Same rule as connect.js.)
   const textOf = (el: HTMLElement): string => {
     const c = el.cloneNode(true) as HTMLElement
-    c.querySelectorAll('.olx-item-x, .olx-add-item').forEach((n) => n.remove())
+    c.querySelectorAll('.olx-item-x, .olx-add-item, .olx-coll-tag, .olx-coll-empty').forEach((n) => n.remove())
     return (c.textContent || '').trim()
   }
 
@@ -515,7 +619,7 @@ export default defineNuxtPlugin(() => {
 
   document.addEventListener('click', (e) => {
     if (!(e.target instanceof Element)) return
-    if (e.target.closest('.olx-add-item, .olx-item-x')) return // our buttons handle themselves
+    if (e.target.closest('.olx-add-item, .olx-item-x, .olx-coll-tag, .olx-coll-empty')) return // our controls handle themselves
     if (e.target.closest('.olx-link-pop')) return // link editor handles itself
 
     // Unmarked interactive elements (hamburger menus, accordions, tabs,
@@ -576,6 +680,8 @@ export default defineNuxtPlugin(() => {
         itemIndex: pIndex,
         itemText: rowText(pRow),
         field: (e.target as Element).closest('[data-olx-field]')?.getAttribute('data-olx-field') || null,
+        // data-olx-fields="logo,logo_text": open only these fields of the panel
+        fields: panelHost.getAttribute('data-olx-fields') || null,
       })
       return
     }

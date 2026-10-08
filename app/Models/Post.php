@@ -52,9 +52,7 @@ class Post extends Model
             'title' => $this->title,
             'slug' => $this->slug,
             'excerpt' => $this->excerpt,
-            'cover_image' => str_starts_with((string) $this->cover_image, '@media/')
-                ? Media::resolveRef($this->site_id, (string) $this->cover_image)
-                : $this->cover_image,
+            'cover_image' => Media::resolveRef($this->site_id, (string) $this->cover_image) ?: null,
             'category' => $this->category,
             'tags' => $this->tags ?? [],
             'author' => $this->author?->name,
@@ -67,7 +65,7 @@ class Post extends Model
         ];
 
         if ($withBody) {
-            $out['body'] = (string) $this->body;
+            $out['body'] = Media::resolveHtml($this->site_id, $this->body);
         }
 
         if ($withComments) {

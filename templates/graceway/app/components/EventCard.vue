@@ -1,106 +1,81 @@
 <script setup lang="ts">
+// An event's poster: the picture (or a themed panel when there is none) with
+// the date on it, then the type, title, a short summary and the essentials —
+// when, where, entry. Everything else lives on the event's own page (`to`).
 const props = withDefaults(defineProps<{
   title: string
-  text: string
-  img: string
-  tags?: string[]
+  text?: string
+  img?: string
+  /** ISO datetime — the date badge and a live countdown */
+  date?: string
+  location?: string
+  price?: number
+  seatsLeft?: number | ''
+  ministry?: string
+  featured?: boolean
+  /** the event's own page */
   to?: string
   cta?: string
-  /** true = image left / content right; false = stacked */
+  /** true = poster left / details right (the featured event) */
   horizontal?: boolean
-  /** true = CTA is a button emitting `select` instead of a link */
-  reservable?: boolean
-  /** ISO datetime of the event — renders a live countdown chip */
-  date?: string
+  // the rest of an event row — accepted so v-bind="event" adds no stray attributes
+  id?: string
+  slug?: string
+  tags?: string[]
+  speakers?: string[]
+  guests?: string[]
+  media?: unknown[]
+  mediaLayout?: string
 }>(), {
-  tags: () => [],
-  to: '/contact',
-  cta: 'Get Ticket',
+  text: '',
+  img: '',
+  to: '/events',
+  cta: 'View Event',
   horizontal: false,
-  reservable: false,
 })
-
-const emit = defineEmits<{ select: [] }>()
 
 // live countdown — ticks once a minute; hides itself once the event has started
 const now = ref(Date.now())
 let tick: ReturnType<typeof setInterval> | undefined
 onMounted(() => { tick = setInterval(() => { now.value = Date.now() }, 60_000) })
 onUnmounted(() => clearInterval(tick))
-// prominent event date + time, stacked vertically on the card
-const when = computed(() => {
-  if (!props.date) return null
-  const d = new Date(props.date)
-  if (Number.isNaN(d.getTime())) return null
-  return {
-    day: d.toLocaleDateString('en-GB', { day: 'numeric' }),
-    month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(),
-    time: d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase(),
-  }
-})
 
-const countdown = computed(() => {
-  if (!props.date) return null
-  const diff = new Date(props.date).getTime() - now.value
-  if (Number.isNaN(diff) || diff <= 0) return null
-  const mins = Math.floor(diff / 60_000)
-  const days = Math.floor(mins / 1440)
-  const hours = Math.floor((mins % 1440) / 60)
-  if (days > 0) return `${days}d ${hours}h to go`
-  if (hours > 0) return `${hours}h ${mins % 60}m to go`
-  return `${mins}m to go`
+const badge = computed(() => eventBadge(props.date))
+const countdown = computed(() => eventCountdown(props.date, now.value))
+const when = computed(() => [eventDayLabel(props.date, 'short'), eventTimeLabel(props.date)].filter(Boolean).join(' · '))
+const place = computed(() => eventPlace(props.location))
+const entry = computed(() => {
+  const seats = props.seatsLeft === '' || props.seatsLeft === undefined ? '' : ` · ${props.seatsLeft} seats left`
+  return eventPriceLabel(props.price) + (countdown.value ? seats : '')
 })
+const broken = ref(false)
 </script>
 
 <template>
   <article class="event-card" :class="{ horizontal }">
-    <!-- <div class="event-card-img"><img :src="img" :alt="title"></div> -->
-    <div class="event-card-body">
-      <!-- header row: date/time stacked on the left · countdown on the right -->
-      <div v-if="when || countdown" class="event-when">
-        <p v-if="when" class="event-date">
-          <b>{{ when.day }}</b>
-          <span>{{ when.month }}</span>
-          <small>{{ when.time }}</small>
-        </p>
-        <span v-if="countdown" class="event-countdown" aria-label="Time until the event">⏳ {{ countdown }}</span>
-      </div>
-      <h3>{{ title }}</h3>
-      <p class="desc">{{ text }}</p>
-      <ul v-if="tags.length" class="tags">
-        <li v-for="t in tags" :key="t">{{ t }}</li>
+    <NuxtLink :to="to" class="ec-poster" :class="{ 'is-plain': !img || broken }" tabindex="-1" aria-hidden="true">
+      <img v-if="img && !broken" :src="img" :alt="title" loading="lazy" @error="broken = true">
+      <span v-else class="ec-poster-plain">
+        <EventIcon name="calendar" :size="horizontal ? 64 : 46" />
+        <span>{{ eventTypeLabel(ministry) }}</span>
+      </span>
+      <span v-if="badge" class="ec-date">
+        <b>{{ badge.day }}</b><span>{{ badge.month }}</span>
+      </span>
+      <span v-if="countdown" class="ec-countdown">{{ countdown }}</span>
+      <span v-if="featured && horizontal" class="ec-featured"><EventIcon name="star" :size="13" /> Featured</span>
+    </NuxtLink>
+
+    <div class="ec-body">
+      <p class="ec-type">{{ eventTypeLabel(ministry) }}</p>
+      <h3><NuxtLink :to="to">{{ title }}</NuxtLink></h3>
+      <p v-if="text" class="ec-desc">{{ text }}</p>
+      <ul class="ec-meta">
+        <li v-if="when"><EventIcon name="clock" :size="17" />{{ when }}</li>
+        <li v-if="place"><EventIcon name="pin" :size="17" />{{ place }}</li>
+        <li><EventIcon name="ticket" :size="17" />{{ entry }}</li>
       </ul>
-      <button v-if="props.reservable" class="event-card-cta" type="button" @click="emit('select')">{{ cta }}</button>
-      <NuxtLink v-else class="event-card-cta" :to="to">{{ cta }}</NuxtLink>
+      <NuxtLink class="ec-cta" :to="to">{{ cta }} <EventIcon name="arrow" :size="18" /></NuxtLink>
     </div>
   </article>
 </template>
-
-<style scoped>
-.event-when {
-  /* the card body uses align-items:flex-start — stretch so space-between works */
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: .8rem;
-  margin-bottom: .5rem;
-}
-.event-date {
-  display: grid;
-  justify-items: center;
-  gap: .3rem;
-  min-width: 64px;
-  background: var(--color-primary);
-  color: #fff;
-  line-height: 1;
-  padding: .65rem .8rem .55rem;
-  border-radius: 12px;
-  margin: 0;
-  text-align: center;
-}
-.event-date b { font-size: 1.5rem; font-weight: 800; }
-.event-date span { font-size: .72rem; font-weight: 700; letter-spacing: .12em; }
-.event-date small { font-size: .66rem; opacity: .85; }
-.event-when .event-countdown { margin: 0; flex: none; }
-</style>

@@ -97,7 +97,7 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
               <div class="body">
                 <p class="eyebrow">{{ s.featured ? 'Featured sermon' : 'Latest sermon' }}</p>
                 <h2>{{ s.title }}</h2>
-                <p class="meta">🎙 {{ s.speaker }} · {{ s.date }}<template v-if="sermonSeriesOf(s)"> · {{ sermonSeriesOf(s)!.name }}</template></p>
+                <p class="meta">🎙 {{ s.speaker }} · {{ publishedOn(s.date) }}<template v-if="sermonSeriesOf(s)"> · {{ sermonSeriesOf(s)!.name }}</template></p>
                 <p class="sum">{{ s.summary }}</p>
                 <span class="btn">{{ ctaFor(s) }}</span>
               </div>
@@ -143,18 +143,20 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
     <section class="sm-list">
       <div class="container">
         <div class="sm-filters">
-          <input v-model="q" type="search" class="sm-search" placeholder="Search title, summary or scripture…" aria-label="Search sermons">
-          <select v-model="speaker" class="gallery-sort" aria-label="Filter by speaker">
-            <option v-for="sp in speakers" :key="sp" :value="sp">{{ sp }}</option>
-          </select>
-          <select v-model="media" class="gallery-sort" aria-label="Filter by media type">
-            <option value="">All media</option>
-            <option value="video">▶ Video</option>
-            <option value="audio">🎧 Audio</option>
-            <option value="text">✍ Text</option>
-          </select>
-          <button data-olx-field="text" v-if="hasFilters" type="button" class="sm-clear" @click="clearFilters">{{ oluxCms.t('Text', oluxFb['Text']) }}</button>
-        </div>
+			<input v-model="q" type="search" class="sm-search" placeholder="Search title, summary or scripture…" aria-label="Search sermons">
+			<div>
+				<select v-model="speaker" class="gallery-sort" aria-label="Filter by speaker">
+					<option v-for="sp in speakers" :key="sp" :value="sp">{{ sp }}</option>
+				</select>
+				<select v-model="media" class="gallery-sort" aria-label="Filter by media type">
+					<option value="">All media</option>
+					<option value="video">▶ Video</option>
+					<option value="audio">🎧 Audio</option>
+					<option value="text">✍ Text</option>
+				</select>
+				<button data-olx-field="text" v-if="hasFilters" type="button" class="sm-clear" @click="clearFilters">{{ oluxCms.t('Text', oluxFb['Text']) }}</button>
+			</div>
+		</div>
 
         <div v-if="!shown.length" class="sm-empty">
           <p data-olx-field="textB" v-if="hasFilters" v-html="oluxCms.t('Text B', oluxFb['Text B'])"></p>
@@ -168,7 +170,7 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
               <span v-if="sermonSeriesOf(s)" class="series-badge">{{ sermonSeriesOf(s)!.name }}</span>
             </div>
             <div class="sermon-body">
-              <p class="meta">{{ s.date }}</p>
+              <p class="meta">{{ publishedOn(s.date) }}</p>
               <h3>{{ s.title }}</h3>
               <p class="preacher">🎙 {{ s.speaker }}</p>
               <p class="summary">{{ s.summary }}</p>
@@ -205,7 +207,7 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
             <img :src="sermonThumb(s)" :alt="s.title">
             <span>
               <b>{{ s.title }}</b>
-              <small>🎙 {{ s.speaker }} · {{ s.date }}</small>
+              <small>🎙 {{ s.speaker }} · {{ publishedOn(s.date) }}</small>
             </span>
           </NuxtLink>
         </div>
@@ -264,11 +266,11 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
   background: rgba(255, 255, 255, .55); transition: background .2s, transform .2s; }
 .smf-dots button.on { background: var(--color-primary); transform: scale(1.25); }
 
-.sm-layout { display: grid; grid-template-columns: 1fr 320px; gap: 2.5rem; align-items: start; }
+.sm-layout { display: grid; grid-template-columns: 1fr 320px; gap: 2.5rem; align-items: start; margin-top: 20px; }
 .sm-main { min-width: 0; }
 .sm-main .container { max-width: none; padding: 0; }
 
-.sm-side { display: grid; gap: 1.8rem; position: sticky; top: 1.5rem; }
+.sm-side { display: grid; gap: 1.8rem; position: sticky; top: 9.5rem; }
 .sms-card { background: #fff; border-radius: 20px; padding: 1.6rem; box-shadow: 0 14px 32px rgba(20, 24, 29, .08); }
 .sms-card h3 { font-size: 1.15rem; color: var(--color-secondary); margin-bottom: .7rem; }
 .sms-card > p { font-size: 17px; color: #55606b; line-height: 1.6; margin-bottom: 1rem; }
@@ -284,7 +286,7 @@ const seriesCount = (slug: string) => sermons.filter(s => s.seriesSlug === slug)
 .sms-row small { font-size: .85rem; color: #55606b; }
 .sms-row:hover b { color: var(--color-primary); }
 
-.sms-filter { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left;
+.sms-filter { display: flex; justify-content: space-between; justify-content: space-between; align-items: center; width: 100%; text-align: left;
   font: inherit; font-size: 17px; font-weight: 600; color: #55606b; background: none; border: 0; cursor: pointer;
   padding: .55rem .2rem; border-bottom: 1px solid #f1ece3; }
 .sms-filter:last-child { border-bottom: 0; }

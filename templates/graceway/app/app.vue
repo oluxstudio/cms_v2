@@ -6,7 +6,7 @@
     <!-- pages mount only once the CMS payload is in, so setup-time reads of
          useSiteContent()/useMembers() capture CMS values, not authored seeds -->
     <NuxtLayout v-if="!booting">
-      <NuxtPage />
+      <NuxtPage :page-key="(r: any) => `${r.fullPath}#${rev}`" />
     </NuxtLayout>
   </div>
 </template>
@@ -28,5 +28,21 @@ onMounted(() => {
   const { ready } = useCms()
   watchEffect(() => { if (loaded.value && ready.value) booting.value = false })
   setTimeout(() => { booting.value = false }, 8000) // CMS down — show the site anyway
+
+  // Connect editor: collection edits re-render the page in place. Composables
+  // read collection rows at component setup, so remount the current page once
+  // fresh rows are in — keeping the scroll position — and tell the editor it
+  // needn't reload the preview frame.
+  window.addEventListener('olux:collections-updated', () => {
+    const y = window.scrollY
+    rev.value++
+    nextTick(() => requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior })))
+  })
+  if (window.parent !== window) {
+    window.parent.postMessage({ source: 'olx-connect', type: 'olx-live-collections' }, '*')
+  }
 })
+
+// bumped to remount the page after the CMS collections change
+const rev = ref(0)
 </script>

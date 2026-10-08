@@ -207,6 +207,21 @@ it('auto-detects unmarked content arrays it can safely wire', function () {
         ->and($byName['Faqs']['definition']['items'])->toHaveCount(3);
 });
 
+it('leaves a block\'s own rows alone when it is marked @olux-rows', function () {
+    $dir = fixtureApp().'-rows-tmp';
+    File::deleteDirectory($dir);
+    File::copyDirectory(fixtureApp(), $dir);
+
+    try {
+        $file = "$dir/app/components/NoticeGrid.vue";
+        File::put($file, str_replace('<script setup lang="ts">', "<script setup lang=\"ts\">\n// @olux-rows", File::get($file)));
+        $names = collect(app(CollectionSourceExtractor::class)->autoCandidates($dir))->pluck('name');
+        expect($names)->not->toContain('Notices')->and($names)->toContain('Faqs');
+    } finally {
+        File::deleteDirectory($dir);
+    }
+});
+
 it('publish auto-wires those arrays to the cms overlay', function () {
     $dir = fixtureApp().'-autowire-tmp';
     File::deleteDirectory($dir);

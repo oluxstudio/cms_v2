@@ -38,7 +38,6 @@
             'values' => $fields[$p[1] ?? '']['tab'] ?? null,
             'rows' => $repeaters[$p[1] ?? '']['tab'] ?? null,
             'variables' => 'variables', 'colors' => 'colours', 'scripts' => 'seo', 'currency' => 'locale',
-            'uploads' => ($p[1] ?? '') === 'fields' ? ($fields[$p[2] ?? '']['tab'] ?? null) : (($p[1] ?? '') === 'rows' ? ($repeaters[$p[2] ?? '']['tab'] ?? null) : 'variables'),
             default => null,
         };
     })->filter()->unique()->flip();
@@ -138,7 +137,7 @@
                         <div class="grid @xl:grid-cols-2 gap-4">
                             @foreach ($groupFields as $key => $f)
                                 <div class="{{ in_array($f['input'], ['textarea', 'image'], true) || in_array($key, ['service_area', 'title_pattern'], true) ? '@xl:col-span-2' : '' }}" wire:key="f-{{ $key }}">
-                                    @include('partials.properties.field', ['f' => $f, 'model' => "values.$key", 'upload' => "fields.$key", 'value' => $v[$key] ?? ''])
+                                    @include('partials.properties.field', ['f' => $f, 'model' => "values.$key", 'value' => $v[$key] ?? ''])
                                     @include('partials.properties.linked-hint', ['prop' => $key])
                                     @if ($key === 'registered_office')
                                         <button type="button" wire:click="copyAddressToOffice" class="text-[11px] font-bold mt-1" style="color:var(--primary)">Same as trading address</button>
@@ -213,7 +212,7 @@
                         <div class="flex flex-wrap @xl:flex-nowrap items-center gap-2 py-2" wire:key="h-{{ $d }}">
                             <span class="w-28 shrink-0 text-sm font-bold text-gray-800 dark:text-gray-100">{{ ucfirst($d) }}</span>
                             <div class="flex-1 min-w-[180px]">
-                                @include('partials.properties.field', ['f' => $fields[$dk] + ['placeholder' => '09:00-17:00'], 'model' => "values.$dk", 'upload' => '', 'value' => $v[$dk] ?? '', 'hideLabel' => true])
+                                @include('partials.properties.field', ['f' => $fields[$dk] + ['placeholder' => '09:00-17:00'], 'model' => "values.$dk", 'value' => $v[$dk] ?? '', 'hideLabel' => true])
                             </div>
                             <div class="flex gap-1.5 shrink-0">
                                 <button type="button" wire:click="$set('values.{{ $dk }}', '09:00-17:00')" class="{{ $ghost }}">9–5</button>
@@ -327,7 +326,7 @@
                             </div>
                             <div class="mt-3">
                                 @if (($var['type'] ?? 'text') === 'image')
-                                    @include('partials.properties.field', ['f' => ['label' => 'Value', 'input' => 'image'], 'model' => "variables.$i.value", 'upload' => "variables.$i", 'value' => $var['value'] ?? ''])
+                                    @include('partials.properties.field', ['f' => ['label' => 'Value', 'input' => 'image'], 'model' => "variables.$i.value", 'value' => $var['value'] ?? ''])
                                 @else
                                     <label class="{{ $label }}">Value</label>
                                     <textarea wire:model.blur="variables.{{ $i }}.value" rows="2" class="{{ $input }}"></textarea>

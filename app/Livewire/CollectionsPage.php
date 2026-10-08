@@ -10,10 +10,13 @@ use App\Models\CollectionItem;
 use App\Models\CollectionItemEvent;
 use App\Models\Component as ComponentModel;
 use App\Models\Media;
+use App\Models\Node;
 use App\Models\Site;
 use App\Support\CollectionFieldShape;
 use App\Support\MediaValue;
+use Illuminate\Support\Carbon;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class CollectionsPage extends Component
@@ -29,6 +32,14 @@ class CollectionsPage extends Component
     public Site $site;
 
     public string $search = '';
+
+    /** List filter: all | linked | unlinked | empty | pending */
+    #[Url(except: 'all')]
+    public string $filter = 'all';
+
+    /** List order: updated | name | entries */
+    #[Url(except: 'updated')]
+    public string $sort = 'updated';
 
     public bool $showModal = false;
 
@@ -103,38 +114,96 @@ class CollectionsPage extends Component
     /** Search for the "add component to collection" selector. */
     public string $memberSearch = '';
 
-    public function mount(Site $site): void
+    public function mount(Site $site, ?string $screen = null, ?string $collection = null): void
     {
         $this->site = $site;
-        $this->initLayout('collections', 'list');
+        $this->initLayout('collections', 'grid');
 
-        // Deep link (?open={id}) — e.g. a component's "Manage data source →".
+        // A new collection / a collection's settings: their own pages.
+        if ($screen === 'new') {
+            $this->openCreate();
+        } elseif ($screen === 'settings' && $collection) {
+            $this->openEdit($collection);
+        }
+
+        // Older deep links (?open={id}[&item={id}]) → the collection's / entry's own page.
         if (($id = (string) request()->query('open')) !== ''
             && CollectionModel::where('site_id', $site->id)->whereKey($id)->exists()) {
-            $this->viewingId = $id;
-            // …and ?item={id} opens that entry (e.g. clicked in a block's grid on the Edit page).
             $itemId = (string) request()->query('item');
-            if ($itemId !== '' && CollectionModel::find($id)->items()->whereKey($itemId)->exists()) {
-                $this->openItem($itemId);
-            }
+            $this->redirect($itemId !== '' && CollectionModel::find($id)->items()->whereKey($itemId)->exists()
+                ? route('collections.entries.show', [$site->name, $id, $itemId])
+                : route('collections.show', [$site->name, $id]), navigate: true);
         }
+    }
+
+    /** Leave the settings page: back to the collection (or the list, for a new one). */
+    public function cancelSettings(): void
+    {
+        $back = $this->editingId ? route('collections.show', [$this->site->name, $this->editingId]) : route('collections', $this->site->name);
+        $this->showModal = false;
+        $this->redirect($back, navigate: true);
     }
 
     public function render()
     {
-        $collections = CollectionModel::where('site_id', $this->site->id)
-            ->when($this->search, fn ($q) => $q->where(function ($q) {
-                $q->where('name', 'like', '%'.$this->search.'%')
-                    ->orWhere('type', 'like', '%'.$this->search.'%')
-                    ->orWhere('description', 'like', '%'.$this->search.'%');
-            }))
-            ->latest()
+        $all = CollectionModel::where('site_id', $this->site->id)
+            ->withCount([
+                'items',
+                'items as published_count' => fn ($q) => $q->where('status', 'published'),
+                'items as pending_count' => fn ($q) => $q->where('status', 'pending'),
+                'components', 'pages',
+            ])
+            ->withMax('items', 'updated_at')
             ->get();
 
-        $total = CollectionModel::where('site_id', $this->site->id)->count();
-        $types = CollectionModel::where('site_id', $this->site->id)->distinct('type')->count('type');
-        $recent = CollectionModel::where('site_id', $this->site->id)
-            ->where('created_at', '>=', now()->startOfWeek())->count();
+        // Blocks that show a collection through a collection-type field (Hero → Hero Words).
+        $fieldLinks = Node::where('type', 'collection')
+            ->whereHas('component', fn ($q) => $q->where('site_id', $this->site->id))
+            ->whereIn('value', $all->pluck('id'))
+            ->get(['value', 'component_id'])
+            ->groupBy('value')->map(fn ($g) => $g->pluck('component_id')->unique()->count());
+
+        $all->each(function (CollectionModel $c) use ($fieldLinks) {
+            $c->blocks_count = (int) $c->components_count + (int) ($fieldLinks[$c->id] ?? 0);
+            $c->linked = $c->blocks_count > 0 || $c->pages_count > 0;
+            $c->fields_count = count((array) $c->fields);
+            $c->last_activity = max(array_filter([$c->items_max_updated_at ? Carbon::parse($c->items_max_updated_at) : null, $c->updated_at]));
+        });
+
+        $needle = mb_strtolower(trim($this->search));
+        $collections = $all
+            ->when($needle !== '', fn ($c) => $c->filter(fn ($col) => str_contains(mb_strtolower($col->name.' '.$col->type.' '.$col->description), $needle)))
+            ->filter(fn ($c) => match ($this->filter) {
+                'linked' => $c->linked,
+                'unlinked' => ! $c->linked,
+                'empty' => $c->items_count === 0,
+                'pending' => $c->pending_count > 0,
+                default => true,
+            })
+            ->sortBy(fn ($c) => match ($this->sort) {
+                'name' => mb_strtolower($c->name),
+                'entries' => -$c->items_count,
+                default => -$c->last_activity->getTimestamp(),
+            })
+            ->values();
+
+        $total = $all->count();
+        $types = $all->pluck('type')->unique()->count();
+        $recent = $all->where('created_at', '>=', now()->startOfWeek())->count();
+        $stats = [
+            'entries' => (int) $all->sum('published_count'),
+            'pending' => (int) $all->sum('pending_count'),
+            'empty' => $all->where('items_count', 0)->count(),
+            'linked' => $all->where('linked', true)->count(),
+            'unlinked' => $all->where('linked', false)->count(),
+            // Visitor submissions that go live with no review.
+            'autoPublish' => $all->filter(fn ($c) => $c->allow_submit && $c->auto_publish)->count(),
+            'byType' => $all->countBy('type')->sortDesc()->all(),
+            'largest' => $all->sortByDesc('items_count')->filter(fn ($c) => $c->items_count > 0)->take(5)->values(),
+            'recentlyEdited' => $all->sortByDesc(fn ($c) => $c->last_activity->getTimestamp())->take(4)->values(),
+            'pendingList' => $all->where('pending_count', '>', 0)->sortByDesc('pending_count')->values(),
+            'emptyList' => $all->where('items_count', 0)->values(),
+        ];
 
         $viewing = $this->viewingId
             ? CollectionModel::where('site_id', $this->site->id)->find($this->viewingId)
@@ -152,6 +221,7 @@ class CollectionsPage extends Component
 
         return view('livewire.collections-page', [
             'collections' => $collections,
+            'stats' => $stats,
             'total' => $total,
             'types' => $types,
             'recent' => $recent,
@@ -161,6 +231,11 @@ class CollectionsPage extends Component
             'available' => $available,
             'sitePages' => $this->site->pages()->orderBy('name')->get(['id', 'name', 'url']),
         ]);
+    }
+
+    public function setFilter(string $filter): void
+    {
+        $this->filter = in_array($filter, ['all', 'linked', 'unlinked', 'empty', 'pending'], true) ? $filter : 'all';
     }
 
     public function viewEntries(string $id): void
@@ -184,6 +259,9 @@ class CollectionsPage extends Component
     // ── Entry (collection item) editing ──────────────────────────────────
 
     public ?string $editingItemId = null;   // null when the item form is closed, '' when adding
+
+    /** Id of the entry the last saveItem() created (this request only). */
+    protected ?string $createdItemId = null;
 
     public array $itemForm = [];             // field key => value
 
@@ -214,12 +292,15 @@ class CollectionsPage extends Component
         // Array values: STRUCTURED editing when the shape is uniform (scalar
         // list / row list / group); only irregular/deep values fall back to
         // the raw-JSON textarea.
-        $arrayKeys = collect($keys)->filter(fn ($k) => in_array($k, $declared, true)
-            || $samples->contains(fn ($i) => is_array(data_get($i->data, $k))))->values();
-        $sampleFor = fn ($k) => $item ? data_get($item->data, $k) : $samples->map(fn ($i) => data_get($i->data, $k))->first(fn ($v) => is_array($v));
-        $this->itemJsonKeys = $arrayKeys->reject(fn ($k) => self::nestedEditable($sampleFor($k) ?? []))->values()->all();
-
         $types = collect($collection->fields ?? [])->mapWithKeys(fn ($f) => [($f['key'] ?? '') => $f['type'] ?? 'text']);
+        // Declared TEXT fields (text, textareas, dates, media…) always edit as
+        // text, even if an older entry stored a list under them.
+        $arrayKeys = collect($keys)->filter(fn ($k) => ! CollectionFieldShape::isTextType($types[$k] ?? null)
+            && (in_array($k, $declared, true) || $samples->contains(fn ($i) => is_array(data_get($i->data, $k)))))->values();
+        $sampleFor = fn ($k) => $item ? data_get($item->data, $k) : $samples->map(fn ($i) => data_get($i->data, $k))->first(fn ($v) => is_array($v));
+        // An EMPTY list edits structurally too (the field's schema shapes its first row).
+        $this->itemJsonKeys = $arrayKeys->reject(fn ($k) => ($sampleFor($k) ?? []) === [] || self::nestedEditable($sampleFor($k)))->values()->all();
+
         $this->itemForm = collect($keys)->mapWithKeys(function ($k) use ($item, $arrayKeys, $types) {
             $v = $item ? data_get($item->data, $k, '') : '';
             if (CollectionModel::isBooleanType($types[$k] ?? null)) {
@@ -259,11 +340,13 @@ class CollectionsPage extends Component
     #[On('media-picked')]
     public function onMediaPicked(array $context, string $mediaRef, string $url): void
     {
-        if ($this->nestedMediaPicked($context, $url)) {
+        // Every picker stores the portable "@media/{filename}" reference.
+        $value = $mediaRef !== '' ? $mediaRef : $url;
+        if ($this->nestedMediaPicked($context, $value)) {
             return;
         }
         if (($context['scope'] ?? '') === 'collection-item' && isset($context['key'])) {
-            $this->itemForm[$context['key']] = $url;
+            $this->itemForm[$context['key']] = $value;
         }
     }
 
@@ -339,7 +422,7 @@ class CollectionsPage extends Component
         if ($this->editingItemId) {
             $collection->items()->findOrFail($this->editingItemId)->update(['data' => $data]);
         } else {
-            $collection->items()->create(['site_id' => $this->site->id, 'data' => $data, 'status' => 'published']);
+            $this->createdItemId = $collection->items()->create(['site_id' => $this->site->id, 'data' => $data, 'status' => 'published'])->id;
         }
         $this->reset(['editingItemId', 'itemForm', 'itemJsonKeys', 'itemLineKeys']);
         $this->bustRenderCache($this->site);
@@ -403,6 +486,8 @@ class CollectionsPage extends Component
         $this->bustRenderCache($this->site);
 
         $this->showModal = false;
+        // Saved → the collection's own page.
+        $this->redirect(route('collections.show', [$this->site->name, $collection->id]), navigate: true);
         $this->reset(['name', 'type', 'description', 'editingId', 'allowSubmit', 'autoPublish', 'pageIds']);
         $this->resetVisibilityFields();
     }

@@ -1,10 +1,6 @@
 {{-- The landing page's studio theme, shared by the public template pages:
      same fonts + palette, with primary-tinted borders and shadows. --}}
 <style>
-    @font-face { font-family: 'junegull'; src: url('/fonts/junegull.otf'); font-display: swap; }
-    @font-face { font-family: 'garet'; font-weight: 400; src: url('/fonts/Garet-Book.woff2') format('woff2'); font-display: swap; }
-    @font-face { font-family: 'comforta'; font-weight: 400; src: url('/fonts/Comfortaa-Regular.ttf'); font-display: swap; }
-    @font-face { font-family: 'comforta'; font-weight: 700; src: url('/fonts/Comfortaa-Bold.ttf'); font-display: swap; }
 
     :root {
         --primary: #e38704; --primary-2: #f77315; --primary-3: #5e3802; --primary-4: #3a2301;
@@ -20,12 +16,15 @@
         --line: color-mix(in srgb, var(--primary) 38%, transparent);
         --shadow: 0 14px 40px -14px color-mix(in srgb, var(--primary) 55%, transparent);
     }
-    .light .pub-theme .text-gray-900 { color: var(--on-bg) !important; }
+    .light .pub-theme .text-gray-900, .light .pub-theme .text-gray-800 { color: var(--on-bg) !important; }
     .light .pub-theme .text-gray-500, .light .pub-theme .text-gray-400 { color: rgba(43,28,10,.55) !important; }
     .light .pub-theme input, .light .pub-theme select { background: rgba(255,255,255,.6) !important; color: var(--on-bg) !important; }
     .light .pub-theme .bg-gray-100, .light .pub-theme .bg-gray-50, .light .pub-theme .bg-indigo-50 { background: var(--surface-2, #f4cf9a) !important; color: var(--on-bg-soft) !important; }
 
-    .pub-theme { background: var(--bg); color: var(--on-bg); font-family: 'garet', sans-serif; min-height: 100vh; position: relative; }
+    /* Public pages use the landing page's font roles (families: resources/css/app.css). */
+    .pub-theme { --font-display: var(--font-madimi); --font-header: var(--font-momo); --font-body: var(--font-textmeone);
+                 --font-ui: var(--font-kodchasan); --font-btn: var(--font-gugi); }
+    .pub-theme { background: var(--bg); color: var(--on-bg); font-family: var(--font-body); min-height: 100vh; position: relative; }
     :root { --surface-2: #17121c; --tile: #262031; }
     .light { --surface-2: #f4cf9a; --tile: #fff3dd; }
 
@@ -55,8 +54,8 @@
 
     /* Template tiles: landing-style elevated cards — solid tile background, primary border. */
     .pub-theme .alt { background: var(--tile) !important; border: 1px solid var(--line) !important; color: var(--on-bg); }
-    .pub-theme h1, .pub-theme h2, .pub-logo { font-family: 'junegull', 'trebuchet ms', sans-serif; text-transform: uppercase; font-weight: 400; }
-    .pub-theme .text-gray-900 { color: var(--on-bg) !important; }
+    .pub-theme h1, .pub-theme h2, .pub-logo { font-family: var(--font-header); text-transform: uppercase; font-weight: 400; }
+    .pub-theme .text-gray-900, .pub-theme .text-gray-800 { color: var(--on-bg) !important; }
     .pub-theme .text-gray-700, .pub-theme .text-gray-600 { color: var(--on-bg-soft) !important; }
     .pub-theme .text-gray-500, .pub-theme .text-gray-400 { color: rgba(248,245,242,.55) !important; }
     .pub-theme .text-indigo-500, .pub-theme .text-indigo-600, .pub-theme .text-indigo-400 { color: var(--penta) !important; }
@@ -77,7 +76,7 @@
     /* Primary CTA (Use template / Get started) — landing-style gradient + glow */
     .pub-theme .bg-gray-900, .pub-theme .bg-indigo-600 {
         background: linear-gradient(120deg, var(--primary), var(--primary-2)) !important; color: #fff !important;
-        box-shadow: 0 12px 26px -12px rgba(227,135,4,.55); font-family: 'comforta', sans-serif;
+        box-shadow: 0 12px 26px -12px rgba(227,135,4,.55); font-family: var(--font-btn);
     }
     .pub-theme .bg-gray-900:hover, .pub-theme .bg-indigo-600:hover { filter: brightness(1.1); }
 

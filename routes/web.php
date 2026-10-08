@@ -4,6 +4,7 @@ use App\Features\FeatureRegistry;
 use App\Http\Controllers\Api\DomainCheckController;
 use App\Http\Controllers\Api\MarketplaceApiController;
 use App\Http\Controllers\Api\SiteDesignController;
+use App\Http\Controllers\AssetUploadController;
 use App\Http\Controllers\BlockKitController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ConnectPreviewController;
@@ -255,6 +256,8 @@ Route::redirect('/welcome', '/');
 // /designs because /templates is shadowed by the template-assets directory
 // in public/. The route NAME stays 'templates' so existing links hold.
 Route::get('/designs', fn () => view('template-gallery'))->name('templates');
+// Public: anyone can share a testimonial about Olux (saved pending; admins publish it).
+Route::view('/testimonials/new', 'testimonial-submit')->name('testimonials.create');
 Route::get('/designs/{key}/buy', fn (string $key) => view('template-buy', ['key' => $key]))
     ->middleware('auth')->name('template.buy');
 Route::get('/designs/{key}', fn (string $key) => view('template-detail', ['key' => $key]))->name('template.detail');
@@ -332,6 +335,7 @@ Route::middleware('auth')->group(function () {
         Route::view('/admin/ai', 'platform-ai')->name('admin.ai');
         Route::view('/admin/addons', 'platform-addons')->name('admin.addons');
         Route::view('/admin/announcements', 'platform-announcements')->name('admin.announcements');
+        Route::view('/admin/testimonials', 'platform-testimonials')->name('admin.testimonials');
         Route::post('/admin/impersonate/{user}', function (string $user) {
             $target = User::findOrFail($user);
             try {
@@ -495,15 +499,35 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/pages', [SiteController::class, 'pages'])->middleware('perm:pages.view')->name('pages');
     Route::get('/{siteID}/pages/{page}/details', [SiteController::class, 'pageDetail'])->middleware('perm:pages.view')->name('site.page.detail');
     Route::get('/{siteID}/collections', [SiteController::class, 'collections'])->middleware('perm:collections.view')->name('collections');
+    // A collection's settings, and a new collection, on their own pages (before {collection}).
+    Route::get('/{siteID}/collections/new', [SiteController::class, 'collections'])->defaults('screen', 'new')->middleware('perm:collections.view')->name('collections.create');
+    Route::get('/{siteID}/collections/{collection}/settings', [SiteController::class, 'collections'])->defaults('screen', 'settings')->middleware('perm:collections.view')->name('collections.settings');
     // A collection's own page (entries: add / edit / reorder / delete) — the "Source ↗" target on the Edit page.
     Route::get('/{siteID}/collections/{collection}', [SiteController::class, 'collectionDetail'])->middleware('perm:collections.view')->name('collections.show');
+    // Each entry, a new entry and the field editor open on their OWN page (no drawers).
+    Route::get('/{siteID}/collections/{collection}/fields', [SiteController::class, 'collectionDetail'])->defaults('screen', 'fields')->middleware('perm:collections.view')->name('collections.fields');
+    Route::get('/{siteID}/collections/{collection}/entries/new', [SiteController::class, 'collectionDetail'])->defaults('screen', 'new')->middleware('perm:collections.view')->name('collections.entries.new');
+    Route::get('/{siteID}/collections/{collection}/entries/{entry}', [SiteController::class, 'collectionDetail'])->defaults('screen', 'entry')->middleware('perm:collections.view')->name('collections.entries.show');
+    Route::get('/{siteID}/collections/{collection}/entries/{entry}/edit', [SiteController::class, 'collectionDetail'])->defaults('screen', 'edit')->middleware('perm:collections.view')->name('collections.entries.edit');
     Route::get('/{siteID}/components', function ($siteID) {
         $site = Site::where('name', $siteID)->firstOrFail();
         abort_unless($site->allows(Auth::user(), 'components.view'), 403);
 
         return view('components-page', ['site' => $site]);
     })->name('site.components');
+    // A component (view / edit) and a new component, each on its own page — no dialogs.
+    $componentScreen = fn (string $screen) => function ($siteID, ?string $component = null) use ($screen) {
+        $site = Site::where('name', $siteID)->firstOrFail();
+        abort_unless($site->allows(Auth::user(), 'components.view'), 403);
+
+        return view('components-page', ['site' => $site, 'screen' => $screen, 'componentId' => $component]);
+    };
+    Route::get('/{siteID}/components/new', $componentScreen('new'))->name('site.components.create');
+    Route::get('/{siteID}/components/{component}', $componentScreen('view'))->name('site.components.show');
+    Route::get('/{siteID}/components/{component}/edit', $componentScreen('edit'))->name('site.components.edit');
     Route::get('/{siteID}/media', [SiteController::class, 'media'])->middleware('perm:media.view')->name('media');
+    // Asset picker "Upload new" → the asset library (JSON; permission checked in the controller).
+    Route::post('/{siteID}/media/upload', AssetUploadController::class)->name('media.upload');
     // The Media page is presented as "Assets" — keep both URLs working.
     Route::redirect('/{siteID}/assets', '/{siteID}/media');
     Route::get('/{siteID}/analytics', [SiteController::class, 'analytics'])->middleware('perm:analytics.view')->name('analytics');

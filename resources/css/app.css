@@ -131,21 +131,25 @@ select:focus[data-flux-control] {
     --primary-strong: var(--tertiary);    /* hover / strong */
     --primary-soft:   #fff3e6;             /* soft tinted surface */
 
-    /* ── Font families (Google Fonts loaded in the layout heads) ──
-       Use as font-family: var(--font-…); theme-independent. */
-    --font-abel:          'Cantarell', 'Abel', sans-serif;
-    --font-afacad:        'Afacad', sans-serif;
-    --font-aladin:        'Aladin', cursive;
+    /* ── Font families — GLOBAL (every page; Google Fonts loaded in the layout
+       heads and on the landing page). Use as font-family: var(--font-…). ── */
+    --font-abel:          'Abel', sans-serif;
     --font-baumans:       'Baumans', sans-serif;
-    --font-bellota:       'Bellota', cursive;
     --font-cantarell:     'Cantarell', sans-serif;
-    --font-fjord:         'Fjord One', serif;
+    --font-gugi:          'Gugi', cursive;
+    --font-kodchasan:     'Kodchasan', sans-serif;
+    --font-madimi:        'Madimi One', sans-serif;
+    --font-momo:          'Momo Trust Display', sans-serif;
     --font-museomoderno:  'MuseoModerno', sans-serif;
     --font-textmeone:     'Text Me One', sans-serif;
 
-    /* semantic slots — point these at whichever family the app should use */
+    /* Roles — point these at any family above. A page can override them
+       (the landing page sets its own). */
     --font-display:       var(--font-museomoderno); /* headings / hero numbers */
-    --font-body:          var(--font-abel);    /* running text */
+    --font-header:        var(--font-display);      /* section headers */
+    --font-body:          var(--font-cantarell);    /* running text */
+    --font-ui:            var(--font-kodchasan);    /* nav, labels, tags */
+    --font-btn:           var(--font-ui);           /* buttons */
     --font-accent:        var(--font-baumans);      /* badges, pills, flourishes */
 }
 .dark {

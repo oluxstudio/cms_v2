@@ -13,7 +13,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * Headless store API for template sites (same pattern as the booking API):
@@ -48,11 +47,9 @@ class StoreApiController extends Controller
             'price_cents' => (int) $p->price_cents,
             'price' => $p->formattedPrice(),
             'currency' => $p->currency,
-            // Media-library images live on the storage disk; template-shipped
-            // paths (/assets/…) and absolute URLs pass through untouched.
-            'image' => $p->image
-                ? (Str::startsWith($p->image, ['/', 'http://', 'https://']) ? $p->image : Storage::url($p->image))
-                : null,
+            // Picker URLs and template-shipped paths (/assets/…) pass through;
+            // legacy storage paths resolve to the disk (Product::image_url).
+            'image' => $p->image_url,
             'inventory' => $p->inventory,
             'in_stock' => $p->inStock(),
             'category' => $p->category,

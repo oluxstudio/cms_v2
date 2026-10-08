@@ -26,7 +26,14 @@ export function useOluxSite() {
   } catch (_) { /* noop */ }
 
   const injected = typeof w.__OLUX_SITE__ === 'string' && w.__OLUX_SITE__ ? (w.__OLUX_SITE__ as string) : null
-  const site = injected || query || baked
+  // The shared template preview (/storage/template-shells/{template}/…) serves EVERY
+  // site on this template: it shows a site only when the address names it
+  // (?site=…, which the CMS's preview links always carry and in-app links keep).
+  // Without it, it shows the template's own sample content — never the baked
+  // default or any other real site's data.
+  const sharedShell = /\/template-shells\//.test(window.location.pathname)
+  const unnamed = sharedShell && !injected && !query
+  const site = injected || query || (sharedShell ? '' : baked)
   // Served by the CMS itself → talk to the CMS on this origin, whatever was baked.
   const cmsServed = !!injected || !!query || window.location.pathname.startsWith('/nuxt-preview/')
   const origin = window.location.origin
@@ -35,6 +42,6 @@ export function useOluxSite() {
   // A real site (its own deploy, ?site= preview, or CMS-served domain) shows only
   // its own collection rows; authored sample rows are for the template gallery
   // preview (?template=KEY, no site) alone.
-  const isSite = !templatePreview && !!(injected || query || baked)
+  const isSite = !templatePreview && !unnamed && !!(injected || query || baked)
   return { site, cmsServed, apiBase, baked, isSite }
 }

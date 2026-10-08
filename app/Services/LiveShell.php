@@ -38,8 +38,18 @@ class LiveShell
         // Site Properties output (icons, SEO, JSON-LD, analytics, consent,
         // custom scripts) — the same for every template. Never breaks a page.
         try {
-            $html = preg_replace('#</head>#i', SiteHead::head($site)."\n</head>", $html, 1);
-            $html = preg_replace('#</body>#i', SiteHead::bodyEnd($site)."\n</body>", $html, 1);
+            $head = SiteHead::head($site);
+            $html = preg_replace_callback('#</head>#i', fn () => $head."\n</head>", $html, 1);
+            // The page's own meta title replaces the shell's <title> (crawlers read this HTML).
+            if (($title = SiteHead::pageMeta($site)['title']) !== '') {
+                $tag = '<title>'.e($title).'</title>';
+                // Callbacks: a "$1" in the title must not read as a back-reference.
+                $html = preg_match('#<title>.*?</title>#is', $html)
+                    ? preg_replace_callback('#<title>.*?</title>#is', fn () => $tag, $html, 1)
+                    : preg_replace_callback('#</head>#i', fn () => $tag."\n</head>", $html, 1);
+            }
+            $bodyEnd = SiteHead::bodyEnd($site);
+            $html = preg_replace_callback('#</body>#i', fn () => $bodyEnd."\n</body>", $html, 1);
         } catch (\Throwable $e) {
             report($e);
         }

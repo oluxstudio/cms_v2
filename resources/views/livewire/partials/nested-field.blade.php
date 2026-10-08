@@ -11,14 +11,28 @@
 @php
     $def ??= null;
     $defType = $def['type'] ?? null;
-    $subKeys = (array) ($def['fields'] ?? []);
+    // Sub-fields arrive as plain keys (Connect editor) or as full field
+    // definitions (Collections page) — accept both.
+    $rawSub = (array) ($def['fields'] ?? []);
+    $subKeys = array_values(array_filter(array_map(fn ($x) => is_array($x) ? ($x['key'] ?? null) : $x, $rawSub)));
+    // typed sub-fields (declared with @olux-field media.type …): key => {type,label,options,show}
+    $subDefs = (array) ($def['subDefs'] ?? collect($rawSub)->filter(fn ($x) => is_array($x) && filled($x['key'] ?? null))
+        ->mapWithKeys(fn ($x) => [$x['key'] => array_intersect_key($x, array_flip(['type', 'label', 'options', 'optionsFrom', 'show']))])->all());
+    if ($subDefs !== []) {
+        $subKeys = array_values(array_unique(array_merge(array_keys($subDefs), $subKeys)));
+    }
     $value = is_array($value) ? $value : [];
     $isList = array_is_list($value) && $defType !== 'group';
     $isRows = $isList && (is_array($value[0] ?? null) || ($value === [] && $defType === 'rows'));
     // Sub-field keys for the first row of an empty rows list (single-quoted: lives in a wire:click attribute).
     $safeKeys = array_values(array_filter($subKeys, fn ($k) => is_string($k) && preg_match('/^[A-Za-z0-9_-]{1,60}$/', $k)));
-    $addArgs = $isRows && $value === [] && $safeKeys !== [] ? ", ['".implode("','", $safeKeys)."']" : '';
+    $addArgs = $isRows && ($value === [] || $subDefs !== []) && $safeKeys !== [] ? ", ['".implode("','", $safeKeys)."']" : '';
     $siteId ??= isset($site) ? $site->id : null;
+    // "+ Add …" button label: the field name made singular, except words that
+    // don't singularise (media → "medium" reads wrong) or would go odd.
+    $addWords = strtolower(trim(str_replace(['-', '_'], ' ', \Illuminate\Support\Str::snake((string) $fieldKey, ' '))));
+    $addNoun = in_array($addWords, ['media', 'audio', 'video', 'data', 'info', 'news', 'series', 'content', 'lyrics', 'gallery', 'speakers info'], true)
+        ? $addWords : \Illuminate\Support\Str::singular($addWords);
     // A list of assets (all entries media) → a gallery editor.
     $isGallery = $isList && ! $isRows && (\App\Support\MediaValue::isMediaList($value, $siteId) || ($value === [] && in_array($defType, ['images', 'gallery', 'media'], true)));
 @endphp
@@ -65,7 +79,8 @@
             </span>
         @endforeach
         <button type="button" wire:click="nestedAdd('{{ $path }}'{{ $addArgs }})"
-                class="text-[11px] font-semibold" style="color:var(--primary)">+ add {{ \Illuminate\Support\Str::singular(str_replace(['-', '_'], ' ', $fieldKey)) }}</button>
+                class="inline-flex items-center gap-1 mt-0.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border border-dashed hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]"
+                style="color:var(--primary);border-color:color-mix(in srgb,var(--primary) 45%,transparent)"><span aria-hidden="true">+</span> Add {{ $addNoun }}</button>
     </div>
 @elseif ($isRows)
     {{-- row list: facts, attachments, media… --}}
@@ -81,16 +96,29 @@
                     @endif
                     <button type="button" wire:click="nestedRemove('{{ $path }}', {{ $j }})" class="w-5 h-5 rounded text-[11px] text-gray-400 hover:text-rose-600" title="Remove">✕</button>
                 </div>
-                @foreach ($row as $sk => $sv)
-                    <label class="block mb-1">
-                        <span class="text-[10px] text-gray-400">{{ \Illuminate\Support\Str::headline((string) $sk) }}</span>
-                        @include('livewire.partials.nested-leaf', ['path' => $path.'.'.$j.'.'.$sk, 'value' => $sv, 'siteId' => $siteId])
-                    </label>
+                @php
+                    // declared sub-fields first (in order), then any other keys the row carries
+                    $rowKeys = $subDefs !== [] ? array_values(array_unique(array_merge(array_keys($subDefs), array_keys((array) $row)))) : array_keys((array) $row);
+                @endphp
+                @foreach ($rowKeys as $sk)
+                    @php
+                        $sd = $subDefs[$sk] ?? null;
+                        $sv = $row[$sk] ?? '';
+                        // conditional sub-field: show=type:audio|video
+                        $shown = empty($sd['show']) || in_array((string) ($row[$sd['show']['field']] ?? ''), (array) $sd['show']['in'], true);
+                    @endphp
+                    @if ($shown)
+                        <label class="block mb-1" wire:key="{{ $path }}-{{ $j }}-{{ $sk }}">
+                            <span class="text-[10px] text-gray-400">{{ $sd['label'] ?? \Illuminate\Support\Str::headline((string) $sk) }}</span>
+                            @include('livewire.partials.nested-leaf', ['path' => $path.'.'.$j.'.'.$sk, 'value' => $sv, 'siteId' => $siteId, 'leafDef' => $sd])
+                        </label>
+                    @endif
                 @endforeach
             </div>
         @endforeach
         <button type="button" wire:click="nestedAdd('{{ $path }}'{{ $addArgs }})"
-                class="text-[11px] font-semibold" style="color:var(--primary)">+ add {{ \Illuminate\Support\Str::singular(str_replace(['-', '_'], ' ', $fieldKey)) }}</button>
+                class="inline-flex items-center gap-1 mt-0.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border border-dashed hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]"
+                style="color:var(--primary);border-color:color-mix(in srgb,var(--primary) 45%,transparent)"><span aria-hidden="true">+</span> Add {{ $addNoun }}</button>
     </div>
 @else
     {{-- group: a fixed-shape object (cta, logo…) --}}

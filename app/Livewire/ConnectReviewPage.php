@@ -22,6 +22,7 @@ use App\Services\SiteConnect\PageJsonPublisher;
 use App\Support\CollectionFieldShape;
 use App\Support\CollectionQuery;
 use App\Support\MediaValue;
+use App\Support\PropertyLinks;
 use App\Support\SiteContentCache;
 use App\Support\SiteProperties;
 use App\Support\TemplatePaths;
@@ -87,6 +88,12 @@ class ConnectReviewPage extends LivewireComponent
         $this->clientUrl = (string) $site->getAttr('client_url', '');
         $this->urlInput = $this->clientUrl;
 
+        // ?page={id} (a page's "Edit content" button) opens the preview on that page.
+        if (($pid = (string) request()->query('page')) !== ''
+            && ($pg = $site->pages()->whereKey($pid)->first(['id', 'url']))) {
+            $this->previewPath = $pg->url ?: '/';
+        }
+
         // ?properties=1 (from the Properties page) opens the Site Properties component.
         if (request()->boolean('properties') && $site->allows(Auth::user(), 'properties.manage')) {
             $this->openSiteProperties();
@@ -102,6 +109,30 @@ class ConnectReviewPage extends LivewireComponent
     {
         abort_unless($this->site->allows(Auth::user(), 'properties.manage'), 403);
         $this->select('component', SiteProperties::component($this->site)->id);
+    }
+
+    /**
+     * Same as the Properties page: an EMPTY property shows the value the
+     * template's own content already holds (Site Profile, contact rows…), so
+     * the panel opens with what the site displays. Saved only on Save.
+     */
+    private function fillPropertiesFromTemplate(): void
+    {
+        $p = SiteProperties::get($this->site);
+        $fills = PropertyLinks::fills($this->site, PropertyLinks::linkedValues($p['values'], $p['rows']));
+        $labels = collect(SiteProperties::fields())->mapWithKeys(fn ($f, $k) => [$k => $f['label']]);
+        foreach ($this->edit['nodes'] as $i => $node) {
+            $prop = $labels->search($node['label']);
+            if ($prop !== false && $node['value'] === '' && isset($fills[$prop]['value']) && $prop !== 'phone') {
+                $this->edit['nodes'][$i]['value'] = (string) $fills[$prop]['value'];
+            }
+        }
+    }
+
+    /** Site Properties opened on a few fields (from the preview) → show them all. */
+    public function showAllProperties(): void
+    {
+        unset($this->edit['focus']);
     }
 
     /** Is the component being edited the Site Properties one? */
@@ -196,7 +227,7 @@ class ConnectReviewPage extends LivewireComponent
 
     /** connect.js click bridge → select the clicked component by id or key. */
     #[On('olx-edit-select')]
-    public function onEditSelect(?string $id = null, ?string $key = null, string $kind = 'component', ?int $itemIndex = null, ?string $itemText = null): void
+    public function onEditSelect(?string $id = null, ?string $key = null, string $kind = 'component', ?int $itemIndex = null, ?string $itemText = null, ?string $fields = null): void
     {
         // The store's product grid edits like a collection grid: the panel
         // key "products" opens the site's Products as entry cards.
@@ -242,6 +273,12 @@ class ConnectReviewPage extends LivewireComponent
             }
 
             return;
+        }
+        // data-olx-fields on a Site Properties panel (e.g. the logo: "logo,
+        // logo_text,logo_subtext") shows just those fields, not every tab.
+        if ($fields && $this->editingSiteProperties()) {
+            $this->edit['focus'] = array_values(array_filter(array_map('trim', explode(',', $fields)),
+                fn ($k) => (bool) preg_match('/^[a-z0-9_]{1,40}$/', $k)));
         }
         // Clicked a specific entry in the preview → open its card in the panel.
         if (($this->edit['type'] ?? null) === 'collection') {
@@ -375,12 +412,15 @@ class ConnectReviewPage extends LivewireComponent
     #[On('media-picked')]
     public function onMediaPicked(array $context = [], string $mediaRef = '', string $url = ''): void
     {
-        if ($this->nestedMediaPicked($context, $url)) {
+        // Every picker stores the portable "@media/{filename}" reference —
+        // payloads resolve it to the file's served URL.
+        $ref = $mediaRef !== '' ? $mediaRef : $url;
+        if ($this->nestedMediaPicked($context, $ref)) {
             return;
         }
         // New-schema-field default value (collection editor's "+ Add field").
         if (($context['scope'] ?? '') === 'connect-new-field') {
-            $this->newField['default'] = str_starts_with($url, '/') ? url($url) : $url;
+            $this->newField['default'] = $ref;
 
             return;
         }
@@ -408,12 +448,11 @@ class ConnectReviewPage extends LivewireComponent
 
             return;
         }
-        // Collection item field: item data isn't @media-resolved by the
-        // generator, so store the absolute asset URL instead of the ref.
+        // Collection item field.
         $item = $context['itemIndex'] ?? null;
         $key = $context['itemKey'] ?? null;
         if ($item !== null && $key !== null && isset($this->edit['items'][$item])) {
-            $value = str_starts_with($url, '/') ? url($url) : $url;
+            $value = $ref;
             $this->edit['items'][$item]['data'][$key] = $value;
             // Existing items apply immediately (new/unsaved rows wait for Save).
             $itemId = $this->edit['items'][$item]['id'] ?? null;
@@ -569,6 +608,9 @@ class ConnectReviewPage extends LivewireComponent
             $this->edit = ['type' => 'component', 'id' => $c->id, 'name' => $c->name, 'removedNodes' => [],
                 'siteProperties' => SiteProperties::isComponent($c),
                 'nodes' => $c->nodes->map(fn (Node $n) => ['id' => $n->id, 'label' => $n->label, 'type' => $n->type, 'value' => (string) $n->value])->all()];
+            if ($this->edit['siteProperties']) {
+                $this->fillPropertiesFromTemplate();
+            }
 
             // Collection grids inside this component: its data source (Pastors →
             // Leadership) plus every collection-type field (Hero → Hero Words),
@@ -578,9 +620,12 @@ class ConnectReviewPage extends LivewireComponent
                 ->filter()->map(fn ($id) => (string) $id)->unique()->values();
             $this->edit['lists'] = [];
             $this->edit['queries'] = [];
+            $this->edit['fills'] = [];
             foreach (Collection::withCount('items')->where('site_id', $this->site->id)->whereIn('id', $listIds)->get() as $col) {
                 // Which entries THIS block shows (how many / order / search / filter) — editable.
                 $this->edit['queries'][$col->id] = self::queryForm($c->collectionQuery((string) $col->id));
+                // "Add entries by rule" builder for this list (not saved — it fills the list).
+                $this->edit['fills'][$col->id] = self::fillForm();
                 $this->edit['lists'][$col->id] = $this->collectionCard($col, $this->edit['queries'][$col->id]);
             }
             // The data source keeps its own card under the fields.
@@ -602,9 +647,64 @@ class ConnectReviewPage extends LivewireComponent
             'search' => (string) ($q['search'] ?? ''),
             'filter_field' => (string) ($q['filter_field'] ?? ''),
             'filter_value' => (string) ($q['filter_value'] ?? ''),
+            'filter_op' => ($q['filter_op'] ?? '') === 'is' ? 'is' : 'contains',
+            'take' => in_array($q['take'] ?? null, CollectionQuery::TAKES, true) ? $q['take'] : 'first',
+            // "Show": the block's default, every entry, or entries matching a search / column
+            'mode' => ! empty($q['search']) || ! empty($q['filter_field']) ? 'match' : (! empty($q['all']) ? 'all' : 'default'),
             'order' => array_values((array) ($q['order'] ?? [])),
             'exclude' => array_values((array) ($q['exclude'] ?? [])),
+            // pick mode: the entries chosen for this block (null = not picking)
+            'pick' => array_key_exists('pick', $q) ? array_values((array) $q['pick']) : null,
         ];
+    }
+
+    /** The "Add entries by rule" builder's fields, with defaults. */
+    private static function fillForm(): array
+    {
+        return ['take' => 'first', 'limit' => '3', 'filter_field' => '', 'filter_op' => 'is', 'filter_value' => '',
+            'search' => '', 'sort' => 'manual', 'field' => '', 'dir' => 'asc'];
+    }
+
+    /** How many entries the builder's rule currently matches (before first/last/random N). */
+    public function fillMatches(string $collectionId): int
+    {
+        [$col] = $this->blockQueryTarget($collectionId);
+        $rule = (array) ($this->edit['fills'][$collectionId] ?? []);
+        unset($rule['limit'], $rule['take']);
+
+        return count(CollectionQuery::select($col, $rule));
+    }
+
+    /**
+     * Fill this block's list from a rule — "the first 3", "a random 2 where
+     * category is Men", "the last 5 matching ‘grace’" — via the reusable
+     * CollectionQuery::select(). The result becomes the block's own fixed list
+     * (pick mode): drag-sortable, ✕-removable, and it doesn't change when the
+     * source grows. $how: replace the list, or append the new entries to it.
+     */
+    public function blockFill(string $collectionId, string $how = 'replace'): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        $rule = (array) ($this->edit['fills'][$collectionId] ?? []);
+        $ids = CollectionQuery::select($col, $rule);
+        if ($ids === []) {
+            $this->dispatch('toast', level: 'error', title: 'Nothing matches', message: 'No '.$col->name.' entries match that rule.');
+
+            return;
+        }
+        if ($how === 'append') {
+            // Start from what the block shows right now, then add what's new.
+            $current = is_array($form['pick'] ?? null)
+                ? $form['pick']
+                : CollectionQuery::apply($col, $form)->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+            $ids = array_values(array_unique([...$current, ...$ids]));
+        }
+        $form['pick'] = $ids;
+        $form['limit'] = '';
+        $this->setBlockQuery($col, $form);
+        $this->dispatch('toast', level: 'success', title: 'List updated',
+            message: count($ids).' '.Str::plural('entry', count($ids)).' in this block — drag to reorder, then Save component.');
     }
 
     // ── Per-block reorder / hide (the collection itself is never changed) ──
@@ -632,6 +732,16 @@ class ConnectReviewPage extends LivewireComponent
     {
         $this->guard();
         [$col, $form] = $this->blockQueryTarget($collectionId);
+        if (is_array($form['pick'] ?? null)) {
+            // pick mode: the dragged order IS the pick
+            $ids = array_values(array_filter(array_map('strval', $visibleIds), fn ($id) => in_array($id, $form['pick'], true)));
+            if (count($ids) === count($form['pick'])) {
+                $form['pick'] = $ids;
+                $this->setBlockQuery($col, $form);
+            }
+
+            return;
+        }
         $full = $this->blockFullOrder($col, $form);
         $visibleIds = array_values(array_filter(array_map('strval', $visibleIds), fn ($id) => in_array($id, $full, true)));
         $slots = array_keys(array_filter($full, fn ($id) => in_array($id, $visibleIds, true)));
@@ -646,11 +756,57 @@ class ConnectReviewPage extends LivewireComponent
         $this->setBlockQuery($col, $form);
     }
 
+    /**
+     * Choose this block's entries from its source (pick mode) — or go back to
+     * showing the source by its order/filters. Starting a pick keeps nothing:
+     * entries are then added one by one from the source.
+     */
+    public function blockPickMode(string $collectionId, bool $on = true): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        $form['pick'] = $on ? [] : null;
+        $this->setBlockQuery($col, $form);
+    }
+
+    /** Add a source entry to this block (pick mode). */
+    public function blockPick(string $collectionId, string $itemId): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        if ($itemId === '' || ! $col->items()->whereKey($itemId)->exists()) {
+            return;
+        }
+        $form['pick'] = array_values(array_unique([...((array) ($form['pick'] ?? [])), $itemId]));
+        $this->setBlockQuery($col, $form);
+    }
+
+    /** Take an entry out of this block (pick mode) — it stays in the source. */
+    public function blockUnpick(string $collectionId, string $itemId): void
+    {
+        $this->guard();
+        [$col, $form] = $this->blockQueryTarget($collectionId);
+        $form['pick'] = array_values(array_diff((array) ($form['pick'] ?? []), [$itemId]));
+        $this->setBlockQuery($col, $form);
+    }
+
     /** Move an entry up (-1) / down (+1) in THIS block's order. */
     public function blockMove(string $collectionId, string $itemId, int $dir): void
     {
         $this->guard();
         [$col, $form] = $this->blockQueryTarget($collectionId);
+        if (is_array($form['pick'] ?? null)) {
+            $ids = array_values($form['pick']);
+            $i = array_search($itemId, $ids, true);
+            $j = $i === false ? false : $i + ($dir < 0 ? -1 : 1);
+            if ($i !== false && $j >= 0 && $j < count($ids)) {
+                [$ids[$i], $ids[$j]] = [$ids[$j], $ids[$i]];
+                $form['pick'] = $ids;
+                $this->setBlockQuery($col, $form);
+            }
+
+            return;
+        }
         $ids = $this->blockFullOrder($col, $form);
         $i = array_search($itemId, $ids, true);
         $j = $i === false ? false : $i + ($dir < 0 ? -1 : 1);
@@ -711,6 +867,18 @@ class ConnectReviewPage extends LivewireComponent
      * A collection grid card. Inside a component it previews exactly what
      * the block shows (its query applied); `fields` feeds the sort/filter selects.
      */
+    /** What an entry is called in the panel: its name / title / question, else its first text. */
+    private static function entryLabel(array $d): string
+    {
+        foreach (['name', 'title', 'q', 'question', 'label', 'heading'] as $k) {
+            if (is_string($d[$k] ?? null) && trim($d[$k]) !== '') {
+                return $d[$k];
+            }
+        }
+
+        return (string) (collect($d)->first(fn ($v) => is_string($v) && trim($v) !== '') ?? '…');
+    }
+
     private function collectionCard(Collection $col, array $query = []): array
     {
         $published = $col->items()->where('status', 'published')->get();
@@ -725,11 +893,19 @@ class ConnectReviewPage extends LivewireComponent
             'filtered' => $q !== [],
             'summary' => CollectionQuery::summary($q, $published->count(), $shown->count()),
             'fields' => $keys,
+            // each column's existing values — suggestions for "Only where … is …"
+            'values' => collect($keys)->mapWithKeys(fn ($k) => [$k => CollectionQuery::fieldValues($published, $k)])->all(),
             'manual' => ($q['sort'] ?? 'manual') === 'manual',
             'customOrder' => ! empty($q['order']),
+            // pick mode: the source's other entries, offered in "Add from …"
+            'pickMode' => array_key_exists('pick', $q),
+            'available' => array_key_exists('pick', $q) ? $published->reject(fn ($i) => in_array((string) $i->id, $q['pick'], true))->map(fn ($i) => [
+                'id' => (string) $i->id,
+                'label' => self::entryLabel((array) $i->data),
+            ])->values()->all() : [],
             'hidden' => $published->whereIn('id', $q['exclude'] ?? [])->map(fn ($i) => [
                 'id' => (string) $i->id,
-                'label' => (string) (data_get($i->data, 'name') ?? data_get($i->data, 'title') ?? collect((array) $i->data)->first(fn ($v) => is_string($v)) ?? '…'),
+                'label' => self::entryLabel((array) $i->data),
             ])->values()->all(),
             'items' => $shown->take(24)->map(function ($i) {
                 $d = (array) ($i->data ?? []);
@@ -739,7 +915,7 @@ class ConnectReviewPage extends LivewireComponent
 
                 return [
                     'id' => $i->id,
-                    'label' => (string) ($d['name'] ?? $d['title'] ?? array_values(array_filter($d, 'is_string'))[0] ?? '…'),
+                    'label' => self::entryLabel($d),
                     'img' => $img,
                 ];
             })->all(),
@@ -759,6 +935,13 @@ class ConnectReviewPage extends LivewireComponent
                     'label' => (string) ($f['label'] ?? ''),
                     'required' => (bool) ($f['required'] ?? false),
                     'fields' => array_values(array_filter(array_map(fn ($s) => $s['key'] ?? $s['name'] ?? null, (array) ($f['fields'] ?? [])))),
+                    'options' => array_values((array) ($f['options'] ?? [])),
+                    'optionsFrom' => $f['optionsFrom'] ?? null,
+                    'hidden' => (bool) ($f['hidden'] ?? false),
+                    'auto' => $f['auto'] ?? null,
+                    // typed sub-fields of a rows list: key => {type,label,options,show}
+                    'subDefs' => collect((array) ($f['fields'] ?? []))->filter(fn ($s) => is_array($s) && filled($s['key'] ?? null))
+                        ->mapWithKeys(fn ($s) => [$s['key'] => array_intersect_key($s, array_flip(['type', 'label', 'options', 'optionsFrom', 'show']))])->all(),
                 ]])->except([''])->all(),
                 'items' => $col->items->map(fn (CollectionItem $i) => ['id' => $i->id, 'data' => CollectionFieldShape::shape($i->data ?? [], (array) ($col->fields ?? []))])->all()];
         }
@@ -1353,6 +1536,82 @@ class ConnectReviewPage extends LivewireComponent
         $this->edit['nodes'] = array_values($this->edit['nodes']);
     }
 
+    /**
+     * A repeatable group's rows in the open component ("{Prefix} {n} {Field}"
+     * nodes, e.g. a carousel's slides): n => [field => index in edit.nodes].
+     */
+    private function nodeRows(string $prefix): array
+    {
+        $rows = [];
+        foreach ($this->edit['nodes'] ?? [] as $i => $node) {
+            if (preg_match('/^'.preg_quote($prefix, '/').' (\d+)(?: (.+))?$/', (string) $node['label'], $m)) {
+                $rows[(int) $m[1]][$m[2] ?? ''] = $i;
+            }
+        }
+        ksort($rows);
+
+        return $rows;
+    }
+
+    /** "+ Add slide": a new empty row with the same fields as the last one. */
+    public function addNodeRow(string $prefix): void
+    {
+        $rows = $this->nodeRows($prefix);
+        if ($rows === []) {
+            return;
+        }
+        $next = max(array_keys($rows)) + 1;
+        foreach (end($rows) as $field => $i) {
+            $this->edit['nodes'][] = ['id' => null, 'label' => trim("{$prefix} {$next} {$field}"),
+                'type' => $this->edit['nodes'][$i]['type'] ?? 'text', 'value' => ''];
+        }
+    }
+
+    /** Remove one row; the rows after it move up so the group stays 1…n. */
+    public function removeNodeRow(string $prefix, int $n): void
+    {
+        $rows = $this->nodeRows($prefix);
+        if (! isset($rows[$n]) || count($rows) < 2) {
+            return; // the last row stays — an empty group would fall back to the template's
+        }
+        foreach ($rows[$n] as $i) {
+            if (! empty($this->edit['nodes'][$i]['id'])) {
+                $this->edit['removedNodes'][] = $this->edit['nodes'][$i]['id'];
+            }
+            unset($this->edit['nodes'][$i]);
+        }
+        $pos = 0;
+        foreach ($rows as $k => $fields) {
+            if ($k === $n) {
+                continue;
+            }
+            $pos++;
+            foreach ($fields as $field => $i) {
+                $this->edit['nodes'][$i]['label'] = trim("{$prefix} {$pos} {$field}");
+            }
+        }
+        $this->edit['nodes'] = array_values($this->edit['nodes']);
+    }
+
+    /** Move a row up (-1) or down (+1) — swaps the two rows' values. */
+    public function moveNodeRow(string $prefix, int $n, int $dir): void
+    {
+        $rows = $this->nodeRows($prefix);
+        $keys = array_keys($rows);
+        $at = array_search($n, $keys, true);
+        $other = $at === false ? null : ($keys[$at + ($dir < 0 ? -1 : 1)] ?? null);
+        if ($other === null) {
+            return;
+        }
+        foreach ($rows[$n] as $field => $i) {
+            if (isset($rows[$other][$field])) {
+                $j = $rows[$other][$field];
+                [$this->edit['nodes'][$i]['value'], $this->edit['nodes'][$j]['value']]
+                    = [$this->edit['nodes'][$j]['value'], $this->edit['nodes'][$i]['value']];
+            }
+        }
+    }
+
     public function saveComponent(): void
     {
         $this->guard();
@@ -1373,6 +1632,8 @@ class ConnectReviewPage extends LivewireComponent
         }
         app(ContentVersioner::class)->capture($component, Auth::user()?->name);
         $oldIcon = $isProperties ? SiteProperties::value($this->site, 'square_icon') : '';
+        $propsBefore = $isProperties ? SiteProperties::get($this->site) : null;
+        $shownBefore = $isProperties ? PropertyLinks::shown($this->site, $propsBefore['values'], $propsBefore['rows']) : [];
         foreach ($this->edit['removedNodes'] ?? [] as $removedId) {
             // Delete the node and any children nested under it.
             Node::where('component_id', $component->id)
@@ -1425,8 +1686,20 @@ class ConnectReviewPage extends LivewireComponent
         }
         if ($isProperties) {
             SiteProperties::afterSave($this->site, $oldIcon);
+            // Same as the Properties page: changed properties also update the
+            // template's own copies (Site Profile, contact rows, header fields).
+            $after = SiteProperties::get($this->site);
+            $synced = PropertyLinks::push($this->site, $shownBefore,
+                PropertyLinks::linkedValues($after['values'], $after['rows']), Auth::user()?->name);
+            if ($synced !== []) {
+                SiteProperties::republish($this->site);
+            }
         }
+        $focus = $this->edit['focus'] ?? null;
         $this->loadEdit();
+        if ($focus) {
+            $this->edit['focus'] = $focus; // stay on the fields the preview opened
+        }
         $this->refreshPreview($isProperties ? 'Site properties saved' : 'Component saved');
     }
 
@@ -1498,6 +1771,11 @@ class ConnectReviewPage extends LivewireComponent
     {
         // "Items in this block" settings: re-preview that grid as you type.
         if (($this->edit['type'] ?? null) === 'component' && preg_match('/^edit\.queries\.([^.]+)\./', $prop, $m)) {
+            if (str_ends_with($prop, '.mode') && ($this->edit['queries'][$m[1]]['mode'] ?? '') !== 'match') {
+                // "Default" / "All entries": the search and column filter no longer apply.
+                $this->edit['queries'][$m[1]]['search'] = '';
+                $this->edit['queries'][$m[1]]['filter_value'] = '';
+            }
             $col = Collection::where('site_id', $this->site->id)->find($m[1]);
             if ($col) {
                 $this->edit['lists'][$col->id] = $this->collectionCard($col, (array) ($this->edit['queries'][$col->id] ?? []));
@@ -1540,7 +1818,12 @@ class ConnectReviewPage extends LivewireComponent
 
             return;
         }
-        CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->update(['data' => $d]);
+        // Saved through the model so system-filled fields (a slug from the name,
+        // dates, entry number …) are filled like on every other save.
+        $row = CollectionItem::where('id', $item['id'])->where('site_id', $this->site->id)->first();
+        if ($row) {
+            $row->update(['data' => $d]);
+        }
         $this->refreshPreview('Item updated', silent: true);
     }
 

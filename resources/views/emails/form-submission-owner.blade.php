@@ -1,14 +1,15 @@
 <x-mail::message>
 # New {{ $formLabel }} submission 📨
 
-Someone just submitted the **{{ $formLabel }}** on **{{ ucwords(str_replace('-', ' ', $site->name)) }}**:
+Someone just submitted the **{{ $formLabel }}** on **{{ ucwords(str_replace('-', ' ', $site->name)) }}**.
 
-@foreach($fields as $key => $value)
-**{{ \Illuminate\Support\Str::headline($key) }}:** {{ is_array($value) ? implode(', ', $value) : $value }}
+@foreach($rows as $label => $value)
+**{{ $label }}**<br>
+{!! nl2br(e($value)) !!}
+
 @endforeach
-
 <x-mail::button :url="$adminUrl">
-View submissions
+View this response
 </x-mail::button>
 
 {{ config('app.name', 'Olux') }}

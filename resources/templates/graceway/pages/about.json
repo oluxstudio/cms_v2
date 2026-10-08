@@ -10,6 +10,7 @@
         {
             "type": "app:graceway:page-hero-content",
             "name": "Page Hero Content",
+            "perPage": true,
             "nodes": []
         },
         {
@@ -61,50 +62,69 @@
             ]
         },
         {
-            "type": "app:graceway:times",
-            "name": "Times",
-            "nodes": []
-        },
-        {
-            "type": "app:graceway:pastors",
-            "name": "Pastors",
+            "type": "app:graceway:about-explore",
+            "name": "About Explore",
             "nodes": [
-                {
-                    "label": "Eyebrow",
-                    "type": "text",
-                    "value": "Leadership",
-                    "order": 0,
-                    "description": "copy:pastorsHead.eyebrow"
-                },
-                {
-                    "label": "Title",
-                    "type": "text",
-                    "value": "Meet our pastors",
-                    "order": 1,
-                    "description": "copy:pastorsHead.title"
-                },
                 {
                     "label": "Text",
                     "type": "text",
-                    "value": "Shepherds, teachers and neighbours \u2014 here to walk with you.",
-                    "order": 2,
-                    "description": "copy:pastorsHead.text"
+                    "value": "Get to know us",
+                    "order": 0,
+                    "description": "text"
                 },
                 {
-                    "label": "Cta To",
-                    "type": "url",
-                    "value": "/about#leadership",
-                    "order": 3,
-                    "description": "copy:pastorsHead.cta.to"
-                },
-                {
-                    "label": "Cta Label",
+                    "label": "Headline",
                     "type": "text",
-                    "value": "View All Members",
-                    "order": 4,
-                    "description": "copy:pastorsHead.cta.label"
+                    "value": "More about our church",
+                    "order": 1,
+                    "description": "text"
                 }
             ]
+        },
+        {
+            "type": "app:graceway:announcements-preview",
+            "name": "Announcements Preview",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "What's happening",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "Latest announcements",
+                    "order": 1,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:leadership-preview",
+            "name": "Leadership Preview",
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Leadership",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Headline",
+                    "type": "text",
+                    "value": "The people who shepherd us",
+                    "order": 1,
+                    "description": "text"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:times",
+            "name": "Times",
+            "nodes": []
         },
         {
             "type": "app:graceway:donate-cta",

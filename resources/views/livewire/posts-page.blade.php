@@ -1,120 +1,241 @@
 @php
-    $stats = $this->stats;
     $canManage = $site->canManageTeam(auth()->user());
+    $panel = 'rounded-[1.75rem] bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm';
+    $btnSolid = 'inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors';
+    $total = $stats['total'];
+    $filters = [
+        'all' => ['All', $total],
+        'published' => ['Published', $stats['published']],
+        'draft' => ['Drafts', $stats['drafts']],
+        'attention' => ['Needs attention', $stats['attention']],
+        'comments' => ['Comments to review', $stats['posts_with_pending']],
+    ];
+    $statusColor = ['published' => '#10b981', 'draft' => '#f59e0b'];
+    $catColors = ['#6366f1', '#0ea5e9', '#8b5cf6', '#f97316', '#14b8a6', '#94a3b8'];
+    $cover = fn ($p) => $p->cover_image ? \App\Models\Media::resolveRef($site->id, (string) $p->cover_image) : null;
+    $badge = fn ($p) => $p->isPublished()
+        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400'
+        : 'bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400';
+    $iconEdit = 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
+    $iconTrash = 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16';
 @endphp
 <x-tri-layout title="Posts" subtitle="Write, publish and see which posts your visitors love." :site-name="$site->name"
-    :labels="['📊 Insights', '📝 Posts', '🏆 Top posts']">
+    :labels="['📊 Stats', '📝 Posts', '📋 Summary']">
 
-    {{-- ── LEFT: insight tiles ── --}}
+    {{-- ── LEFT rail: the blog at a glance ── --}}
     <x-slot:rail>
-    {{-- Insight tiles --}}
     <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
-        <x-tile label="Posts written" :value="number_format($stats['total'])" :sub="$stats['published'].' published'" accent="ink" />
-        <x-tile label="Drafts" :value="number_format($stats['total'] - $stats['published'])" sub="awaiting publish" accent="cocoa" />
-        <x-tile label="Total visits" :value="number_format($stats['views'])" sub="across all posts" accent="lime" />
-        <x-tile label="Engagement" :value="number_format($stats['engagement'])" sub="likes + comments" accent="lavender" />
+        <x-tile accent="ink" wide :value="number_format($total)" label="Posts"
+                :sub="$stats['published_week'] ? $stats['published_week'].' published this week' : ($stats['created_week'] ? $stats['created_week'].' written this week' : 'nothing new this week')"
+                icon="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+        <x-tile accent="lime" :value="number_format($stats['published'])" label="Published" :sub="$total ? round($stats['published'] / $total * 100).'% of posts' : 'none yet'"
+                icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <x-tile accent="{{ $stats['stale_drafts'] ? 'rose' : 'cocoa' }}" :value="number_format($stats['drafts'])" label="Drafts"
+                :sub="$stats['stale_drafts'] ? $stats['stale_drafts'].' untouched '.$staleDays.'d+' : 'awaiting publish'"
+                icon="{{ $iconEdit }}" />
+        <x-tile accent="{{ $stats['pending_comments'] ? 'rose' : 'sky' }}" :value="number_format($stats['pending_comments'])" label="Comments to review"
+                :sub="$stats['pending_comments'] ? 'awaiting moderation' : 'all caught up'"
+                icon="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        <x-tile accent="lavender" :value="number_format($stats['views'])" label="Total views"
+                :sub="number_format($stats['likes']).' likes · '.number_format($stats['comments']).' comments'"
+                icon="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        <x-tile accent="{{ $stats['no_cover'] + $stats['no_excerpt'] ? 'rose' : 'sky' }}" :value="number_format($stats['attention'])" label="Needs attention"
+                :sub="$stats['no_cover'] + $stats['no_excerpt'] ? $stats['no_cover'].' no cover · '.$stats['no_excerpt'].' no excerpt' : 'every post is complete'"
+                icon="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </div>
     </x-slot:rail>
 
-    {{-- ── MAIN: centered content ── --}}
-    <div>
+    {{-- ── CENTER: toolbar + the posts ── --}}
+    <div class="space-y-5">
 
-    {{-- Actions: search + create --}}
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <div class="relative w-full sm:w-auto">
+    <div class="{{ $panel }} !rounded-2xl p-3 space-y-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="relative flex-1 min-w-[12rem]">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search posts…"
-                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-56">
+                <x-field.text wire:model.live.debounce.300ms="search" placeholder="Search by title, excerpt or category…" class="w-full" style="padding-left:2.25rem" />
             </div>
-            @if($canManage)
-            <button wire:click="createPost"
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                Create post
+            <select wire:model.live="sort" class="bkf-input !w-auto text-[13px]" title="Order">
+                <option value="recent">Newest first</option>
+                <option value="updated">Recently edited</option>
+                <option value="views">Most viewed</option>
+                <option value="engagement">Most engaging</option>
+                <option value="title">Title A–Z</option>
+            </select>
+            <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />
+            @if ($canManage)
+            <button type="button" wire:click="createPost"
+                    class="inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                New post
             </button>
             @endif
         </div>
-    </div>
-
-    <div>
-
-        {{-- ── All posts (paginated) ── --}}
-        <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden self-start">
-            <div class="px-5 py-4 border-b border-gray-100 dark:border-white/[0.05]">
-                <h2 class="text-sm font-semibold text-gray-900 dark:text-white">All posts</h2>
-            </div>
-            @forelse($posts as $post)
-            <div class="flex items-center gap-4 px-5 py-3.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                <div class="w-11 h-11 rounded-xl shrink-0 overflow-hidden bg-gray-100 dark:bg-white/[0.05] grid place-items-center text-lg">
-                    @if($post->cover_image)
-                        <img src="{{ $post->cover_image }}" alt="" class="w-full h-full object-cover" loading="lazy">
-                    @else 📝 @endif
-                </div>
-                <div class="min-w-0 flex-1 {{ $canManage ? 'cursor-pointer' : '' }}" @if($canManage) wire:click="editPost('{{ $post->id }}')" @endif>
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $post->title }}</p>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 truncate">
-                        {{ $post->author?->name ?? 'Unknown' }} · {{ ($post->published_at ?? $post->created_at)->format('M j, Y') }}
-                        · 👁 {{ number_format($post->views) }} · ❤ {{ number_format($post->likes) }} · 💬 {{ number_format($post->comments) }}
-                    </p>
-                </div>
-                <button @if($canManage) @click.stop="$wire.togglePublish('{{ $post->id }}')" @endif
-                        class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full {{ $canManage ? 'cursor-pointer' : 'cursor-default' }}
-                        {{ $post->isPublished()
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400'
-                            : 'bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400' }}"
-                        title="{{ $canManage ? 'Click to toggle publish' : '' }}">
-                    {{ $post->isPublished() ? 'Published' : 'Draft' }}
+        <div class="flex gap-2 overflow-x-auto no-scrollbar">
+            @foreach ($filters as $key => [$label, $n])
+                <button type="button" wire:click="setFilter('{{ $key }}')"
+                    class="shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold border transition-colors
+                        {{ $filter === $key
+                            ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white'
+                            : 'bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/[0.1] hover:bg-gray-50 dark:hover:bg-white/[0.06]' }}">
+                    {{ $label }} <span class="opacity-60">{{ $n }}</span>
                 </button>
-                @if($canManage)
-                <button type="button" @click.stop wire:click="deletePost('{{ $post->id }}')" data-confirm="Delete this post?"
-                        class="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
-                @endif
-            </div>
-            @empty
-            <div class="flex flex-col items-center justify-center py-16 text-center">
-                <span class="text-3xl mb-3">📝</span>
-                <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">{{ $search !== '' ? 'No posts match your search.' : 'No posts yet.' }}</p>
-                @if($canManage && $search === '')
-                    <button wire:click="createPost" class="mt-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Write your first post →</button>
-                @endif
-            </div>
-            @endforelse
-
-            @if($posts->hasPages())
-            <div class="px-5 py-3.5 border-t border-gray-100 dark:border-white/[0.05]">{{ $posts->links() }}</div>
-            @endif
-        </div>
-
-    </div>
-
-    {{-- ── RIGHT rail: Top-10 rankings ── --}}
-    <x-slot:quick>
-        <div class="space-y-6">
-            @foreach([
-                ['Top 10 by visits', $this->topByViews, fn ($p) => '👁 '.number_format($p->views)],
-                ['Top 10 by engagement', $this->topByEngagement, fn ($p) => '❤ '.number_format($p->likes).' · 💬 '.number_format($p->comments)],
-            ] as [$heading, $list, $metric])
-            <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border border-gray-100 dark:border-white/[0.05] shadow-sm overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100 dark:border-white/[0.05]">
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ $heading }}</h2>
-                </div>
-                @forelse($list as $i => $p)
-                <div class="flex items-center gap-3 px-5 py-2.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0">
-                    <span class="w-6 h-6 rounded-lg grid place-items-center text-[11px] font-bold shrink-0
-                        {{ $i < 3 ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-white/[0.05] text-gray-500 dark:text-gray-400' }}">{{ $i + 1 }}</span>
-                    <p class="text-[13px] font-medium text-gray-800 dark:text-gray-200 truncate flex-1">{{ $p->title }}</p>
-                    <span class="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums shrink-0">{{ $metric($p) }}</span>
-                </div>
-                @empty
-                <p class="px-5 py-6 text-xs text-gray-400 text-center">Nothing to rank yet.</p>
-                @endforelse
-            </div>
             @endforeach
         </div>
-    </x-slot:quick>
+    </div>
+
+    @if ($posts->isEmpty())
+        <div class="{{ $panel }} px-6 py-16 text-center">
+            <span class="mx-auto mb-3 w-14 h-14 rounded-2xl grid place-items-center bg-gray-100 dark:bg-white/[0.06]">
+                <svg class="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+            </span>
+            @if ($total === 0)
+                <p class="text-[15px] font-bold text-gray-900 dark:text-white">No posts yet</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">Posts power your blog, news and updates — write one and publish it when it's ready.</p>
+                @if ($canManage)
+                    <button type="button" wire:click="createPost" class="inline-flex mt-4 text-sm font-bold px-4 py-2.5 rounded-xl" style="background:var(--primary);color:var(--on-primary)">Write your first post</button>
+                @endif
+            @else
+                <p class="text-[15px] font-bold text-gray-900 dark:text-white">Nothing matches</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Try another search or filter.</p>
+                <button type="button" wire:click="resetFilters" class="{{ $btnSolid }} mt-4 text-sm px-4 py-2">Show all posts</button>
+            @endif
+        </div>
+    @elseif ($viewMode === 'grid')
+        {{-- ── Cards ── --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @foreach ($posts as $post)
+                @php $img = $cover($post); @endphp
+                <div class="group flex flex-col {{ $panel }} !rounded-2xl hover:shadow-md transition-shadow overflow-hidden" wire:key="post-{{ $post->id }}">
+                    <div class="flex-1 {{ $canManage ? 'cursor-pointer' : '' }}" @if($canManage) wire:click="editPost('{{ $post->id }}')" @endif>
+                        <div class="relative aspect-[16/9] max-w-full bg-gray-100 dark:bg-white/[0.05] overflow-hidden">
+                            @if ($img)
+                                <img src="{{ $img }}" alt="" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform" loading="lazy">
+                            @else
+                                <span class="absolute inset-0 grid place-items-center text-[12px] font-semibold text-gray-400 dark:text-gray-500">
+                                    <span class="text-center"><span class="block text-2xl mb-1">🖼</span>No cover image</span>
+                                </span>
+                            @endif
+                            <span class="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm {{ $badge($post) }}">{{ $post->isPublished() ? 'Published' : 'Draft' }}</span>
+                            @if ($post->pending_comments_count)
+                                <span class="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500 text-white">{{ $post->pending_comments_count }} to review</span>
+                            @endif
+                        </div>
+                        <div class="p-5">
+                            <p class="text-[15px] font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:underline">{{ $post->title }}</p>
+                            <p class="mt-1.5 text-[13px] line-clamp-2 min-h-[2.5em] {{ $post->excerpt ? 'text-gray-500 dark:text-gray-400' : 'italic text-amber-600 dark:text-amber-400' }}">{{ $post->excerpt ?: 'No excerpt — add one so it reads well in lists.' }}</p>
+                            <span class="mt-3 flex flex-wrap gap-1.5">
+                                @if ($post->category)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">{{ $post->category }}</span>
+                                @endif
+                                @foreach (array_slice($post->tags ?? [], 0, 3) as $tag)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300">#{{ $tag }}</span>
+                                @endforeach
+                                @if (count($post->tags ?? []) > 3)
+                                    <span class="text-[11px] text-gray-400">+{{ count($post->tags) - 3 }}</span>
+                                @endif
+                            </span>
+                            <p class="mt-3 text-[12px] text-gray-400 dark:text-gray-500 truncate">
+                                {{ $post->author?->name ?? 'Unknown' }} · {{ ($post->published_at ?? $post->created_at)->format('M j, Y') }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 px-3 py-2.5 border-t border-gray-100 dark:border-white/[0.05]">
+                        <span class="flex items-center gap-3 px-1 text-[12px] text-gray-500 dark:text-gray-400 tabular-nums">
+                            <span title="Views">👁 {{ number_format($post->views) }}</span>
+                            <span title="Likes">❤ {{ number_format($post->likes) }}</span>
+                            <span title="Approved comments">💬 {{ number_format($post->comments) }}</span>
+                        </span>
+                        @if ($canManage)
+                        <span class="ml-auto flex items-center gap-0.5">
+                            <button type="button" wire:click="togglePublish('{{ $post->id }}')" class="{{ $btnSolid }} text-[12px] px-3 py-1.5">
+                                {{ $post->isPublished() ? 'Unpublish' : 'Publish' }}
+                            </button>
+                            <button type="button" wire:click="editPost('{{ $post->id }}')" title="Edit"
+                                    class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconEdit }}"/></svg>
+                            </button>
+                            <button type="button" wire:click="deletePost('{{ $post->id }}')" data-confirm="Delete “{{ $post->title }}”?" title="Delete"
+                                    class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconTrash }}"/></svg>
+                            </button>
+                        </span>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @else
+        {{-- ── List & Compact (table) ── --}}
+        @php $compact = $viewMode === 'compact'; $pad = $compact ? 'px-4 py-2' : 'px-4 py-3'; @endphp
+        <div class="{{ $panel }} !rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-100 dark:border-white/[0.05] text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <th class="px-4 py-3">Post</th>
+                            <th class="px-4 py-3">Status</th>
+                            @unless ($compact)
+                                <th class="px-4 py-3">Category</th>
+                                <th class="px-4 py-3 text-right">Views</th>
+                                <th class="px-4 py-3 text-right">Engagement</th>
+                                <th class="px-4 py-3">Date</th>
+                            @endunless
+                            <th class="w-24 px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-white/[0.04]">
+                        @foreach ($posts as $post)
+                            @php $img = $cover($post); @endphp
+                            <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors group" wire:key="row-{{ $post->id }}">
+                                <td class="{{ $pad }}">
+                                    <div class="flex items-center gap-2.5 min-w-0 {{ $canManage ? 'cursor-pointer' : '' }}" @if($canManage) wire:click="editPost('{{ $post->id }}')" @endif>
+                                        <span class="{{ $compact ? 'w-8 h-8' : 'w-10 h-10' }} rounded-lg shrink-0 overflow-hidden bg-gray-100 dark:bg-white/[0.05] grid place-items-center text-sm">
+                                            @if ($img)<img src="{{ $img }}" alt="" class="w-full h-full object-cover" loading="lazy">@else 📝 @endif
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block font-semibold text-gray-900 dark:text-white truncate max-w-[18rem] hover:underline">{{ $post->title }}</span>
+                                            @unless ($compact)<span class="block text-[11px] text-gray-400 truncate max-w-[18rem]">{{ $post->excerpt ?: 'No excerpt' }}</span>@endunless
+                                        </span>
+                                        @if ($post->pending_comments_count)<span class="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">{{ $post->pending_comments_count }} 💬</span>@endif
+                                    </div>
+                                </td>
+                                <td class="{{ $pad }}">
+                                    <button type="button" @if($canManage) wire:click="togglePublish('{{ $post->id }}')" title="Click to toggle publish" @endif
+                                            class="text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap {{ $canManage ? 'cursor-pointer' : 'cursor-default' }} {{ $badge($post) }}">
+                                        {{ $post->isPublished() ? 'Published' : 'Draft' }}
+                                    </button>
+                                </td>
+                                @unless ($compact)
+                                    <td class="{{ $pad }} text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $post->category ?: '—' }}</td>
+                                    <td class="{{ $pad }} text-right tabular-nums font-semibold text-gray-900 dark:text-white">{{ number_format($post->views) }}</td>
+                                    <td class="{{ $pad }} text-right tabular-nums text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">❤ {{ number_format($post->likes) }} · 💬 {{ number_format($post->comments) }}</td>
+                                    <td class="{{ $pad }} text-[12px] text-gray-400 whitespace-nowrap">{{ ($post->published_at ?? $post->created_at)->format('M j, Y') }}</td>
+                                @endunless
+                                <td class="{{ $pad }}">
+                                    @if ($canManage)
+                                    <div class="flex items-center gap-1 justify-end">
+                                        <button type="button" wire:click="editPost('{{ $post->id }}')" title="Edit"
+                                                class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconEdit }}"/></svg>
+                                        </button>
+                                        <button type="button" wire:click="deletePost('{{ $post->id }}')" data-confirm="Delete “{{ $post->title }}”?" title="Delete"
+                                                class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconTrash }}"/></svg>
+                                        </button>
+                                    </div>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
+    @if ($posts->hasPages())
+        <div class="{{ $panel }} !rounded-2xl px-5 py-3.5">{{ $posts->links() }}</div>
+    @endif
 
     {{-- ── Create / edit modal ── --}}
     @if($showForm)
@@ -166,9 +287,8 @@
                 </div>
                 <div class="grid sm:grid-cols-[1fr_auto] gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Cover image URL <a href="{{ url($site->name.'/media') }}" class="font-normal text-indigo-500 hover:underline">(Media)</a></label>
-                        <input wire:model="coverImage" type="text" placeholder="https://… or /media/…"
-                               class="w-full text-sm rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] px-3.5 py-2.5 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Cover image</label>
+                        <x-asset-picker model="coverImage" :site="$site" type="image" placeholder="Image URL, or pick from assets" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Status</label>
@@ -181,7 +301,7 @@
                 </div>
                 <div class="flex items-center justify-end gap-3 pt-2">
                     <button type="button" wire:click="$set('showForm', false)"
-                            class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 border border-gray-200 dark:border-white/[0.08] hover:border-gray-300 transition-colors">Cancel</button>
+                            class="px-4 py-2 rounded-xl text-sm font-medium bg-white dark:bg-[#1d1e2a] text-gray-500 dark:text-gray-300 border border-gray-200 dark:border-white/[0.08] hover:border-gray-300 transition-colors">Cancel</button>
                     <button type="submit"
                             class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
                         {{ $editingId ? 'Save changes' : 'Create post' }}
@@ -192,6 +312,155 @@
     </div>
     @endif
     </div>
+
+    {{-- ══ RIGHT rail: summary · needs attention · comments · most read · related ══ --}}
+    <x-slot:quick>
+        <div class="{{ $panel }} p-5">
+            <p class="text-[11px] font-bold uppercase tracking-[.14em] mb-1" style="color:var(--primary)">Posts summary</p>
+            <p class="text-[13px] text-gray-600 dark:text-gray-300 mb-3">
+                <b class="text-gray-900 dark:text-white">{{ $total }}</b> {{ Str::plural('post', $total) }} ·
+                <b class="text-gray-900 dark:text-white">{{ number_format($stats['views']) }}</b> {{ Str::plural('view', $stats['views']) }} ·
+                <b class="text-gray-900 dark:text-white">{{ number_format($stats['likes'] + $stats['comments']) }}</b> engagements
+            </p>
+            @if ($total)
+                <div class="flex h-2.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/[0.06]">
+                    @foreach (['published' => $stats['published'], 'draft' => $stats['drafts']] as $s => $n)
+                        @if ($n)<span style="width:{{ round($n / $total * 100, 2) }}%;background:{{ $statusColor[$s] }}" title="{{ ucfirst($s) }} · {{ $n }}"></span>@endif
+                    @endforeach
+                </div>
+                <div class="mt-3 space-y-1.5">
+                    @foreach (['published' => ['Published', $stats['published']], 'draft' => ['Drafts', $stats['drafts']]] as $s => [$label, $n])
+                        <div class="flex items-center gap-2 text-[12.5px]">
+                            <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $statusColor[$s] }}"></span>
+                            <span class="text-gray-600 dark:text-gray-300">{{ $label }}</span>
+                            <span class="ml-auto font-bold text-gray-900 dark:text-white">{{ $n }}</span>
+                        </div>
+                    @endforeach
+                </div>
+                @if ($byCategory)
+                    <p class="mt-4 mb-1.5 text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">By category</p>
+                    <div class="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-white/[0.06]">
+                        @foreach (array_values($byCategory) as $i => $n)
+                            <span style="width:{{ round($n / $total * 100, 2) }}%;background:{{ $catColors[$i] ?? '#94a3b8' }}"></span>
+                        @endforeach
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                        @foreach (array_keys($byCategory) as $i => $cat)
+                            <span class="inline-flex items-center gap-1.5 text-[12px] text-gray-600 dark:text-gray-300">
+                                <span class="w-2 h-2 rounded-full" style="background:{{ $catColors[$i] ?? '#94a3b8' }}"></span>{{ $cat }} <b class="text-gray-900 dark:text-white">{{ $byCategory[$cat] }}</b>
+                            </span>
+                        @endforeach
+                    </div>
+                @endif
+            @endif
+        </div>
+
+        @if ($stats['attention'] || $pendingComments->isNotEmpty())
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Needs attention</p>
+            <div class="space-y-2.5">
+                @if ($pendingComments->isNotEmpty())
+                    <div class="rounded-2xl px-3.5 py-3 bg-rose-50 dark:bg-rose-500/10">
+                        <p class="text-[13px] font-bold text-rose-800 dark:text-rose-200">{{ $stats['pending_comments'] }} {{ Str::plural('comment', $stats['pending_comments']) }} to moderate</p>
+                        <div class="mt-2 space-y-2">
+                            @foreach ($pendingComments as $c)
+                                <div class="rounded-xl bg-white/80 dark:bg-white/[0.06] px-3 py-2" wire:key="pc-{{ $c->id }}">
+                                    <p class="text-[12px] text-gray-800 dark:text-gray-100 line-clamp-2">“{{ $c->body }}”</p>
+                                    <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ $c->author_name }} on {{ $c->post?->title ?? 'a post' }}</p>
+                                    @if ($canManage)
+                                    <div class="mt-1.5 flex gap-1.5">
+                                        <button type="button" wire:click="moderateComment('{{ $c->id }}', 'approved')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white">Approve</button>
+                                        <button type="button" wire:click="moderateComment('{{ $c->id }}', 'spam')" data-confirm="Mark this comment as spam?" class="{{ $btnSolid }} px-2.5 py-1 text-[11px]">Spam</button>
+                                    </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                        @if ($stats['posts_with_pending'])
+                            <button type="button" wire:click="setFilter('comments')" class="mt-2 text-[12px] font-semibold text-rose-700 dark:text-rose-200 hover:underline">Show posts with comments to review →</button>
+                        @endif
+                    </div>
+                @endif
+                @if ($stats['stale_drafts'])
+                    <button type="button" wire:click="setFilter('draft')" class="w-full text-left rounded-2xl px-3.5 py-3 bg-amber-50 dark:bg-amber-500/10 hover:ring-2 hover:ring-amber-200 dark:hover:ring-amber-500/30">
+                        <p class="text-[13px] font-bold text-amber-800 dark:text-amber-200">{{ $stats['stale_drafts'] }} {{ Str::plural('draft', $stats['stale_drafts']) }} left untouched</p>
+                        <p class="text-[12px] text-amber-700/80 dark:text-amber-200/70">Not edited in {{ $staleDays }}+ days — finish or delete them →</p>
+                    </button>
+                @endif
+                @if ($stats['no_cover'] || $stats['no_excerpt'])
+                    <div class="rounded-2xl px-3.5 py-3 bg-gray-50 dark:bg-white/[0.04]">
+                        <p class="text-[13px] font-bold text-gray-800 dark:text-gray-100">
+                            {{ collect([$stats['no_cover'] ? $stats['no_cover'].' without a cover' : null, $stats['no_excerpt'] ? $stats['no_excerpt'].' without an excerpt' : null])->filter()->implode(' · ') }}
+                        </p>
+                        <p class="text-[12px] text-gray-500 dark:text-gray-400 mb-1.5">Blog lists and link previews look bare without them.</p>
+                        <div class="flex flex-wrap gap-1">
+                            @foreach ($attentionList as $p)
+                                @if ($canManage)
+                                    <button type="button" wire:click="editPost('{{ $p->id }}')" class="max-w-full truncate px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 hover:underline">✎ {{ Str::limit($p->title, 28) }}</button>
+                                @endif
+                            @endforeach
+                        </div>
+                        <button type="button" wire:click="setFilter('attention')" class="mt-2 text-[12px] font-semibold hover:underline" style="color:var(--primary)">Show all {{ $stats['attention'] }} →</button>
+                    </div>
+                @endif
+            </div>
+        </div>
+        @endif
+
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Most read</p>
+            @if ($mostRead->isEmpty())
+                <p class="text-[12.5px] text-gray-400">No views yet — numbers appear as visitors read your posts.</p>
+            @else
+                @php $maxViews = max(1, $mostRead->max('views')); @endphp
+                <div class="space-y-2.5">
+                    @foreach ($mostRead as $p)
+                        <button type="button" @if($canManage) wire:click="editPost('{{ $p->id }}')" @endif class="block w-full text-left group">
+                            <span class="flex items-center justify-between gap-2 text-[12.5px]">
+                                <span class="truncate text-gray-700 dark:text-gray-200 group-hover:underline">{{ $p->title }}</span>
+                                <span class="font-bold text-gray-900 dark:text-white tabular-nums shrink-0">{{ number_format($p->views) }}</span>
+                            </span>
+                            <span class="block mt-1 h-1.5 rounded-full bg-gray-100 dark:bg-white/[0.06] overflow-hidden">
+                                <span class="block h-full rounded-full" style="width:{{ round($p->views / $maxViews * 100) }}%;background:var(--primary)"></span>
+                            </span>
+                        </button>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        @if ($recentlyPublished->isNotEmpty())
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Recently published</p>
+            <div class="space-y-2">
+                @foreach ($recentlyPublished as $p)
+                    <button type="button" @if($canManage) wire:click="editPost('{{ $p->id }}')" @endif class="flex w-full items-center gap-2.5 text-left group">
+                        <span class="w-2 h-2 rounded-full shrink-0 bg-emerald-500"></span>
+                        <span class="min-w-0 flex-1 text-[12.5px] font-semibold text-gray-700 dark:text-gray-200 truncate group-hover:underline">{{ $p->title }}</span>
+                        <span class="text-[11px] text-gray-400 shrink-0">{{ $p->published_at?->diffForHumans(null, true) }}</span>
+                    </button>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Related</p>
+            <div class="grid grid-cols-2 gap-2">
+                @foreach ([
+                    ['Edit site', 'Place posts on pages', url($site->name.'/connect')],
+                    ['Pages', 'Your blog & news pages', route('pages', $site->name)],
+                    ['Assets', 'Cover images', route('media', $site->name)],
+                    ['Collections', 'Other structured content', route('collections', $site->name)],
+                ] as [$label, $hint, $href])
+                    <a href="{{ $href }}" wire:navigate class="rounded-2xl px-3 py-2.5 bg-gray-50 dark:bg-white/[0.04] hover:ring-2 hover:ring-[color-mix(in_srgb,var(--primary)_30%,transparent)]">
+                        <span class="block text-[12.5px] font-bold text-gray-900 dark:text-white">{{ $label }} →</span>
+                        <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ $hint }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </x-slot:quick>
 </x-tri-layout>
 @assets
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">

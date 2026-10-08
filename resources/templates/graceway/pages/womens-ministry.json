@@ -1,0 +1,435 @@
+{
+    "name": "Womens Ministry",
+    "url": "/womens-ministry",
+    "layout": "default",
+    "keywords": "womens ministry",
+    "attributes": {
+        "title": "Women's Ministry \u2014 CAC Blackburn"
+    },
+    "blocks": [
+        {
+            "type": "app:graceway:page-hero-content",
+            "name": "Page Hero Content",
+            "perPage": true,
+            "nodes": []
+        },
+        {
+            "type": "app:graceway:ministry-hub",
+            "name": "Ministry Hub",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Text",
+                    "type": "text",
+                    "value": "Details for this ministry are coming soon.",
+                    "order": 0,
+                    "description": "text"
+                },
+                {
+                    "label": "Others Title",
+                    "type": "text",
+                    "value": "Other ministries",
+                    "order": 1,
+                    "description": "const:othersTitle"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-about",
+            "name": "Ministry About",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "About Kicker",
+                    "type": "text",
+                    "value": "About the ministry",
+                    "order": 0,
+                    "description": "const:aboutKicker"
+                },
+                {
+                    "label": "About Title",
+                    "type": "text",
+                    "value": "Name from Ministry Pages",
+                    "order": 1,
+                    "description": "const:aboutTitle"
+                },
+                {
+                    "label": "About Text",
+                    "type": "text",
+                    "value": "Story from Ministry Pages",
+                    "order": 2,
+                    "description": "const:aboutText"
+                },
+                {
+                    "label": "About Image",
+                    "type": "image",
+                    "value": "/assets/images/ministry-default.jpg",
+                    "order": 3,
+                    "description": "const:aboutImage"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-glance",
+            "name": "Ministry Glance",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Glance Title",
+                    "type": "text",
+                    "value": "At a glance",
+                    "order": 0,
+                    "description": "const:glanceTitle"
+                },
+                {
+                    "label": "Involved Label",
+                    "type": "text",
+                    "value": "Get involved",
+                    "order": 1,
+                    "description": "const:involvedLabel"
+                },
+                {
+                    "label": "Involved Link",
+                    "type": "text",
+                    "value": "/contact#get-involved",
+                    "order": 2,
+                    "description": "const:involvedLink"
+                },
+                {
+                    "label": "Contact Email",
+                    "type": "text",
+                    "value": "Email from Ministry Pages",
+                    "order": 3,
+                    "description": "const:contactEmail"
+                },
+                {
+                    "label": "Fact 1 Icon",
+                    "type": "text",
+                    "value": "calendar",
+                    "order": 4,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Fact 1 Label",
+                    "type": "text",
+                    "value": "When",
+                    "order": 5,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Fact 1 Value",
+                    "type": "text",
+                    "value": "",
+                    "order": 6,
+                    "description": "item:value"
+                },
+                {
+                    "label": "Fact 2 Icon",
+                    "type": "text",
+                    "value": "pin",
+                    "order": 7,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Fact 2 Label",
+                    "type": "text",
+                    "value": "Where",
+                    "order": 8,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Fact 2 Value",
+                    "type": "text",
+                    "value": "",
+                    "order": 9,
+                    "description": "item:value"
+                },
+                {
+                    "label": "Fact 3 Icon",
+                    "type": "text",
+                    "value": "users",
+                    "order": 10,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Fact 3 Label",
+                    "type": "text",
+                    "value": "Who it's for",
+                    "order": 11,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Fact 3 Value",
+                    "type": "text",
+                    "value": "",
+                    "order": 12,
+                    "description": "item:value"
+                },
+                {
+                    "label": "Fact 4 Icon",
+                    "type": "text",
+                    "value": "star",
+                    "order": 13,
+                    "description": "item:icon"
+                },
+                {
+                    "label": "Fact 4 Label",
+                    "type": "text",
+                    "value": "Members",
+                    "order": 14,
+                    "description": "item:label"
+                },
+                {
+                    "label": "Fact 4 Value",
+                    "type": "text",
+                    "value": "",
+                    "order": 15,
+                    "description": "item:value"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-what-we-do",
+            "name": "Ministry What We Do",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Activities Kicker",
+                    "type": "text",
+                    "value": "Get involved",
+                    "order": 0,
+                    "description": "const:activitiesKicker"
+                },
+                {
+                    "label": "Activities Title",
+                    "type": "text",
+                    "value": "What we do",
+                    "order": 1,
+                    "description": "const:activitiesTitle"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-photos",
+            "name": "Ministry Photos",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Gallery Kicker",
+                    "type": "text",
+                    "value": "Moments together",
+                    "order": 0,
+                    "description": "const:galleryKicker"
+                },
+                {
+                    "label": "Gallery Title",
+                    "type": "text",
+                    "value": "Photo gallery",
+                    "order": 1,
+                    "description": "const:galleryTitle"
+                },
+                {
+                    "label": "Slide 1 Image",
+                    "type": "image",
+                    "value": "/assets/images/gallery-3.jpg",
+                    "order": 2,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Slide 1 Caption",
+                    "type": "text",
+                    "value": "Saturday breakfast",
+                    "order": 3,
+                    "description": "item:caption"
+                },
+                {
+                    "label": "Slide 2 Image",
+                    "type": "image",
+                    "value": "/assets/images/gallery-1.jpg",
+                    "order": 4,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Slide 2 Caption",
+                    "type": "text",
+                    "value": "Midweek Bible study",
+                    "order": 5,
+                    "description": "item:caption"
+                },
+                {
+                    "label": "Slide 3 Image",
+                    "type": "image",
+                    "value": "/assets/images/gallery-8.jpg",
+                    "order": 6,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Slide 3 Caption",
+                    "type": "text",
+                    "value": "Worship together",
+                    "order": 7,
+                    "description": "item:caption"
+                },
+                {
+                    "label": "Slide 4 Image",
+                    "type": "image",
+                    "value": "/assets/images/gallery-5.jpg",
+                    "order": 8,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Slide 4 Caption",
+                    "type": "text",
+                    "value": "Fellowship lunch",
+                    "order": 9,
+                    "description": "item:caption"
+                },
+                {
+                    "label": "Slide 5 Image",
+                    "type": "image",
+                    "value": "/assets/images/gallery-11.jpg",
+                    "order": 10,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Slide 5 Caption",
+                    "type": "text",
+                    "value": "Serve day",
+                    "order": 11,
+                    "description": "item:caption"
+                },
+                {
+                    "label": "Slide 6 Image",
+                    "type": "image",
+                    "value": "/assets/images/gallery-12.jpg",
+                    "order": 12,
+                    "description": "item:img"
+                },
+                {
+                    "label": "Slide 6 Caption",
+                    "type": "text",
+                    "value": "Praying together",
+                    "order": 13,
+                    "description": "item:caption"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-questions",
+            "name": "Ministry Questions",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Faqs Kicker",
+                    "type": "text",
+                    "value": "Good to know",
+                    "order": 0,
+                    "description": "const:faqsKicker"
+                },
+                {
+                    "label": "Faqs Title",
+                    "type": "text",
+                    "value": "Questions people ask",
+                    "order": 1,
+                    "description": "const:faqsTitle"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-leaders",
+            "name": "Ministry Leaders",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Leaders Title",
+                    "type": "text",
+                    "value": "Ministry leaders",
+                    "order": 0,
+                    "description": "const:leadersTitle"
+                },
+                {
+                    "label": "Leaders Link",
+                    "type": "text",
+                    "value": "Meet the whole team",
+                    "order": 1,
+                    "description": "const:leadersLink"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-verse",
+            "name": "Ministry Verse",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Verse Text",
+                    "type": "text",
+                    "value": "Theme verse from Ministry Pages",
+                    "order": 0,
+                    "description": "const:verseText"
+                },
+                {
+                    "label": "Verse Ref",
+                    "type": "text",
+                    "value": "Reference from Ministry Pages",
+                    "order": 1,
+                    "description": "const:verseRef"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-events",
+            "name": "Ministry Events",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Events Title",
+                    "type": "text",
+                    "value": "Upcoming events",
+                    "order": 0,
+                    "description": "const:eventsTitle"
+                },
+                {
+                    "label": "Events Link",
+                    "type": "text",
+                    "value": "All events",
+                    "order": 1,
+                    "description": "const:eventsLink"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:ministry-prayer",
+            "name": "Ministry Prayer",
+            "perPage": true,
+            "nodes": [
+                {
+                    "label": "Prayer Title",
+                    "type": "text",
+                    "value": "Need prayer?",
+                    "order": 0,
+                    "description": "const:prayerTitle"
+                },
+                {
+                    "label": "Prayer Text",
+                    "type": "text",
+                    "value": "Our Prayer Watch prays for every request we receive \u2014 in confidence.",
+                    "order": 1,
+                    "description": "const:prayerText"
+                },
+                {
+                    "label": "Prayer Link",
+                    "type": "text",
+                    "value": "Send a prayer request",
+                    "order": 2,
+                    "description": "const:prayerLink"
+                }
+            ]
+        },
+        {
+            "type": "app:graceway:donate-cta",
+            "name": "Donate Cta",
+            "nodes": []
+        }
+    ]
+}

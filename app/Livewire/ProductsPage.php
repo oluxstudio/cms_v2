@@ -6,12 +6,11 @@ use App\Models\Site;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class ProductsPage extends Component
 {
-    use WithFileUploads, WithPagination;
+    use WithPagination;
 
     public Site $site;
 
@@ -39,9 +38,8 @@ class ProductsPage extends Component
 
     public bool $is_active = true;
 
-    public $photo;
-
-    public ?string $existingImage = null;
+    /** Product picture — a URL from the asset picker (or pasted). */
+    public string $imageUrl = '';
 
     public string $successMessage = '';
 
@@ -202,8 +200,8 @@ class ProductsPage extends Component
         $this->category = (string) ($p->category ?? '');
         $this->tagsInput = implode(', ', $p->tags ?? []);
         $this->is_active = $p->is_active;
-        $this->existingImage = $p->image;
-        $this->photo = null;
+        // The field shows what is stored (an @media ref); legacy upload paths show as their URL.
+        $this->imageUrl = str_starts_with((string) $p->image, '@media/') ? (string) $p->image : (string) $p->image_url;
         $this->showForm = true;
     }
 
@@ -220,7 +218,7 @@ class ProductsPage extends Component
             'price' => ['required', 'numeric', 'min:0'],
             'inventory' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['boolean'],
-            'photo' => ['nullable', 'image', 'max:4096'],
+            'imageUrl' => ['nullable', 'string', 'max:2048'],
         ]);
 
         $data = [
@@ -234,9 +232,7 @@ class ProductsPage extends Component
             'tags' => collect(explode(',', $this->tagsInput))->map(fn ($t) => trim($t))->filter()->unique()->values()->all() ?: null,
         ];
 
-        if ($this->photo) {
-            $data['image'] = $this->photo->store('products', 'public');
-        }
+        $data['image'] = trim($this->imageUrl) !== '' ? trim($this->imageUrl) : null;
 
         if ($this->editingId) {
             $p = $this->site->products()->findOrFail($this->editingId);
@@ -289,7 +285,7 @@ class ProductsPage extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'description', 'price', 'inventory', 'photo', 'existingImage', 'category', 'tagsInput']);
+        $this->reset(['editingId', 'name', 'description', 'price', 'inventory', 'imageUrl', 'category', 'tagsInput']);
         $this->is_active = true;
     }
 

@@ -89,21 +89,21 @@ test('a page from another site 404s', function () {
     $this->actingAs($owner)->get("/{$site->name}/pages/{$otherPage->id}/details")->assertNotFound();
 });
 
-test('the content tab embeds the connect editor scoped to this page with summary tiles', function () {
+test('content is edited on the Edit site page: the Content tab is gone and "Edit content" opens the editor on this page', function () {
     [$owner, $site, $page] = pageDetailSite();
     $component = $site->contentComponents()->create(['name' => 'Hero', 'author' => 't', 'source' => 'app']);
     $component->nodes()->create(['label' => 'Headline', 'type' => 'text', 'value' => 'Hi', 'parent' => '0', 'order' => 0]);
     $page->components()->attach($component->id, ['order' => 1]);
 
     $lw = Livewire::actingAs($owner)->test(PageDetailPage::class, ['site' => $site, 'page' => $page])
-        ->call('setTab', 'content');
-
+        ->call('setTab', 'content')->assertSet('tab', 'edit')            // old links fall back
+        ->assertDontSeeLivewire(ConnectReviewPage::class)
+        ->assertSeeHtml(e(url($site->name.'/connect?page='.$page->id)));
     expect($lw->instance()->summary['components'])->toBe(1)
         ->and($lw->instance()->summary['fields'])->toBe(1);
-    $lw->assertSee('sections')->assertSee('visits · 30 days')->assertSeeLivewire(ConnectReviewPage::class);
 
-    // The embedded editor opens on THIS page's path.
-    $connect = Livewire::actingAs($owner)->test(ConnectReviewPage::class, ['site' => $site, 'previewPath' => $page->url]);
+    // /connect?page={id} opens the preview on that page.
+    $connect = Livewire::withQueryParams(['page' => $page->id])->actingAs($owner)->test(ConnectReviewPage::class, ['site' => $site]);
     expect($connect->get('previewPath'))->toBe('/services');
 });
 
@@ -150,4 +150,22 @@ test('inlineLinkEdit fixes UNMARKED nav links by matching current values (header
     expect($header->nodes()->where('label', 'Right Nav 2 Href')->value('value'))->toBe('/shop')
         ->and($header->nodes()->where('label', 'Right Nav 2 Label')->value('value'))->toBe('Shop')
         ->and($header->nodes()->where('label', 'Left Nav 1 Href')->value('value'))->toBe('/about'); // untouched
+});
+
+test('the page details screen uses the 3-pane layout: stat tiles, settings tabs and a search/SEO summary', function () {
+    $user = User::factory()->create();
+    $site = Site::factory()->create(['user_id' => $user->id, 'domain' => 'pd3-'.uniqid().'.test']);
+    $page = Page::create(['site_id' => $site->id, 'name' => 'About us', 'url' => '/about', 'keywords' => '', 'is_published' => true]);
+    $page->setAttr('description', 'We are a friendly church in the heart of town — come and say hello on Sunday.');
+
+    $c = Livewire::actingAs($user)->test(PageDetailPage::class, ['site' => $site, 'page' => $page])
+        ->assertSee('SEO checks')->assertSee('Visits · 30 days')->assertSee('Content sources')   // left tiles
+        ->assertSee('Page attributes & meta tags')                                                 // centre tabs
+        ->assertSee('Search preview')->assertSee('SEO checklist')->assertSee('Sections on this page') // right rail
+        ->assertSee('We are a friendly church')
+        ->assertSet('tab', 'edit');
+
+    $checks = collect($c->instance()->seoChecks);
+    expect($checks->firstWhere(0, 'Meta description')[1])->toBeTrue()   // 50–160 chars
+        ->and($checks->firstWhere(0, 'Social image')[1])->toBeFalse();
 });

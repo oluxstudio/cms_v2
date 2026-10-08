@@ -2,15 +2,17 @@
 import SiteHeader from '~/components/SiteHeader.vue'
 import PageHeroContent from '~/components/PageHeroContent.vue'
 import AboutBlock from '~/components/AboutBlock.vue'
+import AboutExplore from '~/components/AboutExplore.vue'
+import AnnouncementsPreview from '~/components/AnnouncementsPreview.vue'
+import LeadershipPreview from '~/components/LeadershipPreview.vue'
 import TimesBlock from '~/components/TimesBlock.vue'
-import PastorsBlock from '~/components/PastorsBlock.vue'
 import DonateCta from '~/components/DonateCta.vue'
 import SiteFooter from '~/components/SiteFooter.vue'
 
 useHead({ title: 'About Us — CAC Blackburn' })
 
 // Blocks render in the CMS-configured order (original order as fallback).
-const oluxBlocks: Record<string, any> = { 'site-header': SiteHeader, 'page-hero-content': PageHeroContent, 'about': AboutBlock, 'times': TimesBlock, 'pastors': PastorsBlock, 'donate-cta': DonateCta, 'site-footer': SiteFooter }
+const oluxBlocks: Record<string, any> = { 'site-header': SiteHeader, 'page-hero-content': PageHeroContent, 'about': AboutBlock, 'about-explore': AboutExplore, 'announcements-preview': AnnouncementsPreview, 'leadership-preview': LeadershipPreview, 'times': TimesBlock, 'donate-cta': DonateCta, 'site-footer': SiteFooter }
 const oluxPage = useOluxPageOrder('/about', oluxBlocks)
 // Page-level literal props (e.g. :limit="3" show-view-all) survive the rewrite.
 const oluxProps: Record<string, any> = {  }

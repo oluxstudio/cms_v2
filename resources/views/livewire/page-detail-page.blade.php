@@ -1,86 +1,68 @@
-{{-- Full-screen canvas, dashboard idiom: left rail | centered main content --}}
-<div class="min-h-full flex flex-col app-bg"
-     x-data="{ toast:'', tabsOpen: false }"
+@php
+    $s = $this->summary;
+    $seo = $this->seoChecks;
+    $seoOk = collect($seo)->where(1, true)->count();
+    $panel = 'rounded-[1.75rem] bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm';
+    $btnSolid = 'inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors';
+    $trend = $s['visits_prev'] > 0 ? (int) round(($s['visits_30d'] - $s['visits_prev']) / $s['visits_prev'] * 100) : null;
+    $metaTitleShown = trim($metaTitle) !== '' ? $metaTitle : $page->name.' — '.($site->getAttr('business_name') ?: ucwords(str_replace('-', ' ', $site->name)));
+    $previewHref = $site->previewUrl($page->url);
+@endphp
+{{-- One page's admin screen on the house 3-pane layout: stats · settings · summary --}}
+<div class="min-h-full flex flex-col"
+     x-data="{ toast:'' }"
      x-init="$watch('$wire.successMessage', v => { if(v){ toast=v; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } })">
 
-    <x-bg-ambient />
+<x-tri-layout :title="$page->name" :subtitle="$page->url" :site-name="$site->name"
+    :labels="['📊 Overview', '📄 Page', '🔎 Summary']">
 
-    {{-- ── Header row ── --}}
-    <div class="flex flex-wrap items-center gap-3 px-6 py-5 shrink-0">
-        <div class="min-w-0 flex-1">
-            <a href="{{ route('pages', ['siteID' => $site->name]) }}" class="text-xs font-semibold text-gray-400 hover:text-indigo-500">← Pages</a>
-            <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white truncate leading-tight">{{ $page->name }}</h1>
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-300 font-mono">{{ $page->url }}</p>
+    <x-slot:header>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('pages', ['siteID' => $site->name]) }}" wire:navigate class="{{ $btnSolid }} text-[13px] px-3.5 py-2">← All pages</a>
+            <span class="text-[11px] font-bold px-2.5 py-1 rounded-full {{ $page->is_published ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-200 text-gray-600 dark:bg-black/40 dark:text-gray-300' }}">
+                {{ $page->is_published ? '● Live' : 'Draft' }}
+            </span>
+            @if ($previewHref)
+                <x-preview-button :href="$previewHref" label="View page" small />
+            @endif
+            <a href="{{ url($site->name.'/connect?page='.$page->id) }}" title="Open this page in Edit site"
+               class="inline-flex items-center gap-1.5 text-[13px] font-bold px-3.5 py-2 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Edit content
+            </a>
         </div>
-        <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full {{ $page->is_published ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-200 text-gray-600 dark:bg-black/40 dark:text-gray-300' }}">
-            {{ $page->is_published ? 'Live' : 'Draft' }}
-        </span>
-        @if($preview = $site->previewUrl($page->url))
-            <x-preview-button :href="$preview" label="View page" small />
+    </x-slot:header>
+
+    {{-- ── LEFT rail: this page at a glance ── --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile accent="ink" wide :value="$s['components']" :label="Str::plural('Section', $s['components'])"
+                :sub="$s['fields'].' '.Str::plural('field', $s['fields']).($s['layout'] ? ' · '.$s['layout'] : '')"
+                icon="M4 5a1 1 0 011-1h14a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+        <x-tile accent="lime" :value="number_format($s['visits_30d'])" label="Visits · 30 days"
+                :sub="$trend === null ? 'this page only' : ($trend >= 0 ? '▲ '.$trend.'% vs previous 30' : '▼ '.abs($trend).'% vs previous 30')"
+                icon="M3 13.5L9 7.5l4 4L21 3.5M21 3.5h-5m5 0v5M4 20h16" />
+        <x-tile :accent="$seoOk === count($seo) ? 'sky' : ($seoOk <= 2 ? 'rose' : 'cocoa')" :value="$seoOk.'/'.count($seo)" label="SEO checks"
+                :sub="$seoOk === count($seo) ? 'all good' : (count($seo) - $seoOk).' to improve'"
+                icon="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <x-tile accent="lavender" :value="$s['sources']" label="Content sources" sub="collections, posts & products shown here"
+                icon="M4 7v10c0 2 3.6 3 8 3s8-1 8-3V7M4 7c0 2 3.6 3 8 3s8-1 8-3M4 7c0-2 3.6-3 8-3s8 1 8 3m0 5c0 2-3.6 3-8 3s-8-1-8-3" />
+        <x-tile accent="cocoa" :value="$s['updated']?->diffForHumans(short: true) ?? '—'" label="Last edited"
+                :sub="$page->is_published ? 'live on the site' : 'draft — not on the site'"
+                icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </div>
+    </x-slot:rail>
+
+    {{-- ── CENTER: the page's settings, in pill tabs ── --}}
+    <div class="space-y-5">
+        @if ($s['inactive'])
+            <div class="rounded-2xl px-4 py-3 bg-amber-50 dark:bg-amber-500/10 text-[13px] text-amber-800 dark:text-amber-200">
+                This page belongs to a template that isn't active — it's parked and not shown on the site. Activate it from the <a href="{{ route('pages', ['siteID' => $site->name]) }}" wire:navigate class="font-bold underline">Pages list</a>.
+            </div>
         @endif
-        {{-- Tab toggle: the section tabs stay tucked away until asked for --}}
-        <button type="button" @click="tabsOpen = ! tabsOpen" :aria-expanded="tabsOpen" aria-label="Show page sections"
-                class="p-2 rounded-xl border transition-colors"
-                :class="tabsOpen ? 'text-white border-transparent' : 'border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 bg-white/60 dark:bg-white/[0.04]'"
-                :style="tabsOpen ? 'background:var(--primary)' : ''">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h12M3 17h6"/>
-            </svg>
-        </button>
-    </div>
+        @include('livewire.partials.page-detail-tabs', ['seoOk' => $seoOk, 'seoTotal' => count($seo), 'sources' => $s['sources']])
 
-    {{-- ── Panes: mobile swipe carousel · desktop side-by-side ── --}}
-    <x-carousel :labels="['📊 Overview', '📄 Page']" :start="1">
-
-        {{-- ════ LEFT RAIL ════ --}}
-        @php $s = $this->summary; @endphp
-        <x-carousel.slide class="lg:!w-[280px] px-5 pb-24 lg:pb-6 space-y-4 max-h-full overflow-y-auto
-                      lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] no-scrollbar">
-            {{-- Page identity card --}}
-            <div class="rounded-3xl p-5 shadow-sm text-white" style="background:linear-gradient(150deg,#1f2330,#11131c)">
-                <p class="text-sm font-bold truncate">{{ $page->name }}</p>
-                <p class="text-xs text-white/50 font-mono truncate mt-0.5">{{ $page->url }}</p>
-                <div class="grid grid-cols-2 gap-2 text-center mt-4">
-                    <div class="rounded-xl bg-white/[0.07] px-2 py-2.5">
-                        <p class="text-lg font-extrabold leading-none">{{ $s['components'] }}</p>
-                        <p class="text-[10px] text-white/50 mt-1">sections</p>
-                    </div>
-                    <div class="rounded-xl bg-white/[0.07] px-2 py-2.5">
-                        <p class="text-lg font-extrabold leading-none">{{ $s['fields'] }}</p>
-                        <p class="text-[10px] text-white/50 mt-1">fields</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
-                <x-tile accent="lime" :value="number_format($s['visits_30d'])" label="visits · 30 days"
-                        sub="this page only" />
-                <x-tile accent="cocoa" :value="$s['updated']?->diffForHumans(short: true) ?? '—'" label="last updated"
-                        :sub="$page->is_published ? 'live on the site' : 'draft'" />
-            </div>
-        </x-carousel.slide>
-
-        {{-- ════ MAIN CONTENT ════ --}}
-        <x-carousel.slide class="lg:flex-1 px-5 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
-            <div class="{{ $tab === 'content' ? '' : 'max-w-3xl mx-auto' }}">
-    {{-- Tabs — revealed by the header toggle next to "View page" --}}
-    <div x-show="tabsOpen" x-collapse x-cloak class="flex flex-wrap gap-1.5 mb-5">
-        @foreach(['edit' => '✏️ Edit', 'meta' => '🏷 Page attributes & meta tags', 'sources' => '🧩 Sources', 'content' => '📝 Content'] as $key => $label)
-            <button wire:click="setTab('{{ $key }}')"
-                    class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors
-                           {{ $tab === $key ? 'bg-indigo-600 text-white' : 'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/[0.05] hover:bg-gray-200 dark:hover:bg-white/[0.08]' }}">
-                {{ $label }}
-            </button>
-        @endforeach
-    </div>
-
-    @if($tab === 'content')
-    {{-- ── Content tab: the /connect inline editor, scoped to this page ── --}}
-    <div class="min-w-0" wire:ignore>
-        <livewire:connect-review-page :site="$site" :preview-path="$page->url" :embedded="true" wire:key="content-editor-{{ $page->id }}" />
-    </div>
-
-    @elseif($tab === 'sources')
+    @if($tab === 'sources')
     {{-- ── Sources tab: what dynamic content this page shows ── --}}
     <form wire:submit="saveSources" class="space-y-4">
         @if($site->hasFeature('store'))
@@ -217,7 +199,10 @@
         <x-panel-group label="Social sharing (Open Graph)" hint="how links look on WhatsApp, Facebook, LinkedIn…">
             <x-field.text label="og:title (defaults to the meta title)" model="ogTitle" />
             <x-field.textarea label="og:description" model="ogDescription" rows="2" />
-            <x-field.text label="og:image URL" model="ogImage" placeholder="https://…" />
+            <div>
+                <label class="bkf-label">Social image (og:image)</label>
+                <x-asset-picker model="ogImage" :site="$site" type="image" placeholder="Pick from assets, or https://…" />
+            </div>
         </x-panel-group>
         <x-panel-group label="Search engine controls" hint="canonical URL, robots">
             <x-field.text label="Canonical URL" model="canonicalUrl" placeholder="https://www.example.com{{ $page->url }}" hint="Use when this page's content also lives at another address." />
@@ -249,9 +234,79 @@
         </button>
     </form>
     @endif
-            </div>{{-- /centered column --}}
-        </x-carousel.slide>
-    </x-carousel>
+    </div>
+
+    {{-- ── RIGHT rail: how the page looks to the world + what's on it ── --}}
+    <x-slot:quick>
+        <div class="{{ $panel }} p-5">
+            <p class="text-[11px] font-bold uppercase tracking-[.14em] mb-2" style="color:var(--primary)">Search preview</p>
+            <div class="rounded-xl bg-gray-50 dark:bg-white/[0.04] p-3">
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ $previewHref ? preg_replace('#^https?://#', '', rtrim($previewHref, '/')) : $site->name.$page->url }}</p>
+                <p class="text-[14px] leading-snug font-semibold text-[#1a0dab] dark:text-[#8ab4f8] line-clamp-2 mt-0.5">{{ $metaTitleShown }}</p>
+                <p class="text-[12px] leading-snug text-gray-600 dark:text-gray-300 line-clamp-3 mt-1">{{ trim($metaDescription) !== '' ? $metaDescription : 'No meta description yet — search engines will pick text from the page.' }}</p>
+            </div>
+        </div>
+
+        <div class="{{ $panel }} p-5">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[15px] font-extrabold text-gray-900 dark:text-white">SEO checklist</p>
+                <span class="text-[12px] font-bold {{ $seoOk === count($seo) ? 'text-emerald-600' : 'text-amber-600' }}">{{ $seoOk }}/{{ count($seo) }}</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-gray-100 dark:bg-white/[0.06] overflow-hidden mb-3">
+                <div class="h-full rounded-full {{ $seoOk === count($seo) ? 'bg-emerald-500' : 'bg-amber-500' }}" style="width:{{ round($seoOk / count($seo) * 100) }}%"></div>
+            </div>
+            <div class="space-y-2">
+                @foreach ($seo as [$label, $ok, $hint])
+                    <button type="button" wire:click="setTab('meta')" class="w-full flex items-start gap-2 text-left group">
+                        <span class="mt-0.5 w-4 h-4 shrink-0 rounded-full grid place-items-center text-[10px] font-bold {{ $ok ? 'bg-emerald-500 text-white' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300' }}">{{ $ok ? '✓' : '!' }}</span>
+                        <span class="min-w-0">
+                            <span class="block text-[12.5px] font-semibold text-gray-800 dark:text-gray-100 group-hover:underline">{{ $label }}</span>
+                            @unless ($ok)<span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ $hint }}</span>@endunless
+                        </span>
+                    </button>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Sections on this page</p>
+            @forelse ($s['sections'] as $i => $sec)
+                <a href="{{ url($site->name.'/connect?page='.$page->id.'&component='.$sec['id']) }}" class="flex items-center gap-2.5 py-1.5 group">
+                    <span class="w-6 h-6 rounded-lg grid place-items-center shrink-0 text-[11px] font-bold bg-gray-100 dark:bg-white/[0.06] text-gray-500">{{ $i + 1 }}</span>
+                    <span class="min-w-0 flex-1 text-[12.5px] font-semibold text-gray-700 dark:text-gray-200 truncate group-hover:underline">{{ $sec['name'] }}</span>
+                    <span class="text-[11px] text-gray-400 shrink-0">{{ $sec['fields'] }} {{ Str::plural('field', $sec['fields']) }}</span>
+                </a>
+            @empty
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400">No sections yet — add some from the Pages list or the editor.</p>
+            @endforelse
+            @if ($s['collections']->isNotEmpty())
+                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400 mt-4 mb-1.5">Collections shown</p>
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach ($s['collections'] as $col)
+                        <a href="{{ route('collections.show', [$site->name, $col->id]) }}" wire:navigate class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 hover:underline">{{ $col->name }}</a>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Related</p>
+            <div class="grid grid-cols-2 gap-2">
+                @foreach ([
+                    ['All pages', 'Menu & sections', route('pages', ['siteID' => $site->name])],
+                    ['Components', 'Reusable blocks', route('site.components', $site->name)],
+                    ['Collections', 'Lists on pages', route('collections', $site->name)],
+                    ['Analytics', 'Traffic & visits', route('analytics', $site->name)],
+                ] as [$label, $hint, $href])
+                    <a href="{{ $href }}" wire:navigate class="rounded-2xl px-3 py-2.5 bg-gray-50 dark:bg-white/[0.04] hover:ring-2 hover:ring-[color-mix(in_srgb,var(--primary)_30%,transparent)]">
+                        <span class="block text-[12.5px] font-bold text-gray-900 dark:text-white">{{ $label }} →</span>
+                        <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ $hint }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </x-slot:quick>
+</x-tri-layout>
 
     {{-- Toast --}}
     <div x-show="toast" x-cloak x-transition

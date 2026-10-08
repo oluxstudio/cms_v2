@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Product extends Model
@@ -31,6 +32,27 @@ class Product extends Model
         return Attribute::make(
             set: fn ($value, array $attrs) => Str::slug($value ?: ($attrs['name'] ?? '')),
         );
+    }
+
+    /**
+     * The product picture as a usable URL. `image` holds what the asset
+     * picker gave (an "@media/…" library reference, or any pasted URL); older
+     * products hold a bare storage path from the retired direct upload.
+     */
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::get(function () {
+            $v = trim((string) $this->image);
+            if ($v === '') {
+                return null;
+            }
+
+            if (str_starts_with($v, '@media/')) {
+                return Media::resolveRef($this->site_id, $v) ?: null;
+            }
+
+            return Str::startsWith($v, ['/', 'http://', 'https://', 'data:']) ? $v : Storage::url($v);
+        });
     }
 
     public function site(): BelongsTo

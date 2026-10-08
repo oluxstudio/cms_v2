@@ -17,7 +17,7 @@
                 @foreach ($r['fields'] as $sub => $sf)
                     <div class="{{ $sf['input'] === 'image' ? 'w-full @xl:w-auto @xl:flex-[2]' : 'w-full @xl:flex-1' }} min-w-0">
                         @include('partials.properties.field', [
-                            'f' => $sf + ['display' => $sf['label']], 'model' => "rows.$key.$i.$sub", 'upload' => "rows.$key.$i.$sub",
+                            'f' => $sf + ['display' => $sf['label']], 'model' => "rows.$key.$i.$sub",
                             'value' => $row[$sub] ?? '', 'hideLabel' => $i > 0 && $sf['input'] !== 'image',
                         ])
                     </div>

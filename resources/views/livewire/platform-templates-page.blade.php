@@ -407,6 +407,31 @@
                     </div>
                 </fieldset>
 
+                {{-- Which collections reset for each site vs load with the template's entries --}}
+                @php $tplCollections = ($t0 = \App\Models\Template::find($editingId)) ? \App\Livewire\PlatformTemplatesPage::templateCollections($t0) : []; @endphp
+                @if ($tplCollections)
+                    <fieldset>
+                        <legend class="bkf-label">Collections when a site uses this template</legend>
+                        <p class="text-[12px] text-gray-500 dark:text-gray-400 mb-2">
+                            Tick <b>Reset</b> for the site's own content (e.g. Bible Studies, Sermons, Events) — it starts empty and shows only what the site adds.
+                            Everything else loads with the template's entries, as in the preview. Sites' existing entries are never changed.
+                        </p>
+                        <div class="grid sm:grid-cols-2 gap-2">
+                            @foreach ($tplCollections as $cname => $ccount)
+                                @php $isReset = in_array($cname, (array) ($edit['reset_collections'] ?? []), true); @endphp
+                                <label class="flex items-center gap-2.5 rounded-xl border px-3 py-2 cursor-pointer transition-colors {{ $isReset ? '' : 'border-gray-200 dark:border-white/[0.1]' }}"
+                                       @if ($isReset) style="border-color:var(--primary);background:color-mix(in srgb, var(--primary) 8%, transparent)" @endif>
+                                    <input type="checkbox" wire:model.live="edit.reset_collections" value="{{ $cname }}" class="accent-[var(--primary)]">
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block text-[13px] font-bold text-gray-900 dark:text-white truncate">{{ $cname }}</span>
+                                        <span class="block text-[11.5px] text-gray-500 dark:text-gray-400">{{ $isReset ? 'Reset — starts empty' : 'Loads '.$ccount.' template '.Str::plural('entry', $ccount) }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </fieldset>
+                @endif
+
                 @php
                     $editTpl = \App\Models\Template::find($editingId);
                     $lockedPrivate = $editTpl && $editTpl->isAccountUpload();

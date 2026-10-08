@@ -186,6 +186,11 @@ class TemplateExtractor
             'nodes' => [],
             'items' => null,
         ];
+        // `// @olux-per-page`: the block's content belongs to each page (a page hero
+        // reading its copy by route) — sites keep one copy per page, never shared.
+        if (str_contains($src, '@olux-per-page')) {
+            $block['perPage'] = true;
+        }
 
         // ── Fixed nodes from the template, with digit-free labels ──
         $fields = SfcParser::templateFields($sections['template'] ?? '');

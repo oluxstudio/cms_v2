@@ -23,6 +23,31 @@
             }
         @endphp
         <p class="mt-1 text-[10.5px] text-gray-400">Also on the <a href="{{ url($site->name.'/properties') }}" class="font-semibold underline" style="color:var(--primary)">Properties page</a> — changes show in both.</p>
+        @php
+            // Opened from the preview on a few fields (data-olx-fields): just those, in that order.
+            $focus = (array) ($edit['focus'] ?? []);
+            $focusRows = [];
+            if ($focus !== []) {
+                $propFields = \App\Support\SiteProperties::fields();
+                foreach ($focus as $fk) {
+                    foreach ($edit['nodes'] as $i => $node) {
+                        $def = $spFields->get($node['label']);
+                        $rep = \App\Support\SiteProperties::repeaterMatch((string) $node['label']);
+                        if (($def && ($propFields[$fk]['label'] ?? null) === $node['label']) || ($rep && $rep[0] === $fk)) {
+                            $focusRows[] = [$i, $node, $def ?: (\App\Support\SiteProperties::repeaters()[$rep[0]]['fields'][$rep[2]] + ['repeaterRow' => true])];
+                        }
+                    }
+                }
+            }
+        @endphp
+        @if ($focusRows !== [])
+            <div class="mt-1.5 space-y-2">
+                @foreach ($focusRows as [$i, $node, $def])
+                    @include('livewire.partials.connect-node-field', ['i' => $i, 'node' => $node, 'site' => $site, 'def' => $def])
+                @endforeach
+            </div>
+            <button type="button" wire:click="showAllProperties" class="mt-2 text-[11px] font-semibold underline" style="color:var(--primary)">Show all site properties</button>
+        @else
         <div class="mt-1.5 space-y-2">
             @foreach (config('site-properties.tabs') as $tk => $tl)
                 @continue(empty($spGroups[$tk]))
@@ -36,10 +61,50 @@
                 </details>
             @endforeach
         </div>
+        @endif
     @else
+    @php
+        // Repeatable rows ("Slide 1 Image", "Slide 1 Caption"…) group into one
+        // card per row, with add / remove / reorder for the whole group.
+        $plainNodes = [];
+        $rowGroups = [];
+        foreach ($edit['nodes'] as $i => $node) {
+            if (($node['type'] ?? '') !== 'collection' && preg_match('/^(.+?) (\d+)(?: (.+))?$/', (string) $node['label'], $m)) {
+                $rowGroups[$m[1]][(int) $m[2]][] = [$i, $node, $m[3] ?? 'Text'];
+            } else {
+                $plainNodes[] = [$i, $node];
+            }
+        }
+        foreach ($rowGroups as &$rows) {
+            ksort($rows);
+        }
+        unset($rows);
+    @endphp
     <div class="mt-1.5 space-y-2">
-        @foreach ($edit['nodes'] as $i => $node)
+        @foreach ($plainNodes as [$i, $node])
             @include('livewire.partials.connect-node-field', ['i' => $i, 'node' => $node, 'site' => $site, 'def' => null])
+        @endforeach
+        @foreach ($rowGroups as $prefix => $rows)
+            <div class="rounded-xl border border-gray-100 dark:border-white/[0.06] p-2" data-node-rows="{{ $prefix }}">
+                <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{{ \Illuminate\Support\Str::plural($prefix) }} <span class="font-normal normal-case text-gray-400">({{ count($rows) }})</span></p>
+                @foreach ($rows as $n => $fields)
+                    <div class="mt-2 rounded-lg bg-gray-50/70 dark:bg-white/[0.03] p-1.5 space-y-1.5" wire:key="row-{{ \Illuminate\Support\Str::slug($prefix) }}-{{ $n }}">
+                        <div class="flex items-center gap-1.5 px-0.5">
+                            <span class="flex-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">{{ $prefix }} {{ $loop->iteration }}</span>
+                            <button type="button" wire:click="moveNodeRow(@js($prefix), {{ $n }}, -1)" @disabled($loop->first) class="text-[11px] text-gray-400 disabled:opacity-30" title="Move up">↑</button>
+                            <button type="button" wire:click="moveNodeRow(@js($prefix), {{ $n }}, 1)" @disabled($loop->last) class="text-[11px] text-gray-400 disabled:opacity-30" title="Move down">↓</button>
+                            @if (count($rows) > 1)
+                                <button type="button" wire:click="removeNodeRow(@js($prefix), {{ $n }})" class="text-[11px] text-rose-500">Remove</button>
+                            @endif
+                        </div>
+                        @foreach ($fields as [$i, $node, $field])
+                            @include('livewire.partials.connect-node-field', ['i' => $i, 'node' => $node, 'site' => $site, 'def' => null, 'rowField' => $field])
+                        @endforeach
+                    </div>
+                @endforeach
+                <button type="button" wire:click="addNodeRow(@js($prefix))" class="mt-2 text-xs font-semibold" style="color:var(--primary)">+ Add {{ strtolower($prefix) }}</button>
+                <p class="mt-1 text-[10px] text-gray-400">Save the component to apply added, removed or reordered {{ strtolower(\Illuminate\Support\Str::plural($prefix)) }}.</p>
+            </div>
         @endforeach
     </div>
     @endif
@@ -96,7 +161,7 @@
                 $thumbVal = $thumbKey ? ($item['data'][$thumbKey] ?? '') : '';
                 $thumbRaw = is_array($thumbVal) ? (string) ($thumbVal[0] ?? '') : (string) $thumbVal;
                 $thumb = $thumbRaw !== '' && (is_array($thumbVal) || ! is_array($item['data'][$thumbKey] ?? null))
-                    ? (str_starts_with($thumbRaw, '/assets/') ? \App\Models\Media::resolveRef($site->id, '@media/'.basename($thumbRaw)) : $thumbRaw)
+                    ? (str_starts_with($thumbRaw, '/assets/') ? \App\Models\Media::resolveRef($site->id, '@media/'.basename($thumbRaw)) : \App\Models\Media::resolveRef($site->id, $thumbRaw))
                     : '';
                 $headKey = collect($edit['schema'])->first(fn ($k) => ! in_array(strtolower($k), $imgKeys, true) && is_string($item['data'][$k] ?? null) && trim((string) $item['data'][$k]) !== '');
                 $headline = $headKey ? \Illuminate\Support\Str::limit((string) $item['data'][$headKey], 46) : 'New entry';
@@ -131,6 +196,17 @@
                 {{-- Card body: the fields --}}
                 <div x-show="open" x-collapse x-cloak class="px-2 pb-2 pt-1 border-t border-gray-50 dark:border-white/[0.04] space-y-1.5">
                     @foreach ($edit['schema'] as $key)
+                        @continue(! empty($edit['fieldDefs'][$key]['hidden']))
+                        @if (\App\Support\CollectionAutoFields::valid($edit['fieldDefs'][$key]['auto'] ?? null))
+                            {{-- System-filled (a slug, dates, entry number …) — shown, never typed in --}}
+                            @php $autoVal = $item['data'][$key] ?? ''; @endphp
+                            <div class="block" wire:key="olx-field-{{ $edit['id'] ?? 'new' }}-{{ $i }}-{{ $key }}">
+                                <span class="text-[10px] font-bold uppercase tracking-wide text-gray-400">{{ $edit['fieldDefs'][$key]['label'] ?: \Illuminate\Support\Str::headline($key) }}</span>
+                                <span class="block mt-0.5 px-2 py-1.5 rounded-lg text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-white/[0.04] border border-dashed border-gray-200 dark:border-white/10 break-all">{{ is_scalar($autoVal) && $autoVal !== '' ? \App\Support\SiteTokens::apply($site, (string) $autoVal) : 'Filled in when you save' }}</span>
+                                <span class="block text-[10px] text-gray-400 mt-0.5">Filled automatically · {{ \App\Support\CollectionAutoFields::label($edit['fieldDefs'][$key]['auto']) }}</span>
+                            </div>
+                            @continue
+                        @endif
                         @php
                             $val = $item['data'][$key] ?? '';
                             $fdef = $edit['fieldDefs'][$key] ?? null;
@@ -156,13 +232,29 @@
                             @elseif ($isJson)
                                 {{-- irregular/deep value — protected raw preview --}}
                                 <span class="block mt-0.5 px-2 py-1.5 rounded-lg text-[11px] font-mono text-gray-400 bg-gray-50 dark:bg-white/[0.04] truncate">{{ \Illuminate\Support\Str::limit(json_encode($val, JSON_UNESCAPED_UNICODE), 60) }}</span>
-                                <a href="{{ url($site->name.'/collections?open='.($edit['id'] ?? '')) }}" target="_blank" class="text-[10px] font-semibold text-indigo-500 hover:underline">Edit this list in Collections ↗</a>
+                                <a href="{{ route('collections.show', [$site->name, $edit['id'] ?? '']) }}" target="_blank" class="text-[10px] font-semibold text-indigo-500 hover:underline">Edit this list in Collections ↗</a>
                             @elseif (\App\Models\Collection::isBooleanType($ftype))
                                 {{-- Yes/no: the whole row is the label, so the switch toggles on click --}}
                                 <span class="flex items-center gap-2.5 mt-1 cursor-pointer">
                                     <input type="checkbox" wire:model.live="edit.items.{{ $i }}.data.{{ $key }}" class="{{ $ftype === 'toggle' ? 'sr-only' : 'w-4 h-4 accent-[var(--primary)]' }}">
                                     @if ($ftype === 'toggle')<span class="bkf-switch"></span>@endif
                                     <span class="text-[12px] font-semibold text-gray-700 dark:text-gray-200">{{ filter_var($val, FILTER_VALIDATE_BOOLEAN) ? 'On' : 'Off' }}</span>
+                                </span>
+                            @elseif ($ftype === 'select' && ($opts = \App\Support\CollectionFieldOptions::for($site->id, $fdef ?? [])) !== [])
+                                <select wire:model.live="edit.items.{{ $i }}.data.{{ $key }}" class="olx-in !mt-0.5" @if ($required) required @endif>
+                                    <option value="">—</option>
+                                    @foreach ($opts as $val => $lab)
+                                        <option value="{{ $val }}">{{ empty($fdef['optionsFrom']) ? ucfirst($lab) : $lab }}</option>
+                                    @endforeach
+                                </select>
+                            @elseif ($ftype === 'datetime')
+                                <input type="datetime-local" wire:model.blur="edit.items.{{ $i }}.data.{{ $key }}" class="olx-in !mt-0.5" @if ($required) required @endif>
+                            @elseif ($ftype === 'media')
+                                <span class="flex items-center gap-1.5 mt-0.5">
+                                    <input wire:model.blur="edit.items.{{ $i }}.data.{{ $key }}" class="olx-in !mt-0 flex-1 min-w-0" placeholder="Choose an image, audio or video">
+                                    <button type="button" @click="$dispatch('open-media-picker', { context: { scope: 'nested-media', path: 'edit.items.{{ $i }}.data.{{ $key }}' } })"
+                                            class="shrink-0 px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-500 dark:text-gray-300 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1]"
+                                            title="Choose from the asset library">Assets</button>
                                 </span>
                             @elseif ($isLong)
                                 @include('livewire.partials.rich-text', ['path' => "edit.items.$i.data.$key", 'value' => $val, 'rows' => $taRows ?? 4])

@@ -1,1 +1,0 @@
-import{I as e,N as t,f as n,t as r}from"./DD5YJmvE.js";var i={},a={class:`canvas`};function o(r,i){return t(),n(`div`,a,[e(r.$slots,`default`)])}var s=r(i,[[`render`,o]]);export{s as default};

@@ -26,9 +26,9 @@ const times = ws.times
     <div class="ys-widget ys-verse">
       <p class="ys-label">{{ ws.songsLabel }}</p>
       <ol class="ws-songs" data-olx-panel="songs">
-        <li data-olx-item v-for="(s, i) in songs" :key="s.title">
+        <li data-olx-item v-for="(s, i) in songs" :key="s.slug">
           <span class="num">{{ i + 1 }}</span>
-          <span class="info"><b>{{ s.title }}</b><small>{{ s.artist }}</small></span>
+          <NuxtLink class="info" :to="`/songs/${s.slug}`"><b>{{ s.title }}</b><small>{{ s.artist }}</small></NuxtLink>
           <a :href="s.url" target="_blank" rel="noopener" aria-label="Listen">▶</a>
         </li>
       </ol>

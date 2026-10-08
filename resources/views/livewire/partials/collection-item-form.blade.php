@@ -70,19 +70,19 @@
                 @else
                     <textarea wire:model="itemForm.{{ $key }}" rows="{{ $taRows ?? 4 }}" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 resize-y"></textarea>
                 @endif
-            @elseif(in_array($ftype, ['select', 'radio'], true) && ! empty($f['options']))
+            @elseif(in_array($ftype, ['select', 'radio'], true) && ($opts = \App\Support\CollectionFieldOptions::for($viewing->site_id, $f)) !== [])
                 @if ($ftype === 'radio')
                     <div class="flex flex-wrap gap-x-4 gap-y-1.5 pt-1">
-                        @foreach($f['options'] as $opt)
+                        @foreach($opts as $val => $lab)
                             <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
-                                <input type="radio" wire:model="itemForm.{{ $key }}" value="{{ $opt }}" class="accent-[var(--primary)]"> {{ $opt }}
+                                <input type="radio" wire:model="itemForm.{{ $key }}" value="{{ $val }}" class="accent-[var(--primary)]"> {{ $lab }}
                             </label>
                         @endforeach
                     </div>
                 @else
                     <select wire:model="itemForm.{{ $key }}" class="w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 pr-7">
                         <option value="">—</option>
-                        @foreach($f['options'] as $opt)<option value="{{ $opt }}">{{ $opt }}</option>@endforeach
+                        @foreach($opts as $val => $lab)<option value="{{ $val }}">{{ $lab }}</option>@endforeach
                     </select>
                 @endif
             @elseif($ftype === 'toggle')
@@ -98,9 +98,9 @@
                     <span class="w-14 text-right text-sm font-bold text-gray-800 dark:text-gray-100" x-text="v === '' || v === null ? '—' : v"></span>
                 </div>
             @else
-                {{-- Single-line input: text, number (decimals allowed), email, phone, date --}}
+                {{-- Single-line input: text, number (decimals allowed), email, phone, date, date & time --}}
                 <input wire:model="itemForm.{{ $key }}"
-                       type="{{ in_array($ftype, ['number', 'date', 'email', 'tel', 'url'], true) ? $ftype : 'text' }}"
+                       type="{{ $ftype === 'datetime' ? 'datetime-local' : (in_array($ftype, ['number', 'date', 'email', 'tel', 'url'], true) ? $ftype : 'text') }}"
                        @if ($ftype === 'url') placeholder="https://…" @endif
                        @if (! empty($f['required'])) required aria-required="true" @endif
                        @if ($ftype === 'number') step="{{ $f['step'] ?? 'any' }}" @isset($f['min']) min="{{ $f['min'] }}" @endisset @isset($f['max']) max="{{ $f['max'] }}" @endisset @endif

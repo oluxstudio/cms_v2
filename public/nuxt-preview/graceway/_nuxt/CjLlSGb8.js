@@ -1,0 +1,1 @@
+import{L as e,P as t,p as n,t as r}from"./CHuYgb17.js";var i={},a={class:`canvas`};function o(r,i){return t(),n(`div`,a,[e(r.$slots,`default`)])}var s=r(i,[[`render`,o]]);export{s as default};

@@ -3,11 +3,7 @@ import type { EventMedia } from '~/composables/useSiteContent'
 
 const route = useRoute()
 // CMS-first, same as the archive grid — authored rows carry the pristine template
-const { events: authoredEvents } = useSiteContent()
-const rows = computed(() => {
-  const cms = (useCms().items('events', []) as any[]).filter(e => e.title && e.img)
-  return (cms.length || useCms().isSite) ? cms : authoredEvents
-})
+const rows = computed(() => useEventRows())
 const event = computed(() => rows.value.find(e => (e.id ?? '') === route.params.slug))
 
 useHead({ title: computed(() => event.value ? `${event.value.title} — CAC Blackburn` : 'Event — CAC Blackburn') })
@@ -60,7 +56,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <div class="container">
         <!-- event information -->
         <div class="evd-info">
-          <img class="evd-cover" :src="event.img" :alt="event.title">
+          <img v-if="event.img" class="evd-cover" :src="event.img" :alt="event.title">
           <div class="evd-copy">
             <h2>About this event</h2>
             <p class="evd-text">{{ event.text }}</p>
@@ -76,13 +72,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </div>
         </div>
 
-        <!-- media gallery: photos, video and audio from the event -->
+        <!-- not happened yet: details and RSVP live on the event's own page -->
+        <p v-if="!eventIsPast(event)" class="evd-empty">This event hasn't happened yet — <NuxtLink :to="eventPath(event)">see the details and RSVP</NuxtLink>.</p>
+
+        <!-- media from the event: a slideshow or a gallery grid (set per event) -->
         <div v-if="media.length" class="evd-gallery">
           <div class="section-head">
-            <p class="eyebrow">Gallery</p>
+            <p class="eyebrow">{{ event.mediaLayout === 'slideshow' ? 'Slideshow' : 'Gallery' }}</p>
             <h2>Photos & recordings</h2>
           </div>
-          <div class="evd-media-grid">
+          <EventSlideshow v-if="event.mediaLayout === 'slideshow'" :items="media" />
+          <div v-else class="evd-media-grid">
             <button
               v-for="(m, i) in media" :key="m.title + i" type="button" class="evd-media"
               :aria-label="`Open ${m.title}`" @click="open = i"
@@ -94,7 +94,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             </button>
           </div>
         </div>
-        <p v-else class="evd-empty">No media has been added for this event yet.</p>
+        <p v-else-if="eventIsPast(event)" class="evd-empty">No media has been added for this event yet.</p>
       </div>
 
       <!-- lightbox: renders the right player per media type -->

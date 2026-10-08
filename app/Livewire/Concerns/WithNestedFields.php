@@ -58,7 +58,10 @@ trait WithNestedFields
         }
         $first = $list[0] ?? null;
         $keys = array_values(array_filter($keys, fn ($k) => is_string($k) && preg_match('/^[A-Za-z0-9_-]{1,60}$/', $k)));
-        $list[] = is_array($first) ? array_fill_keys(array_keys($first), '') : ($keys !== [] ? array_fill_keys($keys, '') : '');
+        // a new row gets the first row's keys plus any declared sub-field keys
+        // (a list starting with an image row must still offer a video's src)
+        $list[] = is_array($first) ? array_fill_keys(array_values(array_unique(array_merge(array_keys($first), $keys))), '')
+            : ($keys !== [] ? array_fill_keys($keys, '') : '');
         data_set($this, $path, $list);
     }
 

@@ -122,3 +122,29 @@ test('custom domains redirect to the preferred host (www only once it resolves)'
     Cache::put("edge-resolves:www.$d", true, 60);
     expect(SiteHead::canonicalRedirect($site->fresh(), Request::create("http://$d/")))->toBe("http://www.$d/");
 });
+
+test('a page\'s own meta tags (Pages › page › Page attributes & meta tags) override the site defaults on that page only', function () {
+    $site = headSite(['site_name' => 'Grace Way', 'meta_description' => 'Sunday services in Blackburn', 'share_image' => 'https://cdn.example/share.jpg'], ['live' => true]);
+    $about = Page::create(['site_id' => $site->id, 'name' => 'About', 'url' => '/about', 'keywords' => 'church, about', 'is_published' => true]);
+    $about->setAttr('title', 'About Grace Way — $50 welcome');
+    $about->setAttr('description', 'Who we are and what we believe.');
+    $about->setAttr('og_image', 'https://cdn.example/about.jpg');
+    $about->setAttr('robots', 'noindex, follow');
+    $about->setAttr('canonical_url', 'https://gracechurch.example/about');
+
+    $html = SiteHead::head($site, Request::create("http://{$site->name}.sites.test/about"));
+    expect($html)
+        ->toContain('<meta name="description" content="Who we are and what we believe.">')
+        ->toContain('og:title" content="About Grace Way — $50 welcome"')
+        ->toContain('og:image" content="https://cdn.example/about.jpg"')
+        ->toContain('<meta name="keywords" content="church, about">')
+        ->toContain('<meta name="robots" content="noindex, follow">')
+        ->toContain('<link rel="canonical" href="https://gracechurch.example/about">')
+        ->not->toContain('Sunday services in Blackburn');
+    expect(SiteHead::pageMeta($site, Request::create("http://{$site->name}.sites.test/about"))['title'])->toBe('About Grace Way — $50 welcome');
+
+    // Another page keeps the site defaults.
+    $home = SiteHead::head($site, Request::create("http://{$site->name}.sites.test/"));
+    expect($home)->toContain('content="Sunday services in Blackburn"')->toContain('og:image" content="https://cdn.example/share.jpg"')
+        ->not->toContain('noindex');
+});

@@ -83,6 +83,8 @@ return [
         'short_name' => ['label' => 'Short Name', 'input' => 'text', 'tab' => 'brand', 'rules' => ['max:30'], 'placeholder' => 'Grace Way', 'help' => 'For browser tabs, app icons and email subjects.'],
         'tagline' => ['label' => 'Tagline', 'input' => 'text', 'tab' => 'brand', 'rules' => ['max:160'], 'placeholder' => 'A church family in the heart of Blackburn'],
         'logo' => ['label' => 'Logo', 'input' => 'image', 'tab' => 'brand', 'help' => 'Main logo, for light backgrounds.'],
+        'logo_text' => ['label' => 'Logo Text', 'input' => 'textarea', 'tab' => 'brand', 'rules' => ['max:200'], 'placeholder' => "CAC\nMount Zion\nInternational", 'help' => 'The words shown beside your logo — one line per line.'],
+        'logo_subtext' => ['label' => 'Logo Subtext', 'input' => 'text', 'tab' => 'brand', 'rules' => ['max:80'], 'placeholder' => 'Blackburn.', 'help' => 'A small line under the logo text.'],
         'logo_light' => ['label' => 'Logo Light', 'input' => 'image', 'tab' => 'brand', 'help' => 'White / inverse version for dark backgrounds.'],
         'square_icon' => ['label' => 'Square Icon', 'input' => 'image', 'tab' => 'brand', 'help' => 'Square image, at least 512×512. Favicon, phone and app icons are made from it.'],
         'share_image' => ['label' => 'Share Image', 'input' => 'image', 'tab' => 'brand', 'help' => 'Shown when your site is shared on social media (1200×630 works best).'],

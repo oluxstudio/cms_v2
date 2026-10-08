@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Store product CRUD for client tooling and the MCP server (token context).
@@ -32,7 +31,7 @@ class ProductApiController extends Controller
             'description' => $p->description, 'category' => $p->category,
             'tags' => array_values($p->tags ?? []),
             'price_cents' => (int) $p->price_cents, 'price' => $p->formattedPrice(),
-            'currency' => $p->currency, 'image' => $p->image ? Storage::url($p->image) : null,
+            'currency' => $p->currency, 'image' => $p->image_url,
             'inventory' => $p->inventory, 'in_stock' => $p->inStock(),
             'is_active' => (bool) $p->is_active, 'reviews_enabled' => (bool) $p->reviews_enabled,
             'sort' => (int) $p->sort,

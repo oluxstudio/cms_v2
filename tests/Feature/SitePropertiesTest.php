@@ -172,7 +172,7 @@ test('the content API serves grouped properties and templates get the schema.org
         ->and($ld['sameAs'])->toContain('https://facebook.com/gw')
         ->and($ld['telephone'])->toBe('0123');
 
-    expect($site->fresh()->brandLogo())->toBe('/storage/logo.png');
+    expect($site->fresh()->brandLogo())->toBe(url('/storage/logo.png')); // absolute — it goes into emails
 });
 
 test('the Edit page opens the same Site Properties component, and a save there shows on the Properties page', function () {
@@ -315,4 +315,45 @@ test('a site that already shares its name with another can still save its other 
         ->set('values.tagline', 'Still saves')->call('save')
         ->assertHasNoErrors();
     expect(SiteProperties::value($b, 'tagline'))->toBe('Still saves');
+});
+
+test('logo text and subtext prefill from the Site Profile, save back to it, and reach the site', function () {
+    [$owner, $site] = propsSite();
+    $profile = App\Models\Collection::create(['site_id' => $site->id, 'name' => 'Site Profile', 'slug' => '', 'type' => 'grid', 'fields' => [
+        ['key' => 'name', 'type' => 'text'], ['key' => 'logoText', 'type' => 'textarea'], ['key' => 'logoSub', 'type' => 'text'],
+    ]]);
+    $row = $profile->items()->create(['site_id' => $site->id, 'status' => 'published',
+        'data' => ['name' => 'Grace Way', 'logoText' => "CAC\nMount Zion", 'logoSub' => 'Blackburn.']]);
+
+    $page = Livewire::actingAs($owner)->test(SitePropertiesPage::class, ['site' => $site])
+        ->assertSet('values.logo_text', "CAC\nMount Zion")
+        ->assertSet('values.logo_subtext', 'Blackburn.')
+        ->assertSee('Logo Text')->assertSee('Logo Subtext');
+
+    $page->set('values.logo_text', "Grace Way\nChurch")->set('values.logo_subtext', 'Since 1992')->call('save')->assertHasNoErrors();
+
+    expect($row->fresh()->data['logoText'])->toBe("Grace Way\nChurch")
+        ->and($row->fresh()->data['logoSub'])->toBe('Since 1992')
+        ->and(SiteProperties::payload($site->fresh())["logo_text"] ?? null)->toBe("Grace Way\nChurch");
+});
+
+test('clearing an optional linked property (Logo Subtext) clears the Site Profile copy; required ones never blank it', function () {
+    [$owner, $site] = propsSite();
+    $profile = App\Models\Collection::create(['site_id' => $site->id, 'name' => 'Site Profile', 'slug' => '', 'type' => 'grid', 'fields' => [
+        ['key' => 'logoSub', 'type' => 'text'], ['key' => 'tagline', 'type' => 'text'],
+    ]]);
+    $row = $profile->items()->create(['site_id' => $site->id, 'status' => 'published', 'data' => ['logoSub' => 'Blackburn.', 'tagline' => 'Come as you are']]);
+
+    // the page shows the prefilled values; the owner empties both and saves
+    Livewire::actingAs($owner)->test(SitePropertiesPage::class, ['site' => $site])
+        ->assertSet('values.logo_subtext', 'Blackburn.')
+        ->set('values.logo_subtext', '')
+        ->set('values.tagline', '')
+        ->call('save')->assertHasNoErrors();
+
+    expect($row->fresh()->data['logoSub'])->toBe('')            // optional → cleared on the site
+        ->and($row->fresh()->data['tagline'])->toBe('Come as you are'); // not clearable → template content kept
+
+    // reopening shows it empty (nothing left to prefill from)
+    Livewire::actingAs($owner)->test(SitePropertiesPage::class, ['site' => $site])->assertSet('values.logo_subtext', '');
 });

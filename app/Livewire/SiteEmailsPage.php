@@ -2,15 +2,12 @@
 
 namespace App\Livewire;
 
-use App\Exceptions\PlanLimitReached;
 use App\Models\Site;
-use App\Services\MediaStore;
 use App\Support\EmailTemplate;
 use App\Support\EmailTemplateCatalog;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 
 /**
  * Emails page — every outbound email the site sends, admin-editable.
@@ -21,8 +18,6 @@ use Livewire\WithFileUploads;
  */
 class SiteEmailsPage extends Component
 {
-    use WithFileUploads;
-
     public Site $site;
 
     #[Url(as: 'tpl')]
@@ -34,8 +29,6 @@ class SiteEmailsPage extends Component
     public array $sections = [];
 
     public string $logo = '';        // stored URL (shared across all templates)
-
-    public $logoUpload;              // transient upload
 
     public string $successMessage = '';
 
@@ -72,25 +65,6 @@ class SiteEmailsPage extends Component
         $tpl = EmailTemplate::forKey($this->site, $key);
         $this->subject = $tpl['subject'];
         $this->sections = $tpl['sections'];
-    }
-
-    /** Uploaded logos land in the site's Asset library (so they're re-pickable). */
-    public function updatedLogoUpload(): void
-    {
-        // NB: the plain `image` rule rejects SVG in Laravel 11 — allow it explicitly.
-        $this->validate(['logoUpload' => ['file', 'mimes:jpg,jpeg,png,gif,webp,avif,svg', 'max:4096']]);
-        try {
-            $media = app(MediaStore::class)->store($this->site, $this->logoUpload);
-        } catch (PlanLimitReached $e) {
-            $this->logoUpload = null;
-            $this->dispatch('upgrade-required', reason: $e->getMessage(), cta: $e->cta);
-
-            return;
-        }
-        $this->logo = $media->publicUrl();
-        $this->logoUpload = null;
-        $this->site->setAttr('email.logo', $this->logo);
-        $this->successMessage = 'Logo uploaded to your assets and applied to every email.';
     }
 
     public function removeLogo(): void

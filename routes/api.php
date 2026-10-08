@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CommentApiController;
 use App\Http\Controllers\Api\ComponentApiController;
 use App\Http\Controllers\Api\ConnectTokenController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\DonationApiController;
 use App\Http\Controllers\Api\EstimatorController;
 use App\Http\Controllers\Api\FormApiController;
 use App\Http\Controllers\Api\FormSchemaController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\SitePublishController;
 use App\Http\Controllers\Api\StoreApiController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\TemplatePreviewController;
+use App\Http\Controllers\Api\TestimonialApiController;
 use App\Http\Controllers\Api\V1\ConnectController;
 use App\Http\Controllers\Api\V1\IngestController;
 use App\Http\Controllers\Api\V1\PageJsonController;
@@ -143,8 +145,8 @@ Route::get('/sites/{siteName}/polls', [PollApiController::class, 'index'])->name
 Route::post('/sites/{siteName}/polls/{slug}/vote', [PollApiController::class, 'vote'])->middleware('throttle:60,1')->name('api.polls.vote');
 
 // Donations — JSON front door so CLIENT SITES can host the donate form.
-Route::get('/sites/{siteName}/donate/config', [\App\Http\Controllers\Api\DonationApiController::class, 'config'])->name('api.donate.config');
-Route::post('/sites/{siteName}/donate/checkout', [\App\Http\Controllers\Api\DonationApiController::class, 'checkout'])->middleware(['throttle:booking-write', 'site.origin'])->name('api.donate.checkout');
+Route::get('/sites/{siteName}/donate/config', [DonationApiController::class, 'config'])->name('api.donate.config');
+Route::post('/sites/{siteName}/donate/checkout', [DonationApiController::class, 'checkout'])->middleware(['throttle:booking-write', 'site.origin'])->name('api.donate.checkout');
 // Submit a quote request (saves the lead + emails + dashboard notification).
 Route::post('/sites/{siteName}/quote/request', [EstimatorController::class, 'store'])->middleware(['throttle:leads', 'site.origin', 'honeypot'])->name('api.quote.request');
 // Submit plain interest ("I'm interested") — Contact + notification + owner email.
@@ -180,6 +182,9 @@ Route::get('/sites/{siteName}/components/{id}', [ComponentApiController::class, 
 // ── Pages (page records + EAV attributes; content lives on /content, /page) ──
 Route::get('/sites/{siteName}/pages', [PageApiController::class, 'index'])->name('api.pages.index');
 Route::get('/sites/{siteName}/pages/{id}', [PageApiController::class, 'show'])->name('api.pages.show');
+
+// ── Testimonials about Olux (landing page) — published only, ?limit=1–20 ─────
+Route::get('/testimonials', [TestimonialApiController::class, 'index'])->name('api.testimonials.index');
 
 // ── Collections (public collections + their published items) ────────────────
 Route::get('/sites/{siteName}/collections', [CollectionApiController::class, 'index'])->name('api.collections.index');

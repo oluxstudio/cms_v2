@@ -26,7 +26,12 @@ class InstallTemplateJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public string $siteId, public string $siteTemplateId, public ?string $userId = null) {}
+    /**
+     * $refresh: a template UPDATE on a site already using it (Admin ›
+     * Templates › Update sites) — syncs declared field types/activation like
+     * `template:deploy`, instead of a first-time install.
+     */
+    public function __construct(public string $siteId, public string $siteTemplateId, public ?string $userId = null, public bool $refresh = false) {}
 
     /** One install per site at a time — a second click must not double-scaffold. */
     public function middleware(): array
@@ -42,7 +47,7 @@ class InstallTemplateJob implements ShouldQueue
             return;
         }
 
-        $installer->install($site, $row);
+        $installer->install($site, $row, refresh: $this->refresh);
         TaskAlerts::done($this->userId, $site->id, 'Design applied: '.$row->name,
             Str::headline($site->name).' now uses it — pages, sections and settings are in place.', url($site->name.'/connect'), ['site_template_id' => $row->id]);
     }

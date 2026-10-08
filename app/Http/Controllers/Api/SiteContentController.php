@@ -192,6 +192,9 @@ class SiteContentController extends Controller
 
         $entry = fn ($c) => [
             'type' => "app:{$key}:".Str::slug($c->name),
+            // the block's own id — a block used on several pages (one copy per
+            // page) finds ITS selection in a collection's views['#{id}']
+            'id' => $c->id,
             'name' => $c->name,
             'settings' => $c->pivot?->settings ? json_decode((string) $c->pivot->settings, true) : null,
             'visibility' => $c->visibilityPayload(),

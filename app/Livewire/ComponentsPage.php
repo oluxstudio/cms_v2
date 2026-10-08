@@ -7,8 +7,13 @@ use App\Livewire\Concerns\WithVisibilityFields;
 use App\Models\Component;
 use App\Models\Node;
 use App\Models\Site;
+use App\Support\SiteProperties;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Url;
 use Livewire\Component as LivewireComponent;
 
 /**
@@ -23,13 +28,28 @@ class ComponentsPage extends LivewireComponent
 
     public Site $site;
 
+    #[Url(except: '')]
     public string $search = '';
 
     /** Active tag filter ('' = all). */
+    #[Url(as: 'tag', except: '')]
     public string $filterTag = '';
 
     /** Collection filter: '' = all, 'none' = standalone, else a collection id. */
+    #[Url(as: 'collection', except: '')]
     public string $filterCollection = '';
+
+    /** List filter: all | used | unused | source | inactive | attention */
+    #[Url(except: 'all')]
+    public string $filter = 'all';
+
+    /** List order: updated | name | used | fields */
+    #[Url(except: 'updated')]
+    public string $sort = 'updated';
+
+    public const FILTERS = ['all', 'used', 'unused', 'source', 'inactive', 'attention'];
+
+    public const SORTS = ['updated', 'name', 'used', 'fields'];
 
     // Editor state (null = closed, 0 = new)
     public ?string $editingId = null;
@@ -52,10 +72,45 @@ class ComponentsPage extends LivewireComponent
 
     public string $errorMessage = '';
 
-    public function mount(Site $site): void
+    public function mount(Site $site, ?string $screen = null, ?string $component = null): void
     {
         $this->site = $site;
         $this->initLayout('components', 'grid');
+        // A component and a new component each have their own page.
+        match ($screen) {
+            'new' => $this->open(''),
+            'view' => $this->view((string) $component),
+            'edit' => $this->open((string) $component),
+            default => null,
+        };
+    }
+
+    /** The components list, or one component's own page (view / edit). */
+    public function pageUrl(?string $id = null, bool $edit = false): string
+    {
+        if ($id === null || $id === '' || $id === '0') {
+            return route('site.components', $this->site->name);
+        }
+
+        return route($edit ? 'site.components.edit' : 'site.components.show', [$this->site->name, $id]);
+    }
+
+    public function setFilter(string $filter): void
+    {
+        $this->filter = in_array($filter, self::FILTERS, true) ? $filter : 'all';
+    }
+
+    public function updatedSort(): void
+    {
+        if (! in_array($this->sort, self::SORTS, true)) {
+            $this->sort = 'updated';
+        }
+    }
+
+    /** Clear search, filter, tag and collection — back to every component. */
+    public function resetListing(): void
+    {
+        $this->reset(['search', 'filterTag', 'filterCollection', 'filter']);
     }
 
     public function setTag(string $tag): void
@@ -80,16 +135,123 @@ class ComponentsPage extends LivewireComponent
         return $this->site->allows(Auth::user(), 'components.manage');
     }
 
-    public function getComponentsProperty()
+    /** The listing — every annotated component narrowed by search, tag, collection and filter, then sorted. */
+    public function getComponentsProperty(): SupportCollection
     {
-        return $this->site->contentComponents()
-            ->with(['nodes', 'pages'])
-            ->when($this->search !== '', fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
-            ->when($this->filterTag !== '', fn ($q) => $q->whereJsonContains('tags', $this->filterTag))
-            ->when($this->filterCollection === 'none', fn ($q) => $q->whereNull('collection_id'))
-            ->when($this->filterCollection !== '' && $this->filterCollection !== 'none',
-                fn ($q) => $q->where('collection_id', $this->filterCollection))
+        return $this->applyListing($this->annotatedComponents());
+    }
+
+    /**
+     * Every component of the site with what the listing, tiles and rails
+     * need, in a fixed number of queries: field counts, empty fields, last
+     * edit, its pages (live vs. parked by a template switch) and data sources.
+     */
+    private function annotatedComponents(): SupportCollection
+    {
+        $all = $this->site->contentComponents()
+            ->with(['collection:id,name', 'creator:id,name'])
+            ->withCount([
+                'nodes',
+                'nodes as empty_nodes_count' => fn ($q) => $q->where(fn ($w) => $w->whereNull('value')->orWhere('value', '')),
+            ])
+            ->withMax('nodes', 'updated_at')
             ->get();
+
+        if ($all->isEmpty()) {
+            return $all;
+        }
+        $ids = $all->pluck('id');
+
+        // Placements: a pivot row is LIVE while its page is the current template's
+        // and not parked under /_archived-…; otherwise the placement is inactive.
+        $placements = DB::table('page_component')
+            ->join('pages', 'pages.id', '=', 'page_component.page_id')
+            ->whereIn('page_component.component_id', $ids)
+            ->orderBy('pages.name')
+            ->get(['page_component.component_id', 'pages.id as page_id', 'pages.name', 'pages.url',
+                'page_component.active', 'pages.template_active'])
+            ->map(function ($r) {
+                $r->live = (bool) $r->active && (bool) $r->template_active && ! str_starts_with((string) $r->url, '/_archived-');
+
+                return $r;
+            })
+            ->groupBy('component_id');
+
+        // Data sources through collection-typed fields (besides the component's own collection).
+        $nodeLinks = Node::whereIn('component_id', $ids)->where('type', 'collection')
+            ->whereNotNull('value')->where('value', '!=', '')
+            ->get(['component_id', 'value'])->groupBy('component_id');
+        $linkedNames = $nodeLinks->isEmpty() ? collect()
+            : $this->site->collections()->whereIn('id', $nodeLinks->flatten()->pluck('value')->unique())->pluck('name', 'id');
+
+        return $all->each(function (Component $c) use ($placements, $nodeLinks, $linkedNames) {
+            $c->nodes_count = (int) $c->nodes_count;
+            // Site Properties are filled on their own page (blank = optional
+            // setting), so they never count as "empty fields to fill in".
+            $c->empty_nodes_count = SiteProperties::isComponent($c) ? 0 : (int) $c->empty_nodes_count;
+            $rows = $placements[$c->id] ?? collect();
+            $c->live_pages = $rows->where('live', true)->unique('page_id')->values();
+            $c->placements_count = $rows->count();
+            $c->live_pages_count = $c->live_pages->count();
+            $c->is_used = $c->live_pages_count > 0;
+            $c->is_inactive = $rows->isNotEmpty() && ! $c->is_used;
+
+            $sources = collect();
+            if ($c->collection) {
+                $sources->push($c->collection->name);
+            }
+            foreach ($nodeLinks[$c->id] ?? [] as $n) {
+                if (isset($linkedNames[$n->value])) {
+                    $sources->push($linkedNames[$n->value]);
+                }
+            }
+            $c->data_sources = $sources->unique()->values();
+            $c->has_source = $c->data_sources->isNotEmpty();
+
+            $c->needs_attention = $c->empty_nodes_count > 0 || $c->nodes_count === 0 || $c->is_inactive;
+            $c->last_edited = max(array_filter([
+                $c->updated_at,
+                $c->nodes_max_updated_at ? Carbon::parse($c->nodes_max_updated_at) : null,
+            ]));
+        });
+    }
+
+    /**
+     * The collection select SCOPES the whole page — listing, tiles and rails —
+     * to one collection's components ('none' = standalone ones).
+     */
+    private function scoped(SupportCollection $all): SupportCollection
+    {
+        return match ($this->filterCollection) {
+            '' => $all,
+            'none' => $all->whereNull('collection_id')->values(),
+            default => $all->where('collection_id', $this->filterCollection)->values(),
+        };
+    }
+
+    private function applyListing(SupportCollection $all): SupportCollection
+    {
+        $needle = mb_strtolower(trim($this->search));
+
+        return $this->scoped($all)
+            ->when($needle !== '', fn ($c) => $c->filter(fn ($x) => str_contains(
+                mb_strtolower($x->name.' '.$x->description.' '.implode(' ', $x->tags ?? [])), $needle)))
+            ->when($this->filterTag !== '', fn ($c) => $c->filter(fn ($x) => in_array($this->filterTag, $x->tags ?? [], true)))
+            ->filter(fn ($x) => match ($this->filter) {
+                'used' => $x->is_used,
+                'unused' => $x->placements_count === 0,
+                'source' => $x->has_source,
+                'inactive' => $x->is_inactive,
+                'attention' => $x->needs_attention,
+                default => true,
+            })
+            ->sortBy(fn ($x) => match ($this->sort) {
+                'name' => mb_strtolower($x->name),
+                'used' => -$x->live_pages_count,
+                'fields' => -$x->nodes_count,
+                default => -$x->last_edited->getTimestamp(),
+            })
+            ->values();
     }
 
     public function getSitePagesProperty()
@@ -134,10 +296,13 @@ class ComponentsPage extends LivewireComponent
         }
     }
 
+    /** Leave the editor: back to the component's page (or the list, for a new one). */
     public function close(): void
     {
+        $id = $this->editingId;
         $this->reset(['editingId', 'cName', 'cDescription', 'cTags', 'nodes', 'pageIds', 'collectionId']);
         $this->resetVisibilityFields();
+        $this->redirect($this->pageUrl($id), navigate: true);
     }
 
     /** Parse the comma-separated tags box → clean unique array. */
@@ -259,6 +424,8 @@ class ComponentsPage extends LivewireComponent
         $this->dispatch('toast', level: 'success', title: 'Component saved',
             message: $component->name.' has '.$rows->count().' '.Str::plural('node', $rows->count()).'.');
         $this->close();
+        // Saved → the component's own page (a new one included).
+        $this->redirect($this->pageUrl((string) $component->id), navigate: true);
     }
 
     /** Component being VIEWED read-only (null = closed). */
@@ -272,15 +439,17 @@ class ComponentsPage extends LivewireComponent
     public function closeView(): void
     {
         $this->viewingId = null;
+        $this->redirect($this->pageUrl(), navigate: true);
     }
 
-    /** Jump from the read-only view straight into the editor. */
+    /** From the component's page to its edit page. */
     public function editFromView(): void
     {
         $id = $this->viewingId;
-        $this->closeView();
+        $this->viewingId = null;
         if ($id) {
             $this->open($id);
+            $this->redirect($this->pageUrl($id, true), navigate: true);
         }
     }
 
@@ -289,6 +458,46 @@ class ComponentsPage extends LivewireComponent
         return $this->viewingId
             ? $this->site->contentComponents()->with(['nodes', 'pages', 'creator'])->find($this->viewingId)
             : null;
+    }
+
+    /** Copy a component and its fields (not its page placements) as a new standalone one. */
+    public function duplicateComponent(string $id): void
+    {
+        $this->guard();
+        $source = $this->site->contentComponents()->with('nodes')->findOrFail($id);
+
+        $copy = $source->replicate(['collection_order']);
+        $copy->name = Str::limit($source->name.' (copy)', 120, '');
+        $copy->author = Auth::user()?->name ?? 'Admin';
+        $copy->created_by = Auth::id();
+        $copy->source = 'app';
+        $copy->save();
+
+        // Re-create nodes, remapping nested `parent` ids onto the new rows.
+        $map = [];
+        $pending = $source->nodes->values();
+        $isRoot = fn ($p) => $p === null || $p === '' || $p === '0' || $p === 0;
+        while ($pending->isNotEmpty()) {
+            $ready = $pending->filter(fn ($n) => $isRoot($n->parent) || isset($map[(string) $n->parent])
+                || ! $source->nodes->contains('id', $n->parent));
+            if ($ready->isEmpty()) {
+                $ready = $pending; // unresolvable cycle — keep the rows as roots
+            }
+            foreach ($ready as $n) {
+                $parent = $isRoot($n->parent) ? 0 : ($map[(string) $n->parent] ?? 0);
+                $map[(string) $n->id] = $copy->nodes()->create([
+                    'label' => $n->label, 'type' => $n->type, 'value' => $n->value,
+                    'parent' => $parent, 'order' => $n->order, 'description' => $n->description,
+                ])->id;
+            }
+            $pending = $pending->reject(fn ($n) => isset($map[(string) $n->id]))->values();
+        }
+
+        if ($copy->collection_id) {
+            $copy->update(['collection_order' => (int) Component::where('collection_id', $copy->collection_id)->max('collection_order') + 1]);
+        }
+
+        $this->dispatch('toast', level: 'success', title: 'Component duplicated', message: $copy->name.' was created.');
     }
 
     public function deleteComponent(string $id): void
@@ -304,6 +513,35 @@ class ComponentsPage extends LivewireComponent
 
     public function render()
     {
-        return view('livewire.components-page');
+        $everything = $this->annotatedComponents();
+        $components = $this->applyListing($everything);
+        $all = $this->scoped($everything);
+
+        $total = $all->count();
+        $stats = [
+            'total' => $total,
+            'fields' => (int) $all->sum('nodes_count'),
+            'empty' => (int) $all->sum('empty_nodes_count'),
+            'emptyComponents' => $all->where('empty_nodes_count', '>', 0)->count(),
+            'used' => $all->where('is_used', true)->count(),
+            'unused' => $all->where('placements_count', 0)->count(),
+            'inactive' => $all->where('is_inactive', true)->count(),
+            'source' => $all->where('has_source', true)->count(),
+            'attention' => $all->where('needs_attention', true)->count(),
+            'placements' => (int) $all->sum('live_pages_count'),
+            'noFields' => $all->where('nodes_count', 0)->values(),
+            'recent' => $all->where('created_at', '>=', now()->startOfWeek())->count(),
+            'emptyList' => $all->where('empty_nodes_count', '>', 0)->sortByDesc('empty_nodes_count')->take(4)->values(),
+            'mostUsed' => $all->where('live_pages_count', '>', 0)->sortByDesc('live_pages_count')->take(5)->values(),
+            'recentlyEdited' => $all->sortByDesc(fn ($c) => $c->last_edited->getTimestamp())->take(4)->values(),
+            'byTag' => $all->flatMap(fn ($c) => $c->tags ?? [])->countBy()->sortDesc()->take(6)->all(),
+        ];
+
+        return view('livewire.components-page', [
+            'components' => $components,
+            'stats' => $stats,
+            'siteTotal' => $everything->count(),
+            'tags' => $everything->flatMap(fn ($c) => $c->tags ?? [])->unique()->sort()->values()->all(),
+        ]);
     }
 }

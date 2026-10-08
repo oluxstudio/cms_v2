@@ -179,3 +179,54 @@ test('nested collection values edit structurally on both surfaces', function () 
     // Either way the whitelist stopped the mutation before any write.
     expect($item->refresh()->data['facts'])->toHaveCount(3);
 });
+
+test('empty list fields on the Collections page get structured editors with add buttons, not JSON', function () {
+    [$owner, $site] = mirrorSite();
+    $col = $site->collections()->create(['name' => 'Studies Demo', 'slug' => '', 'type' => 'grid', 'is_public' => true,
+        'fields' => [
+            ['key' => 'title', 'name' => 'title', 'label' => 'Title', 'type' => 'text'],
+            ['key' => 'questions', 'name' => 'questions', 'label' => 'Questions', 'type' => 'list'],
+            ['key' => 'media', 'name' => 'media', 'label' => 'Media', 'type' => 'rows', 'fields' => [
+                ['key' => 'type', 'type' => 'select', 'options' => ['video', 'audio', 'image']],
+                ['key' => 'src', 'type' => 'media', 'label' => 'File'],
+            ]],
+        ]]);
+    $item = $col->items()->create(['site_id' => $site->id, 'status' => 'published',
+        'data' => ['title' => 'T', 'questions' => [], 'media' => []]]);
+
+    $lw = Livewire\Livewire::actingAs($owner)->test(CollectionsPage::class, ['site' => $site])
+        ->call('viewEntries', $col->id)
+        ->call('openItem', $item->id);
+    expect($lw->get('itemJsonKeys'))->toBe([])
+        ->and($lw->get('itemForm.media'))->toBe([]);
+    $lw->assertSee('Add question')->assertSee('Add media')->assertDontSee('list (JSON)');
+
+    // a new media row gets the schema's sub-fields, typed (select + asset picker)
+    $lw->call('nestedAdd', 'itemForm.media', ['type', 'src']);
+    expect($lw->get('itemForm.media.0'))->toBe(['type' => '', 'src' => '']);
+    $lw->assertSee('<option value="audio">', false)->assertSee('Choose an audio or video file');
+});
+
+test('a text field stays a text box on the Collections page even when an older entry stored a list there', function () {
+    [$owner, $site] = mirrorSite();
+    $col = $site->collections()->create(['name' => 'Sermons Demo', 'slug' => '', 'type' => 'grid', 'is_public' => true,
+        'fields' => [
+            ['key' => 'title', 'name' => 'title', 'label' => 'Title', 'type' => 'textarea2'],
+            ['key' => 'body', 'name' => 'body', 'label' => 'Content', 'type' => 'textarea15'],
+        ]]);
+    $old = $col->items()->create(['site_id' => $site->id, 'status' => 'published',
+        'data' => ['title' => 'Old', 'body' => ['First paragraph.', 'Second paragraph.']]]);
+
+    $lw = Livewire\Livewire::actingAs($owner)->test(CollectionsPage::class, ['site' => $site])
+        ->call('viewEntries', $col->id)
+        ->call('openItem');                                   // NEW entry
+    expect($lw->get('itemJsonKeys'))->toBe([])
+        ->and($lw->get('itemForm.body'))->toBe('');           // a plain, empty text box
+    $lw->assertDontSee('list (JSON)')->assertSee('wire:model="itemForm.body"', false);
+
+    // the older entry opens with its paragraphs as text, and saves back as text
+    $lw->call('cancelItem')->call('openItem', $old->id);
+    expect($lw->get('itemForm.body'))->toBe("First paragraph.\n\nSecond paragraph.");
+    $lw->call('saveItem');
+    expect($old->fresh()->data['body'])->toBe("First paragraph.\n\nSecond paragraph.");
+});

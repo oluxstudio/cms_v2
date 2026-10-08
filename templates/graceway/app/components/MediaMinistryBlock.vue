@@ -115,7 +115,7 @@ const sendForm = async (e: Event) => {
             <img :src="sermonThumb(sm)" :alt="sm.title">
             <span>
               <b>{{ sm.title }}</b>
-              <small>{{ sm.speaker }} · {{ sm.date }}</small>
+              <small>{{ sm.speaker }} · {{ publishedOn(sm.date) }}</small>
             </span>
           </NuxtLink>
         </div>

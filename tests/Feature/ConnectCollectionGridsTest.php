@@ -61,14 +61,18 @@ test('nested list fields edit structurally even when empty, and new entries star
         ['key' => 'name', 'name' => 'name', 'type' => 'text'],
         ['key' => 'features', 'name' => 'features', 'type' => 'list'],
         ['key' => 'links', 'name' => 'links', 'type' => 'rows', 'fields' => [['key' => 'label'], ['key' => 'href']]],
-    ], [['name' => 'Starter', 'features' => [], 'links' => []]]);
+        ['key' => 'media', 'name' => 'media', 'type' => 'rows', 'fields' => [['key' => 'src']]],
+    ], [['name' => 'Starter', 'features' => [], 'links' => [], 'media' => []]]);
 
     $lw = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
         ->call('select', 'collection', $plans->id)
         ->assertSet('edit.fieldDefs.features.type', 'list')
         ->assertSet('edit.fieldDefs.links.fields', ['label', 'href'])
-        ->assertSee('+ add feature')
-        ->assertSee('+ add link');
+        // add buttons are labelled with the singular field name — but "media" stays "media"
+        ->assertSee('Add feature')
+        ->assertSee('Add link')
+        ->assertSee('Add media')
+        ->assertDontSee('Add medium');
 
     // The first row of an empty rows list gets the schema's sub-fields.
     $lw->call('nestedAdd', 'edit.items.0.data.links', ['label', 'href'])

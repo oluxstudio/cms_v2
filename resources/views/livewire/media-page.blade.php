@@ -55,51 +55,143 @@
         </div>
     </x-slot:rail>
 
-<div class="max-w-[52rem] mx-auto"
+<div class="max-w-[56rem] mx-auto"
      x-data="{ toast:'', toastType:'success', copied:'' }"
      x-init="
         $watch('$wire.successMessage', v => { if(v){ toast=v; toastType='success'; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } });
         $watch('$wire.errorMessage',   v => { if(v){ toast=v; toastType='error';   setTimeout(()=>{ toast=''; $wire.errorMessage='';   }, 5000) } });
      ">
 
-    {{-- ════════ Drag & drop upload panel (solid card) ════════ --}}
-    <div x-data="{ over:false }"
-         x-on:dragover.prevent.stop="over=true"
-         x-on:dragleave.prevent.stop="over=false"
-         x-on:drop.prevent.stop="over=false; $refs.input.files = $event.dataTransfer.files; $refs.input.dispatchEvent(new Event('change', { bubbles:true }))"
-         :class="over ? 'border-indigo-500 ring-4 ring-indigo-500/20 bg-indigo-50 dark:bg-[#232540]' : 'border-gray-300 dark:border-white/[0.14] bg-white dark:bg-[#1d1e2a]'"
-         class="relative border-2 border-dashed rounded-[1.75rem] shadow-sm mb-6 transition-colors">
+    {{-- ════════ Drag & drop upload panel ════════
+         Tall dropzone · selected files listed · real byte progress (Livewire
+         upload events) → "Saving to your library" → done. --}}
+    <div x-data="{
+            over: false, phase: 'idle', progress: 0, files: [], done: 0, failed: '',
+            pick(list) {
+                this.files.forEach(f => f.preview && URL.revokeObjectURL(f.preview));
+                this.files = Array.from(list || []).map(f => {
+                    const kind = this.kindOf(f);
+                    // Images (and videos) preview straight from the chosen file — no round trip.
+                    return { name: f.name, size: f.size, kind, preview: ['image', 'video'].includes(kind) ? URL.createObjectURL(f) : null };
+                });
+                this.failed = '';
+            },
+            kindOf(f) {
+                const ext = (f.name.split('.').pop() || '').toLowerCase();
+                if (f.type.startsWith('image/') || ['svg', 'webp', 'avif', 'ico'].includes(ext)) return 'image';
+                if (f.type.startsWith('video/')) return 'video';
+                if (f.type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext)) return 'audio';
+                if (['ttf', 'otf', 'woff', 'woff2', 'eot'].includes(ext)) return 'font';
+                return 'document';
+            },
+            ext(f) { return (f.name.split('.').pop() || 'file').toUpperCase().slice(0, 5) },
+            badge: @js(collect($typeStyles)->all()),
+            get total() { return this.files.reduce((t, f) => t + f.size, 0) },
+            human(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB' },
+            reset() { this.files.forEach(f => f.preview && URL.revokeObjectURL(f.preview)); this.phase = 'idle'; this.progress = 0; this.files = []; },
+         }"
+         x-on:dragover.prevent.stop="if (phase === 'idle' || phase === 'done') over = true"
+         x-on:dragleave.prevent.stop="over = false"
+         x-on:drop.prevent.stop="over = false; if (phase === 'uploading' || phase === 'saving') return; pick($event.dataTransfer.files); $refs.input.files = $event.dataTransfer.files; $refs.input.dispatchEvent(new Event('change', { bubbles: true }))"
+         x-on:livewire-upload-start="phase = 'uploading'; progress = 0"
+         x-on:livewire-upload-progress="progress = $event.detail.progress"
+         x-on:livewire-upload-finish="progress = 100; phase = 'saving'"
+         x-on:livewire-upload-error="phase = 'idle'; failed = 'The upload was interrupted — check your connection and try again.'"
+         x-on:livewire-upload-cancel="reset()"
+         x-on:media-uploaded.window="done = $event.detail.count; phase = 'done'; setTimeout(() => { if (phase === 'done') reset() }, 3500)"
+         x-on:media-upload-failed.window="reset()"
+         :class="over ? 'border-[var(--primary)] ring-4 ring-[color-mix(in_srgb,var(--primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--primary)_6%,white)] dark:bg-[#232540] scale-[1.005]' : 'border-gray-300 dark:border-white/[0.14] bg-white dark:bg-[#1d1e2a]'"
+         class="relative border-2 border-dashed rounded-[1.75rem] shadow-sm mb-6 transition-all duration-150 overflow-hidden">
 
         <input type="file" wire:model="uploads" multiple x-ref="input" id="media-input"
+               x-on:change="pick($event.target.files)"
                accept="image/*,video/*,audio/*,.svg,.ttf,.otf,.woff,.woff2,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.ppt,.pptx,.zip"
                class="hidden">
 
-        {{-- Whole panel is a clickable label → opens the file dialog --}}
-        <label for="media-input" class="flex flex-col sm:flex-row items-center gap-4 cursor-pointer px-6 py-7 text-center sm:text-left" wire:loading.remove wire:target="uploads">
-            <div class="w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center" style="background:var(--primary)">
-                <svg class="w-7 h-7" style="color:var(--on-primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-            </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-[15px] font-bold text-gray-900 dark:text-white">Drag &amp; drop files here</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Images, video, audio, fonts and documents · up to 50&nbsp;MB each · several at once</p>
-            </div>
-            <span class="inline-flex items-center gap-2 shrink-0 px-5 py-2.5 text-sm font-bold rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">
+        {{-- Idle: the whole (tall) panel is a label → opens the file dialog --}}
+        <label for="media-input" x-show="phase === 'idle'"
+               class="flex flex-col items-center justify-center text-center gap-3 cursor-pointer px-6 py-10 min-h-[17rem] sm:min-h-[19rem]">
+            <span class="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm transition-transform" :class="over && 'scale-110 -translate-y-1'" style="background:var(--primary)">
+                <svg class="w-8 h-8" style="color:var(--on-primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            </span>
+            <span>
+                <span class="block text-lg font-extrabold text-gray-900 dark:text-white" x-text="over ? 'Drop to upload' : 'Drag & drop files here'"></span>
+                <span class="block text-[13px] text-gray-500 dark:text-gray-400 mt-1">or choose them from your device — several at once, up to 50&nbsp;MB each</span>
+            </span>
+            <span class="inline-flex items-center gap-2 mt-1 px-5 py-2.5 text-sm font-bold rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 Browse files
             </span>
+            <span class="flex flex-wrap justify-center gap-1.5 mt-1">
+                @foreach (['Images', 'Video', 'Audio', 'Fonts', 'PDF & documents'] as $kind)
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400">{{ $kind }}</span>
+                @endforeach
+            </span>
+            <span x-show="failed" x-cloak x-text="failed" class="text-xs font-semibold text-red-500"></span>
         </label>
 
-        <div wire:loading.flex wire:target="uploads" class="flex-col items-center justify-center hidden px-6 py-9">
-            <svg class="w-7 h-7 animate-spin mb-2" style="color:var(--primary)" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
-            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Uploading…</p>
+        {{-- Uploading / saving / done: progress for the dropped or chosen files --}}
+        <div x-show="phase !== 'idle'" x-cloak class="flex flex-col justify-center gap-4 px-6 sm:px-10 py-8 min-h-[17rem] sm:min-h-[19rem]">
+            <div class="flex items-center gap-3">
+                <span class="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center" :class="phase === 'done' ? 'bg-emerald-500' : ''" :style="phase === 'done' ? '' : 'background:var(--primary)'">
+                    <svg x-show="phase !== 'done'" class="w-5 h-5 animate-spin" style="color:var(--on-primary)" fill="none" viewBox="0 0 24 24"><circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                    <svg x-show="phase === 'done'" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[15px] font-bold text-gray-900 dark:text-white"
+                       x-text="phase === 'uploading' ? 'Uploading ' + files.length + (files.length === 1 ? ' file' : ' files') + '…'
+                             : phase === 'saving' ? 'Saving to your library…'
+                             : (done ? done + (done === 1 ? ' file' : ' files') + ' added to your library' : 'Upload finished')"></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400" x-text="human(Math.round(total * progress / 100)) + ' of ' + human(total)"></p>
+                </div>
+                <span class="text-2xl font-extrabold tabular-nums" :class="phase === 'done' ? 'text-emerald-500' : 'text-gray-900 dark:text-white'" x-text="progress + '%'"></span>
+            </div>
+
+            {{-- Overall progress bar --}}
+            <div class="h-3 rounded-full bg-gray-100 dark:bg-white/[0.08] overflow-hidden" role="progressbar" aria-label="Upload progress" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+                <div class="h-full rounded-full transition-[width] duration-200 ease-out relative overflow-hidden"
+                     :class="phase === 'done' ? 'bg-emerald-500' : ''" :style="'width:' + progress + '%;' + (phase === 'done' ? '' : 'background:var(--primary)')">
+                    <span x-show="phase === 'saving'" class="absolute inset-0 animate-pulse bg-white/30"></span>
+                </div>
+            </div>
+
+            {{-- The files in this batch: image/video previews + what kind of asset each is --}}
+            <ul class="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 pr-1">
+                <template x-for="(f, i) in files" :key="i">
+                    <li class="flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] p-2">
+                        <span class="relative w-14 h-14 shrink-0 rounded-lg overflow-hidden bg-white dark:bg-white/[0.06] flex items-center justify-center">
+                            <template x-if="f.kind === 'image'"><img :src="f.preview" alt="" class="w-full h-full object-cover"></template>
+                            <template x-if="f.kind === 'video'"><video :src="f.preview" muted preload="metadata" class="w-full h-full object-cover"></video></template>
+                            <template x-if="f.kind === 'audio'"><svg class="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l11-2v13M9 19a2 2 0 11-4 0 2 2 0 014 0zm11-2a2 2 0 11-4 0 2 2 0 014 0z"/></svg></template>
+                            <template x-if="f.kind === 'font'"><span class="text-xl font-extrabold text-violet-500">Aa</span></template>
+                            <template x-if="f.kind === 'document'"><span class="text-[10px] font-bold text-gray-400" x-text="ext(f)"></span></template>
+                            <span x-show="f.kind === 'video'" class="absolute inset-0 flex items-center justify-center"><span class="w-6 h-6 rounded-full bg-black/55 flex items-center justify-center"><svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></span>
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-[13px] font-semibold text-gray-800 dark:text-gray-100" x-text="f.name" :title="f.name"></span>
+                            <span class="flex items-center gap-1.5 mt-1">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" :class="badge[f.kind]" x-text="f.kind.charAt(0).toUpperCase() + f.kind.slice(1)"></span>
+                                <span class="text-[11px] text-gray-400 tabular-nums" x-text="ext(f) + ' · ' + human(f.size)"></span>
+                            </span>
+                        </span>
+                        <svg x-show="phase === 'done'" class="w-5 h-5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </li>
+                </template>
+            </ul>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" x-show="phase === 'uploading'" x-on:click="$wire.cancelUpload('uploads'); reset()"
+                        class="{{ $btnSolid }} text-[12.5px] px-3.5 py-1.5">Cancel</button>
+                <label for="media-input" x-show="phase === 'done'" class="{{ $btnSolid }} text-[12.5px] px-3.5 py-1.5 cursor-pointer">Upload more</label>
+            </div>
         </div>
 
-        @error('uploads')   <p class="text-xs text-red-500 pb-3 text-center">{{ $message }}</p> @enderror
-        @error('uploads.*') <p class="text-xs text-red-500 pb-3 text-center">{{ $message }}</p> @enderror
+        @error('uploads')   <p class="text-xs text-red-500 pb-4 text-center">{{ $message }}</p> @enderror
+        @error('uploads.*') <p class="text-xs text-red-500 pb-4 text-center">{{ $message }}</p> @enderror
     </div>
 
     {{-- ════════ Tabs + search ════════ --}}
-    <div class="flex flex-wrap items-center gap-2 mb-5">
+    <div class="flex flex-wrap items-center gap-2 mb-5 p-2 {{ $panel }} !rounded-2xl">
         <div class="min-w-0 flex-1 basis-full sm:basis-auto">
             <div class="flex gap-2 overflow-x-auto no-scrollbar">
                 @foreach($tabs as $key => $tab)

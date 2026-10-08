@@ -191,7 +191,8 @@ test('updating sites moves outdated sites to the latest version and re-installs 
 
     expect($outdated->fresh()->template_version_id)->toBe($new->id);
     Queue::assertPushed(InstallTemplateJob::class, 1);
-    Queue::assertPushed(InstallTemplateJob::class, fn ($j) => $j->siteTemplateId === $outdated->id);
+    // An update REFRESHES the site (declared field types sync), unlike a first install.
+    Queue::assertPushed(InstallTemplateJob::class, fn ($j) => $j->siteTemplateId === $outdated->id && $j->refresh);
     expect($current->fresh()->template_version_id)->toBe($new->id);
 });
 

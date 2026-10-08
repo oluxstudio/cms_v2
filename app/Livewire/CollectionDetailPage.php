@@ -39,30 +39,66 @@ class CollectionDetailPage extends CollectionsPage
         'text' => 'Input (one line)', 'textarea2' => 'Textarea (2 rows)', 'textarea' => 'Textarea (4 rows)',
         'textarea6' => 'Textarea (6 rows)', 'textarea10' => 'Textarea (10 rows)', 'textarea15' => 'Textarea (15 rows)',
         'number' => 'Number (decimals ok)',
-        'email' => 'Email', 'tel' => 'Phone', 'url' => 'Link', 'date' => 'Date',
+        'email' => 'Email', 'tel' => 'Phone', 'url' => 'Link', 'date' => 'Date', 'datetime' => 'Date & time',
         'select' => 'Dropdown', 'radio' => 'Radio buttons', 'checkbox' => 'Checkbox (yes/no)', 'toggle' => 'Toggle (on/off switch)',
-        'slider' => 'Slider', 'image' => 'Image', 'images' => 'Images (gallery)', 'list' => 'List', 'tags' => 'Tags',
+        'slider' => 'Slider', 'image' => 'Image', 'images' => 'Images (gallery)', 'media' => 'Audio / video / file',
+        'list' => 'List', 'tags' => 'Tags', 'slug' => 'Slug (web address, made from other fields)',
     ];
+
+    /** Structured types the picker can't create but must keep (a template's rows / group / JSON fields). */
+    public const KEPT_TYPES = ['rows' => 'Rows (sub-fields)', 'group' => 'Group (sub-fields)', 'json' => 'JSON', 'array' => 'List (JSON)'];
+
+    private static function knownType(?string $type): bool
+    {
+        return array_key_exists((string) $type, self::FIELD_TYPES) || array_key_exists((string) $type, self::KEPT_TYPES);
+    }
 
     /** "Edit fields" panel: one row per field. */
     public bool $editingFields = false;
 
     public array $fieldRows = [];
 
-    public function mount(Site $site, ?string $collection = null): void
+    public function mount(Site $site, ?string $collection = null, ?string $entry = null, ?string $screen = null): void
     {
         $this->site = $site;
         abort_unless($site->allows(Auth::user(), 'collections.view'), 403);
         $col = CollectionModel::where('site_id', $site->id)->findOrFail((string) $collection);
         $this->viewingId = $col->id;
 
-        // ?item={id} opens that entry in the side panel; ?new=1 starts a new one.
-        $itemId = (string) request()->query('item');
-        if ($itemId !== '' && $col->items()->whereKey($itemId)->exists()) {
-            $this->viewItem($itemId);
-        } elseif (request()->boolean('new') && $this->canManage()) {
-            $this->addEntry();
+        // Each entry / the field editor is its own page (routes collections.entries.*, collections.fields).
+        match ($screen) {
+            'entry' => $this->viewItem((string) $entry),
+            'edit' => $this->canManage() ? $this->editItem((string) $entry) : $this->viewItem((string) $entry),
+            'new' => $this->canManage() ? $this->addEntry() : null,
+            'fields' => $this->canManage() ? $this->openFields() : null,
+            default => null,
+        };
+        // Older links: ?item={id} / ?new=1 → the entry's own page.
+        if ($screen === null) {
+            $itemId = (string) request()->query('item');
+            if ($itemId !== '' && $col->items()->whereKey($itemId)->exists()) {
+                $this->redirect($this->entryUrl($itemId), navigate: true);
+            } elseif (request()->boolean('new') && $this->canManage()) {
+                $this->redirect($this->pageUrl('new'), navigate: true);
+            }
         }
+    }
+
+    /** URL of this collection's page, or one of its own sub-pages. */
+    public function pageUrl(?string $screen = null): string
+    {
+        $args = [$this->site->name, $this->viewingId];
+
+        return match ($screen) {
+            'new' => route('collections.entries.new', $args),
+            'fields' => route('collections.fields', $args),
+            default => route('collections.show', $args),
+        };
+    }
+
+    public function entryUrl(string $itemId, bool $edit = false): string
+    {
+        return route($edit ? 'collections.entries.edit' : 'collections.entries.show', [$this->site->name, $this->viewingId, $itemId]);
     }
 
     private function canManage(): bool
@@ -107,22 +143,25 @@ class CollectionDetailPage extends CollectionsPage
         $this->panelMode = 'edit';
     }
 
-    /** Edit → back to viewing the entry (a new, unsaved entry just closes). */
+    /** Edit → back to the entry's page (a new, unsaved entry → the collection). */
     public function cancelItem(): void
     {
         parent::cancelItem();
         if ($this->panelId) {
             $this->panelMode = 'view';
+            $this->redirect($this->entryUrl($this->panelId), navigate: true);
         } else {
             $this->closePanel();
         }
     }
 
+    /** Leave the entry's page → back to the collection. */
     public function closePanel(): void
     {
         parent::cancelItem();
         $this->panelId = null;
         $this->panelMode = 'view';
+        $this->redirect($this->pageUrl(), navigate: true);
     }
 
     // ── Fields (schema): label, type and per-type settings ─────────
@@ -130,11 +169,13 @@ class CollectionDetailPage extends CollectionsPage
     public function openFields(): void
     {
         $this->guardManage();
-        $this->closePanel();
+        parent::cancelItem();            // no entry open on the field editor's page
+        $this->panelId = null;
+        $this->panelMode = 'view';
         $this->fieldRows = collect($this->collection()->fields ?? [])->map(fn ($f) => [
             'key' => (string) ($f['key'] ?? $f['name'] ?? ''),
             'label' => (string) ($f['label'] ?? Str::headline((string) ($f['key'] ?? ''))),
-            'type' => array_key_exists($f['type'] ?? 'text', self::FIELD_TYPES) ? ($f['type'] ?? 'text') : 'text',
+            'type' => self::knownType($f['type'] ?? 'text') ? ($f['type'] ?? 'text') : 'text',
             'options' => implode(', ', (array) ($f['options'] ?? [])),
             'min' => (string) ($f['min'] ?? ''),
             'max' => (string) ($f['max'] ?? ''),
@@ -142,6 +183,7 @@ class CollectionDetailPage extends CollectionsPage
             'required' => (bool) ($f['required'] ?? false),
             'hidden' => (bool) ($f['hidden'] ?? false),
             'auto' => (string) ($f['auto'] ?? ''),
+            'slugFrom' => CollectionAutoFields::slugSources($f['auto'] ?? null),
         ])->values()->all();
         $this->resetErrorBag();
         $this->editingFields = true;
@@ -149,7 +191,7 @@ class CollectionDetailPage extends CollectionsPage
 
     public function addFieldRow(): void
     {
-        $this->fieldRows[] = ['key' => '', 'label' => '', 'type' => 'text', 'options' => '', 'min' => '', 'max' => '', 'step' => '', 'required' => false, 'hidden' => false, 'auto' => ''];
+        $this->fieldRows[] = ['key' => '', 'label' => '', 'type' => 'text', 'options' => '', 'min' => '', 'max' => '', 'step' => '', 'required' => false, 'hidden' => false, 'auto' => '', 'slugFrom' => []];
     }
 
     public function removeFieldRow(int $i): void
@@ -166,15 +208,17 @@ class CollectionDetailPage extends CollectionsPage
         }
     }
 
+    /** Leave the field editor's page → back to the collection. */
     public function closeFields(): void
     {
         $this->reset('editingFields', 'fieldRows');
         $this->resetErrorBag();
+        $this->redirect($this->pageUrl(), navigate: true);
     }
 
     /**
-     * Save the schema. Entry data is never touched: a removed field's values
-     * stay stored (just not shown); existing keys keep their name so data
+     * Save the schema. Entry data is kept: a removed field's values stay
+     * stored (just not shown), a retyped field's values are converted; existing keys keep their name so data
      * lines up; anything else on a field (nested list schema, help…) is kept.
      */
     public function saveFields(): void
@@ -192,7 +236,7 @@ class CollectionDetailPage extends CollectionsPage
 
                 continue;
             }
-            $type = array_key_exists($row['type'] ?? '', self::FIELD_TYPES) ? $row['type'] : 'text';
+            $type = self::knownType($row['type'] ?? '') ? $row['type'] : 'text';
             $key = (string) ($row['key'] ?? '') ?: Str::snake(Str::ascii($label));
             $key = $key !== '' ? $key : 'field';
             for ($n = 2, $base = $key; in_array($key, $used, true) || (($row['key'] ?? '') === '' && $old->has($key)); $n++) {
@@ -216,7 +260,15 @@ class CollectionDetailPage extends CollectionsPage
             }
 
             $auto = (string) ($row['auto'] ?? '');
-            $auto = CollectionAutoFields::valid($auto) ? $auto : null;
+            $auto = CollectionAutoFields::valid($auto) && CollectionAutoFields::slugSources($auto) === [] ? $auto : null;
+            if ($type === 'slug') {
+                // Built from the fields ticked under "Made from" (fields of this collection).
+                $known = collect($this->fieldRows)->pluck('key')->filter()->all();
+                $auto = CollectionAutoFields::slugSource(array_values(array_intersect((array) ($row['slugFrom'] ?? []), $known)));
+                if ($auto === null) {
+                    $this->addError("fieldRows.$i.slugFrom", 'Tick at least one field to make the slug from.');
+                }
+            }
 
             $def = array_diff_key((array) ($old[$key] ?? []), array_flip(['options', 'min', 'max', 'step', 'hidden', 'auto']));
             $out[] = array_filter([
@@ -238,7 +290,12 @@ class CollectionDetailPage extends CollectionsPage
         }
         // Fields that just got a system source are filled on the existing entries.
         $newlyAuto = collect($out)->filter(fn ($f) => ! empty($f['auto']) && (($old[$f['key']]['auto'] ?? null) !== $f['auto']))->isNotEmpty();
+        $retyped = collect($out)->filter(fn ($f) => $old->has($f['key']) && ($old[$f['key']]['type'] ?? 'text') !== $f['type'])->values()->all();
         $col->update(['fields' => $out]);
+        // A changed type converts the stored values ("yes" → on for a toggle, "12" → 12 for a number).
+        if ($retyped !== []) {
+            \App\Support\CollectionFieldShape::coerceEntries($col, $retyped);
+        }
         if ($newlyAuto) {
             CollectionAutoFields::backfill($col->fresh());
         }
@@ -267,12 +324,19 @@ class CollectionDetailPage extends CollectionsPage
         if ($isNew) {
             // New entries go to the end of the manual order.
             $col = $this->collection();
-            $newest = $col->items()->whereNull('position')->latest()->first();
-            $newest?->update(['position' => (int) $col->items()->max('position') + 1]);
-            $editedId = $newest?->id;
+            $created = $this->createdItemId ? $col->items()->find($this->createdItemId) : null;
+            if ($created && $created->position === null) {
+                $created->update(['position' => (int) $col->items()->max('position') + 1]);
+            }
+            $editedId = $created?->id;
         }
-        // Back to viewing what was just saved.
-        $editedId ? $this->viewItem((string) $editedId) : $this->closePanel();
+        // Back to the page of what was just saved.
+        if ($editedId) {
+            $this->viewItem((string) $editedId);
+            $this->redirect($this->entryUrl((string) $editedId), navigate: true);
+        } else {
+            $this->closePanel();
+        }
     }
 
     /** Soft delete: the entry disappears everywhere but can be restored. */
@@ -377,6 +441,11 @@ class CollectionDetailPage extends CollectionsPage
         $panelItem = $this->panelId ? $col->items()->find($this->panelId) : null;
 
         return view('livewire.collection-detail-page', [
+            // Grouped components (the collection's members) + those still free to add.
+            'members' => $col->components()->withCount('nodes')->get(),
+            'available' => \App\Models\Component::where('site_id', $this->site->id)->whereNull('collection_id')
+                ->when($this->memberSearch !== '', fn ($q) => $q->where('name', 'like', '%'.$this->memberSearch.'%'))
+                ->orderBy('name')->get(['id', 'name']),
             'viewing' => $col,
             'entries' => $entries,
             'trashed' => $trashed,

@@ -7,21 +7,21 @@ namespace App\Livewire\Concerns;
  *
  * The choice is persisted on the site via the site_attributes table
  * (Site::getAttr/setAttr) under the key "layout:{page}", so it is shared by the
- * whole team and survives reloads. Each page opens in a smart default until the
- * user overrides it.
+ * whole team and survives reloads. Every content list opens as a GRID until
+ * the user picks another layout.
  *
  * Host component requirements: a public Site $site property, and a call to
  * initLayout() from its own mount() AFTER $site has been assigned.
  */
 trait WithLayoutMode
 {
-    public string $viewMode = 'list';
+    public string $viewMode = 'grid';
 
     public string $layoutPage = '';
 
     public array $layoutModes = ['grid', 'list', 'compact'];
 
-    public function initLayout(string $page, string $default = 'list', array $modes = ['grid', 'list', 'compact']): void
+    public function initLayout(string $page, string $default = 'grid', array $modes = ['grid', 'list', 'compact']): void
     {
         $this->layoutPage = $page;
         $this->layoutModes = $modes;

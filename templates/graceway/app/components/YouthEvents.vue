@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import type { YouthEventsContent } from '../composables/useSiteContent'
+import type { ChurchEvent } from '../composables/useSiteContent'
 
-type YEvent = YouthEventsContent['events'][number]
+type YEvent = ChurchEvent
 
 const { youthEvents } = useSiteContent()
-const events: YEvent[] = youthEvents.events
+// upcoming youth-ministry events from the Events collection, soonest first
+const events = computed(() => upcomingEvents(useEventRows(), 'youth'))
+const dayOf = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: '2-digit' })
+const monthOf = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { month: 'short' })
 
-// countdown to the next big event (the first authored event)
-const target = new Date(events[0]?.date ?? Date.now())
+// countdown to the next youth event
+const next = computed(() => events.value[0])
 const now = ref(Date.now())
 let timer: ReturnType<typeof setInterval>
 onMounted(() => { timer = setInterval(() => { now.value = Date.now() }, 1000) })
 onUnmounted(() => clearInterval(timer))
 const cd = computed(() => {
-  const s = Math.max(0, Math.floor((target.getTime() - now.value) / 1000))
+  const s = Math.max(0, Math.floor((new Date(next.value?.date ?? 0).getTime() - now.value) / 1000))
   return { d: Math.floor(s / 86400), h: Math.floor(s / 3600) % 24, m: Math.floor(s / 60) % 60, s: s % 60 }
 })
 
@@ -51,7 +54,7 @@ const submitRsvp = async () => {
     ...form.value,
     event: rsvpEvent.value.title,
     event_date: rsvpEvent.value.date.slice(0, 10),
-    spots_left: rsvpEvent.value.spots,
+    spots_left: rsvpEvent.value.seatsLeft,
   })) return
   going.value[rsvpEvent.value.id] = true
   save()
@@ -70,9 +73,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <h2>{{ youthEvents.title }}</h2>
       </div>
 
-      <!-- countdown to the next big event -->
-      <div class="yv-countdown">
-        <span class="yv-cd-label">{{ youthEvents.countdownLabel }}</span>
+      <p v-if="!events.length" class="yv-empty">No youth events are scheduled right now — check back soon!</p>
+
+      <!-- countdown to the next youth event -->
+      <div v-if="next" class="yv-countdown">
+        <span class="yv-cd-label">🔥 {{ next.title }} starts in</span>
         <div class="yv-cd-units">
           <span><b>{{ cd.d }}</b>days</span>
           <span><b>{{ cd.h }}</b>hrs</span>
@@ -81,9 +86,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </div>
 
-      <div class="yv-event-grid" data-olx-panel="youth-events">
+      <div class="yv-event-grid" data-olx-panel="events">
         <article data-olx-item v-for="e in events" :key="e.id" class="yv-event">
-          <div class="date"><b>{{ e.day }}</b><span>{{ e.month }}</span></div>
+          <div class="date"><b>{{ dayOf(e.date) }}</b><span>{{ monthOf(e.date) }}</span></div>
           <div class="body">
             <h3>{{ e.title }}</h3>
             <p>{{ e.text }}</p>
@@ -91,7 +96,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               <button class="rsvp-btn" :class="{ on: going[e.id] }" type="button" @click="openRsvp(e)">
                 {{ going[e.id] ? '✓ You\'re in!' : "I'm coming" }}
               </button>
-              <span class="rsvp-count">👥 {{ e.spots + (going[e.id] ? 1 : 0) }} going</span>
+              <span v-if="e.seatsLeft !== ''" class="rsvp-count">🎟 {{ e.seatsLeft }} spots left</span>
+              <NuxtLink class="yv-details" :to="eventPath(e)">Details →</NuxtLink>
             </div>
           </div>
         </article>
@@ -105,7 +111,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
             <template v-if="!confirmed">
               <p class="eyebrow">You're coming to</p>
-              <h3>{{ rsvpEvent.title }} · {{ rsvpEvent.day }} {{ rsvpEvent.month }}</h3>
+              <h3>{{ rsvpEvent.title }} · {{ dayOf(rsvpEvent.date) }} {{ monthOf(rsvpEvent.date) }}</h3>
               <div v-if="countdownFor(rsvpEvent.date)" class="rsvp-countdown" aria-label="Time until the event">
                 <span v-for="(v, k) in { days: countdownFor(rsvpEvent.date)!.d, hrs: countdownFor(rsvpEvent.date)!.h, min: countdownFor(rsvpEvent.date)!.m, sec: countdownFor(rsvpEvent.date)!.s }" :key="k">
                   <b>{{ v }}</b>{{ k }}

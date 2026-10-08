@@ -2,6 +2,8 @@
     $panel = 'rounded-[1.75rem] bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm';
     $btnSolid = 'inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors';
     $iconBtn = $btnSolid.' w-8 h-8 shrink-0';
+    // Entries, a new entry and the field editor each open on their own page.
+    $onSubPage = $panelId !== null || $editingFields;
 @endphp
 
 <x-tri-layout :title="$viewing->name" :subtitle="$stats['total'].' '.Str::plural('entry', $stats['total']).' · '.Str::headline($viewing->type ?: 'collection')"
@@ -11,10 +13,10 @@
         <div class="flex flex-wrap items-center gap-2">
             <a href="{{ route('collections', $site->name) }}" wire:navigate class="{{ $btnSolid }} text-sm px-4 py-2.5">← All collections</a>
             @if ($canManage)
-                <button wire:click="addEntry" class="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">
+                <a href="{{ $this->pageUrl('new') }}" wire:navigate class="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     Add entry
-                </button>
+                </a>
             @endif
         </div>
     </x-slot:header>
@@ -31,6 +33,7 @@
         </div>
     </x-slot:rail>
 
+    @unless ($onSubPage)
     <div class="max-w-[52rem] mx-auto space-y-4">
         <div class="{{ $panel }} overflow-hidden">
             @if (! $fields)
@@ -38,7 +41,7 @@
             @elseif ($entries->isEmpty())
                 <div class="p-10 text-center">
                     <p class="text-sm text-gray-500">No entries yet.</p>
-                    @if ($canManage)<button wire:click="addEntry" class="mt-3 text-sm font-bold" style="color:var(--primary)">+ Add the first entry</button>@endif
+                    @if ($canManage)<a href="{{ $this->pageUrl('new') }}" wire:navigate class="inline-block mt-3 text-sm font-bold" style="color:var(--primary)">+ Add the first entry</a>@endif
                 </div>
             @else
                 <ul class="divide-y divide-gray-100 dark:divide-white/[0.05]">
@@ -53,7 +56,7 @@
                                     <span class="text-[11px] font-bold text-gray-400">{{ Str::upper(Str::substr($label($item), 0, 2)) }}</span>
                                 @endif
                             </div>
-                            <button type="button" wire:click="viewItem('{{ $item->id }}')" class="min-w-0 flex-1 text-left" title="Open this entry">
+                            <a href="{{ $this->entryUrl($item->id) }}" wire:navigate class="min-w-0 flex-1 text-left" title="Open this entry">
                                 <span class="block text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $label($item) }}</span>
                                 <span class="block text-[10.5px] text-gray-400" title="Created {{ $item->created_at?->format('j M Y, H:i') }}">Updated {{ $item->updated_at?->diffForHumans() ?? '—' }}</span>
                                 <span class="block text-[11.5px] text-gray-500 dark:text-gray-400 truncate">
@@ -61,7 +64,7 @@
                                         ->map(fn ($k) => is_scalar(data_get($item->data, $k)) ? Str::limit(strip_tags(\App\Support\SiteTokens::apply($site, (string) data_get($item->data, $k))), 40) : (is_array(data_get($item->data, $k)) ? count(data_get($item->data, $k)).' items' : ''))
                                         ->filter()->implode(' · ') }}
                                 </span>
-                            </button>
+                            </a>
                             @if ($canManage)
                                 <button wire:click="toggleStatus('{{ $item->id }}')"
                                         class="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full {{ $item->status === 'published' ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-white/[0.1] dark:text-gray-200' }}"
@@ -70,9 +73,9 @@
                                     <button wire:click="moveItem('{{ $item->id }}', -1)" @disabled($loop->first) class="{{ $iconBtn }} disabled:opacity-30" title="Move up">↑</button>
                                     <button wire:click="moveItem('{{ $item->id }}', 1)" @disabled($loop->last) class="{{ $iconBtn }} disabled:opacity-30" title="Move down">↓</button>
                                 </span>
-                                <button wire:click="editItem('{{ $item->id }}')" class="{{ $iconBtn }}" title="Edit">
+                                <a href="{{ $this->entryUrl($item->id, true) }}" wire:navigate class="{{ $iconBtn }}" title="Edit">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                </button>
+                                </a>
                                 <button wire:click="deleteItem('{{ $item->id }}')" data-confirm="Delete “{{ $label($item) }}”? It disappears from the collection and every block that shows it — you can restore it from Deleted entries."
                                         class="{{ $iconBtn }} hover:!text-red-600 hover:!border-red-200" title="Delete">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -111,15 +114,58 @@
                 @endif
             </div>
         @endif
+
+        @if ($canManage)
+            {{-- ── Grouped components (the collection's members) ── --}}
+        <div class="{{ $panel }} p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <p class="text-xs font-bold uppercase tracking-[.12em] text-gray-400">Components <span class="text-gray-300 dark:text-gray-600">({{ $members->count() }})</span></p>
+                <div class="flex items-center gap-2" x-data="{ pick: '' }">
+                    <input wire:model.live.debounce.300ms="memberSearch" type="text" placeholder="Search components…"
+                           class="px-2.5 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 placeholder-gray-400 w-40">
+                    <select x-model="pick" class="px-2.5 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200">
+                        <option value="">Add a component…</option>
+                        @foreach($available as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach
+                    </select>
+                    <button x-on:click="if(pick){ $wire.addComponent(pick); pick='' }"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style="background:var(--primary)">Add</button>
+                </div>
+            </div>
+            @if($available->isEmpty() && $memberSearch !== '')
+                <p class="text-[11px] text-gray-400 mb-2">No standalone components match "{{ $memberSearch }}".</p>
+            @endif
+
+            @if($members->isEmpty())
+                <p class="text-xs text-gray-400">No components yet — add existing ones above, or set a component's collection on the Components page.</p>
+            @else
+                <div class="space-y-1.5">
+                    @foreach($members as $i => $m)
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 dark:border-white/[0.06]">
+                        <div class="flex flex-col leading-none">
+                            <button wire:click="moveComponent('{{ $m->id }}', -1)" @if($i === 0) disabled @endif class="text-gray-400 hover:text-gray-700 disabled:opacity-30">▲</button>
+                            <button wire:click="moveComponent('{{ $m->id }}', 1)" @if($i === $members->count() - 1) disabled @endif class="text-gray-400 hover:text-gray-700 disabled:opacity-30">▼</button>
+                        </div>
+                        <span class="flex-1 text-sm text-gray-800 dark:text-gray-200 truncate">{{ $m->name }}
+                            <span class="text-xs text-gray-400">· {{ $m->nodes_count }} {{ Str::plural('node', $m->nodes_count) }}</span>
+                        </span>
+                        <button wire:click="removeComponent('{{ $m->id }}')" class="text-xs font-semibold text-rose-500 hover:text-rose-600">Remove</button>
+                    </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+        @endif
     </div>
 
-    {{-- ══ Edit fields: name, type and settings per field ══ --}}
+    @endunless
+
+    {{-- ══ Edit fields: its own page ══ --}}
     @if ($editingFields)
         @php
             $inp = 'w-full px-3 py-2 text-sm rounded-lg bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100';
             $autoOptions = \App\Support\CollectionAutoFields::options($site);
         @endphp
-        <x-side-drawer close="closeFields" width="max-w-lg">
+        <x-page-panel :back="$this->pageUrl()" :back-label="'Back to '.$viewing->name">
             <x-slot:header>
                 <p class="text-[11px] font-bold uppercase tracking-[.14em]" style="color:var(--primary)">Fields · {{ $viewing->name }}</p>
                 <h2 class="text-lg font-extrabold text-gray-900 dark:text-white">Edit fields</h2>
@@ -146,6 +192,8 @@
                                 <span class="text-[11px] font-bold text-gray-500">Type</span>
                                 <select wire:model.live="fieldRows.{{ $i }}.type" class="{{ $inp }}">
                                     @foreach (\App\Livewire\CollectionDetailPage::FIELD_TYPES as $tk => $tl)<option value="{{ $tk }}">{{ $tl }}</option>@endforeach
+                                    {{-- A template's structured field keeps its type (it can't be picked for a new field). --}}
+                                    @isset(\App\Livewire\CollectionDetailPage::KEPT_TYPES[$row['type']])<option value="{{ $row['type'] }}">{{ \App\Livewire\CollectionDetailPage::KEPT_TYPES[$row['type']] }}</option>@endisset
                                 </select>
                             </label>
                             <label class="flex items-center gap-2 pt-5 text-sm text-gray-700 dark:text-gray-200">
@@ -168,8 +216,31 @@
                             @error("fieldRows.$i.step")<p class="text-[11px] text-red-500">{{ $message }}</p>@enderror
                             <p class="text-[10.5px] text-gray-400">Step 0.1 or 0.5 allows decimals like 4.5. Leave blank for any number.</p>
                         @endif
+                        @if ($row['type'] === 'slug')
+                            {{-- A slug is made from other fields of the entry (dates as Y-m-d), unique in this collection --}}
+                            <div>
+                                <span class="text-[11px] font-bold text-gray-500">Made from</span>
+                                <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1.5">
+                                    @foreach ($fieldRows as $j => $other)
+                                        @continue($j === $i || ($other['key'] ?? '') === '' || in_array($other['type'] ?? '', ['slug', 'rows', 'group', 'list', 'images', 'tags', 'json', 'array'], true))
+                                        <label class="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                                            <input type="checkbox" wire:model.live="fieldRows.{{ $i }}.slugFrom" value="{{ $other['key'] }}" class="w-4 h-4 accent-[var(--primary)]"> {{ $other['label'] ?: $other['key'] }}
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @error("fieldRows.$i.slugFrom")<p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>@enderror
+                                @php $slugFrom = array_values(array_intersect(collect($fieldRows)->pluck('key')->all(), (array) ($row['slugFrom'] ?? []))); @endphp
+                                <p class="mt-1.5 text-[10.5px] text-gray-400">
+                                    Filled automatically when an entry is saved{{ $slugFrom ? ' — e.g. '.collect($slugFrom)->map(fn ($k) => in_array(collect($fieldRows)->firstWhere('key', $k)['type'] ?? '', ['date', 'datetime'], true) ? '2026-10-18' : Str::slug(collect($fieldRows)->firstWhere('key', $k)['label'] ?? $k))->implode('-') : '' }}.
+                                    Lower-case words joined by dashes, dates as year-month-day; a number is added if another entry already has it.
+                                </p>
+                            </div>
+                        @endif
                         {{-- Who fills it: a person, or the system (dates, who, entry number, a Site Property) --}}
                         <div class="grid grid-cols-2 gap-2">
+                            @if ($row['type'] === 'slug')
+                            <span class="block text-[11px] text-gray-400 pt-5">Filled by the system</span>
+                            @else
                             <label class="block">
                                 <span class="text-[11px] font-bold text-gray-500">Filled by</span>
                                 <select wire:model.live="fieldRows.{{ $i }}.auto" class="{{ $inp }}">
@@ -182,11 +253,12 @@
                                     </optgroup>
                                 </select>
                             </label>
+                            @endif
                             <label class="flex items-center gap-2 pt-5 text-sm text-gray-700 dark:text-gray-200">
                                 <input type="checkbox" wire:model="fieldRows.{{ $i }}.hidden" class="w-4 h-4 accent-[var(--primary)]"> Hide in edit form
                             </label>
                         </div>
-                        @if (($row['auto'] ?? '') !== '')
+                        @if (($row['auto'] ?? '') !== '' && $row['type'] !== 'slug' && ! str_starts_with($row['auto'], 'slug:'))
                             <p class="text-[10.5px] text-gray-400">Filled automatically whenever an entry is saved — shown read-only in the form.{{ str_starts_with($row['auto'], 'property:') ? ' Always shows the current value from Site Properties.' : '' }}</p>
                         @elseif (! empty($row['hidden']))
                             <p class="text-[10.5px] text-gray-400">Not shown in the edit form. Its value is kept and still appears on the website.</p>
@@ -203,12 +275,12 @@
                     <button wire:click="saveFields" class="inline-flex items-center text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">Save fields</button>
                 </div>
             </x-slot:footer>
-        </x-side-drawer>
+        </x-page-panel>
     @endif
 
-    {{-- ══ Entry side panel: view ⇄ edit, fields in one column ══ --}}
+    {{-- ══ An entry's own page: view ⇄ edit, fields in one column ══ --}}
     @if ($panelId !== null)
-        <x-side-drawer close="closePanel" width="max-w-lg">
+        <x-page-panel :back="$this->pageUrl()" :back-label="'Back to '.$viewing->name">
             <x-slot:header>
                 <p class="text-[11px] font-bold uppercase tracking-[.14em]" style="color:var(--primary)">{{ $panelMode === 'edit' ? ($panelId ? 'Edit entry' : 'New entry') : 'Entry' }} · {{ $viewing->name }}</p>
                 <h2 class="text-lg font-extrabold text-gray-900 dark:text-white truncate">{{ $panelItem ? $label($panelItem) : 'New entry' }}</h2>
@@ -309,15 +381,15 @@
                         <button wire:click="deleteItem('{{ $panelItem->id }}')" data-confirm="Delete this entry? You can restore it from Deleted entries."
                                 class="{{ $btnSolid }} text-sm px-4 py-2.5 !text-rose-600">Delete</button>
                         <span class="flex-1"></span>
-                        <button wire:click="closePanel" class="{{ $btnSolid }} text-sm px-4 py-2.5">Close</button>
-                        <button wire:click="editItem" class="inline-flex items-center text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">Edit</button>
+                        <a href="{{ $this->pageUrl() }}" wire:navigate class="{{ $btnSolid }} text-sm px-4 py-2.5">Close</a>
+                        <a href="{{ $this->entryUrl($panelItem->id, true) }}" wire:navigate class="inline-flex items-center text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">Edit</a>
                     @else
                         <span class="flex-1"></span>
                         <button wire:click="closePanel" class="{{ $btnSolid }} text-sm px-4 py-2.5">Close</button>
                     @endif
                 </div>
             </x-slot:footer>
-        </x-side-drawer>
+        </x-page-panel>
     @endif
 
     {{-- ══ RIGHT rail ══ --}}
@@ -336,7 +408,7 @@
         <div class="{{ $panel }} p-5">
             <div class="flex items-center justify-between mb-1.5">
                 <h3 class="text-[15px] font-bold text-gray-900 dark:text-white">Fields</h3>
-                @if ($canManage)<button wire:click="openFields" class="text-xs font-bold" style="color:var(--primary)">Edit fields</button>@endif
+                @if ($canManage)<a href="{{ $this->pageUrl('fields') }}" wire:navigate class="text-xs font-bold" style="color:var(--primary)">Edit fields</a>@endif
             </div>
             <div class="flex flex-wrap gap-1.5">
                 @forelse ($viewing->fields ?? [] as $f)

@@ -65,6 +65,7 @@ watch([series, audience, sort], () => { page.value = 1 })
           <h3>{{ s.title }}</h3>
           <p class="passage">📖 {{ s.passage }}<template v-if="s.week"> · {{ s.week }}</template></p>
           <p class="summary">{{ s.summary }}</p>
+          <p class="study-byline"><template v-if="s.author">By {{ s.author }} · </template>{{ publishedOn(s.date) }}</p>
           <span class="more">Read Study →</span>
         </NuxtLink>
       </div>

@@ -27,9 +27,10 @@ const give = async () => {
   sending.value = true
   error.value = ''
   try {
-    const pub: any = (useRuntimeConfig() as any).public || {}
-    const site = pub.cmsSite || 'graceway'
-    const base = pub.bookingApiBase || window.location.origin
+    // the site being shown (its domain, or ?site=… in a CMS preview) — never a default
+    const { site, apiBase } = useOluxSite()
+    if (!site) { error.value = 'This is a template preview — online giving works on a real site.'; return }
+    const base = apiBase || window.location.origin
     const url = new URL(window.location.href)
     url.searchParams.set('gave', '1')
     const res = await fetch(`${base}/api/sites/${encodeURIComponent(site)}/donate/checkout`, {

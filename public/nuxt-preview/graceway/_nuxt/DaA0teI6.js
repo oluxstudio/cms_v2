@@ -1,0 +1,1 @@
+import{n as e}from"./CQzsnOBv.js";var t=()=>e(`youth`);export{t};

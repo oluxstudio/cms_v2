@@ -70,7 +70,7 @@ test('the block panel previews and saves which entries the block shows', functio
     $page = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
         ->call('select', 'component', $block->id)
         ->assertSee('Source ↗')
-        ->assertSeeHtml(route('collections.show', [$site->name, $col->id]).'?item=')
+        ->assertSeeHtml(route('collections.show', [$site->name, $col->id]).'/entries/')
         ->assertSee('Items in this block')
         ->assertSet("edit.lists.{$col->id}.shown", 4);
 
@@ -101,6 +101,8 @@ test('the content api sends each block its selection without trimming the full l
     expect($c['items'])->toHaveCount(4)
         ->and($c['views']['events-grid']['ids'])->toBe([$items[3]->id, $items[2]->id])
         ->and($c['views']['events-grid']['block'])->toBe('Events Grid');
+    // …and under the block's own id, for blocks with one copy per page
+    expect($c['views']['#'.$block->id]['ids'])->toBe([$items[3]->id, $items[2]->id]);
 
     // A block without a query adds nothing.
     $block->update(['collection_queries' => null]);
@@ -122,18 +124,21 @@ test('a collection field in a static export follows its block query, in manual o
         ->and(collect($m->invoke($gen, $site, $col->id, $hero->collectionQuery($col->id)))->pluck('title')->all())->toBe(['Wedding fair', 'Wedding prep']);
 });
 
-test('collections?open=&item= opens that entry, and only for this site', function () {
+test('collections?open=&item= goes to that entry\'s own page, and only for this site', function () {
     [$user, $site, $col, , $items] = cbqSite();
     [, $otherSite, $otherCol, , $otherItems] = cbqSite();
 
     Livewire::withQueryParams(['open' => $col->id, 'item' => $items[1]->id])->actingAs($user)
         ->test(CollectionsPage::class, ['site' => $site])
-        ->assertSet('viewingId', $col->id)->assertSet('editingItemId', $items[1]->id);
+        ->assertRedirect(route('collections.entries.show', [$site->name, $col->id, $items[1]->id]));
+    Livewire::withQueryParams(['open' => $col->id])->actingAs($user)
+        ->test(CollectionsPage::class, ['site' => $site])
+        ->assertRedirect(route('collections.show', [$site->name, $col->id]));
 
-    // Another site's collection/item is ignored.
+    // Another site's collection/item is ignored (no redirect, nothing opened).
     Livewire::withQueryParams(['open' => $otherCol->id, 'item' => $otherItems[1]->id])->actingAs($user)
         ->test(CollectionsPage::class, ['site' => $site])
-        ->assertSet('viewingId', null);
+        ->assertNoRedirect()->assertSet('viewingId', null);
 });
 
 test('a block can reorder and hide entries for itself without touching the collection', function () {
@@ -171,30 +176,48 @@ test('the collection page views, edits, reorders, publishes, soft-deletes and re
 
     $this->actingAs($user)->get(route('collections.show', [$site->name, $col->id]))->assertOk()->assertSee('Events')->assertSee('Used by')->assertSee('Events Grid');
 
-    // ?item opens the side panel in VIEW mode, with created/updated times.
-    $page = Livewire::withQueryParams(['item' => $items[1]->id])->actingAs($user)
-        ->test(CollectionDetailPage::class, ['site' => $site, 'collection' => $col->id])
+    // Each entry has its OWN page (no drawer): view mode, with created/updated times.
+    $this->actingAs($user)->get(route('collections.entries.show', [$site->name, $col->id, $items[1]->id]))->assertOk()->assertSee('Wedding fair');
+    $this->actingAs($user)->get(route('collections.entries.edit', [$site->name, $col->id, $items[1]->id]))->assertOk();
+    $this->actingAs($user)->get(route('collections.entries.new', [$site->name, $col->id]))->assertOk();
+    $this->actingAs($user)->get(route('collections.fields', [$site->name, $col->id]))->assertOk();
+    $page = Livewire::actingAs($user)
+        ->test(CollectionDetailPage::class, ['site' => $site, 'collection' => $col->id, 'entry' => $items[1]->id, 'screen' => 'entry'])
         ->assertSet('panelId', $items[1]->id)->assertSet('panelMode', 'view')->assertSet('editingItemId', null)
-        ->assertSee('Wedding fair')->assertSee('Created '.$items[1]->fresh()->created_at->format('j M Y'));
+        ->assertSee('Wedding fair')->assertSee('Created '.$items[1]->fresh()->created_at->format('j M Y'))
+        ->assertDontSee('Move up');                         // the list isn't on an entry's page
 
-    // Edit → save → back to view.
+    // Older ?item links land on the entry's own page.
+    Livewire::withQueryParams(['item' => $items[1]->id])->actingAs($user)
+        ->test(CollectionDetailPage::class, ['site' => $site, 'collection' => $col->id])
+        ->assertRedirect(route('collections.entries.show', [$site->name, $col->id, $items[1]->id]));
+
+    // Edit → save → back to the entry's page.
     $page->call('editItem')->assertSet('panelMode', 'edit')->assertSet('itemForm.title', 'Wedding fair')
         ->set('itemForm.title', 'Wedding <b>fair</b> 2026')->call('saveItem')
-        ->assertSet('panelMode', 'view')->assertSet('panelId', $items[1]->id);
+        ->assertSet('panelMode', 'view')->assertSet('panelId', $items[1]->id)
+        ->assertRedirect(route('collections.entries.show', [$site->name, $col->id, $items[1]->id]));
     expect($items[1]->fresh()->data['title'])->toBe('Wedding <b>fair</b> 2026');
-    $page->assertSee('Wedding fair 2026')->assertDontSeeHtml('Wedding <b>fair</b>'); // view mode shows text, not HTML
+    // the entry's page shows the saved text (view mode shows text, not HTML)
+    Livewire::actingAs($user)->test(CollectionDetailPage::class, ['site' => $site, 'collection' => $col->id, 'entry' => $items[1]->id, 'screen' => 'entry'])
+        ->assertSee('Wedding fair 2026')->assertDontSeeHtml('Wedding <b>fair</b>');
 
+    // The list (on the collection's page): reorder, publish.
+    $page = Livewire::withQueryParams([])->actingAs($user)->test(CollectionDetailPage::class, ['site' => $site, 'collection' => $col->id])
+        ->assertSet('panelId', null);
     $page->call('moveItem', $items[3]->id, -1);
     expect($col->items()->pluck('id')->take(4)->all())->toBe([$items[0]->id, $items[1]->id, $items[3]->id, $items[2]->id]);
 
     $page->call('toggleStatus', $items[0]->id);
     expect($items[0]->fresh()->status)->toBe('draft');
 
-    // A new entry goes last and opens in view mode after saving.
-    $page->call('addEntry')->assertSet('panelId', '')->set('itemForm.title', 'New event')->call('saveItem');
+    // A new entry (its own page) goes last and lands on its page after saving.
+    $newPage = Livewire::actingAs($user)->test(CollectionDetailPage::class, ['site' => $site, 'collection' => $col->id, 'screen' => 'new'])
+        ->assertSet('panelId', '')->set('itemForm.title', 'New event')->call('saveItem');
     $new = $col->items()->get()->last();
     expect($new->data['title'])->toBe('New event')->and($new->position)->toBeGreaterThan($items[3]->fresh()->position);
-    $page->assertSet('panelId', $new->id)->assertSet('panelMode', 'view');
+    $newPage->assertSet('panelId', $new->id)->assertSet('panelMode', 'view')
+        ->assertRedirect(route('collections.entries.show', [$site->name, $col->id, $new->id]));
 
     // Delete is soft: gone everywhere, recorded, restorable.
     $before = $items[2]->fresh()->position;
@@ -348,15 +371,16 @@ test('nested media: template paths resolve to the asset library, lists edit as a
         ->assertSeeHtml("path: 'itemForm.facts.0.value'")      // media leaf inside a row → picker
         ->assertSeeHtml('type="number" step="any" wire:model.blur="itemForm.facts.1.value"');
 
-    // Picking media appends to the gallery / sets a nested leaf; paths outside the form are refused.
+    // Picking media appends to the gallery / sets a nested leaf (as @media refs);
+    // paths outside the form are refused.
     $page->dispatch('media-picked', context: ['scope' => 'nested-media', 'path' => 'itemForm.images', 'append' => true], mediaRef: '@media/x.png', url: '/storage/media/x.png')
-        ->assertSet('itemForm.images.2', '/storage/media/x.png')
+        ->assertSet('itemForm.images.2', '@media/x.png')
         ->dispatch('media-picked', context: ['scope' => 'nested-media', 'path' => 'itemForm.facts.0.value'], mediaRef: '@media/y.png', url: '/storage/media/y.png')
-        ->assertSet('itemForm.facts.0.value', '/storage/media/y.png')
+        ->assertSet('itemForm.facts.0.value', '@media/y.png')
         ->call('nestedRemove', 'itemForm.images', 0)
         ->call('saveItem')->assertHasNoErrors();
-    expect($items[0]->fresh()->data['images'])->toBe(['/assets/images/portfolio/port2.png', '/storage/media/x.png'])
-        ->and($items[0]->fresh()->data['facts'][0]['value'])->toBe('/storage/media/y.png');
+    expect($items[0]->fresh()->data['images'])->toBe(['/assets/images/portfolio/port2.png', '@media/x.png'])
+        ->and($items[0]->fresh()->data['facts'][0]['value'])->toBe('@media/y.png');
 
     $page->dispatch('media-picked', context: ['scope' => 'nested-media', 'path' => 'viewingId'], mediaRef: '', url: '/x.png')->assertForbidden();
 });
@@ -364,6 +388,7 @@ test('nested media: template paths resolve to the asset library, lists edit as a
 test('several media paths in one text value show and edit as a gallery, and save back as lines', function () {
     [$user, $site, $col, , $items] = cbqSite();
     Media::create(['site_id' => $site->id, 'name' => 'port1.png', 'file_type' => 'image', 'url' => '/storage/media/'.$site->name.'/port1.png']);
+    Media::create(['site_id' => $site->id, 'name' => 'n.png', 'file_type' => 'image', 'url' => '/storage/media/'.$site->name.'/n.png']);
     $col->update(['fields' => array_merge($col->fields, [['key' => 'images', 'type' => 'textarea', 'label' => 'Images']])]);
     $items[0]->update(['data' => array_merge($items[0]->data, ['images' => "/assets/images/portfolio/port1.png\n/assets/images/portfolio/port2.png\n/assets/images/portfolio/port3.webp"])]);
 
@@ -382,7 +407,7 @@ test('several media paths in one text value show and edit as a gallery, and save
         ->dispatch('media-picked', context: ['scope' => 'nested-media', 'path' => 'itemForm.images', 'append' => true], mediaRef: '@media/n.png', url: '/storage/media/n.png')
         ->call('saveItem')->assertHasNoErrors();
 
-    expect($items[0]->fresh()->data['images'])->toBe("/assets/images/portfolio/port1.png\n/assets/images/portfolio/port3.webp\n/storage/media/n.png");
+    expect($items[0]->fresh()->data['images'])->toBe("/assets/images/portfolio/port1.png\n/assets/images/portfolio/port3.webp\n@media/n.png");
 });
 
 test('the rich text field ignores unrelated variables it inherits from the page', function () {
@@ -393,4 +418,136 @@ test('the rich text field ignores unrelated variables it inherits from the page'
 
     $html = view('livewire.partials.rich-text', ['path' => 'p', 'value' => ['not', 'text'], 'rows' => 6])->render();
     expect($html)->toContain('rows="6"');
+});
+
+test('collections and components open on their own pages, never in a dialog', function () {
+    [$user, $site, $col] = cbqSite();
+    $comp = App\Models\Component::create(['site_id' => $site->id, 'name' => 'Hero', 'author' => 'Test']);
+    $comp->nodes()->create(['label' => 'Heading', 'type' => 'text', 'value' => 'Welcome!', 'parent' => 0, 'order' => 0]);
+
+    // every page loads
+    foreach ([route('collections.create', $site->name), route('collections.settings', [$site->name, $col->id]),
+        route('site.components.create', $site->name), route('site.components.show', [$site->name, $comp->id]),
+        route('site.components.edit', [$site->name, $comp->id])] as $url) {
+        $this->actingAs($user)->get($url)->assertOk();
+    }
+    // no overlay markup anywhere on these screens
+    foreach ([route('collections', $site->name), route('collections.show', [$site->name, $col->id]), route('site.components', $site->name),
+        route('site.components.show', [$site->name, $comp->id])] as $url) {
+        $html = $this->actingAs($user)->get($url)->assertOk()->getContent();
+        expect($html)->not->toContain('id="olx-drawer"')->not->toContain('lightbox-drawer')->not->toContain('lightbox-panel');
+    }
+
+    // collection settings: opens from the URL, saving goes to the collection's page
+    Livewire::actingAs($user)->test(App\Livewire\CollectionsPage::class, ['site' => $site, 'screen' => 'settings', 'collection' => $col->id])
+        ->assertSet('showModal', true)->assertSet('editingId', $col->id)->assertSee('Collection settings')
+        ->set('name', 'Events & gatherings')->call('save')
+        ->assertRedirect(route('collections.show', [$site->name, $col->id]));
+    expect($col->fresh()->name)->toBe('Events & gatherings');
+
+    // a component: view page → edit page → save → back to its page; close → list
+    Livewire::actingAs($user)->test(App\Livewire\ComponentsPage::class, ['site' => $site, 'screen' => 'view', 'component' => $comp->id])
+        ->assertSet('viewingId', $comp->id)->assertSee('Edit this component')
+        ->call('closeView')->assertRedirect(route('site.components', $site->name));
+    Livewire::actingAs($user)->test(App\Livewire\ComponentsPage::class, ['site' => $site, 'screen' => 'edit', 'component' => $comp->id])
+        ->assertSet('editingId', $comp->id)->set('cName', 'Hero banner')->call('save')
+        ->assertRedirect(route('site.components.show', [$site->name, $comp->id]));
+    expect($comp->fresh()->name)->toBe('Hero banner');
+});
+
+test('the new-entry, fields and new-collection addresses open their forms when visited', function () {
+    [$user, $site, $col] = cbqSite();
+
+    // Routes without {entry}/{collection} still reach the right screen.
+    $this->actingAs($user)->get(route('collections.entries.new', [$site->name, $col->id]))
+        ->assertOk()->assertSeeHtml('wire:model="itemForm.');
+    $this->actingAs($user)->get(route('collections.fields', [$site->name, $col->id]))
+        ->assertOk()->assertSeeHtml('wire:model="fieldRows.0.label"');
+    $this->actingAs($user)->get(route('collections.create', $site->name))
+        ->assertOk()->assertSeeHtml('wire:model.live="allowSubmit"');
+});
+
+test('saving a new entry opens that entry, even beside older entries without a position', function () {
+    [$user, $site, $col] = cbqSite();
+    $old = $col->items()->create(['site_id' => $site->id, 'data' => [], 'status' => 'published']);
+    $old->forceFill(['position' => null])->save();
+
+    $page = Livewire::actingAs($user)->test(App\Livewire\CollectionDetailPage::class, ['site' => $site, 'collection' => $col->id, 'screen' => 'new'])
+        ->set('itemForm.title', 'Brand new');
+    $page->call('saveItem');
+    $new = $col->items()->get()->first(fn ($i) => ($i->data['title'] ?? null) === 'Brand new');
+    expect($new)->not->toBeNull()->and($new->position)->not->toBeNull();
+    $page->assertRedirect(route('collections.entries.show', [$site->name, $col->id, $new->id]));
+});
+
+test('a block can pick exactly which source entries it shows', function () {
+    [$user, $site, $col, $block, $items] = cbqSite();
+    // Draft only (items[4]) is unpublished; pick from the published ones
+    [$a, $b, $c] = [$items[0], $items[1], $items[2]];
+
+    $page = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])
+        ->call('select', 'component', $block->id)
+        ->assertSee('Choose entries from')
+        ->call('blockPickMode', $col->id, true)
+        ->assertSet("edit.lists.{$col->id}.shown", 0)
+        ->assertSee('No entries chosen yet')
+        ->call('blockPick', $col->id, $c->id)
+        ->call('blockPick', $col->id, $a->id)
+        ->call('blockPick', $col->id, $b->id)
+        ->call('blockMove', $col->id, $b->id, -1)        // c, b, a
+        ->call('blockUnpick', $col->id, $a->id);          // c, b
+    expect(collect($page->get("edit.lists.{$col->id}.items"))->pluck('id')->map(fn ($id) => (string) $id)->all())->toBe([(string) $c->id, (string) $b->id])
+        ->and(collect($page->get("edit.lists.{$col->id}.available"))->pluck('id')->all())->toContain((string) $a->id)
+        ->and($page->get("edit.lists.{$col->id}.summary"))->toBe('2 of 4 chosen');
+
+    $page->call('saveComponent');
+    expect($block->fresh()->collectionQuery($col->id))->toBe(['pick' => [(string) $c->id, (string) $b->id]]);
+
+    // The site gets exactly the picked entries, in that order.
+    $res = collect($this->getJson('/api/sites/'.$site->name.'/collections')->json('collections'))->firstWhere('id', $col->id);
+    expect($res['views']['#'.$block->id]['ids'])->toBe([(string) $c->id, (string) $b->id]);
+
+    // An empty pick shows nothing; leaving pick mode goes back to the source's order.
+    expect(App\Support\CollectionQuery::normalize(['pick' => []], ['title']))->toBe(['pick' => []])
+        ->and(App\Support\CollectionQuery::apply($col, ['pick' => []]))->toHaveCount(0);
+    $page->call('blockPickMode', $col->id, false)->call('saveComponent');
+    expect($block->fresh()->collection_queries)->toBeNull();
+});
+
+test('a block can show all entries, or match a column exactly — tags entry by entry', function () {
+    $site = Site::factory()->create(['user_id' => User::factory()->create()->id, 'domain' => 'cbq-'.uniqid().'.test']);
+    $col = Collection::create(['site_id' => $site->id, 'name' => 'Faqs', 'slug' => 'faqs-'.uniqid(), 'type' => 'grid', 'is_public' => true,
+        'fields' => [['key' => 'q', 'name' => 'q', 'type' => 'text'], ['key' => 'category', 'name' => 'category', 'type' => 'text'], ['key' => 'tags', 'name' => 'tags', 'type' => 'tags']]]);
+    foreach ([["Men's Ministry", ['men', 'breakfast']], ["Women's Ministry", ['women']], ['Joining the church', ['visiting', 'men']]] as $i => [$cat, $tags]) {
+        CollectionItem::create(['collection_id' => $col->id, 'site_id' => $site->id, 'status' => 'published', 'position' => $i, 'data' => ['q' => "Q$i", 'category' => $cat, 'tags' => $tags]]);
+    }
+    $keys = CollectionQuery::fieldKeys($col);
+    $qs = fn (array $q) => CollectionQuery::apply($col, $q)->pluck('data.q')->all();
+
+    // "contains" can't tell Men's from Women's — "is" can.
+    expect($qs(['filter_field' => 'category', 'filter_value' => "men's ministry"]))->toBe(['Q0', 'Q1'])
+        ->and($qs(['filter_field' => 'category', 'filter_value' => "men's ministry", 'filter_op' => 'is']))->toBe(['Q0'])
+        ->and($qs(['filter_field' => 'tags', 'filter_value' => 'men', 'filter_op' => 'is']))->toBe(['Q0', 'Q2']);
+
+    // "All entries" is a choice of its own (a block with a default of its own shows everything).
+    expect(CollectionQuery::normalize(['mode' => 'all'], $keys))->toBe(['all' => true])
+        ->and(CollectionQuery::normalize(['mode' => 'default', 'all' => true], $keys))->toBe([])
+        ->and(CollectionQuery::normalize(['mode' => 'match', 'filter_field' => 'category', 'filter_value' => 'x', 'filter_op' => 'is'], $keys))
+        ->toBe(['filter_field' => 'category', 'filter_value' => 'x', 'filter_op' => 'is'])
+        ->and($qs(['all' => true]))->toBe(['Q0', 'Q1', 'Q2'])
+        ->and(CollectionQuery::summary(['filter_field' => 'category', 'filter_value' => 'x', 'filter_op' => 'is'], 3, 1))->toContain('category is “x”');
+
+    // Suggestions: each column's values, tags one by one.
+    expect(CollectionQuery::fieldValues($col->items()->get(), 'tags'))->toBe(['breakfast', 'men', 'visiting', 'women']);
+});
+
+test('switching a block to "All entries" in the panel drops its search and saves all', function () {
+    [$user, $site, $col, $block] = cbqSite();
+    $page = Livewire::actingAs($user)->test(ConnectReviewPage::class, ['site' => $site])->call('select', 'component', $block->id)
+        ->set("edit.queries.{$col->id}.mode", 'match')->set("edit.queries.{$col->id}.search", 'wedding')
+        ->set("edit.queries.{$col->id}.mode", 'all')
+        ->assertSet("edit.queries.{$col->id}.search", '')
+        ->assertSee('All entries')
+        ->call('saveComponent');
+    expect($block->fresh()->collectionQuery($col->id))->toBe(['all' => true]);
 });

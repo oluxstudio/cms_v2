@@ -7,31 +7,21 @@
     <meta name="description" content="Olux Studio CMS: build sites, capture leads, take bookings and payments, send invoices and go live on your own domain — with a built-in CRM and AI assistant.">
     <link rel="icon" href="{{asset('favicon.ico')}}">
     {{-- Brand fonts (Google Fonts) + the landing's font variables --}}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Abel&family=Baumans&family=Cantarell:ital,wght@0,400;0,700;1,400;1,700&family=Kodchasan:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&family=Madimi+One&family=Momo+Trust+Display&family=MuseoModerno:ital,wght@0,100..900;1,100..900&family=Text+Me+One&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/fonts/google/fonts.css">{{-- self-hosted brand fonts: php artisan fonts:download --}}
     {{-- Tailwind (compiled app bundle). The landing's own CSS below lives in
          the `components` cascade layer, so TAILWIND UTILITIES ALWAYS WIN —
          add any utility class anywhere on this page and it applies. --}}
     @vite('resources/css/app.css')
     <style>
-        html:root {   /* beats the app bundle's :root font tokens (loaded above) */
-            /* Families */
-            --font-abel:         'Abel', sans-serif;
-            --font-baumans:      'Baumans', sans-serif;
-            --font-cantarell:    'Cantarell', sans-serif;
-            --font-kodchasan:    'Kodchasan', sans-serif;
-            --font-madimi:       'Madimi One', sans-serif;
-            --font-momo:         'Momo Trust Display', sans-serif;
-            --font-museomoderno: 'MuseoModerno', sans-serif;
-            --font-textmeone:    'Text Me One', sans-serif;
-
-            /* Roles — point these at any family above to restyle the page */
-            --font-display: var(--font-madimi);  /* headings, logo, prices, big numbers */
-            --font-header:    var(--font-momo);     /* running text */
-            --font-body:    var(--font-textmeone);     /* running text */
-            --font-ui:      var(--font-kodchasan);     /* nav, buttons, eyebrows, tags, badges */
-            --font-accent:  var(--font-baumans);       /* flourishes */
+        /* Font FAMILIES are global (resources/css/app.css). The landing page only
+           picks its own ROLES — beats the app bundle's defaults (loaded above). */
+        html:root {
+            --font-display: var(--font-madimi);     /* headings, logo, prices, big numbers */
+            --font-header:  var(--font-momo);       /* section headers */
+            --font-body:    var(--font-textmeone);  /* running text */
+            --font-ui:      var(--font-kodchasan);  /* nav, eyebrows, tags, badges */
+            --font-btn:     var(--font-gugi);       /* buttons */
+            --font-accent:  var(--font-baumans);    /* flourishes */
         }
     </style>
     @php
@@ -85,7 +75,7 @@
         html { scroll-behavior: smooth; }
         /* Body rhythm: --font-body, text-lg / leading-8 */
         body { font-family: var(--font-body); color: var(--on-bg); background: var(--bg); font-size: 1.125rem; line-height: 2rem; }
-        h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; font-weight: 400; }
+        h1, h2 { font-family: var(--font-header) !important; line-height: 1.15; font-weight: 400; }
         a { color: inherit; text-decoration: none; }
         /* Main-site container rhythm: px-4, prose capped near max-w-3xl+ */
         .wrap { max-width: 86rem; margin: 80px auto; padding: 0 1rem; }
@@ -93,7 +83,7 @@
         /* .section-label: --font-ui, bold, uppercase, widest */
         .eyebrow { display: inline-block; font-family: var(--font-ui); font-size: 1.1875rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--primary); margin-bottom: .75rem; }
         /* .section-header: --font-display */
-        .h2 { font-size: clamp(30px, 4.4vw, 48px); text-transform: uppercase; margin-bottom: .75rem; color: var(--on-bg); }
+        .h2 { font-size: clamp(30px, 4.4vw, 40px); text-transform: uppercase; margin-bottom: .75rem; color: var(--on-bg); }
         .sub { color: var(--on-bg-soft); max-width: 48rem; font-size: 1.25rem; line-height: 1.8; }
         /* Alt bands: slightly lifted dark, same dark theme as the main site */
         .alt { background: var(--surface-2); opacity: 0.95; border-block: 1px solid var(--line-inv); color: var(--on-bg); }
@@ -174,7 +164,7 @@
 
         /* ── Hero: CENTERED single column ── */
         .hero { padding: 92px 0 118px; position: relative; text-align: center; } /* extra bottom room for the pinned scroll cue */
-        .hero h1 { font-size: clamp(38px, 5.6vw, 74px); text-transform: uppercase; max-width: 900px; margin: 0 auto 16px; color: var(--on-bg); }
+        .hero h1 { font-family: var(--font-header) !important; font-size: clamp(38px, 5.6vw, 74px); text-transform: uppercase; max-width: 900px; margin: 0 auto 16px; color: var(--on-bg); }
         .hero h1 em { font-style: normal; background: linear-gradient(92deg, var(--primary), var(--primary-2), var(--penta)); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .hero .tagline { font-family: var(--font-ui); font-weight: 700; color: var(--penta); margin-bottom: 14px; font-size: .95rem; }
         .hero p.lede { color: var(--on-bg-soft); max-width: 600px; margin: 0 auto 26px; font-size:20px; }
@@ -252,7 +242,7 @@
         .tags span { font-family: var(--font-ui); font-size: 14px; font-weight: 700; background: rgba(227,135,4,.15); color: var(--penta); padding: 2px 20px; border-radius: 9999px; }
 
         /* ── Specialties: 6 cards ── */
-        .cards-6 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); margin-top: 36px; }
+        .cards-6 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); margin-top: 36px; }
 
         /* ── Process: 4 numbered steps ── */
         .steps { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 42px; }
@@ -269,7 +259,7 @@
         .plan.hot { border: 2px solid var(--primary); box-shadow: 0 24px 46px -24px rgba(227,135,4,.5); }
         .plan .flag { background: linear-gradient(120deg, var(--primary), var(--primary-2)); }
         .plan .flag { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; font-size: 17px; font-weight: 700; padding: 4px 18px; border-radius: 9999px; white-space: nowrap; }
-        .plan h3 { font-size: 20px; color: var(--primary-2); }
+        .plan h3 { font-size: 24px; color: var(--primary-2); }
         .plan .tag { font-size: 18px; color: var(--muted); margin: 2px 0 12px; }
         .plan .price { font-family: var(--font-display); font-size: 30px; font-weight: 800; }
         .plan .price small { font-size: 12.5px; color: var(--muted); font-family: var(--font-body); font-weight: 500; }
@@ -282,8 +272,13 @@
         .carousel { position: relative; max-width: 760px; margin: 40px auto 0; }
         .car-view { overflow: hidden; border-radius: 18px; }
         .car-track { display: flex; transition: transform .5s cubic-bezier(.4,0,.2,1); }
-        .slide { display: flex; align-items: center; height:22em; min-width: 100%; background: var(--surface); border: 1px solid var(--line-inv); border-radius: 18px; padding: 38px 42px; text-align: center; }
-        .slide .box {}
+        .slide { display: flex; align-items: center; justify-content: center; min-height: 22em; min-width: 100%; background: var(--surface); border: 1px solid var(--line-inv); border-radius: 18px; padding: 38px 42px; text-align: center; }
+        .tm-skel { display: block; height: 14px; border-radius: 8px; margin: 10px auto; background: var(--line-inv); animation: tm-pulse 1.4s ease-in-out infinite; }
+        @keyframes tm-pulse { 50% { opacity: .45; } }
+        .slide .stars { color: var(--primary); letter-spacing: .15em; font-size: 18px; margin-bottom: 10px; }
+        /* Curly quote marks around each testimonial (no space before ::, or it targets the q's children) */
+        .slide .box q::before { content: '\201C'; padding-right: 2rem; font-size: 2.5rem; color: var(--primary); }
+        .slide .box q::after  { content: '\201D'; padding-left: 1rem; font-size: 2.5rem; color: var(--primary); }
 		.slide q { font-family: var(--font-body); font-size: 22px; font-weight: 600; display: block; margin-bottom: 18px; }
         .slide .who { display: inline-flex; align-items: center; gap: 12px; }
         .slide .ava { width: 42px; height: 42px; border-radius: 9999px; background: linear-gradient(140deg, var(--primary), var(--primary-3)); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 14px; }
@@ -712,37 +707,15 @@
         </div>
     </section>
 
-    {{-- ── Carousel: rotating quotes (arrows + dots + autoplay) ── --}}
-    <section class="alt">
+    {{-- ── Carousel: testimonials (Admin › Testimonials; arrows + dots + autoplay) ── --}}
+    <section class="alt" id="testimonials">
         <div class="wrap">
             <span class="eyebrow">What it feels like</span>
             <h2 class="h2">Built for the way service businesses actually work</h2>
             <p class="sub">Olux is shaped around real days: an enquiry at lunchtime, a quote by teatime, a booking for next week and an invoice paid on the way out.</p>
-            <div class="carousel" id="carousel">
-                <div class="car-view">
-                    <div class="car-track" id="car-track">
-                        <div class="slide">
-							<div class="box">
-								<q>Every enquiry used to live in three inboxes. Now the form, the quote and the booking are one contact with a history.</q><span class="who"><span class="ava">TR</span><span><b>Tunde R.</b><small>Cleaning company owner*</small></span></span>
-							</div>
-						</div>
-                        <div class="slide">
-							<div class="box">
-								<q>I built our price calculator myself — tapped the formula out like a calculator, and clients get their quote by email in seconds.</q><span class="who"><span class="ava">MK</span><span><b>Maya K.</b><small>Landscaping studio*</small></span></span>
-							</div>
-                        </div>
-                        <div class="slide">
-							<div class="box">
-								<q>Going live was pointing our domain and clicking verify. The certificate sorted itself out — content edits show up instantly.</q><span class="who"><span class="ava">JD</span><span><b>Jon D.</b><small>Agency developer*</small></span></span>
-							</div>
-						</div>
-                    </div>
-                </div>
-                <button class="car-btn car-prev" onclick="carGo(-1)" aria-label="Previous">‹</button>
-                <button class="car-btn car-next" onclick="carGo(1)" aria-label="Next">›</button>
-                <div class="dots" id="car-dots"></div>
-            </div>
-            <p style="text-align:center;font-size:16px;color:var(--muted);margin-top:14px">* Illustrative examples of how teams use Olux.</p>
+            {{-- Testimonials: lazy Livewire island fed by the same query as GET /api/testimonials (Admin › Testimonials) --}}
+            <livewire:landing-testimonials />
+            <p style="text-align:center;margin-top:14px"><a class="more" href="{{ route('testimonials.create') }}">Using Olux? Share your experience →</a></p>
         </div>
     </section>
 
@@ -848,29 +821,6 @@
             });
         })();
 
-        // ── Carousel: manual arrows + dots + autoplay (pauses on hover) ──
-        (function () {
-            var track = document.getElementById('car-track');
-            var dotsWrap = document.getElementById('car-dots');
-            var n = track.children.length, i = 0, timer;
-
-            for (var d = 0; d < n; d++) {
-                var b = document.createElement('button');
-                b.setAttribute('aria-label', 'Slide ' + (d + 1));
-                (function (idx) { b.addEventListener('click', function () { go(idx); }); })(d);
-                dotsWrap.appendChild(b);
-            }
-            function paint() {
-                track.style.transform = 'translateX(-' + (i * 100) + '%)';
-                Array.from(dotsWrap.children).forEach(function (dot, idx) { dot.className = idx === i ? 'on' : ''; });
-            }
-            function go(idx) { i = (idx + n) % n; paint(); restart(); }
-            window.carGo = function (dir) { go(i + dir); };
-            function restart() { clearInterval(timer); timer = setInterval(function () { go(i + 1); }, 5000); }
-            document.getElementById('carousel').addEventListener('mouseenter', function () { clearInterval(timer); });
-            document.getElementById('carousel').addEventListener('mouseleave', restart);
-            paint(); restart();
-        })();
     </script>
 </body>
 </html>

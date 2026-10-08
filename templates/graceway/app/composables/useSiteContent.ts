@@ -14,6 +14,12 @@ export type Profile = {
   name: string
   shortName: string
   logo: { lead: string; bold: string }
+  /** header logo: badge image, wordmark lines (one per line) and the small line under them */
+  logoImg: string
+  /** optional second logo beside the first (e.g. the denomination's mark) — '' hides it */
+  logoImg2?: string
+  logoText: string
+  logoSub: string
   email: string
   phone: string
   phoneHref: string
@@ -30,7 +36,12 @@ export type Profile = {
 import type { Service } from './useServices'
 
 export type ChurchEvent = {
+  /** the event's web address — title + date (Y-M-D), made by the CMS, unique */
+  slug: string
+  /** = slug (an older entry's own id, or one made from title + date when missing) — used for links and reservations */
   id: string
+  /** the CMS entry's id ('' for the template's sample rows) — what block selections refer to */
+  cmsId?: string
   img: string
   title: string
   text: string
@@ -39,16 +50,26 @@ export type ChurchEvent = {
   date: string
   /** price per seat — 0 means a free RSVP */
   price: number
-  seatsLeft: number
-  /** primed/featured — the first flagged event renders as the big featured card */
+  /** seats still bookable — empty means no limit (or no booking) */
+  seatsLeft: number | ''
+  /** featured (on/off) — the first featured upcoming event renders as the big featured card */
   featured?: boolean
   /** where the event happens/happened — shown on cards and in the archive */
   location?: string
-  /** who spoke/led — shown in the archive */
+  /** who spoke/led — shown on the event page and in the archive */
   speakers?: string[]
-  /** photos/recordings from the event — the archive detail page gallery */
+  /** special guests — shown on the event page */
+  guests?: string[]
+  /** photos/recordings from the event — shown on the archive page once it's past */
   media?: EventMedia[]
+  /** event type — youth events also list on the youth page */
+  ministry?: 'church' | 'youth' | 'men' | 'women'
+  /** how a past event's media is shown: a grid gallery or a slideshow */
+  mediaLayout?: 'gallery' | 'slideshow'
 }
+
+/** An Events collection entry as authored (no id — the slug identifies it). */
+export type EventEntry = Omit<ChurchEvent, 'id'>
 
 export type EventMedia = {
   type: 'image' | 'video' | 'audio'
@@ -227,13 +248,35 @@ export type GivingContent = {
   verse: { text: string; cite: string }
 }
 
+export type MinistryActivity = {
+  /** the ministry page's path, e.g. /mens-ministry */
+  page: string
+  icon: string
+  title: string
+  text: string
+  when: string
+}
+
+export type AboutPageLink = { icon: string; title: string; text: string; to: string; cta: string }
+
 export type MinistryDetailEntry = {
   img: string
   alt: string
   text: string
   meets: string
   leader: string
+  /** a ministry page's sidebar & intro extras (all optional) */
+  verse?: string
+  verseRef?: string
+  location?: string
+  audience?: string
+  members?: string
+  email?: string
 }
+
+
+/** One question in the site's FAQs — `category` groups it, `tags` add keywords (each FAQ section picks by them). */
+export type FaqItem = { q: string; a: string; category?: string; tags?: string[] }
 
 export type JoinContent = {
   stepsEyebrow: string
@@ -318,8 +361,6 @@ export type WorshipSidebarContent = {
 export type YouthEventsContent = {
   eyebrow: string
   title: string
-  countdownLabel: string
-  events: { id: string; day: string; month: string; date: string; title: string; text: string; spots: number }[]
 }
 
 export type YouthHighlightsContent = {
@@ -387,7 +428,7 @@ export type EventsArchiveContent = {
 export type SiteContent = {
   profile: Profile
   services: Service[]
-  events: ChurchEvent[]
+  events: EventEntry[]
   socials: SocialMedia[]
   hero: HeroContent
   welcome: WelcomeContent
@@ -410,6 +451,12 @@ export type SiteContent = {
   contact: ContactContent
   giving: GivingContent
   ministryDetail: Record<string, MinistryDetailEntry>
+  /** "What we do" rows per ministry page path */
+  ministryActivities: MinistryActivity[]
+  /** the About page's guide to its sub-pages */
+  aboutPages: AboutPageLink[]
+  /** gallery photos and FAQs per ministry page path */
+  faqs: FaqItem[]
   join: JoinContent
   prayer: PrayerContent
   bookStore: BookStoreContent
@@ -426,11 +473,25 @@ export type SiteContent = {
 /** split an authored `\n` string into lines for <br>-joined rendering */
 export const contentLines = (text: string) => text.split('\n')
 
-/** @olux-collection Site Profile */
+/** Site Profile fields an owner may leave empty on purpose (the CMS lets them be cleared). */
+const OPTIONAL_PROFILE_KEYS = ['logoText', 'logoSub', 'logoImg2']
+
+/** @olux-collection Site Profile
+ * @olux-field logoImg image label="Logo image"
+ * @olux-field logoImg2 image label="Second logo (optional)"
+ * @olux-field logoText textarea label="Logo text (one line per line)"
+ * @olux-field logoSub text label="Logo small line"
+ * @olux-field email email
+ * @olux-field phoneHref url label="Phone link"
+ */
 const siteProfileRows: Profile[] = [{
   name: 'Christ Apostolic Church, Blackburn',
   shortName: 'CAC Blackburn',
   logo: { lead: 'CAC', bold: 'Blackburn' },
+  logoImg: '/assets/images/logo.png',
+  logoImg2: '',
+  logoText: 'CAC\nMount Zion\nInternational',
+  logoSub: 'Blackburn.',
   email: 'hello@cacblackburn.org',
   phone: '+1 705 55 50 000',
   phoneHref: 'tel:+17055550000',
@@ -457,22 +518,40 @@ const socials: SocialMedia[] = [
   { key: 'twitch', name: 'Twitch', href: 'https://twitch.tv/cacblackburn', color: '#9146ff', available: false, icon: 'M4.3 3 3 6.4v13.7h4.7V22h2.6l2.5-1.9h3.8L21 15.6V3H4.3zm15 11.7-2.9 2.9h-4.6l-2.5 1.9v-1.9H5.4V4.7h13.9v10zM16.6 7.7v5h-1.7v-5h1.7zm-4.6 0v5h-1.7v-5H12z' },
 ]
 
-/** @olux-collection Events */
-const events: ChurchEvent[] = [
-  // ── past events (the archive) ──
-  { id: 'summer-picnic-25', date: '2026-08-16T12:00:00', img: '/assets/images/gallery-1.jpg', title: 'Summer Picnic & Sports Day', text: 'Games, grills and three-legged races — the whole church family in Riverside Park.', tags: ['Community', 'Family'], price: 0, seatsLeft: 0, location: 'Riverside Park, Blackburn', speakers: ['Rev. Daniel Okafor'], media: [ { type: 'image', img: '/assets/images/gallery-1.jpg', title: 'The whole family in the park' }, { type: 'image', img: '/assets/images/gallery-6.jpg', title: 'Three-legged race finals' }, { type: 'video', img: '/assets/images/event-1.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Picnic day highlights' }, { type: 'image', img: '/assets/images/gallery-12.jpg', title: 'Shared lunch' } ] },
-  { id: 'worship-night-jun', date: '2026-06-27T19:00:00', img: '/assets/images/gallery-5.jpg', title: 'Midsummer Worship Night', text: 'An evening of music and candlelight with the full choir and band.', tags: ['Worship', 'Music'], price: 0, seatsLeft: 0, location: 'Main Sanctuary', speakers: ['Grace Lindqvist', 'Choir & Band'], media: [ { type: 'video', img: '/assets/images/gallery-5.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Worship night — full set' }, { type: 'audio', src: 'https://www.w3schools.com/html/horse.mp3', title: 'Choir set (live recording)' }, { type: 'image', img: '/assets/images/gallery-7.jpg', title: 'Candlelight moment' } ] },
-  { id: 'vbs-25', date: '2026-07-21T09:00:00', img: '/assets/images/gallery-3.jpg', title: 'Kids Holiday Bible Club', text: 'A full week of stories, crafts and songs for nursery to grade six.', tags: ['Kids', 'Family'], price: 0, seatsLeft: 0, location: 'Kids Wing', speakers: ['Ruth Alonso'], media: [ { type: 'image', img: '/assets/images/gallery-3.jpg', title: 'Craft corner' }, { type: 'image', img: '/assets/images/circle-3.jpg', title: 'Story time' }, { type: 'video', img: '/assets/images/gallery-11.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Bible club recap' } ] },
-  { id: 'anniversary-34', date: '2026-05-10T10:00:00', img: '/assets/images/gallery-2.jpg', title: '34th Church Anniversary', text: 'Thirty-four years of worship, friendship and service — celebrated with a combined service and shared lunch.', tags: ['Celebration'], price: 0, seatsLeft: 0, location: 'Main Sanctuary & Hall', speakers: ['Rev. Daniel Okafor', 'Peter Adeyemi'], media: [ { type: 'image', img: '/assets/images/gallery-2.jpg', title: 'Combined anniversary service' }, { type: 'video', img: '/assets/images/gallery-8.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: '34 years — the story so far' }, { type: 'audio', src: 'https://www.w3schools.com/html/horse.mp3', title: 'Anniversary message (audio)' }, { type: 'image', img: '/assets/images/gallery-9.jpg', title: 'Shared lunch in the hall' } ] },
-  { id: 'easter-26', date: '2026-04-05T09:00:00', img: '/assets/images/gallery-8.jpg', title: 'Easter Sunday Celebration', text: 'Resurrection morning — two packed services, baptisms and brunch.', tags: ['Worship', 'Celebration'], price: 0, seatsLeft: 0, location: 'Main Sanctuary', speakers: ['Rev. Daniel Okafor', 'Esther Mwangi'], media: [ { type: 'image', img: '/assets/images/gallery-8.jpg', title: 'Resurrection morning' }, { type: 'image', img: '/assets/images/gallery-10.jpg', title: 'Baptisms' }, { type: 'video', img: '/assets/images/event-3.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Easter service highlights' } ] },
-  { id: 'food-drive-spring', date: '2026-03-14T09:00:00', img: '/assets/images/gallery-4.jpg', title: 'Spring Food Drive', text: 'Two tonnes of donations collected, sorted and delivered across Blackburn.', tags: ['Outreach', 'Volunteer'], price: 0, seatsLeft: 0, location: 'Church Hall & Pantry', speakers: ['Peter Adeyemi'], media: [ { type: 'image', img: '/assets/images/gallery-4.jpg', title: 'Sorting donations' }, { type: 'image', img: '/assets/images/gallery-6.jpg', title: 'Delivery crew' } ] },
+/** @olux-collection Events
+ * @olux-field title text required
+ * @olux-field slug slug from=title+date was=id label="Slug (web address)"
+ * @olux-field date datetime label="Date & time"
+ * @olux-field img image
+ * @olux-field text textarea10
+ * @olux-field price number label="Price (0 = free)"
+ * @olux-field seatsLeft number label="Seats left (optional)"
+ * @olux-field location textarea6
+ * @olux-field speakers list
+ * @olux-field guests list label="Special guests"
+ * @olux-field media rows
+ * @olux-field media.type select options=image|video|audio
+ * @olux-field media.title text
+ * @olux-field media.img image label="Image / poster"
+ * @olux-field media.src media label="Source (audio or video file)" show=type:audio|video
+ * @olux-field featured toggle
+ * @olux-field ministry select options=church|youth|men|women label="Event type"
+ * @olux-field mediaLayout select options=gallery|slideshow label="Show media as"
+ */
+const events: EventEntry[] = [
+  // ── past event (the archive) ──
+  { slug: 'summer-picnic-sports-day-2026-08-16', date: '2026-08-16T12:00', img: '/assets/images/gallery-1.jpg', title: 'Summer Picnic & Sports Day', text: 'Games, grills and three-legged races — the whole church family in Riverside Park.', tags: ['Community', 'Family'], price: 0, seatsLeft: '', location: 'Riverside Park, Blackburn', speakers: ['Rev. Daniel Okafor'], guests: [], featured: false, ministry: 'church', mediaLayout: 'slideshow', media: [
+    { type: 'image', title: 'The whole family in the park', img: '/assets/images/gallery-1.jpg', src: '' },
+    { type: 'video', title: 'Picnic day highlights', img: '/assets/images/event-1.jpg', src: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+    { type: 'image', title: 'Shared lunch', img: '/assets/images/gallery-12.jpg', src: '' },
+  ] },
   // ── upcoming events ──
-  { id: 'picnic', date: '2026-09-21T12:00:00', img: '/assets/images/event-1.jpg', title: 'Community Picnic in Riverside Park', text: 'Bring a dish and a friend — games, music and food for the whole neighbourhood. Sep 21, 12:00 PM.', tags: ['Community', 'Family', 'Food'], price: 0, seatsLeft: 120, featured: true },
-  { id: 'fooddrive', date: '2026-10-04T09:00:00', img: '/assets/images/event-2.jpg', title: 'Harvest Food Drive', text: 'Help us collect and sort donations for local families. Volunteers of all ages welcome. Oct 4, 9:00 AM.', tags: ['Outreach', 'Volunteer'], price: 0, seatsLeft: 40 },
-  { id: 'worshipnight', date: '2026-10-18T19:00:00', img: '/assets/images/event-3.jpg', title: 'Worship Night', text: 'An evening of music, prayer and candlelight in the main sanctuary. Oct 18, 7:00 PM.', tags: ['Worship', 'Prayer', 'Music'], price: 10, seatsLeft: 85 },
-  { id: 'newcomers', date: '2026-11-01T12:30:00', img: '/assets/images/circle-1.jpg', title: 'Newcomers\' Lunch', text: 'New to CAC Blackburn? Join the pastors for lunch and hear the story of our church. Nov 1, 12:30 PM.', tags: ['Welcome', 'Food'], price: 0, seatsLeft: 24 },
-  { id: 'choir', date: '2026-09-22T19:00:00', img: '/assets/images/circle-2.jpg', title: 'Christmas Choir Rehearsals', text: 'All voices welcome as we prepare carols for the Christmas Eve service. Tuesdays, 7:00 PM.', tags: ['Music', 'Christmas'], price: 0, seatsLeft: 30 },
-  { id: 'youthgames', date: '2026-11-14T18:30:00', img: '/assets/images/circle-3.jpg', title: 'Youth Games Night', text: 'Pizza, tournaments and big questions for teens in the Youth Hall. Nov 14, 6:30 PM.', tags: ['Youth', 'Games'], price: 5, seatsLeft: 46 },
+  { slug: 'worship-night-2026-10-18', date: '2026-10-18T19:00', img: '/assets/images/event-3.jpg', title: 'Worship Night', text: 'An evening of music, prayer and candlelight in the main sanctuary. Oct 18, 7:00 PM.', tags: ['Worship', 'Prayer', 'Music'], price: 10, seatsLeft: 85, location: 'Main Sanctuary\n85 Johnston Street, Blackburn', speakers: ['Rev. Daniel Okafor'], guests: ['The Blackburn Gospel Choir', 'Grace Lindqvist (worship leader)'], featured: true, ministry: 'church', mediaLayout: 'gallery', media: [] },
+  { slug: 'newcomers-lunch-2026-11-01', date: '2026-11-01T12:30', img: '/assets/images/circle-1.jpg', title: 'Newcomers\' Lunch', text: 'New to CAC Blackburn? Join the pastors for lunch and hear the story of our church. Nov 1, 12:30 PM.', tags: ['Welcome', 'Food'], price: 0, seatsLeft: 24, location: 'Church Hall\n85 Johnston Street, Blackburn', speakers: ['Rev. Daniel Okafor', 'Esther Mwangi'], guests: [], featured: false, ministry: 'church', mediaLayout: 'gallery', media: [] },
+  // ── youth ministry (no image — not every event has one) ──
+  { slug: 'all-night-lock-in-2026-09-26', date: '2026-09-26T18:30', img: '', title: 'All-Night Lock-In', text: 'Games, films, pizza and a 2 AM worship moment. Bring a sleeping bag!', tags: ['Youth'], price: 0, seatsLeft: 18, location: 'Youth Hall', speakers: ['Samuel Reyes'], guests: [], featured: false, ministry: 'youth', mediaLayout: 'gallery', media: [] },
+  { slug: 'autumn-youth-camp-2026-10-17', date: '2026-10-17T09:00', img: '', title: 'Autumn Youth Camp', text: 'A weekend away in the hills — campfires, big questions, no phones (mostly).', tags: ['Youth'], price: 0, seatsLeft: 31, location: 'Hollins Hill Retreat Centre', speakers: ['Samuel Reyes'], guests: [], featured: false, ministry: 'youth', mediaLayout: 'gallery', media: [] },
+  { slug: 'city-serve-day-2026-11-07', date: '2026-11-07T09:00', img: '', title: 'City Serve Day', text: 'Food bank shift in the morning, milkshakes after. Serve your city with your crew.', tags: ['Youth', 'Outreach'], price: 0, seatsLeft: 12, location: 'Blackburn Foodbank', speakers: ['Samuel Reyes'], guests: [], featured: false, ministry: 'youth', mediaLayout: 'gallery', media: [] },
 ]
 
 // ministries — `title` is the official name everywhere; `altName` is the
@@ -487,6 +566,8 @@ const ministriesBento: MinistryCard[] = [
   { size: 'big', color: 'm-pink', tag: 'Discipleship', icon: '📖', title: 'Bible Study', to: '/bible-study', altName: 'Scripture Study', text: 'Midweek small groups in homes across the city — study the Word, share a meal, and belong to a circle that knows your name.', members: '150+', meets: 'Weeknights' },
   { size: 'small', color: 'm-blue', tag: 'Prayer', icon: '🕯', title: 'Prayer Watch', to: '/prayer', altName: 'Prayer Ministry', text: 'Intercessors praying for the church, the city and every request received.', members: '40+', meets: 'Wed 6 AM' },
   { size: 'small', color: 'm-teal', tag: 'Media', icon: '🎥', title: 'Media & Broadcast', to: '/media-ministry', altName: 'Media Team', text: 'Cameras, sound and livestreams — carrying every service to those worshipping from home.', members: '25+', meets: 'Sundays' },
+  { size: 'big', color: 'm-green', tag: 'Fellowship', icon: '🛡', title: "Men's Ministry", to: '/mens-ministry', altName: "Men's Fellowship", text: 'Breakfasts, Bible study and honest conversation — men growing in faith together and showing up for their families and their city.', members: '70+', meets: '1st Saturday' },
+  { size: 'big', color: 'm-pink', tag: 'Fellowship', icon: '🌸', title: "Women's Ministry", to: '/womens-ministry', altName: "Women's Fellowship", text: 'Brunches, retreats and prayer circles — women of every age encouraging one another, studying the Word and serving side by side.', members: '90+', meets: '2nd Saturday' },
 ]
 
 const shortTime = (t: string) => t.replace(':00 ', ' ')
@@ -589,6 +670,30 @@ const ministriesOverviewRows: MinistryFeature[] = [
         { label: 'Who', value: 'Open to all' },
       ],
     },
+    {
+      to: '/mens-ministry',
+      img: '/assets/images/circle-1.jpg',
+      tag: "Men's Ministry",
+      title: 'Brothers who show up',
+      text: 'A monthly breakfast, a midweek study group and practical serving days — a place for men to grow in faith, find friendship that goes deeper than small talk, and lead well at home, at work and in the city.',
+      facts: [
+        { label: 'Leader', value: 'Rev. Daniel Okafor' },
+        { label: 'Meets', value: '1st Saturday 8:30 AM — Church Hall' },
+        { label: 'Who', value: 'Men 18+, all walks of life' },
+      ],
+    },
+    {
+      to: '/womens-ministry',
+      img: '/assets/images/gallery-5.jpg',
+      tag: "Women's Ministry",
+      title: 'Encouraged, equipped, together',
+      text: 'Monthly brunches, a Tuesday Bible study and a yearly retreat — women of every age and season gathering to study the Word, pray for one another and serve the church and the city side by side.',
+      facts: [
+        { label: 'Leader', value: 'Esther Mwangi' },
+        { label: 'Meets', value: '2nd Saturday 10:00 AM — Fellowship Hall' },
+        { label: 'Who', value: 'Women 18+, every season of life' },
+      ],
+    },
   ]
 
 /** @olux-collection Prayer Rhythms */
@@ -606,13 +711,6 @@ const worshipHistory: WorshipSidebarContent['history'] = [
       { img: '/assets/images/gallery-5.jpg', text: 'New song added', sub: 'Firm Foundation', when: '1 hr ago' },
       { img: '/assets/images/gallery-9.jpg', text: 'Choir set recorded', sub: 'Live from 11 AM', when: '2 hrs ago' },
       { img: '/assets/images/event-3.jpg', text: 'Worship night announced', sub: 'First Friday', when: '5 hrs ago' },
-    ]
-
-/** @olux-collection Youth Events */
-const youthEventRows: YouthEventsContent['events'] = [
-      { id: 'lockin', day: '26', month: 'Sep', date: '2026-09-26T18:30:00', title: 'All-Night Lock-In', text: 'Games, films, pizza and a 2 AM worship moment. Bring a sleeping bag!', spots: 18 },
-      { id: 'camp', day: '17', month: 'Oct', date: '2026-10-17T09:00:00', title: 'Autumn Youth Camp', text: 'A weekend away in the hills — campfires, big questions, no phones (mostly).', spots: 31 },
-      { id: 'serve', day: '07', month: 'Nov', date: '2026-11-07T09:00:00', title: 'City Serve Day', text: 'Food bank shift in the morning, milkshakes after. Serve your city with your crew.', spots: 12 },
     ]
 
 /** @olux-collection Care Impact */
@@ -648,13 +746,27 @@ const mediaGalleryRows: MediaMinistryContent['gallery'] = [
       { img: '/assets/images/gallery-10.jpg', title: 'Behind the cameras' },
     ]
 
-/** @olux-collection Faqs */
-const joinFaqs: JoinContent['faqs'] = [
-      { q: 'Do I have to be baptised to join?', a: 'No — everyone is welcome to belong and take part from day one. Baptism and formal membership are steps we\'ll walk with you when you\'re ready, never a condition for a seat at the table.' },
-      { q: 'What should I expect on a first visit?', a: 'About 90 minutes of music, a message and a warm welcome. Kids have their own program during both services, parking is free, and nobody will single you out or ask you to stand up.' },
-      { q: 'Is there anything for my children?', a: 'Yes — Kids Church runs during both Sunday services for nursery through grade 6, with trained and vetted leaders. Teens have their own Friday-night youth ministry.' },
-      { q: 'How is the church funded?', a: 'Entirely by the voluntary giving of members and friends. Giving is never expected of guests, and our finances are reviewed and reported to the congregation annually.' },
-    ]
+// The site's questions and answers — ONE list for every FAQ section. `category`
+// groups them (Joining the church, Men's Ministry …) and `tags` add keywords;
+// each section shows the ones it asks for (Edit site › Items in this block).
+/** @olux-collection Faqs
+ * @olux-field q text label="Question" required
+ * @olux-field a textarea6 label="Answer"
+ * @olux-field category text label="Category (e.g. Joining the church)"
+ * @olux-field tags tags label="Tags"
+ */
+const faqs: FaqItem[] = [
+  { q: 'Do I have to be baptised to join?', a: 'No — everyone is welcome to belong and take part from day one. Baptism and formal membership are steps we\'ll walk with you when you\'re ready, never a condition for a seat at the table.', category: 'Joining the church', tags: ['membership', 'baptism'] },
+  { q: 'What should I expect on a first visit?', a: 'About 90 minutes of music, a message and a warm welcome. Kids have their own program during both services, parking is free, and nobody will single you out or ask you to stand up.', category: 'Joining the church', tags: ['visiting', 'sunday'] },
+  { q: 'Is there anything for my children?', a: 'Yes — Kids Church runs during both Sunday services for nursery through grade 6, with trained and vetted leaders. Teens have their own Friday-night youth ministry.', category: 'Joining the church', tags: ['children', 'youth'] },
+  { q: 'How is the church funded?', a: 'Entirely by the voluntary giving of members and friends. Giving is never expected of guests, and our finances are reviewed and reported to the congregation annually.', category: 'Joining the church', tags: ['giving'] },
+  { q: 'Do I need to be a church member to come?', a: 'Not at all. Bring a friend, a colleague or your dad — every man is welcome, whatever his story.', category: "Men's Ministry", tags: ['men', 'visiting'] },
+  { q: 'What does the breakfast cost?', a: 'It is free. There is a basket for anyone who wants to give towards next month\'s food.', category: "Men's Ministry", tags: ['men', 'breakfast'] },
+  { q: 'How do I join a midweek study group?', a: 'Come to a breakfast and speak to Michael, or email the ministry — we will find a group near you.', category: "Men's Ministry", tags: ['men', 'bible study'] },
+  { q: 'Is there childcare at the brunch?', a: 'Yes — a crèche runs during every brunch for children under five. Older children are welcome in Kids Church.', category: "Women's Ministry", tags: ['women', 'children'] },
+  { q: 'I have never been to church. Can I still come?', a: 'Absolutely. Many women first come for the brunch and the friendship. Come as you are.', category: "Women's Ministry", tags: ['women', 'visiting'] },
+  { q: 'How much is the autumn retreat?', a: 'The weekend costs £85 including meals and lodging. Bursaries are available — just ask Esther or Funmi.', category: "Women's Ministry", tags: ['women', 'retreat'] },
+]
 
 /** @olux-collection Join Perks */
 const joinPerks: { text: string }[] = [
@@ -694,7 +806,19 @@ const worshipTimes: WorshipSidebarContent['times'] = [
       { label: 'Team rehearsal', value: 'Thursdays, 7:00 PM' },
     ]
 
-/** @olux-collection Ministry Pages */
+/** @olux-collection Ministry Pages
+ * @olux-field path text label="Page (e.g. /mens-ministry)"
+ * @olux-field img image
+ * @olux-field text textarea6
+ * @olux-field meets text
+ * @olux-field leader text label="Led by"
+ * @olux-field verse textarea2 label="Theme verse"
+ * @olux-field verseRef text label="Verse reference"
+ * @olux-field location text label="Where"
+ * @olux-field audience text label="Who it's for"
+ * @olux-field members text label="Members (e.g. 70+)"
+ * @olux-field email email label="Contact email"
+ */
 const ministryPages: (MinistryDetailEntry & { path: string })[] = [
   { path: '/kids',
       img: '/assets/images/circle-3.jpg', alt: 'Kids ministry',
@@ -711,6 +835,52 @@ const ministryPages: (MinistryDetailEntry & { path: string })[] = [
       text: 'The Media Team runs cameras, sound and livestreams so every service reaches those worshipping from home — and keeps the sermon archive and podcast up to date. Training provided at the desk.',
       meets: 'Sundays 8:30 AM — Media Desk', leader: 'Samuel Reyes'
   },
+  { path: '/mens-ministry',
+      img: '/assets/images/circle-1.jpg', alt: "Men's ministry",
+      text: "Men's Ministry is a band of brothers learning to follow Jesus in the everyday — at home, at work and in the city. We meet for a hearty breakfast and honest teaching on the first Saturday of each month, study the Bible in small groups midweek, and roll up our sleeves on serving days. Whether you've been in church for decades or are just asking questions, there's a seat at the table for you.",
+      meets: '1st Saturday 8:30 AM — Church Hall', leader: 'Rev. Daniel Okafor',
+      verse: 'As iron sharpens iron, so one person sharpens another.', verseRef: 'Proverbs 27:17',
+      location: 'Church Hall, 85 Johnston Street', audience: 'Men 18+, all walks of life', members: '70+', email: 'men@cacblackburn.org'
+  },
+  { path: '/womens-ministry',
+      img: '/assets/images/gallery-5.jpg', alt: "Women's ministry",
+      text: "Women's Ministry brings together women of every age and season of life to grow in faith and friendship. We share a monthly brunch with an encouraging talk, study the Bible together on Tuesday evenings, pray for one another and serve the church and the city side by side — and every autumn we get away for a weekend retreat. Come as you are; bring a friend.",
+      meets: '2nd Saturday 10:00 AM — Fellowship Hall', leader: 'Esther Mwangi',
+      verse: 'She is clothed with strength and dignity; she can laugh at the days to come.', verseRef: 'Proverbs 31:25',
+      location: 'Fellowship Hall, 85 Johnston Street', audience: 'Women 18+, every season of life', members: '90+', email: 'women@cacblackburn.org'
+  },
+]
+
+// What each ministry page lists under "What we do" (`page` = the page's path).
+/** @olux-collection Ministry Activities
+ * @olux-field page text label="Page (e.g. /mens-ministry)"
+ * @olux-field icon text label="Icon (an emoji)"
+ * @olux-field title text required
+ * @olux-field text textarea2
+ * @olux-field when text label="When"
+ */
+const ministryActivities: MinistryActivity[] = [
+  { page: '/mens-ministry', icon: '🍳', title: "Men's Breakfast", text: 'A full breakfast, a short talk and real conversation around the tables.', when: '1st Saturday, 8:30 AM' },
+  { page: '/mens-ministry', icon: '📖', title: 'Midweek Study', text: 'Small groups working through a book of the Bible, one chapter at a time.', when: 'Wednesdays, 7:30 PM' },
+  { page: '/mens-ministry', icon: '🛠', title: 'Serve Days', text: 'Fixing, building and moving for families and neighbours who need a hand.', when: 'Quarterly Saturdays' },
+  { page: '/womens-ministry', icon: '☕', title: 'Women\'s Brunch', text: 'Pastries, good coffee and an encouraging talk for every season of life.', when: '2nd Saturday, 10:00 AM' },
+  { page: '/womens-ministry', icon: '📖', title: 'Tuesday Bible Study', text: 'Reading Scripture together, sharing honestly and praying for one another.', when: 'Tuesdays, 7:00 PM' },
+  { page: '/womens-ministry', icon: '🌿', title: 'Autumn Retreat', text: 'A weekend away to rest, worship and make friends that last.', when: 'Every October' },
+]
+
+// The About page's guide to its sub-pages (leadership, announcements, media, prayer …).
+/** @olux-collection About Pages
+ * @olux-field icon text label="Icon (an emoji)"
+ * @olux-field title text required
+ * @olux-field text textarea2
+ * @olux-field to text label="Link (e.g. /leadership)"
+ * @olux-field cta text label="Button text"
+ */
+const aboutPages: AboutPageLink[] = [
+  { icon: '👥', title: 'Our Leadership', text: 'Meet the pastors and ministry leaders who serve and shepherd our church family.', to: '/leadership', cta: 'Meet the team' },
+  { icon: '📣', title: 'Announcements', text: 'Church news, notices and what is coming up — all in one place.', to: '/announcements', cta: 'Read the latest' },
+  { icon: '🎥', title: 'Media & Broadcast', text: 'Cameras, sound and livestreams carrying every service to those worshipping from home.', to: '/media-ministry', cta: 'Watch & serve' },
+  { icon: '🕯', title: 'Prayer Watch', text: 'Intercessors praying for the church, the city and every request we receive.', to: '/prayer', cta: 'Send a request' },
 ]
 
 /** @olux-collection Legal Sections */
@@ -765,7 +935,9 @@ export const useSiteContent = (): SiteContent => {
   const mergedProfile: Profile = profileRow
     ? {
         ...profile,
-        ...Object.fromEntries(Object.entries(profileRow).filter(([k, v]) => k in profile && v !== '' && v != null)),
+        // A blank CMS value falls back to the template's — except optional
+        // fields, where blank means "show nothing" (e.g. no logo small line).
+        ...Object.fromEntries(Object.entries(profileRow).filter(([k, v]) => k in profile && v != null && (v !== '' || OPTIONAL_PROFILE_KEYS.includes(k)))),
         logo: { lead: profileRow.logoLead || profile.logo.lead, bold: profileRow.logoBold || profile.logo.bold },
         officeHours: Array.isArray(profileRow.officeHours) ? profileRow.officeHours : profile.officeHours,
       }
@@ -1001,6 +1173,9 @@ ways: cms('givingWays', [
     },
   },
   ministryDetail: Object.fromEntries(cms('ministryPages', ministryPages).map(r => [(r as any).path, r])),
+  ministryActivities: cms('ministryActivities', ministryActivities),
+  aboutPages: cms('aboutPages', aboutPages),
+  faqs: cms('faqs', faqs),
   join: {
     stepsEyebrow: 'Your journey',
     stepsTitle: 'Four simple steps to belonging',
@@ -1025,7 +1200,7 @@ perks: cms('joinPerks', joinPerks).map(r => (r as any).text ?? r),
     thanks: "🎉 Welcome to the family! Look out for a welcome email this week — and we'd love to see you on Sunday.",
     faqEyebrow: 'Good to know',
     faqTitle: 'Questions people ask',
-faqs: cms('faqs', joinFaqs),
+faqs: cms('faqs', faqs),
   },
   prayer: {
     intro: {
@@ -1128,8 +1303,6 @@ times: cms('worshipTimes', [
   youthEvents: {
     eyebrow: "What's coming up",
     title: "Don't miss the next one",
-    countdownLabel: '🔥 All-Night Lock-In starts in',
-events: cms('youthEvents', youthEventRows),
   },
   youthHighlights: {
     eyebrow: 'Highlights',

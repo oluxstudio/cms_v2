@@ -140,19 +140,25 @@ class SiteController extends Controller
         return view('pages', ['site' => $site]);
     }
 
-    public function collections($siteID)
+    /** The collections list — or a new collection / a collection's settings, each on its own page. */
+    public function collections(Request $request, $siteID)
     {
         $site = $this->findSiteBySlug($siteID);
 
-        return view('collections', ['site' => $site]);
+        // By name: route parameters reach a controller by position, so a route
+        // without {collection} would hand its `screen` default to $collection.
+        return view('collections', ['site' => $site, 'collection' => $request->route('collection'), 'screen' => $request->route('screen')]);
     }
 
-    public function collectionDetail($siteID, string $collection)
+    /** A collection's page — or one of its own sub-pages: an entry, a new entry, the field editor. */
+    public function collectionDetail(Request $request, $siteID, string $collection)
     {
         $site = $this->findSiteBySlug($siteID);
         $col = Collection::where('site_id', $site->id)->findOrFail($collection);
 
-        return view('collection-detail', ['site' => $site, 'collection' => $col]);
+        // By name: on routes without {entry} (new, fields) a positional
+        // $entry argument would receive the `screen` default instead.
+        return view('collection-detail', ['site' => $site, 'collection' => $col, 'entry' => $request->route('entry'), 'screen' => $request->route('screen')]);
     }
 
     public function media($siteID)

@@ -1,6 +1,6 @@
 {{--
   One schema-driven property input. Vars: $f (field def), $model (wire path, e.g.
-  "values.tagline"), $upload (upload path, e.g. "fields.logo"), $value, $site.
+  "values.tagline"), $value, $site.
 --}}
 @php
     $input = 'w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[color:var(--primary)]/40 focus:border-[color:var(--primary)]';
@@ -51,17 +51,9 @@
                 </div>
                 <div class="flex-1 min-w-[200px] space-y-2">
                     <x-asset-picker :model="$model" :site="$site" type="image" placeholder="Image URL, or pick from assets" />
-                    <div class="flex items-center gap-3">
-                        <label class="{{ $ghost }} cursor-pointer">
-                            <span wire:loading.remove wire:target="uploads.{{ $upload }}">⬆ Upload</span>
-                            <span wire:loading wire:target="uploads.{{ $upload }}">Uploading…</span>
-                            <input type="file" wire:model="uploads.{{ $upload }}" accept="image/*" class="hidden">
-                        </label>
-                        @if ($value)
-                            <button type="button" wire:click="$set('{{ $model }}', '')" class="text-xs font-semibold text-rose-500 hover:text-rose-600">Remove</button>
-                        @endif
-                    </div>
-                    @if ($m = $errors->first('uploads.'.$upload))<p class="text-xs text-rose-500">{{ $m }}</p>@endif
+                    @if ($value)
+                        <button type="button" wire:click="$set('{{ $model }}', '')" class="text-xs font-semibold text-rose-500 hover:text-rose-600">Remove</button>
+                    @endif
                 </div>
             </div>
             @break

@@ -1,174 +1,312 @@
-@php $canManage = $this->canManage; @endphp
-<x-tri-layout title="Components" subtitle="Standalone content components — build the nodes once, attach to pages or link collections anywhere." :site-name="$site->name"
+@php
+    $canManage = $this->canManage;
+    $panel = 'rounded-[1.75rem] bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm';
+    $btnSolid = 'inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors';
+    $iconBtn = 'p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10';
+    $total = $stats['total'];
+    $filters = [
+        'all' => ['All', $total],
+        'used' => ['On pages', $stats['used']],
+        'unused' => ['Unused', $stats['unused']],
+        'source' => ['With data source', $stats['source']],
+        'inactive' => ['Inactive', $stats['inactive']],
+        'attention' => ['Needs attention', $stats['attention']],
+    ];
+    $sourceBadge = function ($c) {
+        if ($c->site_template_id) return ['Template', 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300'];
+        return match ($c->source ?? 'app') {
+            'api' => ['API', 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300'],
+            'imported' => ['Imported', 'bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300'],
+            'app' => ['App', 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'],
+            default => [ucfirst($c->source), 'bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300'],
+        };
+    };
+    $icons = [
+        'block' => 'M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5',
+        'page' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+        'unused' => 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636',
+        'source' => 'M4 7v10c0 2.2 3.6 4 8 4s8-1.8 8-4V7M4 7c0 2.2 3.6 4 8 4s8-1.8 8-4M4 7c0-2.2 3.6-4 8-4s8 1.8 8 4m0 5c0 2.2-3.6 4-8 4s-8-1.8-8-4',
+        'empty' => 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.4-9.4a2 2 0 112.8 2.8L11.8 15H9v-2.8l8.6-8.6z',
+        'inactive' => 'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z',
+        'edit' => 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
+        'editor' => 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14',
+        'copy' => 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z',
+        'trash' => 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
+    ];
+    $deleteMsg = fn ($c) => 'Delete “'.$c->name.'”? It is removed from every page it\'s attached to.';
+@endphp
+<x-tri-layout title="Components" subtitle="Standalone content components — build the fields once, attach to pages or link collections anywhere." :site-name="$site->name"
     :labels="['📊 Overview', '🧩 Components', '⚡ Quick access']">
 
-    {{-- ── LEFT rail: stat tiles ── --}}
+    {{-- ── LEFT rail: the components at a glance (tap a tile to filter) ── --}}
     <x-slot:rail>
     <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
-        <x-tile accent="ink" :value="$this->components->count()" label="components" sub="standalone building blocks" />
-        <x-tile accent="lime" :value="$this->components->sum(fn ($c) => $c->nodes->count())" label="nodes" sub="typed content fields" />
-        <x-tile accent="lavender" :value="$this->components->filter(fn ($c) => $c->pages->isNotEmpty())->count()" label="attached to pages" sub="in use on the site" />
-        <x-tile accent="cocoa" :value="$this->components->filter(fn ($c) => $c->nodes->where('type', 'collection')->isNotEmpty())->count()" label="linked to collections" sub="via collection nodes" />
+        <x-tile accent="ink" wide :value="$total" label="Components"
+                :sub="$stats['recent'] ? $stats['recent'].' added this week' : number_format($stats['fields']).' '.Str::plural('field', $stats['fields'])"
+                :icon="$icons['block']" />
+        <x-tile accent="lime" :value="$stats['used']" label="On pages" :sub="'live · of '.$total"
+                :icon="$icons['page']" role="button" wire:click="setFilter('used')" class="cursor-pointer" />
+        <x-tile accent="lavender" :value="$stats['unused']" label="Unused" :sub="$stats['unused'] ? 'on no page' : 'all placed'"
+                :icon="$icons['unused']" role="button" wire:click="setFilter('unused')" class="cursor-pointer" />
+        <x-tile accent="sky" :value="$stats['source']" label="Data source" sub="fed by a collection"
+                :icon="$icons['source']" role="button" wire:click="setFilter('source')" class="cursor-pointer" />
+        <x-tile :accent="$stats['empty'] ? 'rose' : 'cocoa'" :value="number_format($stats['empty'])" label="Empty fields"
+                :sub="$stats['empty'] ? 'in '.$stats['emptyComponents'].' '.Str::plural('component', $stats['emptyComponents']) : 'all filled in'"
+                :icon="$icons['empty']" role="button" wire:click="setFilter('attention')" class="cursor-pointer" />
+        <x-tile :accent="$stats['inactive'] ? 'rose' : 'cocoa'" :value="$stats['inactive']" label="Inactive"
+                :sub="$stats['inactive'] ? 'parked by a template switch' : 'none parked'"
+                :icon="$icons['inactive']" role="button" wire:click="setFilter('inactive')" class="cursor-pointer" />
     </div>
     </x-slot:rail>
 
-    <div>
+    <div class="space-y-5">
     @if ($errorMessage)
-        <p class="mb-4 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-sm text-rose-600 dark:text-rose-400">{{ $errorMessage }}</p>
+        <p class="px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-sm text-rose-600 dark:text-rose-400">{{ $errorMessage }}</p>
     @endif
 
-    {{-- List card — toolbar (search · results · layout · new) then the list --}}
-    <div class="bg-white dark:bg-[#1e1f2b] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
-
-        {{-- Toolbar --}}
-        <div class="flex flex-wrap items-center gap-3 p-5 {{ count($this->componentTags) ? '' : 'border-b border-gray-100 dark:border-white/[0.05]' }}">
-            <div class="relative w-full sm:w-auto">
+    {{-- A component (view / edit) and a new component open on their own page, without the list --}}
+    @unless ($viewingId !== null || $editingId !== null)
+    {{-- ── Toolbar: search · collection · sort · layout · new, then filter pills and tags ── --}}
+    <div class="{{ $panel }} !rounded-2xl p-3 space-y-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="relative flex-1 min-w-[12rem]">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search components…"
-                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full sm:w-64">
+                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search by name, tag or description…"
+                       class="pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 w-full">
             </div>
-            {{-- Filter by collection --}}
-            <select wire:model.live="filterCollection"
-                    class="py-2 pl-3 pr-8 text-sm rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+            <select wire:model.live="filterCollection" title="Collection"
+                    class="py-2 pl-3 pr-8 text-[13px] rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
                 <option value="">All collections</option>
                 <option value="none">Standalone (no collection)</option>
                 @foreach ($this->siteCollections as $col)<option value="{{ $col->id }}">{{ $col->name }}</option>@endforeach
             </select>
-            <div class="ml-auto flex items-center gap-3">
-                <span class="text-xs text-gray-400 dark:text-gray-500">{{ $this->components->count() }} result{{ $this->components->count() !== 1 ? 's' : '' }}</span>
-                <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />
-                @if ($canManage)
-                <button wire:click="open(0)"
-                        class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                    New component
-                </button>
-                @endif
-            </div>
+            <select wire:model.live="sort" title="Order"
+                    class="py-2 pl-3 pr-8 text-[13px] rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+                <option value="updated">Recently edited</option>
+                <option value="name">Name A–Z</option>
+                <option value="used">Most used</option>
+                <option value="fields">Most fields</option>
+            </select>
+            <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />
+            @if ($canManage)
+            <a href="{{ route('site.components.create', $site->name) }}" wire:navigate
+               class="inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                New component
+            </a>
+            @endif
         </div>
-
-        {{-- Tag filter chips --}}
-        @if (count($this->componentTags))
-        <div class="flex flex-wrap items-center gap-2 px-5 pb-4 border-b border-gray-100 dark:border-white/[0.05]">
-            <button wire:click="setTag('')" @class([
-                'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
-                'bg-indigo-600 text-white border-indigo-600' => $filterTag === '',
-                'bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== '',
-            ])>All</button>
-            @foreach ($this->componentTags as $tag)
-            <button wire:click="setTag('{{ $tag }}')" @class([
-                'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
+        <div class="flex gap-2 overflow-x-auto no-scrollbar">
+            @foreach ($filters as $key => [$label, $n])
+                <button type="button" wire:click="setFilter('{{ $key }}')"
+                    class="shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold border transition-colors
+                        {{ $filter === $key
+                            ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white'
+                            : 'bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/[0.1] hover:bg-gray-50 dark:hover:bg-white/[0.06]' }}">
+                    {{ $label }} <span class="opacity-60">{{ $n }}</span>
+                </button>
+            @endforeach
+        </div>
+        @if (count($tags))
+        <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">Tags</span>
+            @foreach ($tags as $tag)
+            <button type="button" wire:click="setTag(@js($tag))" @class([
+                'px-2.5 py-0.5 rounded-full text-[12px] font-semibold border transition-colors',
                 'bg-indigo-600 text-white border-indigo-600' => $filterTag === $tag,
-                'bg-white dark:bg-white/[0.04] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== $tag,
+                'bg-white dark:bg-[#1d1e2a] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/[0.08] hover:border-indigo-400' => $filterTag !== $tag,
             ])>#{{ $tag }}</button>
             @endforeach
         </div>
         @endif
+    </div>
 
-        {{-- Body — grid / list / compact --}}
-        @if ($this->components->isEmpty())
-        <div class="flex flex-col items-center justify-center py-20 text-center">
-            <span class="text-3xl mb-3">🧩</span>
-            <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">{{ ($search !== '' || $filterTag !== '') ? 'No components match.' : 'No components yet.' }}</p>
-            <p class="text-xs text-gray-400 mt-1">Create one, define its nodes, then attach it to pages or link a collection.</p>
+    @if ($components->isEmpty())
+        <div class="{{ $panel }} px-6 py-16 text-center">
+            <span class="mx-auto mb-3 w-14 h-14 rounded-2xl grid place-items-center bg-gray-100 dark:bg-white/[0.06]">
+                <svg class="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['block'] }}"/></svg>
+            </span>
+            @if ($siteTotal === 0)
+                <p class="text-[15px] font-bold text-gray-900 dark:text-white">No components yet</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">A component is a named set of content fields — a hero, a pricing card, a footer — built once and placed on any page.</p>
+                @if ($canManage)
+                <a href="{{ route('site.components.create', $site->name) }}" wire:navigate class="inline-flex mt-4 text-sm font-bold px-4 py-2.5 rounded-xl" style="background:var(--primary);color:var(--on-primary)">Create the first component</a>
+                @endif
+            @else
+                <p class="text-[15px] font-bold text-gray-900 dark:text-white">Nothing matches</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">No component fits this search or filter.</p>
+                <button type="button" wire:click="resetListing" class="{{ $btnSolid }} mt-4 text-sm px-4 py-2">Show all components</button>
+            @endif
         </div>
 
-        @elseif ($viewMode === 'grid')
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 p-5">
-            @foreach ($this->components as $c)
-            <div class="bg-white dark:bg-[#1d1e2a] rounded-2xl border {{ $editingId === $c->id ? 'border-indigo-400 ring-2 ring-indigo-500/20' : 'border-gray-100 dark:border-white/[0.05]' }} shadow-sm p-4 flex flex-col">
-                <div class="min-w-0">
-                    <p class="text-sm font-bold text-gray-900 dark:text-white truncate">🧩 {{ $c->name }}</p>
-                    <p class="text-[11px] text-gray-400 mt-0.5">
-                        {{ $c->nodes->count() }} {{ Str::plural('node', $c->nodes->count()) }}
-                        · {{ $c->pages->count() }} {{ Str::plural('page', $c->pages->count()) }}
-                        @if ($c->nodes->where('type', 'collection')->isNotEmpty())
-                            · {{ $c->nodes->where('type', 'collection')->count() }} collection {{ Str::plural('link', $c->nodes->where('type', 'collection')->count()) }}
+    @elseif ($viewMode === 'grid')
+        {{-- ── Cards ── --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @foreach ($components as $c)
+                @php [$srcLabel, $srcClass] = $sourceBadge($c); $show = $this->pageUrl($c->id); @endphp
+                <div class="group flex flex-col {{ $panel }} !rounded-2xl hover:shadow-md transition-shadow overflow-hidden" wire:key="comp-{{ $c->id }}">
+                    <a href="{{ $show }}" wire:navigate class="p-5 flex-1 block">
+                        <div class="flex items-start gap-3">
+                            <span class="w-11 h-11 rounded-xl grid place-items-center shrink-0 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['block'] }}"/></svg>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-[15px] font-bold text-gray-900 dark:text-white truncate group-hover:underline">{{ $c->name }}</span>
+                                <span class="block text-[12px] text-gray-400 mt-0.5 truncate">
+                                    <span class="inline-flex px-1.5 py-px rounded-md text-[10.5px] font-bold {{ $srcClass }}">{{ $srcLabel }}</span>
+                                    {{ $c->creator?->name ?? $c->author ?? '' }} · edited {{ $c->last_edited->diffForHumans() }}
+                                </span>
+                            </span>
+                            <span class="text-right shrink-0">
+                                <span class="block text-2xl font-extrabold tabular-nums leading-none {{ $c->nodes_count ? 'text-gray-900 dark:text-white' : 'text-gray-300 dark:text-gray-600' }}">{{ $c->nodes_count }}</span>
+                                <span class="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 mt-1">{{ Str::plural('field', $c->nodes_count) }}</span>
+                            </span>
+                        </div>
+                        <p class="mt-3 text-[13px] text-gray-500 dark:text-gray-400 line-clamp-2">{{ $c->description ?: 'No description yet.' }}</p>
+
+                        {{-- Pages it's on --}}
+                        <span class="mt-3 flex flex-wrap items-center gap-1.5">
+                            @forelse ($c->live_pages->take(3) as $p)
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" title="{{ $p->url }}">● {{ $p->name }}</span>
+                            @empty
+                                @if ($c->is_inactive)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300" title="Only on pages of a template that isn't the current one">Inactive — {{ $c->placements_count }} parked {{ Str::plural('placement', $c->placements_count) }}</span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400">On no page</span>
+                                @endif
+                            @endforelse
+                            @if ($c->live_pages_count > 3)<span class="text-[11px] text-gray-400">+{{ $c->live_pages_count - 3 }} more</span>@endif
+                        </span>
+
+                        {{-- Fields · data source · tags --}}
+                        <span class="mt-2 flex flex-wrap items-center gap-1.5">
+                            @if ($c->empty_nodes_count)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300">{{ $c->empty_nodes_count }} empty {{ Str::plural('field', $c->empty_nodes_count) }}</span>
+                            @elseif (! $c->nodes_count)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300">No fields</span>
+                            @endif
+                            @foreach ($c->data_sources->take(2) as $srcName)
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300" title="Data source">📦 {{ $srcName }}</span>
+                            @endforeach
+                            @foreach (($c->tags ?? []) as $tag)
+                                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">#{{ $tag }}</span>
+                            @endforeach
+                        </span>
+                    </a>
+                    <div class="flex items-center gap-1.5 px-3 py-2.5 border-t border-gray-100 dark:border-white/[0.05]">
+                        @if ($canManage)
+                            <a href="{{ $this->pageUrl($c->id, true) }}" wire:navigate
+                               class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-bold" style="background:var(--primary);color:var(--on-primary)">Edit</a>
                         @endif
-                    </p>
+                        <a href="{{ $show }}" wire:navigate class="{{ $btnSolid }} text-[12px] px-3 py-1.5">View</a>
+                        <span class="ml-auto flex items-center gap-0.5">
+                            <a href="{{ url($site->name.'/connect?component='.$c->id) }}" title="Open in the site editor" class="{{ $iconBtn }}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['editor'] }}"/></svg>
+                            </a>
+                            @if ($canManage)
+                            <button type="button" wire:click="duplicateComponent('{{ $c->id }}')" title="Duplicate" class="{{ $iconBtn }}">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['copy'] }}"/></svg>
+                            </button>
+                            <button type="button" wire:click="deleteComponent('{{ $c->id }}')" data-confirm="{{ $deleteMsg($c) }}" title="Delete"
+                                    class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['trash'] }}"/></svg>
+                            </button>
+                            @endif
+                        </span>
+                    </div>
                 </div>
-                @if ($c->description)
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">{{ Str::limit($c->description, 90) }}</p>
-                @endif
-                @if ($c->tags)
-                <div class="flex flex-wrap gap-1.5 mt-2">
-                    @foreach ($c->tags as $tag)
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">#{{ $tag }}</span>
-                    @endforeach
-                </div>
-                @endif
-                <div class="flex flex-wrap gap-1.5 mt-3 flex-1 content-start">
-                    @foreach ($c->nodes->take(6) as $n)
-                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400">
-                            {{ $n->label }} <span class="opacity-60">· {{ $n->type }}</span></span>
-                    @endforeach
-                    @if ($c->nodes->count() > 6)<span class="text-[10px] text-gray-400">+{{ $c->nodes->count() - 6 }}</span>@endif
-                </div>
-                <div class="flex gap-2 mt-4">
-                    <button wire:click="view('{{ $c->id }}')"
-                            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">View</button>
-                    @if ($canManage)
-                    <button wire:click="open('{{ $c->id }}')"
-                            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-colors">Edit</button>
-                    <button wire:click="deleteComponent('{{ $c->id }}')" data-confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
-                            class="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-rose-500 transition-colors">Delete</button>
-                    @endif
-                </div>
-            </div>
             @endforeach
         </div>
 
     @else
-        {{-- list & compact (table; compact hides description/tags) --}}
-        @php $compact = $viewMode === 'compact'; $pad = $compact ? 'px-4 py-2' : 'px-5 py-3.5'; @endphp
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+        {{-- ── List & Compact (table; compact hides description, source and tags) ── --}}
+        @php $compact = $viewMode === 'compact'; $pad = $compact ? 'px-4 py-2' : 'px-4 py-3'; @endphp
+        <div class="{{ $panel }} !rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-gray-100 dark:border-white/[0.05]">
-                            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Component</th>
-                            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Nodes</th>
-                            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Pages</th>
-                            @unless($compact)<th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-5 py-3">Tags</th>@endunless
-                            <th class="px-5 py-3"></th>
+                        <tr class="border-b border-gray-100 dark:border-white/[0.05] text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <th class="px-4 py-3">Component</th>
+                            <th class="px-4 py-3 text-right">Fields</th>
+                            <th class="px-4 py-3">Pages</th>
+                            @unless ($compact)
+                                <th class="px-4 py-3">Data source</th>
+                                <th class="px-4 py-3">Edited</th>
+                            @endunless
+                            <th class="w-32 px-4 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                        @foreach ($this->components as $c)
-                        <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02]">
-                            <td class="{{ $pad }}">
-                                <p class="font-semibold text-gray-900 dark:text-white">🧩 {{ $c->name }}</p>
-                                @unless($compact)@if($c->description)<p class="text-xs text-gray-400 mt-0.5 max-w-md truncate">{{ $c->description }}</p>@endif @endunless
-                            </td>
-                            <td class="{{ $pad }} text-gray-500 dark:text-gray-400">{{ $c->nodes->count() }}</td>
-                            <td class="{{ $pad }} text-gray-500 dark:text-gray-400">{{ $c->pages->count() }}</td>
-                            @unless($compact)
-                            <td class="{{ $pad }}">
-                                <div class="flex flex-wrap gap-1">
-                                    @foreach (($c->tags ?? []) as $tag)<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">#{{ $tag }}</span>@endforeach
-                                </div>
-                            </td>
-                            @endunless
-                            <td class="{{ $pad }} text-right whitespace-nowrap">
-                                <button wire:click="view('{{ $c->id }}')" class="text-xs font-semibold text-gray-500 hover:text-indigo-600 px-2">View</button>
-                                @if ($canManage)
-                                <button wire:click="open('{{ $c->id }}')" class="text-xs font-semibold text-gray-500 hover:text-indigo-600 px-2">Edit</button>
-                                <button wire:click="deleteComponent('{{ $c->id }}')" data-confirm="Delete “{{ $c->name }}”? It is removed from every page it's attached to."
-                                        class="text-xs font-semibold text-gray-400 hover:text-rose-500 px-2">Delete</button>
-                                @endif
-                            </td>
-                        </tr>
+                        @foreach ($components as $c)
+                            @php [$srcLabel, $srcClass] = $sourceBadge($c); @endphp
+                            <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors" wire:key="row-{{ $c->id }}">
+                                <td class="{{ $pad }}">
+                                    <a href="{{ $this->pageUrl($c->id) }}" wire:navigate class="block min-w-0">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="font-semibold text-gray-900 dark:text-white truncate hover:underline">{{ $c->name }}</span>
+                                            @unless ($compact)<span class="shrink-0 px-1.5 py-px rounded-md text-[10px] font-bold {{ $srcClass }}">{{ $srcLabel }}</span>@endunless
+                                        </span>
+                                        @unless ($compact)
+                                            @if ($c->description)<span class="block text-[11px] text-gray-400 truncate max-w-[18rem]">{{ $c->description }}</span>@endif
+                                            @if ($c->tags)
+                                            <span class="mt-1 flex flex-wrap gap-1">
+                                                @foreach ($c->tags as $tag)<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">#{{ $tag }}</span>@endforeach
+                                            </span>
+                                            @endif
+                                        @endunless
+                                    </a>
+                                </td>
+                                <td class="{{ $pad }} text-right whitespace-nowrap">
+                                    <span class="font-bold tabular-nums text-gray-900 dark:text-white">{{ $c->nodes_count }}</span>
+                                    @if ($c->empty_nodes_count)<span class="block text-[11px] font-semibold text-rose-600 dark:text-rose-400">{{ $c->empty_nodes_count }} empty</span>@endif
+                                </td>
+                                <td class="{{ $pad }} text-[12px]">
+                                    @if ($c->is_used)
+                                        <span class="text-emerald-700 dark:text-emerald-300">{{ $c->live_pages->take(2)->pluck('name')->implode(', ') }}@if ($c->live_pages_count > 2) +{{ $c->live_pages_count - 2 }}@endif</span>
+                                    @elseif ($c->is_inactive)
+                                        <span class="text-amber-700 dark:text-amber-300">Inactive</span>
+                                    @else
+                                        <span class="text-gray-400">On no page</span>
+                                    @endif
+                                </td>
+                                @unless ($compact)
+                                    <td class="{{ $pad }} text-[12px] {{ $c->has_source ? 'text-sky-700 dark:text-sky-300' : 'text-gray-400' }}">{{ $c->has_source ? $c->data_sources->implode(', ') : '—' }}</td>
+                                    <td class="{{ $pad }} text-[12px] text-gray-400 whitespace-nowrap">{{ $c->last_edited->diffForHumans() }}</td>
+                                @endunless
+                                <td class="{{ $pad }}">
+                                    <div class="flex items-center gap-0.5 justify-end">
+                                        @if ($canManage)
+                                        <a href="{{ $this->pageUrl($c->id, true) }}" wire:navigate title="Edit" class="{{ $iconBtn }}">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['edit'] }}"/></svg>
+                                        </a>
+                                        @endif
+                                        <a href="{{ url($site->name.'/connect?component='.$c->id) }}" title="Open in the site editor" class="{{ $iconBtn }}">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['editor'] }}"/></svg>
+                                        </a>
+                                        @if ($canManage)
+                                        <button type="button" wire:click="duplicateComponent('{{ $c->id }}')" title="Duplicate" class="{{ $iconBtn }}">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['copy'] }}"/></svg>
+                                        </button>
+                                        <button type="button" wire:click="deleteComponent('{{ $c->id }}')" data-confirm="{{ $deleteMsg($c) }}" title="Delete"
+                                                class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['trash'] }}"/></svg>
+                                        </button>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>
+            </div>
         </div>
-        @endif
-
-    </div>{{-- /list card --}}
+    @endif
+    @endunless
 
     {{-- ═══ DETAIL VIEW — every stored fact, on the reusable lightbox ═══ --}}
     @if ($viewingId !== null && $this->viewing)
     @php $v = $this->viewing; @endphp
-    <x-lightbox close="closeView" icon="🧩" :title="$v->name" :subtitle="$v->description" max-width="max-w-2xl" :drawer="true">
+    <x-page-panel :back="$this->pageUrl()" back-label="Back to components" icon="🧩" :title="$v->name" :subtitle="$v->description">
         <x-slot:badge>
             <span class="text-[10px] font-bold px-2.5 py-1 rounded-full {{ ($v->source ?? 'app') === 'api' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300' }}">
                 {{ ($v->source ?? 'app') === 'api' ? '🔌 API' : '🖥 App' }}</span>
@@ -243,7 +381,7 @@
             <div class="sm:col-span-2">
                 <div class="flex items-center justify-between mb-2">
                     <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-400">📦 Data source — {{ $vCol->name }} ({{ $vCol->items_count }})</p>
-                    <a href="{{ url($site->name.'/collections?open='.$vCol->id) }}"
+                    <a href="{{ route('collections.show', [$site->name, $vCol->id]) }}"
                        class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Manage entries →</a>
                 </div>
                 <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
@@ -253,7 +391,7 @@
                             $ciImg = (string) ($d['img'] ?? $d['image'] ?? $d['photo'] ?? '');
                             $ciImg = $ciImg !== '' ? \App\Models\Media::resolveRef($site->id, '@media/'.basename($ciImg)) : '';
                         @endphp
-                        <a href="{{ url($site->name.'/collections?open='.$vCol->id) }}"
+                        <a href="{{ route('collections.entries.show', [$site->name, $vCol->id, $ci->id]) }}"
                            class="rounded-lg border border-gray-100 dark:border-white/[0.06] p-1.5 hover:border-indigo-300 dark:hover:border-indigo-500/40 transition-colors">
                             @if ($ciImg)<img src="{{ $ciImg }}" alt="" class="w-full aspect-square rounded-md object-cover mb-1" onerror="this.style.display='none'">@endif
                             <span class="block text-[10px] font-semibold text-gray-600 dark:text-gray-300 truncate">{{ $d['name'] ?? $d['title'] ?? '…' }}</span>
@@ -268,18 +406,18 @@
         @if ($canManage)
         <x-slot:footer>
             <div class="flex justify-end gap-2">
-                <button wire:click="closeView" class="px-4 py-2 rounded-xl text-xs font-medium text-gray-500 border border-gray-200 dark:border-white/[0.08]">Close</button>
-                <button wire:click="editFromView"
-                        class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">Edit this component</button>
+                <a href="{{ $this->pageUrl() }}" wire:navigate class="px-4 py-2 rounded-xl text-xs font-medium text-gray-500 bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08]">Close</a>
+                <a href="{{ $this->pageUrl($v->id, true) }}" wire:navigate
+                        class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">Edit this component</a>
             </div>
         </x-slot:footer>
         @endif
-    </x-lightbox>
+    </x-page-panel>
     @endif
 
     {{-- ═══ EDITOR ═══ --}}
     @if ($editingId !== null)
-    <x-lightbox close="close" icon="🧩" :title="$editingId ? 'Edit component' : 'New component'"
+    <x-page-panel close="close" :back-label="$editingId ? 'Back to the component' : 'Back to components'" icon="🧩" :title="$editingId ? 'Edit component' : 'New component'"
                 subtitle="Nodes are the content fields; attach to pages or link a collection node." max-width="max-w-3xl">
             <form wire:submit="save" class="space-y-5">
                 <div class="grid sm:grid-cols-2 gap-4">
@@ -375,11 +513,153 @@
                 </div>
 
                 <div class="flex justify-end gap-3 pt-1">
-                    <button type="button" wire:click="close" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 border border-gray-200 dark:border-white/[0.08]">Cancel</button>
+                    <button type="button" wire:click="close" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08]">Cancel</button>
                     <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">Save component</button>
                 </div>
             </form>
-    </x-lightbox>
+    </x-page-panel>
     @endif
-</div>
+    </div>
+
+    {{-- ══ RIGHT rail: summary · needs attention · most used · recently edited · related ══ --}}
+    <x-slot:quick>
+        @php
+            $split = [
+                ['On pages', $stats['used'], '#10b981', 'used'],
+                ['Inactive', $stats['inactive'], '#f59e0b', 'inactive'],
+                ['Unused', $stats['unused'], '#9ca3af', 'unused'],
+            ];
+        @endphp
+        <div class="{{ $panel }} p-5">
+            <p class="text-[11px] font-bold uppercase tracking-[.14em] mb-1" style="color:var(--primary)">Components summary</p>
+            <p class="text-[13px] text-gray-600 dark:text-gray-300 mb-3">
+                <b class="text-gray-900 dark:text-white">{{ $total }}</b> {{ Str::plural('component', $total) }} ·
+                <b class="text-gray-900 dark:text-white">{{ number_format($stats['fields']) }}</b> {{ Str::plural('field', $stats['fields']) }} ·
+                <b class="text-gray-900 dark:text-white">{{ $stats['placements'] }}</b> live {{ Str::plural('placement', $stats['placements']) }}
+            </p>
+            @if ($total)
+                <div class="flex h-2.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/[0.06]">
+                    @foreach ($split as [$label, $n, $color])
+                        @if ($n)<span style="width:{{ round($n / $total * 100, 2) }}%;background:{{ $color }}" title="{{ $label }} · {{ $n }}"></span>@endif
+                    @endforeach
+                </div>
+                <div class="mt-3 space-y-1.5">
+                    @foreach ($split as [$label, $n, $color, $key])
+                        <button type="button" wire:click="setFilter('{{ $key }}')" class="w-full flex items-center gap-2 text-[12.5px] hover:underline">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:{{ $color }}"></span>
+                            <span class="text-gray-600 dark:text-gray-300">{{ $label }}</span>
+                            <span class="ml-auto font-bold text-gray-900 dark:text-white">{{ $n }}</span>
+                        </button>
+                    @endforeach
+                </div>
+                @if ($stats['byTag'])
+                    <p class="mt-4 mb-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400">Top tags</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach ($stats['byTag'] as $tag => $n)
+                            <button type="button" wire:click="setTag(@js((string) $tag))" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 hover:underline">#{{ $tag }} <span class="opacity-60">{{ $n }}</span></button>
+                        @endforeach
+                    </div>
+                @endif
+            @else
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400">Nothing built yet.</p>
+            @endif
+        </div>
+
+        @if ($stats['emptyList']->isNotEmpty() || $stats['noFields']->isNotEmpty() || $stats['inactive'] || $stats['unused'])
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Needs attention</p>
+            <div class="space-y-2.5">
+                @if ($stats['emptyList']->isNotEmpty())
+                    <div class="rounded-2xl px-3.5 py-3 bg-rose-50 dark:bg-rose-500/10">
+                        <p class="text-[13px] font-bold text-rose-800 dark:text-rose-200">{{ $stats['empty'] }} empty {{ Str::plural('field', $stats['empty']) }} to fill in</p>
+                        <p class="text-[12px] text-rose-700/80 dark:text-rose-200/70 mb-1.5">These show blank on the site.</p>
+                        <div class="flex flex-wrap gap-1">
+                            @foreach ($stats['emptyList'] as $c)
+                                <a href="{{ $this->pageUrl($c->id, $canManage) }}" wire:navigate class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/80 dark:bg-white/[0.08] text-rose-800 dark:text-rose-200 hover:underline">{{ $c->name }} · {{ $c->empty_nodes_count }}</a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                @if ($stats['noFields']->isNotEmpty())
+                    <div class="rounded-2xl px-3.5 py-3 bg-amber-50 dark:bg-amber-500/10">
+                        <p class="text-[13px] font-bold text-amber-800 dark:text-amber-200">{{ $stats['noFields']->count() }} without any fields</p>
+                        <div class="flex flex-wrap gap-1 mt-1.5">
+                            @foreach ($stats['noFields']->take(5) as $c)
+                                <a href="{{ $this->pageUrl($c->id, $canManage) }}" wire:navigate class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white/80 dark:bg-white/[0.08] text-amber-800 dark:text-amber-200 hover:underline">{{ $c->name }}</a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                @if ($stats['inactive'])
+                    <button type="button" wire:click="setFilter('inactive')" class="w-full text-left rounded-2xl px-3.5 py-3 bg-amber-50 dark:bg-amber-500/10 hover:ring-2 hover:ring-amber-200 dark:hover:ring-amber-500/30">
+                        <p class="text-[13px] font-bold text-amber-800 dark:text-amber-200">{{ $stats['inactive'] }} inactive after a template switch</p>
+                        <p class="text-[12px] text-amber-700/80 dark:text-amber-200/70">Only on another template's pages — they return if you switch back. Show them →</p>
+                    </button>
+                @endif
+                @if ($stats['unused'])
+                    <button type="button" wire:click="setFilter('unused')" class="w-full text-left rounded-2xl px-3.5 py-3 bg-gray-50 dark:bg-white/[0.04] hover:ring-2 hover:ring-gray-200 dark:hover:ring-white/10">
+                        <p class="text-[13px] font-bold text-gray-800 dark:text-gray-100">{{ $stats['unused'] }} on no page</p>
+                        <p class="text-[12px] text-gray-500 dark:text-gray-400">Place them on a page or tidy them up. Show them →</p>
+                    </button>
+                @endif
+            </div>
+        </div>
+        @endif
+
+        @if ($stats['mostUsed']->isNotEmpty())
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Most used</p>
+            @php $max = max(1, $stats['mostUsed']->max('live_pages_count')); @endphp
+            <div class="space-y-2.5">
+                @foreach ($stats['mostUsed'] as $c)
+                    <a href="{{ $this->pageUrl($c->id) }}" wire:navigate class="block group">
+                        <span class="flex items-center justify-between text-[12.5px]">
+                            <span class="truncate text-gray-700 dark:text-gray-200 group-hover:underline">{{ $c->name }}</span>
+                            <span class="font-bold text-gray-900 dark:text-white tabular-nums">{{ $c->live_pages_count }} {{ Str::plural('page', $c->live_pages_count) }}</span>
+                        </span>
+                        <span class="block mt-1 h-1.5 rounded-full bg-gray-100 dark:bg-white/[0.06] overflow-hidden">
+                            <span class="block h-full rounded-full" style="width:{{ round($c->live_pages_count / $max * 100) }}%;background:var(--primary)"></span>
+                        </span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        @if ($stats['recentlyEdited']->isNotEmpty())
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Recently edited</p>
+            <div class="space-y-2">
+                @foreach ($stats['recentlyEdited'] as $c)
+                    <a href="{{ $this->pageUrl($c->id) }}" wire:navigate class="flex items-center gap-2.5 group">
+                        <span class="w-7 h-7 rounded-lg grid place-items-center shrink-0 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['block'] }}"/></svg>
+                        </span>
+                        <span class="min-w-0 flex-1 text-[12.5px] font-semibold text-gray-700 dark:text-gray-200 truncate group-hover:underline">{{ $c->name }}</span>
+                        <span class="text-[11px] text-gray-400 shrink-0">{{ $c->last_edited->diffForHumans(null, true) }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Related</p>
+            <div class="grid grid-cols-2 gap-2">
+                @foreach ([
+                    ['Edit site', 'Place blocks visually', url($site->name.'/connect'), false],
+                    ['Pages', 'Where components sit', route('pages', $site->name), true],
+                    ['Collections', 'Data behind blocks', route('collections', $site->name), true],
+                    ['Assets', 'Images for fields', route('media', $site->name), true],
+                    ['Forms', 'Submissions & fields', route('site.forms', $site->name), true],
+                    ['Designs', 'Templates & themes', route('site.designs', $site->name), true],
+                ] as [$label, $hint, $href, $navigate])
+                    <a href="{{ $href }}" @if ($navigate) wire:navigate @endif class="rounded-2xl px-3 py-2.5 bg-gray-50 dark:bg-white/[0.04] hover:ring-2 hover:ring-[color-mix(in_srgb,var(--primary)_30%,transparent)]">
+                        <span class="block text-[12.5px] font-bold text-gray-900 dark:text-white">{{ $label }} →</span>
+                        <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ $hint }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </x-slot:quick>
 </x-tri-layout>
