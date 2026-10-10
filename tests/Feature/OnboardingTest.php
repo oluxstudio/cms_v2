@@ -131,7 +131,7 @@ test('creating a site with sample content populates it and advances the checklis
         ->set('addSample', true)
         ->set('form.name', 'sample-'.uniqid())
         ->set('form.domain', 'sample.test')
-        ->set('form.owner', $user->name)
+        ->set('form.owner', $user->name)->set('form.description', 'A site created by the test suite.')
         ->call('create')
         ->assertDispatched('onboarding-updated');
 

@@ -34,6 +34,6 @@ return [
         'www', 'cms', 'app', 'admin', 'api', 'mail', 'smtp', 'imap', 'pop', 'webmail', 'ftp',
         'autoconfig', 'autodiscover', 'ns1', 'ns2', 'mx', 'status', 'help', 'docs', 'blog',
         'dev', 'staging', 'test', 'demo', 'preview', 'assets', 'cdn', 'static', 'support',
-        'hairco', 'v2hairco',
+        'hairco', 'v2hairco', 'privacy', 'terms', 'legal',
     ], array_filter(array_map('trim', explode(',', (string) env('PLATFORM_RESERVED_SUBDOMAINS', ''))))))),
 ];

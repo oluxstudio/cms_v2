@@ -279,6 +279,16 @@ class ConnectReviewPage extends LivewireComponent
         if ($fields && $this->editingSiteProperties()) {
             $this->edit['focus'] = array_values(array_filter(array_map('trim', explode(',', $fields)),
                 fn ($k) => (bool) preg_match('/^[a-z0-9_]{1,40}$/', $k)));
+        } elseif ($fields && ($this->edit['type'] ?? null) === 'component') {
+            // Any block: data-olx-fields names its fields by key (a field
+            // labelled "Logo Badge" is logoBadge) — the panel opens on those,
+            // with "Show all fields" for the rest.
+            $want = array_values(array_filter(array_map('trim', explode(',', $fields)),
+                fn ($k) => (bool) preg_match('/^[A-Za-z0-9_]{1,60}$/', $k)));
+            $have = collect($this->edit['nodes'] ?? [])->map(fn ($n) => Str::camel(Str::slug((string) $n['label'])))->all();
+            if (array_intersect($want, $have) !== []) {
+                $this->edit['focus'] = $want;
+            }
         }
         // Clicked a specific entry in the preview → open its card in the panel.
         if (($this->edit['type'] ?? null) === 'collection') {

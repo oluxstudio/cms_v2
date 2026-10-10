@@ -315,6 +315,14 @@
                     @endforeach
                 </div>
 
+                {{-- Referral network: pass this customer to a partner --}}
+                @if($c->email && $site->allows(auth()->user(), 'network.manage'))
+                <button type="button" x-on:click="$dispatch('open-refer-partner', { prefill: { from_contact_id: @js($c->id) } })"
+                        class="mb-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors">
+                    🤝 Refer to a partner
+                </button>
+                @endif
+
                 {{-- Extra data --}}
                 @if(!empty($c->data))
                 <div class="mb-6 p-4 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.04]">
@@ -412,4 +420,6 @@
         </div>
     </div>
     @endif
+
+    <livewire:refer-to-partner :site="$site" />
 </div>

@@ -408,6 +408,8 @@
 </x-tri-layout>
 @endif {{-- /detail --}}
 
+<livewire:refer-to-partner :site="$site" />
+
 
 
 

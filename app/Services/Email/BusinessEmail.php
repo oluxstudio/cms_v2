@@ -187,7 +187,8 @@ class BusinessEmail
                 'email_domain_id' => $d->id,
                 'local_part' => $local,
                 'display_name' => trim((string) $displayName) ?: null,
-                'quota_gb' => (int) config('email.quota_gb', 15),
+                // The plan's storage per mailbox (Growth 10 GB, Pro 25 GB); else the default.
+                'quota_gb' => (int) (User::find($d->account_id)?->currentSubscription()->tier()['limits']['mailbox_storage_gb'] ?? config('email.quota_gb', 15)),
                 'status' => 'pending',
                 'idempotency_key' => (string) Str::ulid(),
                 'created_by' => $actor->id,

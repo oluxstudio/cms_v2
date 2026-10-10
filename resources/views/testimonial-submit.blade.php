@@ -8,6 +8,7 @@
     </head>
     <body class="pub-theme antialiased">
         <livewire:testimonial-submit-page />
+        <x-legal-footer />
         @fluxScripts
     </body>
 </html>

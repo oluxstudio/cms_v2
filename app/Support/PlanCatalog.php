@@ -54,6 +54,18 @@ class PlanCatalog
         config(['plans.tiers' => $tiers]);
     }
 
+    /**
+     * The rules an account falls back to when nothing is paying (trial over,
+     * plan cancelled): the Free plan — as edited by an admin when it's on
+     * sale, or the shipped Free plan when it has been removed from sale.
+     */
+    public static function lapsedTier(): ?array
+    {
+        self::$defaults ??= ['tiers' => config('plans.tiers', []), 'trial_days' => config('plans.trial_days', 14)];
+
+        return config('plans.tiers.free') ?? self::$defaults['tiers']['free'] ?? null;
+    }
+
     /** Built-in plans a super admin deleted (restorable): key => name. @return array<string,string> */
     public static function deletedBuiltIns(): array
     {

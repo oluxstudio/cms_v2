@@ -78,3 +78,20 @@ it('never re-creates rows the owner removed when the template refreshes', functi
     $scaffold->applyPages($site, slideDefs(2));
     expect(slideRows($photos))->toHaveCount(4);
 });
+
+it('tops up header/footer blocks with fields the template added since', function () {
+    $site = Site::factory()->create(['user_id' => User::factory()->create()->id, 'domain' => 'rows-'.uniqid().'.test']);
+    $scaffold = app(TemplateScaffolder::class);
+    $header = fn (array $extra) => [['name' => 'Site Header', 'nodes' => array_merge([
+        ['label' => 'Cta Label', 'type' => 'text', 'value' => 'Join'],
+        ['label' => 'Menu 1 Label', 'type' => 'text', 'value' => 'Home', 'description' => 'item:label'],
+        ['label' => 'Menu 2 Label', 'type' => 'text', 'value' => 'About', 'description' => 'item:label'],
+    ], $extra)], ['type' => 'content']];
+    $scaffold->applyChrome($site, $header([]));
+    $c = Component::where('site_id', $site->id)->where('name', 'Site Header')->firstOrFail();
+    $c->nodes()->where('label', 'Cta Label')->update(['value' => 'Visit us']);
+    $c->nodes()->where('label', 'Menu 2 Label')->delete();
+
+    $scaffold->applyChrome($site, $header([['label' => 'Logo Main', 'type' => 'image', 'value' => '/assets/images/main.png']]));
+    expect($c->nodes()->pluck('value', 'label')->all())->toBe(['Cta Label' => 'Visit us', 'Menu 1 Label' => 'Home', 'Logo Main' => '/assets/images/main.png']);
+});

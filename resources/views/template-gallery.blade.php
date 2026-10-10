@@ -7,6 +7,7 @@
     </head>
     <body class="pub-theme antialiased">
         <livewire:template-gallery-page />
+        <x-legal-footer />
         @fluxScripts
     </body>
 </html>

@@ -144,6 +144,7 @@
 <footer>
     <div class="wrap">
         Built on <a href="{{ route('landing') }}">Olux Studio</a> — websites, leads &amp; bookings for local businesses.
+        · <a href="{{ route('privacy') }}">Privacy</a>
     </div>
 </footer>
 

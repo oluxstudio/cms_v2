@@ -66,6 +66,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'hooks/template-repo',
             'stripe/templates/webhook',
             'stripe/subscription/webhook',
+            'newsletter/unsubscribe/*', // RFC 8058 one-click unsubscribe POSTs from mail providers
         ]);
     })
     ->withProviders([

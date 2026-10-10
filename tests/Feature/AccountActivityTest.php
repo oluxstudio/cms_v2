@@ -29,7 +29,7 @@ test('creating a site and API key records account activity', function () {
     Livewire::actingAs($owner)->test(SiteComponent::class)
         ->set('form.name', 'act-'.Str::lower(Str::random(6)))
         ->set('form.domain', 'act.test')
-        ->set('form.owner', $owner->name)
+        ->set('form.owner', $owner->name)->set('form.description', 'A site for the account activity test.')
         ->call('create');
 
     $site = Site::where('user_id', $owner->id)->first();

@@ -14,7 +14,7 @@ test('the landing page has a detail panel for every public plan and every specia
     }
     expect($html)->toContain('← Back to pricing')
         ->toContain('← Back to features')
-        ->toContain('Reason to upgrade')                       // the plan's comparison rows
+        ->toContain('Storage per mailbox')                     // the plan's comparison rows
         ->toContain('/fonts/google/fonts.css');                  // self-hosted brand fonts
 });
 

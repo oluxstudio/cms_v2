@@ -2,7 +2,7 @@
      LEFT and the slot on the right — used by /start so the signup steps that
      come after email verification look like the register panel they follow. --}}
 @props(['tagline' => 'Join thousands of creators<br>building with '.e(config('app.name')).'.'])
-<div class="auth-screen min-h-screen flex items-center justify-center p-4">
+<div class="auth-screen min-h-screen flex flex-col items-center justify-center p-4">
     <div class="auth-card w-full max-w-[65rem] rounded-3xl shadow-2xl overflow-hidden relative md:flex">
 
         {{-- Hero panel --}}
@@ -46,6 +46,7 @@
             {{ $slot }}
         </div>
     </div>
+    <x-legal-footer class="pb-0" />
 </div>
 
 <style>
@@ -81,6 +82,8 @@
     /* Social buttons + divider on dark */
     .auth-screen .grid.grid-cols-2 a { border-color: var(--line-inv); color: var(--on-bg-soft); }
     .auth-screen .grid.grid-cols-2 a:hover { background: rgba(255,255,255,.06); border-color: var(--primary); }
+    .auth-screen .social-btn { background: rgba(255,255,255,.05); border-color: var(--line-inv); color: var(--on-bg); }
+    .auth-screen .social-btn:hover { background: rgba(255,255,255,.1); border-color: var(--primary); }
     .auth-screen .h-px { background: var(--line-inv); }
     .auth-screen .signup-steps .step-bg { background: var(--surface); }
     .auth-screen .text-gray-600, .auth-screen .text-gray-700 { color: var(--on-bg-soft); }

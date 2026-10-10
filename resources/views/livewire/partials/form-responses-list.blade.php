@@ -92,7 +92,28 @@
                                         </span>
                                     @endif
                                 </div>
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    {{-- Referral network: pass this person to a partner (prefilled from the fields) --}}
+                                    @if ($site->allows(auth()->user(), 'network.manage'))
+                                        @php
+                                            $pick = fn (string $needle) => collect($fields)->first(fn ($v, $k) => is_scalar($v) && $v !== '' && str_contains(strtolower((string) $k), $needle));
+                                            $referPrefill = array_filter([
+                                                'name' => $response->contact?->name ?? $pick('name'),
+                                                'email' => $response->contact?->email ?? $pick('email'),
+                                                'phone' => $response->contact?->phone ?? $pick('phone'),
+                                                'from_contact_id' => $response->contact_id,
+                                                'form_tick' => (bool) collect($fields)->first(fn ($v, $k) => str_contains(strtolower((string) $k), 'consent') && in_array(strtolower((string) (is_array($v) ? implode(',', $v) : $v)), ['1', 'yes', 'on', 'true'], true)),
+                                            ]);
+                                        @endphp
+                                        <button type="button" x-on:click="$dispatch('open-refer-partner', { prefill: @js($referPrefill) })"
+                                                class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
+                                                       bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200
+                                                       border border-gray-200 dark:border-white/[0.1]
+                                                       hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors">
+                                            🤝 Refer to a partner
+                                        </button>
+                                    @endif
+
                                     {{-- Convert to Contact / Converted indicator --}}
                                     @if ($response->contact)
                                         <a href="{{ url($site->name.'/contacts').'?contact='.$response->contact->id }}"

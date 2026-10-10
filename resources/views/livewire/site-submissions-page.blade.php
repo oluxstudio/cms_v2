@@ -71,10 +71,10 @@
                         </td>
                         <td class="px-5 py-3.5">
                             <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
-                                         {{ $sub->status === 'active'
+                                         {{ in_array($sub->status, ['active', 'subscribed'], true)
                                              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
                                              : 'bg-gray-100 dark:bg-white/[0.05] text-gray-500 dark:text-gray-400' }}">
-                                <span class="w-1.5 h-1.5 rounded-full {{ $sub->status === 'active' ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
+                                <span class="w-1.5 h-1.5 rounded-full {{ in_array($sub->status, ['active', 'subscribed'], true) ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
                                 {{ ucfirst($sub->status) }}
                             </span>
                         </td>

@@ -241,6 +241,11 @@ Route::middleware('feature:store')->group(function () {
 // Live X / Twitter feed.
 Route::get('/preview/{siteName}/feed', [FeedController::class, 'index'])->middleware('feature:twitter')->name('public.feed');
 
+// ── Module public routes (newsletter / events / memberships / reviews) ──
+foreach (['newsletter', 'events', 'memberships', 'reviews', 'network'] as $module) {
+    require __DIR__."/modules/{$module}-public.php";
+}
+
 // ── Public page rendering (catch-all — keep last in the public group)
 Route::get('/preview/{siteName}/{pageUrl}', [PublicPageController::class, 'show'])
     ->where('pageUrl', '.*')
@@ -264,6 +269,10 @@ Route::get('/designs/{key}', fn (string $key) => view('template-detail', ['key' 
 
 // Public "getting started" tutorial — linked from the post-payment email.
 Route::view('/tutorial', 'tutorial')->name('tutorial');
+
+// Public privacy policy (UK GDPR). /privacy#data-deletion is the data-deletion URL
+// registered with Meta / X / TikTok developer apps.
+Route::view('/privacy', 'privacy')->name('privacy');
 
 // Landing "choose a plan" CTA. Signed-in users go straight to checkout;
 // guests are sent to sign up with the chosen plan remembered in the session,
@@ -336,6 +345,7 @@ Route::middleware('auth')->group(function () {
         Route::view('/admin/addons', 'platform-addons')->name('admin.addons');
         Route::view('/admin/announcements', 'platform-announcements')->name('admin.announcements');
         Route::view('/admin/testimonials', 'platform-testimonials')->name('admin.testimonials');
+        require __DIR__.'/modules/network-super.php';
         Route::post('/admin/impersonate/{user}', function (string $user) {
             $target = User::findOrFail($user);
             try {
@@ -573,6 +583,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/{siteID}/polls', [SiteController::class, 'polls'])->middleware(['feature:polls', 'perm:polls.view'])->name('site.polls');
     Route::get('/{siteID}/posts', [SiteController::class, 'posts'])->middleware('perm:posts.view')->name('site.posts');
     Route::get('/{siteID}/donations', [SiteController::class, 'donations'])->middleware(['feature:donations', 'perm:donations.view'])->name('site.donations');
+    // Module admin pages (newsletter / events / memberships / reviews)
+    foreach (['newsletter', 'events', 'memberships', 'reviews', 'network'] as $module) {
+        require __DIR__."/modules/{$module}-admin.php";
+    }
     Route::get('/{siteID}/invoices', [SiteController::class, 'invoices'])->middleware(['feature:invoices', 'perm:invoices.view'])->name('site.invoices');
     Route::get('/{siteID}/invoices/{invoice}', [SiteController::class, 'invoiceShow'])->middleware(['feature:invoices', 'perm:invoices.view'])->name('site.invoice.show');
     Route::get('/{siteID}/store/{product}', [SiteController::class, 'productShow'])->middleware(['feature:store', 'perm:store.view'])->name('site.store.product');

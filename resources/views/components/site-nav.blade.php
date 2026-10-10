@@ -46,6 +46,9 @@
             $link('contacts', 'Contacts', 'contacts'),
             $link('tasks', 'Tasks', 'check-square'),
             $link('alerts', 'Alerts', 'bell'),
+            // Referral Network (core, not an add-on): pass leads to local partners.
+            $link('network', 'Network', 'team'),
+            $link('earnings', 'Earnings', 'receipt'),
         ],
         'Site' => [
             $link('properties', 'Properties', 'sliders'),

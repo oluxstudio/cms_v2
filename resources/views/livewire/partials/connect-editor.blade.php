@@ -64,11 +64,17 @@
         @endif
     @else
     @php
+        // Opened from the preview on a few fields (data-olx-fields): just those.
+        $nodeFocus = (array) ($edit['focus'] ?? []);
+        $inFocus = fn ($node) => $nodeFocus === [] || in_array(\Illuminate\Support\Str::camel(\Illuminate\Support\Str::slug((string) $node['label'])), $nodeFocus, true);
         // Repeatable rows ("Slide 1 Image", "Slide 1 Caption"…) group into one
         // card per row, with add / remove / reorder for the whole group.
         $plainNodes = [];
         $rowGroups = [];
         foreach ($edit['nodes'] as $i => $node) {
+            if (! $inFocus($node)) {
+                continue;
+            }
             if (($node['type'] ?? '') !== 'collection' && preg_match('/^(.+?) (\d+)(?: (.+))?$/', (string) $node['label'], $m)) {
                 $rowGroups[$m[1]][(int) $m[2]][] = [$i, $node, $m[3] ?? 'Text'];
             } else {
@@ -107,6 +113,9 @@
             </div>
         @endforeach
     </div>
+    @if ($nodeFocus !== [])
+        <button type="button" wire:click="showAllProperties" class="mt-2 text-[11px] font-semibold underline" style="color:var(--primary)">Show all fields</button>
+    @endif
     @endif
     @if (!empty($edit['collection']))
         {{-- Data source backing this component — entries edit in the collection panel --}}

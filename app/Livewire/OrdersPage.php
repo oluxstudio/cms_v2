@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithLayoutMode;
 use App\Mail\CourierInvite;
 use App\Models\Invoice;
 use App\Models\Order;
@@ -16,23 +17,44 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Store dashboard — greeting, month stats w/ deltas, revenue bars,
- * sales-by-category donut, and the order list (search/sort/filter, per-row
- * status control, order → invoice).
+ * Orders — the house 3-rail layout: money & fulfilment tiles left, the order
+ * cards (search · status pills · sort · layout) centre, revenue trend ·
+ * status mix · needs attention · top customers · related right. The detail
+ * drawer keeps the lifecycle actions (ship, deliver, return, refund, courier,
+ * invoice).
  */
 class OrdersPage extends Component
 {
+    use WithLayoutMode;
+
+    /** Order statuses that count as money in. */
+    private const PAID = ['paid', 'shipped', 'delivered', 'fulfilled'];
+
+    /** Filter pills → the statuses each one covers. Raw statuses also work (?status=pending). */
+    public const GROUPS = [
+        'unfulfilled' => ['pending', 'paid', 'return_requested'],
+        'paid' => ['paid', 'shipped', 'delivered', 'fulfilled'],
+        'fulfilled' => ['shipped', 'delivered', 'fulfilled'],
+        'refunded' => ['refunded', 'returned'],
+        'cancelled' => ['cancelled'],
+    ];
+
+    public const SORTS = ['newest', 'oldest', 'amount', 'amount_asc', 'customer'];
+
     public Site $site;
 
-    #[Url(as: 'status')]
+    #[Url(as: 'status', except: 'all')]
     public string $statusFilter = 'all';
 
     #[Url(as: 'order')]
     public ?string $selectedId = null;
 
+    #[Url(as: 'q', except: '')]
     public string $search = '';
 
-    public string $sort = 'newest';   // newest | oldest | amount
+    /** newest | oldest | amount | amount_asc | customer */
+    #[Url(except: 'newest')]
+    public string $sort = 'newest';
 
     public string $successMessage = '';
 
@@ -41,11 +63,35 @@ class OrdersPage extends Component
     public function mount(Site $site): void
     {
         $this->site = $site;
+        $this->initLayout('orders', 'grid');
+        if (! $this->validFilter($this->statusFilter)) {
+            $this->statusFilter = 'all';
+        }
     }
 
     public function setStatusFilter(string $status): void
     {
-        $this->statusFilter = $status;
+        $this->statusFilter = $this->validFilter($status) ? $status : 'all';
+    }
+
+    private function validFilter(string $f): bool
+    {
+        return $f === 'all' || isset(self::GROUPS[$f]) || in_array($f, Order::STATUSES, true);
+    }
+
+    /** Statuses the current filter covers (null = all). */
+    private function filterStatuses(): ?array
+    {
+        if ($this->statusFilter === 'all') {
+            return null;
+        }
+
+        return self::GROUPS[$this->statusFilter] ?? [$this->statusFilter];
+    }
+
+    public function updatedSort(): void
+    {
+        $this->sort = in_array($this->sort, self::SORTS, true) ? $this->sort : 'newest';
     }
 
     public function open(string $id): void
@@ -269,16 +315,23 @@ class OrdersPage extends Component
     {
         $term = trim($this->search);
 
+        $statuses = $this->filterStatuses();
+        $bare = ltrim($term, '#');
+
         return $this->site->orders()
             ->withCount('items')
-            ->when($this->statusFilter !== 'all', fn ($q) => $q->where('status', $this->statusFilter))
+            ->withSum('items as units', 'qty')
+            ->when($statuses !== null, fn ($q) => $q->whereIn('status', $statuses))
             ->when($term !== '', fn ($q) => $q->where(fn ($w) => $w
-                ->where('id', (int) ltrim($term, '#'))
+                ->where('id', $bare)
+                ->orWhere('order_number', 'like', "%{$bare}%")
                 ->orWhere('customer_name', 'like', "%{$term}%")
                 ->orWhere('customer_email', 'like', "%{$term}%")
                 ->orWhereHas('items', fn ($i) => $i->where('name', 'like', "%{$term}%"))))
-            ->when($this->sort === 'amount', fn ($q) => $q->orderByDesc('total_cents'),
-                fn ($q) => $this->sort === 'oldest' ? $q->oldest() : $q->latest())
+            ->when($this->sort === 'amount', fn ($q) => $q->orderByDesc('total_cents'))
+            ->when($this->sort === 'amount_asc', fn ($q) => $q->orderBy('total_cents'))
+            ->when($this->sort === 'customer', fn ($q) => $q->orderByRaw("COALESCE(NULLIF(customer_name, ''), customer_email) IS NULL")->orderByRaw("COALESCE(NULLIF(customer_name, ''), customer_email)"))
+            ->when($this->sort === 'oldest', fn ($q) => $q->oldest(), fn ($q) => $q->latest())
             ->get();
     }
 
@@ -288,7 +341,7 @@ class OrdersPage extends Component
             return null;
         }
 
-        return $this->site->orders()->with('items')->find($this->selectedId);
+        return $this->site->orders()->with(['items', 'events.user:id,name'])->find($this->selectedId);
     }
 
     public function getStatusCountsProperty(): array
@@ -300,6 +353,10 @@ class OrdersPage extends Component
             ->toArray();
 
         $counts['all'] = array_sum($counts);
+        // Pill groups (Unfulfilled / Paid / Fulfilled / Refunded / Cancelled).
+        foreach (self::GROUPS as $group => $statuses) {
+            $counts['group:'.$group] = array_sum(array_intersect_key($counts, array_flip($statuses)));
+        }
 
         return $counts;
     }
@@ -310,11 +367,15 @@ class OrdersPage extends Component
         return $prev > 0 ? (int) round(($now - $prev) / $prev * 100) : null;
     }
 
-    /** Dashboard numbers — month stats + deltas, daily bars, category donut. */
+    /**
+     * Rail numbers — month stats + deltas, daily revenue, top products,
+     * refunds, repeat & top customers, needs-attention counts. Grouped
+     * queries only: the cost doesn't grow with the date range or statuses.
+     */
     public function getInsightsProperty(): array
     {
         $currency = $this->site->currency ?? 'gbp';
-        $paid = fn () => $this->site->orders()->whereIn('status', ['paid', 'shipped', 'delivered', 'fulfilled']);
+        $paid = fn () => $this->site->orders()->whereIn('status', self::PAID);
 
         $monthStart = now()->startOfMonth();
         $prevStart = now()->subMonthNoOverflow()->startOfMonth();
@@ -334,22 +395,19 @@ class OrdersPage extends Component
         $paidOrders = $paid()->count();
         $revenueAll = (int) $paid()->sum('total_cents');
 
-        // Last 8 days of revenue → the big bar chart.
-        $daily = collect(range(7, 0))->map(function ($d) {
+        // Last 14 days of revenue → the trend bars (one grouped query).
+        $since = now()->subDays(13)->startOfDay();
+        $byDay = $paid()->where('paid_at', '>=', $since)
+            ->selectRaw('DATE(paid_at) as d, SUM(total_cents) as cents')
+            ->groupBy('d')->pluck('cents', 'd');
+        $daily = collect(range(13, 0))->map(function ($d) use ($byDay) {
             $date = now()->subDays($d);
 
-            return [
-                'label' => $date->format('j M'),
-                'cents' => (int) $this->site->orders()
-                    ->whereIn('status', ['paid', 'shipped', 'delivered', 'fulfilled'])
-                    ->whereDate('paid_at', $date->toDateString())
-                    ->sum('total_cents'),
-            ];
+            return ['label' => $date->format('j M'), 'cents' => (int) ($byDay[$date->toDateString()] ?? 0)];
         })->all();
 
-        // Sales by category (top products by revenue share).
-        $paidIds = $paid()->pluck('id');
-        $cats = OrderItem::whereIn('order_id', $paidIds)
+        // Sales by product (top products by revenue share).
+        $cats = OrderItem::whereIn('order_id', $paid()->select('id'))
             ->selectRaw('name, sum(price_cents * qty) as revenue_cents, sum(qty) as units')
             ->groupBy('name')->orderByDesc('revenue_cents')->limit(5)->get();
         $catTotal = max(1, (int) $cats->sum('revenue_cents'));
@@ -361,15 +419,13 @@ class OrdersPage extends Component
             'revenue' => Money::format((int) $r->revenue_cents, $currency),
         ])->all();
 
-        // Weekly per-status movement for the summary tiles.
-        $weekly = [];
-        foreach (Order::STATUSES as $st) {
-            $thisWeek = $this->site->orders()->where('status', $st)
-                ->where('updated_at', '>=', now()->startOfWeek())->count();
-            $lastWeek = $this->site->orders()->where('status', $st)
-                ->whereBetween('updated_at', [now()->subWeek()->startOfWeek(), now()->startOfWeek()->subSecond()])->count();
-            $weekly[$st] = ['now' => $thisWeek, 'delta' => $this->delta($thisWeek, $lastWeek)];
-        }
+        // Customers by email across every paid-ish order (refunds excluded).
+        $byCustomer = $this->site->orders()->whereIn('status', [...self::PAID, 'return_requested', 'returned'])
+            ->whereNotNull('customer_email')->where('customer_email', '!=', '')
+            ->selectRaw('customer_email as email, MAX(customer_name) as name, COUNT(*) as n, SUM(total_cents) as cents')
+            ->groupBy('customer_email')->get();
+        $refunds = $this->site->orders()->where('status', 'refunded')
+            ->selectRaw('COUNT(*) as n, COALESCE(SUM(total_cents), 0) as cents')->first();
 
         return [
             'currency' => $currency,
@@ -380,12 +436,25 @@ class OrdersPage extends Component
             'customers' => $customers,
             'custDelta' => $this->delta($customers, $prevCustomers),
             'aov' => Money::format($paidOrders > 0 ? (int) round($revenueAll / $paidOrders) : 0, $currency),
+            'revenueAll' => Money::format($revenueAll, $currency),
             'awaiting' => $this->site->orders()->where('status', 'pending')->count(),
             'waitingPeople' => $this->site->orders()->where('status', 'pending')
                 ->whereNotNull('customer_email')->distinct('customer_email')->count('customer_email'),
+            // Checkouts left unpaid for over a day — likely failed or abandoned payments.
+            'stalePending' => $this->site->orders()->where('status', 'pending')->where('created_at', '<', now()->subDay())->count(),
+            'refunds' => (int) ($refunds->n ?? 0),
+            'refundedTotal' => Money::format((int) ($refunds->cents ?? 0), $currency),
+            'customersAll' => $byCustomer->count(),
+            'repeatCustomers' => $byCustomer->where('n', '>', 1)->count(),
+            'topCustomers' => $byCustomer->sortByDesc('cents')->take(5)->map(fn ($c) => [
+                'email' => $c->email,
+                'name' => $c->name ?: $c->email,
+                'orders' => (int) $c->n,
+                'cents' => (int) $c->cents,
+                'total' => Money::format((int) $c->cents, $currency),
+            ])->values()->all(),
             'daily' => $daily,
             'categories' => $categories,
-            'weekly' => $weekly,
         ];
     }
 

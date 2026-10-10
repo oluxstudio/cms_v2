@@ -102,6 +102,11 @@
             ]
         },
         {
+            "type": "app:graceway:ministries",
+            "name": "Ministries",
+            "nodes": []
+        },
+        {
             "type": "app:graceway:sermons",
             "name": "Sermons",
             "nodes": [

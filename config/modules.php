@@ -36,6 +36,10 @@ return [
         'donations' => 'basic',
         'bookings' => 'basic',
         'estimator' => 'basic',
+        'newsletter' => 'basic',
+        'events' => 'basic',
+        'memberships' => 'basic',
+        'reviews' => 'basic',
 
     ],
 

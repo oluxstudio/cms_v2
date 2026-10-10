@@ -276,7 +276,7 @@ class SiteController extends Controller
         return view('store-product', ['site' => $site, 'product' => $productModel]);
     }
 
-    public function invoiceShow($siteID, int $invoice)
+    public function invoiceShow($siteID, string $invoice)
     {
         $site = $this->findSiteBySlug($siteID);
         $invoice = Invoice::where('site_id', $site->id)->findOrFail($invoice);
@@ -285,7 +285,7 @@ class SiteController extends Controller
     }
 
     /** Letterhead-style PDF of the invoice. */
-    public function invoicePdf($siteID, int $invoice)
+    public function invoicePdf($siteID, string $invoice)
     {
         $site = $this->findSiteBySlug($siteID);
         $invoice = Invoice::where('site_id', $site->id)->findOrFail($invoice);

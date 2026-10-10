@@ -12,6 +12,8 @@ use Livewire\Livewire;
 function flowSite(array $attrs = []): array
 {
     $owner = User::factory()->create();
+    // Own domains are a paid-plan feature (the trial gets a free subdomain).
+    \App\Models\AccountSubscription::create(['user_id' => $owner->id, 'plan' => 'starter', 'status' => 'active', 'started_at' => now()]);
     $site = Site::create($attrs + [
         'user_id' => $owner->id, 'name' => $n = 'flow-'.uniqid(),
         'domain' => $attrs['domain'] ?? '',

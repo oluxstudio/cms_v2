@@ -23,3 +23,14 @@ test('a user cannot switch to a site they cannot access', function () {
         ->call('selected', $site->id)
         ->assertStatus(403);
 });
+
+it('has a How to use button that opens the guide on the sites page', function () {
+    $user = \App\Models\User::factory()->create(['email_verified_at' => now()]);
+
+    $html = $this->actingAs($user)->get(route('home'))->assertOk()->getContent();
+
+    expect($html)->toContain("\$dispatch('open-how-to')")
+        ->toContain('id="how-to-use"')
+        ->toContain('@open-how-to.window')
+        ->toContain('From a new site to your first customer');
+});

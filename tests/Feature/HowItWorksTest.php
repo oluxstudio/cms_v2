@@ -49,7 +49,8 @@ test('first login shows the intro pack with plans; after hiding it the button br
 
     $this->actingAs($user->fresh())->get('/select-site')
         ->assertOk()
-        ->assertSee('Show introduction')
+        ->assertSee('Introduction')
+        ->assertSee('How to use')
         ->assertDontSee('Your 5 steps');
 
     // The button reopens the same panel, without resetting "shown once".

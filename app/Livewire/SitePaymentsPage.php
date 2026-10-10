@@ -9,6 +9,8 @@ use App\Models\SitePaymentSettings;
 use App\Payments\Drivers\StripeConnectGateway;
 use App\Payments\SitePaymentOnboarding;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Stripe\StripeClient;
@@ -178,6 +180,97 @@ class SitePaymentsPage extends Component
         }
 
         return ['collected_cents' => $collected, 'outstanding_cents' => $outstanding];
+    }
+
+    /**
+     * Money taken THIS calendar month, per payment-taking feature (only the
+     * features this site has switched on). Grouped SUM queries — one per
+     * feature; modules whose tables aren't migrated yet are skipped.
+     */
+    #[Computed]
+    public function monthTakings(): array
+    {
+        $since = now()->startOfMonth();
+        $siteId = $this->site->id;
+        $rows = [];
+        $sum = function (string $key, callable $query) use (&$rows) {
+            try {
+                $rows[$key] = (int) $query();
+            } catch (\Throwable) {
+                // module table not migrated yet — leave it out
+            }
+        };
+
+        if ($this->site->hasFeature('store')) {
+            $sum('store', fn () => Order::where('site_id', $siteId)->whereIn('status', ['paid', 'fulfilled'])->where('created_at', '>=', $since)->sum('total_cents'));
+        }
+        if ($this->site->hasFeature('invoices')) {
+            $sum('invoices', fn () => Invoice::where('site_id', $siteId)->where('status', 'paid')->where('paid_at', '>=', $since)->sum('total_cents'));
+        }
+        if ($this->site->hasFeature('donations')) {
+            $sum('donations', fn () => $this->site->donations()->where('status', 'paid')
+                ->where(fn ($q) => $q->where('paid_at', '>=', $since)->orWhere(fn ($w) => $w->whereNull('paid_at')->where('created_at', '>=', $since)))
+                ->sum('amount_cents'));
+        }
+        if ($this->site->hasFeature('bookings')) {
+            $sum('bookings', fn () => $this->site->bookings()->where('paid_cents', '>', 0)->where('created_at', '>=', $since)->sum('paid_cents'));
+        }
+        if ($this->site->hasFeature('events') && Schema::hasTable('event_ticket_orders')) {
+            $sum('events', fn () => DB::table('event_ticket_orders')->where('site_id', $siteId)->where('status', 'paid')->where('paid_at', '>=', $since)->sum('total_cents'));
+        }
+        if ($this->site->hasFeature('memberships') && Schema::hasTable('members')) {
+            // Recurring members active this month — monthly price (yearly ÷ 12).
+            $sum('memberships', fn () => DB::table('members')->where('site_id', $siteId)->where('status', 'active')->where('price_cents', '>', 0)
+                ->selectRaw("COALESCE(SUM(CASE WHEN `interval` = 'year' THEN price_cents / 12 ELSE price_cents END), 0) as c")->value('c'));
+        }
+
+        return ['rows' => $rows, 'total' => array_sum($rows)];
+    }
+
+    /** The platform fee (percent of each sale) on the owner's plan. */
+    #[Computed]
+    public function feePct(): float
+    {
+        try {
+            return (float) ($this->site->user?->currentSubscription()->paymentFeePct() ?? config('payments.connect_fee_percent', 0));
+        } catch (\Throwable) {
+            return (float) config('payments.connect_fee_percent', 0);
+        }
+    }
+
+    /** Test vs live: own keys → the publishable key; Connect → the platform key. */
+    #[Computed]
+    public function testMode(): ?bool
+    {
+        $ps = $this->site->paymentSettings;
+        if ($ps?->connect_account_id) {
+            $secret = (string) config('services.stripe_platform.secret');
+
+            return $secret === '' ? null : str_starts_with($secret, 'sk_test_');
+        }
+        if ($ps && filled($ps->stripe_publishable)) {
+            return ! str_starts_with((string) $ps->stripe_publishable, 'pk_live_');
+        }
+
+        return null;
+    }
+
+    /** Every money feature: switched on? and where its admin page lives. */
+    #[Computed]
+    public function moneyFeatures(): array
+    {
+        return collect([
+            'store' => ['Store', 'Card checkout for products', 'store'],
+            'invoices' => ['Invoices', 'Pay-by-link on every invoice', 'invoices'],
+            'donations' => ['Donations', 'One-off gifts on /donate', 'donations'],
+            'bookings' => ['Bookings', 'Deposits & full payment', 'bookings'],
+            'events' => ['Events', 'Paid tickets (RSVPs are free)', 'events'],
+            'memberships' => ['Memberships', 'Recurring paid tiers', 'memberships'],
+        ])->map(fn ($f, $key) => [
+            'key' => $key, 'label' => $f[0], 'hint' => $f[1],
+            'enabled' => $this->site->hasFeature($key),
+            'href' => url($this->site->name.'/'.$f[2]),
+        ])->values()->all();
     }
 
     public function render()

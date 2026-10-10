@@ -101,6 +101,11 @@ Route::post('/sites/{siteName}/subscribe', [SubscriptionController::class, 'stor
 Route::post('/sites/{siteName}/unsubscribe', [SubscriptionController::class, 'destroy'])->middleware(['throttle:leads', 'site.origin', 'honeypot'])
     ->name('api.unsubscribe');
 
+// ── Module APIs for template sites (newsletter / events / memberships / reviews)
+foreach (['newsletter', 'events', 'memberships', 'reviews'] as $module) {
+    require __DIR__."/modules/{$module}-api.php";
+}
+
 // ── Contact form
 Route::post('/sites/{siteName}/contact', [ContactController::class, 'store'])->middleware(['throttle:leads', 'site.origin', 'honeypot'])
     ->name('api.contact');

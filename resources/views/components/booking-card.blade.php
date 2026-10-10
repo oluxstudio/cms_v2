@@ -1,7 +1,10 @@
 {{--
-    Booking card — professional dark card on a cream base.
-    Structure: identity header → accent summary strip → definition rows →
-    total + status. One accent element, stroke-icon system, tabular numerals.
+    Booking detail — the body of the booking drawer on the Bookings page.
+    Sections: identity (service · reference · status) → when (date tile, time,
+    staff) → customer (contact actions, message, form answers) → payment
+    (total · paid · balance) → progress (Created → Confirmed → Paid/Cancelled).
+    Light + dark, theme accent, readable sizes. Actions live in the drawer's
+    pinned footer (the default slot is rendered there by the page).
     Props: booking (App\Models\Booking), accent (hex).
 --}}
 @props(['booking', 'accent' => '#6366f1'])
@@ -9,172 +12,162 @@
     $b = $booking;
     $p = (array) ($b->params ?? []);
     $kind = $b->service?->kind ?? 'slot';
-    $statusChip = ['confirmed' => 'Confirmed', 'pending' => 'Pending', 'no_show' => 'No-show',
-                   'awaiting_payment' => 'Awaiting payment', 'cancelled' => 'Cancelled'][$b->status] ?? ucfirst($b->status);
+    $status = [
+        'confirmed' => ['Confirmed', 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300', 'bg-emerald-500'],
+        'pending' => ['Pending', 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300', 'bg-amber-500'],
+        'awaiting_payment' => ['Awaiting payment', 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300', 'bg-sky-500'],
+        'no_show' => ['No-show', 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300', 'bg-orange-500'],
+        'cancelled' => ['Cancelled', 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300', 'bg-rose-500'],
+    ][$b->status] ?? [ucfirst((string) $b->status), 'bg-gray-100 text-gray-600 dark:bg-white/[0.06] dark:text-gray-300', 'bg-gray-400'];
 
-    $when = match ($kind) {
-        'stay'  => ($p['check_in'] ?? '?').' → '.($p['check_out'] ?? '?'),
-        'trip'  => ($p['origin'] ?? '?').' → '.($p['destination'] ?? '?'),
-        default => $b->starts_at?->format('D, M j, Y'),
-    };
-    $whenSub = match ($kind) {
-        'stay'  => ($p['nights'] ?? '?').' night(s) · '.($p['guests'] ?? 1).' guest(s)',
-        'trip'  => $b->starts_at?->format('D, M j, Y · g:i A'),
-        default => $b->starts_at?->format('g:i A').' – '.$b->ends_at?->format('g:i A'),
-    };
+    $start = $b->starts_at;
+    $end = $b->ends_at;
+    $minutes = $start && $end ? $start->diffInMinutes($end) : null;
+    $duration = $minutes === null ? null : ($minutes >= 60 ? intdiv($minutes, 60).' h'.($minutes % 60 ? ' '.($minutes % 60).' min' : '') : $minutes.' min');
+    $relative = $start ? ($start->isToday() ? 'Today' : ($start->isTomorrow() ? 'Tomorrow' : ($start->isPast() ? $start->diffForHumans() : 'in '.$start->diffForHumans(null, true)))) : null;
 
-    // Payment section only matters when the SERVICE takes payment (or money
-    // was actually collected) — services without payment hide it entirely.
-    $paymentRelevant = $b->total_cents > 0
-        && (($b->service?->requires_payment ?? false) || $b->paid_cents > 0);
+    // Payment section only when the SERVICE takes payment (or money was collected).
+    $paymentRelevant = $b->total_cents > 0 && (($b->service?->requires_payment ?? false) || $b->paid_cents > 0);
+    $paidPct = $b->total_cents > 0 ? min(100, (int) round($b->paid_cents / $b->total_cents * 100)) : 0;
+    $payState = $b->balanceCents() === 0 ? ['Paid in full', 'text-emerald-600 dark:text-emerald-400']
+        : ($b->paid_cents > 0 ? ['Deposit paid', 'text-sky-600 dark:text-sky-400'] : ['Unpaid', 'text-amber-600 dark:text-amber-400']);
 
-    [$int, $dec] = $b->total_cents > 0
-        ? explode('.', number_format($b->total_cents / 100, 2))
-        : ['Free', null];
+    $initials = collect(preg_split('/\s+/', trim((string) $b->customer_name)))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('') ?: '?';
+    $answers = collect((array) ($p['fields'] ?? []))->filter(fn ($v) => filled($v));
 
-    // Stroke-icon set (Feather-style, 15px, consistent weight)
-    $svg = fn (string $d) => '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'.$d.'</svg>';
-    $icons = [
-        'user'  => $svg('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
-        'mail'  => $svg('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>'),
-        'phone' => $svg('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>'),
-        'note'  => $svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
-        'clock' => $svg('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'),
-        'tag'   => $svg('<path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42Z"/><circle cx="7" cy="7" r="1"/>'),
-        'users' => $svg('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
-    ];
-
-    $rows = [];
-    if ($b->resource) $rows[] = ['user', ucfirst($b->service?->resourceNoun() ?? 'resource'), $b->resource->name];
-    if ($kind === 'stay') $rows[] = ['users', 'Party', ($p['guests'] ?? 1).' guest(s) · '.$b->quantity.' unit(s)'];
-    if ($kind === 'trip') $rows[] = ['tag', 'Seats', $b->quantity];
-    $rows[] = ['mail', 'Email', $b->customer_email];
-    if ($b->customer_phone) $rows[] = ['phone', 'Phone', $b->customer_phone];
-    foreach ((array) ($p['fields'] ?? []) as $fk => $fv) $rows[] = ['tag', \Illuminate\Support\Str::headline($fk), $fv];
-    if ($b->notes) $rows[] = ['note', 'Message', $b->notes];
-    $rows[] = ['clock', 'Booked', $b->created_at->format('M j, Y · g:i A')];
+    $section = 'rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-white/[0.03]';
+    $label = 'text-[11px] font-bold uppercase tracking-[.12em] text-gray-400 dark:text-gray-500';
 @endphp
-<div {{ $attributes->merge(['class' => 'relative rounded-[22px] p-3']) }}
-     style="background:#f6efe0; box-shadow:0 24px 48px -12px rgba(0,0,0,.45)">
+<div {{ $attributes->merge(['class' => 'space-y-3']) }}>
 
-    {{-- dark card --}}
-    <div class="relative rounded-2xl px-6 pt-6 pb-5 text-[#ece5d8]"
-         style="background:#1c1a16; border:1px solid rgba(236,229,216,.07); box-shadow:0 16px 32px -8px rgba(0,0,0,.5)">
-
-        {{-- identity header --}}
-        <div class="flex items-start justify-between gap-4">
-            <div class="flex items-center gap-3.5 min-w-0">
-                <span class="shrink-0 w-11 h-11 rounded-full grid place-items-center text-lg"
-                      style="background:rgba(236,229,216,.06); border:1px solid rgba(236,229,216,.16)">{{ $b->service?->typeIcon() ?? '📅' }}</span>
-                <div class="min-w-0">
-                    <p class="text-[16px] font-semibold tracking-tight text-[#f6f1e7] truncate">{{ $b->service?->name ?? 'Service' }}</p>
-                    <p class="text-[11px] mt-0.5 font-mono tracking-wide text-[#9a8f7e]">{{ $b->reference }}</p>
-                </div>
-            </div>
-            <span class="shrink-0 mt-0.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.08em]
-                {{ $b->status === 'cancelled' ? 'text-rose-300' : ($b->status === 'no_show' ? 'text-amber-300' : 'text-[#e8dfc9]') }}"
-                  style="background:rgba(236,229,216,.07); border:1px solid rgba(236,229,216,.14)">{{ $statusChip }}</span>
+    {{-- ── Identity ── --}}
+    <div class="flex items-start gap-3">
+        <span class="shrink-0 w-12 h-12 rounded-2xl grid place-items-center text-xl" style="background:{{ $accent }}1a">{{ $b->service?->typeIcon() ?? '📅' }}</span>
+        <div class="min-w-0 flex-1">
+            <p class="text-[17px] font-extrabold tracking-tight text-gray-900 dark:text-white truncate">{{ $b->service?->name ?? 'Service' }}</p>
+            <button type="button" x-data="{ c: false }" x-on:click="navigator.clipboard?.writeText(@js($b->reference)); c = true; setTimeout(() => c = false, 1500)"
+                    class="mt-0.5 inline-flex items-center gap-1.5 font-mono text-[12px] tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white" title="Copy reference">
+                {{ $b->reference }}
+                <span x-show="! c" class="text-[10px]">⧉</span><span x-show="c" x-cloak class="text-[10px] text-emerald-500 font-sans font-bold">Copied</span>
+            </button>
         </div>
+        <span class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] font-bold {{ $status[1] }}">
+            <span class="w-1.5 h-1.5 rounded-full {{ $status[2] }}"></span>{{ $status[0] }}
+        </span>
+    </div>
 
-        {{-- accent "credit card" hero — the single accent element --}}
-        <div class="mt-5 relative overflow-hidden rounded-2xl px-5 pt-4 pb-4.5 text-white"
-             style="background:linear-gradient(125deg, {{ $accent }} 0%, {{ $accent }}d9 55%, {{ $accent }}b3 100%); box-shadow:0 12px 28px -10px {{ $accent }}99">
-            {{-- sheen --}}
-            <div class="absolute -top-14 -right-10 w-48 h-48 rounded-full pointer-events-none" style="background:rgba(255,255,255,.12); filter:blur(2px)"></div>
-            <div class="absolute -bottom-20 -left-8 w-44 h-44 rounded-full pointer-events-none" style="background:rgba(0,0,0,.12); filter:blur(2px)"></div>
-
-            {{-- top row: chip + payment state --}}
-            <div class="relative flex items-center justify-between">
-                <span class="inline-block w-9 h-6.5 rounded-[5px]"
-                      style="background:linear-gradient(135deg, #f3e3b8, #d9bd82); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18); height:1.65rem"></span>
-                @if($paymentRelevant)
-                    <div class="text-right">
-                        <p class="text-[10px] uppercase tracking-[0.1em] text-white/65">
-                            {{ $b->balanceCents() === 0 ? 'Paid in full' : ($b->paid_cents > 0 ? 'Balance due' : 'Unpaid') }}</p>
-                        <p class="text-[14px] font-bold tabular-nums leading-tight">
-                            {{ $b->balanceCents() > 0 && $b->paid_cents > 0 ? $b->formattedBalance() : $b->formattedTotal() }}</p>
-                    </div>
+    {{-- ── When ── --}}
+    <div class="{{ $section }} p-4 flex items-center gap-4">
+        @if ($kind === 'slot' && $start)
+            <div class="shrink-0 w-16 rounded-xl overflow-hidden text-center shadow-sm border border-gray-100 dark:border-white/[0.08]">
+                <p class="text-[10px] font-bold uppercase tracking-wider py-0.5 text-white" style="background:{{ $accent }}">{{ $start->format('M') }}</p>
+                <p class="text-[24px] font-extrabold leading-tight text-gray-900 dark:text-white bg-white dark:bg-[#1d1e2a]">{{ $start->format('j') }}</p>
+                <p class="text-[10px] font-semibold text-gray-500 pb-1 bg-white dark:bg-[#1d1e2a]">{{ $start->format('D') }}</p>
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="text-[17px] font-extrabold text-gray-900 dark:text-white tabular-nums">{{ $start->format('g:i A') }}@if($end) – {{ $end->format('g:i A') }}@endif</p>
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400">{{ $start->format('l j F Y') }}@if($duration) · {{ $duration }}@endif</p>
+                @if ($b->resource)
+                    <p class="mt-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-gray-700 dark:text-gray-200">
+                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+                        {{ ucfirst($b->service?->resourceNoun() ?? 'with') }}: {{ $b->resource->name }}
+                    </p>
                 @endif
             </div>
-
-            {{-- "card number": the booking reference, spaced in groups --}}
-            <p class="relative mt-4 font-mono text-[17px] font-semibold tracking-[0.18em] tabular-nums">
-                {{ trim(chunk_split($b->reference, 4, ' ')) }}</p>
-
-            {{-- bottom row: holder + valid line (cardholder / expiry treatment) --}}
-            <div class="relative mt-3.5 flex items-end justify-between gap-4">
-                <div class="min-w-0">
-                    <p class="text-[9px] uppercase tracking-[0.14em] text-white/60">Customer</p>
-                    <p class="text-[12.5px] font-semibold tracking-wide truncate uppercase">{{ $b->customer_name }}</p>
-                </div>
-                <div class="shrink-0 text-right">
-                    <p class="text-[9px] uppercase tracking-[0.14em] text-white/60">{{ $kind === 'stay' ? 'Dates' : ($kind === 'trip' ? 'Route' : 'When') }}</p>
-                    <p class="text-[12.5px] font-semibold tracking-wide">{{ $when }}</p>
-                    <p class="text-[10px] text-white/70">{{ $whenSub }}</p>
-                </div>
-            </div>
-        </div>
-
-
-        {{-- lifecycle box — Created → Confirmed → Paid / Cancelled --}}
-        <div class="mt-4 rounded-xl px-4 py-3" style="background:rgba(236,229,216,.045); border:1px solid rgba(236,229,216,.08)">
-            <div class="flex items-start">
-                @foreach($b->timeline() as $i => $step)
-                    @php $done = (bool) $step['at']; $bad = $step['label'] === 'Cancelled'; @endphp
-                    @if($i > 0)
-                        <div class="flex-1 h-px mt-[9px] mx-2" style="background:rgba(236,229,216,{{ $done ? '.35' : '.1' }})"></div>
-                    @endif
-                    <div class="flex flex-col items-center shrink-0">
-                        <span class="w-[18px] h-[18px] rounded-full grid place-items-center text-[9px] font-bold"
-                              style="{{ $bad && $done
-                                  ? 'background:rgba(244,63,94,.18); color:#fda4af; box-shadow:inset 0 0 0 1px rgba(244,63,94,.5)'
-                                  : ($done
-                                      ? 'background:'.$accent.'; color:#fff; box-shadow:0 2px 6px -1px '.$accent.'99'
-                                      : 'background:rgba(236,229,216,.07); color:#9a8f7e; box-shadow:inset 0 0 0 1px rgba(236,229,216,.18)') }}">
-                            {{ $done ? ($bad ? '✕' : '✓') : $i + 1 }}
-                        </span>
-                        <span class="mt-1 text-[9px] font-semibold uppercase tracking-[0.07em] {{ $done ? ($bad ? 'text-rose-300' : 'text-[#ece5d8]') : 'text-[#7d7362]' }}">{{ $step['label'] }}</span>
-                        <span class="text-[8.5px] tabular-nums {{ $done ? 'text-[#9a8f7e]' : 'text-[#5f574a]' }}">{{ $step['at']?->format('M j · g:i A') ?? '—' }}</span>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- definition rows --}}
-        <div class="mt-4 max-h-[26vh] overflow-y-auto">
-            @foreach($rows as [$icon, $label, $value])
-                <div class="flex items-center gap-3 py-[9px] border-b last:border-0" style="border-color:rgba(236,229,216,.06)">
-                    <span class="shrink-0 text-[#8a7f6d]">{!! $icons[$icon] !!}</span>
-                    <span class="shrink-0 text-[12px] text-[#9a8f7e]">{{ $label }}</span>
-                    <span class="ml-auto text-right text-[13px] font-medium text-[#ece5d8] break-all leading-snug">{{ $value }}</span>
-                </div>
-            @endforeach
-        </div>
-
-        {{-- total row (hidden when the service takes no payment) --}}
-        @if($paymentRelevant)
-        <div class="mt-4 pt-4 flex items-end justify-between gap-4 border-t" style="border-color:rgba(236,229,216,.1)">
-            <div>
-                <p class="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[#9a8f7e]">Total</p>
-                @php
-                    $cmeta = config('currencies.'.strtolower($b->currency ?: 'gbp'));
-                    $sym = $cmeta['symbol'] ?? strtoupper($b->currency);
-                    $after = ($cmeta['position'] ?? 'before') === 'after';
-                @endphp
-                <p class="mt-1 text-[28px] font-bold tracking-tight leading-none tabular-nums text-[#f6f1e7]">
-                    @if($dec !== null && ! $after)<span class="text-[16px] font-semibold text-[#9a8f7e] mr-0.5">{{ $sym }}</span>@endif{{ $int }}@if($dec !== null)<span class="text-[15px] font-semibold text-[#9a8f7e]">.{{ $dec }}</span>@if($after)
-                    <span class="text-[12px] font-semibold text-[#9a8f7e] ml-1">{{ $sym }}</span>@endif @endif
-                </p>
-            </div>
-            @if($b->total_cents > 0 && $b->paid_cents > 0 && $b->balanceCents() > 0)
-                <p class="text-[11px] text-[#9a8f7e] tabular-nums text-right leading-relaxed">paid {{ $b->formattedPaid() }}<br>due {{ $b->formattedBalance() }}</p>
+            @if ($relative)
+                <span class="shrink-0 self-start text-[11px] font-bold px-2 py-0.5 rounded-full {{ $start->isPast() ? 'bg-gray-100 dark:bg-white/[0.06] text-gray-500' : 'text-white' }}"
+                      @unless ($start->isPast()) style="background:{{ $accent }}" @endunless>{{ $relative }}</span>
             @endif
-        </div>
+        @elseif ($kind === 'stay')
+            <div class="min-w-0 flex-1">
+                <p class="{{ $label }}">Stay</p>
+                <p class="text-[17px] font-extrabold text-gray-900 dark:text-white mt-1">{{ $p['check_in'] ?? '?' }} → {{ $p['check_out'] ?? '?' }}</p>
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400">{{ $p['nights'] ?? '?' }} {{ Str::plural('night', (int) ($p['nights'] ?? 2)) }} · {{ $p['guests'] ?? 1 }} {{ Str::plural('guest', (int) ($p['guests'] ?? 1)) }} · {{ $b->quantity }} {{ Str::plural('unit', (int) $b->quantity) }}@if($b->resource) · {{ $b->resource->name }}@endif</p>
+            </div>
+        @else
+            <div class="min-w-0 flex-1">
+                <p class="{{ $label }}">Trip</p>
+                <p class="text-[17px] font-extrabold text-gray-900 dark:text-white mt-1">{{ $p['origin'] ?? '?' }} → {{ $p['destination'] ?? '?' }}</p>
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400">{{ $start?->format('D j M Y · g:i A') }} · {{ $b->quantity }} {{ Str::plural('seat', (int) $b->quantity) }}</p>
+            </div>
         @endif
     </div>
 
-    {{-- cream footer lip: actions --}}
-    @if(trim($slot ?? '') !== '')
-        <div class="px-2 pt-3.5 pb-2 flex flex-wrap items-center justify-center gap-2">{{ $slot }}</div>
+    {{-- ── Customer ── --}}
+    <div class="{{ $section }} p-4">
+        <div class="flex items-center gap-3">
+            <span class="shrink-0 w-10 h-10 rounded-full grid place-items-center text-[13px] font-extrabold text-white" style="background:{{ $accent }}">{{ $initials }}</span>
+            <div class="min-w-0 flex-1">
+                <p class="text-[15px] font-bold text-gray-900 dark:text-white truncate">{{ $b->customer_name }}</p>
+                <p class="text-[12px] text-gray-500 dark:text-gray-400">Customer</p>
+            </div>
+        </div>
+        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <a href="mailto:{{ $b->customer_email }}" class="group flex items-center gap-2.5 rounded-xl px-3 py-2.5 bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.07] min-w-0">
+                <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span class="text-[13px] font-semibold text-gray-800 dark:text-gray-100 truncate group-hover:underline">{{ $b->customer_email }}</span>
+            </a>
+            @if ($b->customer_phone)
+                <a href="tel:{{ preg_replace('/[^0-9+]/', '', $b->customer_phone) }}" class="group flex items-center gap-2.5 rounded-xl px-3 py-2.5 bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.07] min-w-0">
+                    <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.95.68l1.5 4.49a1 1 0 01-.5 1.21l-2.26 1.13a11.04 11.04 0 005.52 5.52l1.13-2.26a1 1 0 011.21-.5l4.49 1.5a1 1 0 01.68.95V19a2 2 0 01-2 2h-1C9.72 21 3 14.28 3 6V5z"/></svg>
+                    <span class="text-[13px] font-semibold text-gray-800 dark:text-gray-100 tabular-nums truncate group-hover:underline">{{ $b->customer_phone }}</span>
+                </a>
+            @endif
+        </div>
+        @if ($b->notes)
+            <div class="mt-3 rounded-xl px-3.5 py-3 text-[13px] leading-relaxed text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-white/[0.04] border-l-[3px]" style="border-color:{{ $accent }}">
+                <p class="{{ $label }} mb-1">Message</p>
+                {{ $b->notes }}
+            </div>
+        @endif
+        @if ($answers->isNotEmpty())
+            <dl class="mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]">
+                @foreach ($answers as $fk => $fv)
+                    <div class="flex items-start justify-between gap-4 py-2 text-[13px]">
+                        <dt class="text-gray-500 dark:text-gray-400">{{ Str::headline($fk) }}</dt>
+                        <dd class="font-semibold text-gray-900 dark:text-white text-right break-words">{{ is_array($fv) ? implode(', ', $fv) : $fv }}</dd>
+                    </div>
+                @endforeach
+            </dl>
+        @endif
+    </div>
+
+    {{-- ── Payment ── --}}
+    @if ($paymentRelevant)
+        <div class="{{ $section }} p-4">
+            <div class="flex items-end justify-between gap-4">
+                <div>
+                    <p class="{{ $label }}">Total</p>
+                    <p class="mt-1 text-[26px] font-extrabold tracking-tight leading-none tabular-nums text-gray-900 dark:text-white">{{ $b->formattedTotal() }}</p>
+                </div>
+                <p class="text-[13px] font-bold {{ $payState[1] }}">{{ $payState[0] }}</p>
+            </div>
+            <div class="mt-3 h-2 rounded-full bg-gray-100 dark:bg-white/[0.07] overflow-hidden">
+                <div class="h-full rounded-full {{ $paidPct === 100 ? 'bg-emerald-500' : '' }}" style="width:{{ $paidPct }}%;{{ $paidPct === 100 ? '' : 'background:'.$accent }}"></div>
+            </div>
+            <div class="mt-2 flex justify-between text-[12px] text-gray-500 dark:text-gray-400 tabular-nums">
+                <span>Paid {{ $b->formattedPaid() }}</span>
+                <span>{{ $b->balanceCents() > 0 ? 'Balance '.$b->formattedBalance() : 'Nothing left to pay' }}</span>
+            </div>
+        </div>
     @endif
+
+    {{-- ── Progress ── --}}
+    <div class="{{ $section }} p-4">
+        <p class="{{ $label }} mb-3">Progress</p>
+        <ol class="relative space-y-3">
+            @foreach ($b->timeline() as $i => $step)
+                @php $done = (bool) $step['at']; $bad = $step['label'] === 'Cancelled'; @endphp
+                <li class="flex items-start gap-3">
+                    <span class="shrink-0 w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold
+                                 {{ $done ? ($bad ? 'bg-rose-500 text-white' : 'text-white') : 'bg-gray-100 dark:bg-white/[0.07] text-gray-400' }}"
+                          @if ($done && ! $bad) style="background:{{ $accent }}" @endif>{{ $done ? ($bad ? '✕' : '✓') : $i + 1 }}</span>
+                    <div class="min-w-0 flex-1 flex items-baseline justify-between gap-3">
+                        <span class="text-[13.5px] font-semibold {{ $done ? ($bad ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white') : 'text-gray-400' }}">{{ $step['label'] }}</span>
+                        <span class="text-[12px] tabular-nums text-gray-400">{{ $step['at']?->format('j M · g:i A') ?? 'Not yet' }}</span>
+                    </div>
+                </li>
+            @endforeach
+        </ol>
+    </div>
 </div>

@@ -5,8 +5,10 @@ namespace App\Livewire;
 use App\Livewire\Forms\SiteForm;
 use App\Models\Site;
 use App\Services\AccountActivity;
+use App\Services\Blueprints\BlueprintRegistry;
 use App\Services\Blueprints\SalonBlueprint;
 use App\Services\SampleSiteSeeder;
+use App\Support\SiteProperties;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
@@ -27,14 +29,82 @@ class SiteComponent extends Component
     /** Scaffold a populated starter (pages, components, testimonials, contact form). */
     public bool $addSample = true;
 
-    /** Starter content: 'sample' (generic), 'salon' (Salon & Barber blueprint) or 'blank'. */
+    /**
+     * Starter content: 'business' (the ready-made setup for the chosen kind of
+     * business), 'sample' (generic), 'salon' (Salon & Barber) or 'blank'.
+     */
     public string $starter = 'sample';
+
+    // ── Create-site lightbox: the business behind the site ──
+    /** Kind of business (BlueprintRegistry type) — tailors the starter pages. */
+    public string $type = '';
+
+    public string $contactEmail = '';
+
+    public string $contactPhone = '';
+
+    /** Live web-address check: null = not checked yet. */
+    public ?bool $available = null;
+
+    /** The address keeps following the business name until it's edited. */
+    public bool $addressEdited = false;
 
     /** Opened from the onboarding checklist's "Create site" step. */
     #[On('open-create-site')]
     public function openCreate(): void
     {
         $this->showCreate = true;
+    }
+
+    public function closeCreate(): void
+    {
+        $this->showCreate = false;
+        $this->resetErrorBag();
+    }
+
+    /** Business name typed → suggest the web address from it (until edited). */
+    public function updatedFormOwner(string $value): void
+    {
+        if (! $this->addressEdited) {
+            $this->form->name = Str::slug($value);
+        }
+        $this->checkAddress();
+    }
+
+    public function updatedFormName(string $value): void
+    {
+        $this->form->name = Str::slug($value);
+        $this->addressEdited = $this->form->name !== '' && $this->form->name !== Str::slug((string) $this->form->owner);
+        $this->checkAddress();
+    }
+
+    /** Picking a kind of business makes its ready-made setup the starter. */
+    public function updatedType(string $value): void
+    {
+        if (BlueprintRegistry::exists($value)) {
+            $this->starter = 'business';
+        }
+    }
+
+    public function checkAddress(): void
+    {
+        $label = (string) $this->form->name;
+        $this->available = $label === '' ? null
+            : (strlen($label) >= 4 && Site::validSubdomainLabel($label) && ! Site::nameTaken($label) && ! Site::where('name', $label)->exists());
+    }
+
+    /** Sites used / allowed on the account's plan — the lightbox shows it up front. */
+    public function getPlanRoomProperty(): array
+    {
+        $sub = Auth::user()->currentSubscription();
+
+        return [
+            'plan' => $sub->tier()['name'] ?? 'Free trial',
+            'used' => Auth::user()->sites()->count(),
+            'limit' => $sub->sitesLimit(),
+            'can' => $sub->canCreateSite(),
+            'expired' => $sub->trialExpired(),
+        ];
     }
 
     public function mount(): void
@@ -68,7 +138,7 @@ class SiteComponent extends Component
                     ->orWhereIn('id', Auth::user()->memberships()->whereNotNull('site_id')->pluck('site_id'))
                     ->orWhereIn('user_id', Auth::user()->memberships()->whereNull('site_id')->pluck('account_id'));
             }))
-            ->withCount(['pages', 'components'])->with('user:id,name');
+            ->withCount(['pages', 'components', 'contacts'])->with('user:id,name');
 
         if ($this->search !== '') {
             $query->where(function ($q) {
@@ -86,7 +156,11 @@ class SiteComponent extends Component
 
         // The card view reads plain array keys — provide every one it shows.
         $this->sites = $query->latest()->get()
-            ->map(fn ($s) => array_merge($s->toArray(), ['owner' => $s->user->name ?? '—']))
+            ->map(fn ($s) => array_merge($s->toArray(), [
+                'owner' => $s->user->name ?? '—',
+                'url' => $s->publicUrl(),
+                'is_owner' => $s->user_id === Auth::id(),
+            ]))
             ->all();
     }
 
@@ -99,10 +173,29 @@ class SiteComponent extends Component
 
     public function create(): void
     {
+        // The web address follows the business name unless typed; the
+        // instant subdomain fills the domain (a real one is added on Go live).
+        $this->form->name = Str::slug((string) ($this->form->name ?: $this->form->owner));
+        if (trim((string) $this->form->domain) === '') {
+            $base = (string) config('publishing.subdomain_base') ?: 'oluxstudio.com';
+            $this->form->domain = $this->form->name.'.'.$base;
+        }
         $this->validate([
-            'form.name' => ['required', 'unique:sites,name', fn ($attr, $value, $fail) => Site::nameTaken(Str::slug((string) $value)) && $fail('That address is taken. Try another.')],
-            'form.domain' => 'required',
-            'form.owner' => 'required',
+            'form.owner' => ['required', 'string', 'min:2', 'max:80'],
+            'form.name' => ['required', 'min:4', 'max:63', 'alpha_dash', 'unique:sites,name',
+                fn ($attr, $value, $fail) => (Site::nameTaken((string) $value) || ! Site::validSubdomainLabel((string) $value)) && $fail('That address is taken or not allowed — try another.')],
+            'form.domain' => ['required', 'string', 'max:190'],
+            'form.description' => ['required', 'string', 'min:10', 'max:500'],
+            'type' => ['nullable', 'string', fn ($attr, $value, $fail) => $value !== '' && ! BlueprintRegistry::exists($value) && $fail('Pick one of the listed kinds of business.')],
+            'contactEmail' => ['nullable', 'email', 'max:190'],
+            'contactPhone' => ['nullable', 'max:40', 'regex:/^[0-9+().\-\s\/ext]{3,40}$/i'],
+        ], [
+            'form.owner.required' => 'What is the business (or project) called?',
+            'form.description.required' => 'Add a sentence about what the site is for.',
+            'form.description.min' => 'A little more, please — at least a short sentence.',
+        ], [
+            'form.owner' => 'business name', 'form.name' => 'web address', 'form.description' => 'description',
+            'contactEmail' => 'email', 'contactPhone' => 'phone',
         ]);
 
         // Plan enforcement: site count is capped by the subscription tier
@@ -135,19 +228,40 @@ class SiteComponent extends Component
         // tier) — so the Commerce nav is populated from day one.
         $site->enableCommerceSuite();
 
+        // The business behind the site: Site Properties + the AI's context.
+        $site->setAttr('business_name', (string) $this->form->owner);
+        $site->setAttr('site_purpose', (string) $this->form->description);
+        if ($this->type !== '') {
+            $site->setAttr('business_type', $this->type);
+        }
+        $values = array_filter(['site_name' => (string) $this->form->owner, 'email' => trim($this->contactEmail)]);
+        $rows = trim($this->contactPhone) !== '' ? ['phones' => [['label' => 'Main', 'value' => trim($this->contactPhone)]]] : [];
+        try {
+            SiteProperties::save($site, ['values' => $values] + ($rows ? ['rows' => $rows] : []), Auth::user()?->name);
+            // Setup isn't an edit: no history entry (the checklist's "update your
+            // pages" step counts content versions).
+            \App\Models\ContentVersion::where('site_id', $site->id)->delete();
+        } catch (\Throwable $e) {
+            report($e); // details can always be added on Site Properties
+        }
+
         // Optional starter content so the site isn't a blank canvas (onboarding).
-        match ($this->starter) {
-            'salon' => app(SalonBlueprint::class)->apply($site),
-            'sample' => app(SampleSiteSeeder::class)->seed($site),
+        match (true) {
+            $this->starter === 'business' && BlueprintRegistry::exists($this->type) => BlueprintRegistry::forType($this->type)->apply($site),
+            $this->starter === 'salon' => app(SalonBlueprint::class)->apply($site),
+            in_array($this->starter, ['sample', 'business'], true) => app(SampleSiteSeeder::class)->seed($site),
             default => null,
         };
 
         AccountActivity::siteCreated($site);
 
         $this->form->reset();
+        $this->reset(['type', 'contactEmail', 'contactPhone', 'available', 'addressEdited']);
+        $this->starter = 'sample';
         $this->showCreate = false;
         $this->loadSites();
         $this->dispatch('onboarding-updated'); // advance the checklist
+        $this->dispatch('toast', level: 'success', title: 'Site created', message: $site->name.' is ready — next, choose a template and edit its content.');
     }
 
     public function delete(string $id): void
@@ -168,6 +282,14 @@ class SiteComponent extends Component
 
     public function render()
     {
-        return view('livewire.site-component');
+        $user = Auth::user();
+
+        return view('livewire.site-component', [
+            'businessTypes' => BlueprintRegistry::types(),
+            // Right rail: the get-started checklist and the account's plan.
+            'steps' => \App\Support\Onboarding::steps($user),
+            'progress' => \App\Support\Onboarding::progress($user),
+            'sub' => $user->currentSubscription(),
+        ]);
     }
 }

@@ -99,5 +99,6 @@
             </details>
         </section>
     </main>
+    <x-legal-footer style="border-top:1px solid var(--line)" />
 </body>
 </html>

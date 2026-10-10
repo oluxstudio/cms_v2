@@ -275,6 +275,28 @@ class TemplateScaffolder
             if ($existing = $site->contentComponents()->where('name', $name)->first()) {
                 $tags = collect($existing->tags ?? [])->reject(fn ($t) => str_starts_with((string) $t, 'chrome:'))->push($zone);
                 $existing->update(['tags' => $tags->values()->all()]);
+                // The template gained header/footer fields since: add them
+                // (owner values untouched; rows the owner removed stay removed).
+                $have = $existing->nodes()->pluck('label')->flip();
+                $max = (int) $existing->nodes()->max('order');
+                foreach (($block['nodes'] ?? []) as $node) {
+                    $label = $node['label'] ?? null;
+                    if (! $label || isset($have[$label])) {
+                        continue;
+                    }
+                    if (str_starts_with((string) ($node['description'] ?? $node['kind'] ?? ''), 'item:')
+                        && preg_match('/^(.+?) \d+(?: |$)/', $label, $m)
+                        && $have->keys()->contains(fn ($l) => str_starts_with((string) $l, $m[1].' '))) {
+                        continue;
+                    }
+                    $existing->nodes()->create([
+                        'label' => $label,
+                        'type' => in_array($node['type'] ?? 'text', Node::TYPES, true) ? $node['type'] : 'text',
+                        'value' => str_replace('{site_name}', $siteTitle, (string) ($node['value'] ?? '')),
+                        'parent' => (string) ($node['parent'] ?? '0'),
+                        'order' => ++$max,
+                    ]);
+                }
 
                 continue;
             }

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithLayoutMode;
 use App\Models\Estimate;
 use App\Models\Estimator;
 use App\Models\EstimatorCalc;
@@ -21,19 +22,38 @@ use Livewire\Component;
  */
 class EstimatesPage extends Component
 {
+    use WithLayoutMode;
+
     public const STATUSES = ['new', 'contacted', 'won', 'lost'];
+
+    public const SORTS = ['newest', 'oldest', 'value'];
+
+    /** A new lead untouched this long counts as "needs a follow-up". */
+    public const FOLLOW_UP_HOURS = 48;
 
     public Site $site;
 
-    #[Url(as: 'q')]
+    /** Centre tab: estimates (the leads) | estimators (configuration) */
+    #[Url(except: 'estimates')]
+    public string $tab = 'estimates';
+
+    /** Inside an open estimator: fields | calcs | email */
+    #[Url(as: 'step', except: 'fields')]
+    public string $editTab = 'fields';
+
+    #[Url(except: 'newest')]
+    public string $sort = 'newest';
+
+    #[Url(as: 'q', except: '')]
     public string $search = '';
 
-    #[Url(as: 'status')]
+    #[Url(as: 'status', except: 'all')]
     public string $statusFilter = 'all';
 
     // ── Estimators ──
     public string $newEstimatorName = '';
 
+    #[Url(as: 'estimator', except: null)]
     public ?string $selectedId = null;       // estimator open in the editor
 
     // ── Editor: name + email template ──
@@ -72,6 +92,28 @@ class EstimatesPage extends Component
     public function mount(Site $site): void
     {
         $this->site = $site;
+        $this->initLayout('estimates', 'grid');
+
+        // A deep link (?estimator=…) reopens that estimator's editor.
+        if ($this->selectedId) {
+            if ($this->canManage && $site->estimators()->whereKey($this->selectedId)->exists()) {
+                $keep = $this->editTab;
+                $this->select($this->selectedId);
+                $this->editTab = in_array($keep, ['fields', 'calcs', 'email'], true) ? $keep : 'fields';
+            } else {
+                $this->selectedId = null;
+            }
+        }
+    }
+
+    public function setTab(string $tab): void
+    {
+        $this->tab = in_array($tab, ['estimates', 'estimators'], true) ? $tab : 'estimates';
+    }
+
+    public function setEditTab(string $tab): void
+    {
+        $this->editTab = in_array($tab, ['fields', 'calcs', 'email'], true) ? $tab : 'fields';
     }
 
     private function guardManage(): void
@@ -146,6 +188,8 @@ class EstimatesPage extends Component
         $this->guardManage();
         $estimator = $this->site->estimators()->findOrFail($id);
         $this->selectedId = $id;
+        $this->tab = 'estimators';
+        $this->editTab = 'fields';
         $this->eName = $estimator->name;
         $this->eEmailSubject = $estimator->emailSubject();
         $this->eEmailBody = $estimator->emailBody();
@@ -366,7 +410,8 @@ class EstimatesPage extends Component
 
     public function setStatusFilter(string $status): void
     {
-        $this->statusFilter = $status;
+        $this->statusFilter = in_array($status, self::STATUSES, true) ? $status : 'all';
+        $this->tab = 'estimates';
     }
 
     public function updateStatus(string $id, string $status): void
@@ -394,7 +439,9 @@ class EstimatesPage extends Component
                     ->orWhere('trade', 'like', $term));
             })
             ->when($this->statusFilter !== 'all', fn ($q) => $q->where('status', $this->statusFilter))
-            ->latest()
+            ->when($this->sort === 'oldest', fn ($q) => $q->oldest())
+            ->when($this->sort === 'value', fn ($q) => $q->orderByDesc('cost_high_cents')->latest())
+            ->when(! in_array($this->sort, ['oldest', 'value'], true), fn ($q) => $q->latest())
             ->get();
     }
 
@@ -405,6 +452,54 @@ class EstimatesPage extends Component
         $counts['all'] = array_sum($counts);
 
         return $counts;
+    }
+
+    /**
+     * Rail numbers — grouped aggregate queries (no per-row work): this month,
+     * average value, won value, follow-ups due, and leads per service.
+     */
+    public function getStatsProperty(): array
+    {
+        $base = fn () => Estimate::where('site_id', $this->site->id);
+        $monthStart = now()->startOfMonth();
+        $dueBefore = now()->subHours(self::FOLLOW_UP_HOURS);
+
+        $agg = $base()->selectRaw(
+            'SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as month_count,
+             SUM(CASE WHEN created_at >= ? AND created_at < ? THEN 1 ELSE 0 END) as last_month_count,
+             AVG(CASE WHEN cost_high_cents > 0 THEN (cost_low_cents + cost_high_cents) / 2 END) as avg_value,
+             SUM(CASE WHEN status = ? THEN cost_high_cents ELSE 0 END) as won_value,
+             SUM(CASE WHEN status = ? AND created_at < ? THEN 1 ELSE 0 END) as overdue',
+            [$monthStart, $monthStart->copy()->subMonth(), $monthStart, 'won', 'new', $dueBefore]
+        )->first();
+
+        $trades = config('estimator.trades', []);
+        $names = $this->estimators->pluck('name', 'id');
+        $byService = $base()->selectRaw('estimator_id, trade, COUNT(*) as c, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as won', ['won'])
+            ->groupBy('estimator_id', 'trade')->get()
+            ->map(fn ($r) => [
+                'name' => $names[$r->estimator_id] ?? ($trades[$r->trade]['name'] ?? ($r->trade ? ucfirst($r->trade) : 'Estimate')),
+                'count' => (int) $r->c,
+                'won' => (int) $r->won,
+            ])
+            ->groupBy('name')->map(fn ($g, $name) => ['name' => $name, 'count' => $g->sum('count'), 'won' => $g->sum('won')])
+            ->sortByDesc('count')->values();
+
+        $counts = $this->statusCounts;
+        $decided = ($counts['won'] ?? 0) + ($counts['lost'] ?? 0);
+
+        return [
+            'month' => (int) ($agg->month_count ?? 0),
+            'lastMonth' => (int) ($agg->last_month_count ?? 0),
+            'avgCents' => (int) round((float) ($agg->avg_value ?? 0)),
+            'wonCents' => (int) ($agg->won_value ?? 0),
+            'overdue' => (int) ($agg->overdue ?? 0),
+            'conversion' => ($counts['all'] ?? 0) > 0 ? (int) round(($counts['won'] ?? 0) / $counts['all'] * 100) : null,
+            'winRate' => $decided > 0 ? (int) round(($counts['won'] ?? 0) / $decided * 100) : null,
+            'byService' => $byService->all(),
+            'overdueList' => $base()->where('status', 'new')->where('created_at', '<', $dueBefore)
+                ->with('estimator:id,name')->oldest()->limit(3)->get(),
+        ];
     }
 
     public function render()

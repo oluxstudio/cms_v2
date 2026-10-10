@@ -1,78 +1,97 @@
-<div class="main-body p-6"
-     x-data="{ toast:'', toastType:'success' }"
-     x-init="
-        $watch('$wire.successMessage', v => { if(v){ toast=v; toastType='success'; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } });
-        $watch('$wire.errorMessage',   v => { if(v){ toast=v; toastType='error';   setTimeout(()=>{ toast=''; $wire.errorMessage='';   }, 5000) } });
-     ">
+@php
+    $panel = 'rounded-[1.75rem] bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm';
+    $btnSolid = 'inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors';
+    $i = $this->interest; $s = $this->sales;
+    $low = \App\Livewire\ProductsPage::LOW_STOCK;
+    $stockText = $product->inventory === null ? 'Unlimited' : ($product->inventory === 0 ? 'Out of stock' : $product->inventory.' in stock');
+    $approved = $this->approvedReviews;
+@endphp
+<x-tri-layout :title="$product->name" :site-name="$site->name"
+    :subtitle="$product->formattedPrice().' · '.($product->is_active ? 'active in the storefront' : 'hidden from the storefront')"
+    :labels="['📊 Overview', '🛍️ Product', '⚡ Summary']">
 
-    {{-- Breadcrumb + header --}}
-    <div class="mb-5">
-        <a href="{{ url($site->name.'/store') }}" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">← Store</a>
-        <div class="flex flex-col lg:flex-row lg:items-start gap-5 mt-3">
-            <div class="w-full lg:w-56 shrink-0">
+    <x-slot:header>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('site.store', $site->name) }}" wire:navigate class="{{ $btnSolid }} text-xs px-3.5 py-2">← Store</a>
+            <button wire:click="edit" class="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold shadow-sm" style="background:var(--primary);color:var(--on-primary)">Edit product</button>
+        </div>
+    </x-slot:header>
+
+    {{-- ── LEFT rail: this product at a glance ── --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile accent="ink" wide :value="\App\Support\Money::format($s['lifetime_revenue_cents'], $this->currency)" label="Lifetime revenue" sub="paid orders only" />
+        <x-tile accent="{{ $product->inventory === 0 ? 'rose' : ($product->inventory !== null && $product->inventory <= $low ? 'cocoa' : 'lime') }}"
+                :value="$product->inventory === null ? '∞' : $product->inventory" label="In stock"
+                :sub="$product->inventory === 0 ? 'out of stock' : ($product->inventory === null ? 'unlimited' : ($product->inventory <= $low ? 'running low' : 'units available'))"
+                icon="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        <x-tile accent="lime" :value="number_format($s['lifetime_units'])" label="Units sold" :sub="$i['orders'].' orders in 30 days'"
+                icon="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        <x-tile accent="sky" :value="number_format($i['total_views'])" label="Product views" sub="last 30 days"
+                icon="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.46 12C3.73 7.94 7.52 5 12 5c4.48 0 8.27 2.94 9.54 7-1.27 4.06-5.06 7-9.54 7-4.48 0-8.27-2.94-9.54-7z" />
+        <x-tile accent="lavender" :value="number_format($i['total_adds'])" label="Added to basket"
+                :sub="$i['conversion'] !== null ? $i['conversion'].'% of viewers' : 'last 30 days'"
+                icon="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        <x-tile accent="{{ $this->pendingReviews->isNotEmpty() ? 'rose' : 'cocoa' }}" :value="$approved->isNotEmpty() ? '★ '.round($approved->avg('rating'), 1) : '—'" label="Reviews"
+                :sub="$this->pendingReviews->isNotEmpty() ? $this->pendingReviews->count().' awaiting approval' : $approved->count().' approved'"
+                icon="M11.05 2.93c.3-.92 1.6-.92 1.9 0l1.52 4.67a1 1 0 00.95.69h4.91c.97 0 1.37 1.24.59 1.81l-3.97 2.89a1 1 0 00-.36 1.12l1.52 4.67c.3.92-.76 1.69-1.54 1.12l-3.97-2.89a1 1 0 00-1.18 0l-3.97 2.89c-.78.57-1.84-.2-1.54-1.12l1.52-4.67a1 1 0 00-.36-1.12L2.07 10.1c-.78-.57-.38-1.81.59-1.81h4.91a1 1 0 00.95-.69l1.53-4.67z" />
+    </div>
+    </x-slot:rail>
+
+    <div class="space-y-5">
+    {{-- Product hero --}}
+    <div class="{{ $panel }} !rounded-2xl p-4 sm:p-5">
+        <div class="flex flex-col sm:flex-row sm:items-start gap-5">
+            <div class="w-full sm:w-48 shrink-0">
                 <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/[0.04]">
-                    @if($product->image)
-                        <img src="{{ $product->image_url }}" class="w-full h-full object-cover">
+                    @if($product->image_url)
+                        <img src="{{ $product->image_url }}" alt="" class="w-full h-full object-cover">
                     @else
-                        <div class="w-full h-full flex items-center justify-center text-5xl">🛍️</div>
+                        <button type="button" wire:click="edit" class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-gray-600">
+                            <span class="text-4xl">🛍️</span><span class="text-[11px] font-semibold">Add a photo</span>
+                        </button>
                     @endif
                 </div>
             </div>
             <div class="flex-1 min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                    <h1 class="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ $product->name }}</h1>
                     <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full {{ $product->is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-200 text-gray-600 dark:bg-black/40 dark:text-gray-300' }}">
                         {{ $product->is_active ? 'Active' : 'Hidden' }}
                     </span>
                     <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full {{ $product->inventory === 0 ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400' }}">
-                        {{ $product->inventory === null ? 'Unlimited stock' : ($product->inventory === 0 ? 'Out of stock' : $product->inventory.' in stock') }}
+                        {{ $product->inventory === null ? 'Unlimited stock' : $stockText }}
                     </span>
-                </div>
-                <p class="mt-1 text-lg font-extrabold text-gray-900 dark:text-white">{{ $product->formattedPrice() }}</p>
-                @if($product->category || $product->tags)
-                <div class="flex flex-wrap items-center gap-1.5 mt-2">
                     @if($product->category)<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">{{ $product->category }}</span>@endif
                     @foreach($product->tags ?? [] as $tag)
                         <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">#{{ $tag }}</span>
                     @endforeach
                 </div>
-                @endif
+                <p class="mt-2 text-2xl font-extrabold tabular-nums text-gray-900 dark:text-white">{{ $product->formattedPrice() }}</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-3">{{ $product->description ?: 'No description yet.' }}</p>
 
                 <div class="flex flex-wrap items-center gap-2 mt-4">
-                    <button wire:click="edit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-colors">Edit product</button>
-                    <button wire:click="toggleActive" class="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.04]">
+                    <button wire:click="toggleActive" class="{{ $btnSolid }} px-3.5 py-2 text-xs">
                         {{ $product->is_active ? 'Hide from storefront' : 'Show in storefront' }}
                     </button>
-                    <button wire:click="toggleReviews" class="px-3.5 py-2 rounded-xl text-xs font-semibold {{ $product->reviews_enabled ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400' }}">
+                    <button wire:click="toggleReviews" class="px-3.5 py-2 rounded-xl text-xs font-semibold border {{ $product->reviews_enabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-400 dark:border-emerald-400/20' : 'bg-white dark:bg-[#1d1e2a] text-gray-500 border-gray-200 dark:border-white/[0.1] dark:text-gray-400' }}">
                         Reviews (this product): {{ $product->reviews_enabled ? 'ON' : 'OFF' }}
                     </button>
-                    <button wire:click="toggleStoreReviews" class="px-3.5 py-2 rounded-xl text-xs font-semibold {{ $this->storeReviewsOn ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400' }}">
+                    <button wire:click="toggleStoreReviews" class="px-3.5 py-2 rounded-xl text-xs font-semibold border {{ $this->storeReviewsOn ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-400 dark:border-emerald-400/20' : 'bg-white dark:bg-[#1d1e2a] text-gray-500 border-gray-200 dark:border-white/[0.1] dark:text-gray-400' }}">
                         Reviews (whole store): {{ $this->storeReviewsOn ? 'ON' : 'OFF' }}
                     </button>
-                    @if($product->inventory !== null)
-                    <div class="flex items-center gap-2 ml-auto">
-                        <input type="number" min="1" wire:model="restockQty" placeholder="Qty"
-                               class="w-20 px-2.5 py-1.5 rounded-lg text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
-                        <button wire:click="addStock" class="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">＋ Add stock</button>
-                    </div>
-                    @endif
                 </div>
+                @if($product->inventory !== null)
+                <div class="flex items-center gap-2 mt-3">
+                    <input type="number" min="1" wire:model="restockQty" placeholder="Qty"
+                           class="w-20 px-2.5 py-1.5 rounded-lg text-sm bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08]">
+                    <button wire:click="addStock" class="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold">＋ Add stock</button>
+                </div>
+                @endif
             </div>
         </div>
     </div>
 
-    {{-- Totals row --}}
-    @php $i = $this->interest; $s = $this->sales; @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-        <x-tile accent="ink" :value="number_format($i['total_views'])" label="product views" sub="last 30 days" />
-        <x-tile accent="lavender" :value="number_format($i['total_adds'])" label="added to basket"
-                :sub="$i['conversion'] !== null ? $i['conversion'].'% of viewers' : 'last 30 days'" />
-        <x-tile accent="lime" :value="number_format($s['lifetime_units'])" label="units sold"
-                :sub="$i['orders'].' orders in 30 days'" />
-        <x-tile accent="cocoa" :value="\App\Support\Money::format($s['lifetime_revenue_cents'], $this->currency)" label="lifetime revenue" sub="paid orders only" />
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {{-- Interest chart --}}
         <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
             <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-1">Interest — last 30 days</h2>
@@ -87,7 +106,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 items-start">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
         {{-- Inventory history --}}
         <div class="bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.05] shadow-sm rounded-2xl p-5">
             <h2 class="text-gray-900 dark:text-white font-bold text-sm mb-3">Inventory history</h2>
@@ -223,21 +242,82 @@
                     <span wire:loading.remove wire:target="save">Save changes</span>
                     <span wire:loading wire:target="save">Saving…</span>
                 </button>
-                <button type="button" wire:click="closeForm" class="px-4 py-2.5 border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">Cancel</button>
+                <button type="button" wire:click="closeForm" class="px-4 py-2.5 bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.08] text-sm font-semibold text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">Cancel</button>
             </div>
         </form>
     </x-lightbox>
     @endif
 
+    </div>
+
     {{-- Toast --}}
+    <div class="fixed bottom-6 right-6 z-[60]"
+         x-data="{ toast:'', toastType:'success' }"
+         x-init="
+            $watch('$wire.successMessage', v => { if(v){ toast=v; toastType='success'; setTimeout(()=>{ toast=''; $wire.successMessage=''; }, 4000) } });
+            $watch('$wire.errorMessage',   v => { if(v){ toast=v; toastType='error';   setTimeout(()=>{ toast=''; $wire.errorMessage='';   }, 5000) } });
+         ">
     <div x-show="toast" x-cloak
          x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
          x-transition:leave="transition ease-in duration-200" x-transition:leave-end="opacity-0 translate-y-4"
-         class="fixed bottom-6 right-6 z-[60] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-medium"
+         class="flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl text-sm font-medium"
          :class="toastType === 'success' ? 'bg-gray-900 text-white' : 'bg-red-600 text-white'">
         <span x-text="toast"></span>
     </div>
-</div>
+    </div>
+
+    {{-- ══ RIGHT rail: summary · related ══ --}}
+    <x-slot:quick>
+        <div class="{{ $panel }} p-5">
+            <p class="text-[11px] font-bold uppercase tracking-[.14em] mb-3" style="color:var(--primary)">Product summary</p>
+            <dl class="space-y-2 text-[12.5px]">
+                @foreach([
+                    ['Price', $product->formattedPrice()],
+                    ['Stock', $stockText],
+                    ['Status', $product->is_active ? 'Active' : 'Hidden'],
+                    ['Category', $product->category ?: '—'],
+                    ['Revenue · 30 days', \App\Support\Money::format((int) round(array_sum($s['revenue']) * 100), $this->currency)],
+                    ['Units · 30 days', array_sum($s['units'])],
+                    ['Added', $product->created_at?->format('j M Y') ?? '—'],
+                ] as [$k, $v])
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="text-gray-500 dark:text-gray-400">{{ $k }}</dt>
+                        <dd class="font-bold text-gray-900 dark:text-white truncate">{{ $v }}</dd>
+                    </div>
+                @endforeach
+            </dl>
+        </div>
+
+        @if($product->inventory === 0 || ! $product->image_url || (int) $product->price_cents <= 0 || $this->pendingReviews->isNotEmpty())
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Needs attention</p>
+            <div class="space-y-2">
+                @if($product->inventory === 0)<p class="rounded-2xl px-3.5 py-2.5 text-[12.5px] font-semibold bg-rose-50 dark:bg-rose-500/10 text-rose-800 dark:text-rose-200">Out of stock — add stock above.</p>@endif
+                @if(! $product->image_url)<button type="button" wire:click="edit" class="w-full text-left rounded-2xl px-3.5 py-2.5 text-[12.5px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200">No photo yet — add one →</button>@endif
+                @if((int) $product->price_cents <= 0)<button type="button" wire:click="edit" class="w-full text-left rounded-2xl px-3.5 py-2.5 text-[12.5px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200">No price — it shows as free →</button>@endif
+                @if($this->pendingReviews->isNotEmpty())<p class="rounded-2xl px-3.5 py-2.5 text-[12.5px] font-semibold bg-gray-50 dark:bg-white/[0.04] text-gray-800 dark:text-gray-100">{{ $this->pendingReviews->count() }} {{ Str::plural('review', $this->pendingReviews->count()) }} awaiting approval</p>@endif
+            </div>
+        </div>
+        @endif
+
+        <div class="{{ $panel }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Related</p>
+            <div class="grid grid-cols-2 gap-2">
+                @foreach([
+                    ['Store', 'All products', route('site.store', $site->name), true],
+                    ['Orders', 'Fulfil & refund', route('site.orders', $site->name), true],
+                    ['Assets', 'Product photos', route('media', $site->name), true],
+                    ['Storefront', 'See it live ↗', url($site->name.'/store'), false],
+                ] as [$label, $hint, $href, $nav])
+                    <a href="{{ $href }}" @if($nav) wire:navigate @else target="_blank" @endif class="rounded-2xl px-3 py-2.5 bg-gray-50 dark:bg-white/[0.04] hover:ring-2 hover:ring-[color-mix(in_srgb,var(--primary)_30%,transparent)]">
+                        <span class="block text-[12.5px] font-bold text-gray-900 dark:text-white">{{ $label }} →</span>
+                        <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ $hint }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </x-slot:quick>
+</x-tri-layout>
 
 @script
 <script>

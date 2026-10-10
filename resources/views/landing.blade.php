@@ -304,7 +304,7 @@
         .band p { opacity: .88; margin-bottom: 26px; }
         .band .btn { background: #fff; color: var(--primary-4); }
         footer { background: var(--line-inv); border-top: 1px solid var(--line-inv); color: var(--on-bg-soft); padding: 52px 0 30px; }
-        .foot-grid { display: grid; gap: 30px; grid-template-columns: 1.4fr 1fr 1fr 1fr; margin-bottom: 34px; }
+        .foot-grid { display: grid; gap: 30px; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; margin-bottom: 34px; }
         @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
         footer h4 { font-family: var(--font-display); color: var(--on-bg); font-size: 14px; margin-bottom: 12px; }
         footer a { display: block; font-size: 19px; padding: 3px 0; }
@@ -775,9 +775,14 @@
                     <a href="https://oluxstudio.com" target="_blank" rel="noopener">oluxstudio.com</a>
                     <a href="https://github.com/oluxstudio" target="_blank" rel="noopener">GitHub</a>
                 </div>
+                <div>
+                    <h4>Legal</h4>
+                    <a href="{{ route('privacy') }}">Privacy policy</a>
+                    <a href="{{ route('privacy') }}#data-deletion">Delete your data</a>
+                </div>
             </div>
             <div class="foot-base">
-                <span>© {{ date('Y') }} Olux Studio. All rights reserved.</span>
+                <span>© {{ date('Y') }} Olux Studio. All rights reserved. · <a href="{{ route('privacy') }}" style="display:inline;font-size:inherit;padding:0">Privacy</a></span>
                 <span>Set up tonight. Booked tomorrow.</span>
             </div>
         </div>

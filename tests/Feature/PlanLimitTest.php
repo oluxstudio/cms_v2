@@ -34,7 +34,7 @@ test('a trial account is blocked from a second site with an upgrade prompt', fun
     expect($user->currentSubscription()->canCreateSite())->toBeFalse();
 
     Livewire::actingAs($user)->test(SiteComponent::class)
-        ->set('form.name', 'second-'.uniqid())->set('form.domain', 'b.test')->set('form.owner', $user->name)
+        ->set('form.name', 'second-'.uniqid())->set('form.domain', 'b.test')->set('form.owner', $user->name)->set('form.description', 'A site created by the test suite.')
         ->call('create')
         ->assertDispatched('upgrade-required');
 
@@ -45,7 +45,7 @@ test('an enterprise account can create multiple sites', function () {
     $user = planUser('enterprise');
     foreach (range(1, 3) as $i) {
         Livewire::actingAs($user)->test(SiteComponent::class)
-            ->set('form.name', "e{$i}-".uniqid())->set('form.domain', "e{$i}.test")->set('form.owner', $user->name)
+            ->set('form.name', "e{$i}-".uniqid())->set('form.domain', "e{$i}.test")->set('form.owner', $user->name)->set('form.description', 'A site created by the test suite.')
             ->call('create')->assertNotDispatched('upgrade-required');
     }
     expect($user->sites()->count())->toBe(3);

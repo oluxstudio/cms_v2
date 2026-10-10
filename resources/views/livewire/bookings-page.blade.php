@@ -1,44 +1,113 @@
-<div class="h-full overflow-y-auto p-5 sm:p-6" wire:key="bookings-{{ $site->id }}">
+@php
+    $panelCls = 'rounded-[1.75rem] bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] shadow-sm';
+    $btnSolid = 'inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors';
+    $s = $this->stats;
+    $cur = $site->currency;
+    $money = fn (int $c) => \App\Support\Money::format($c, $cur);
+    $bookPage = route('public.book', ['siteName' => $site->name]);
 
-    <x-carousel :labels="['📊 Stats', '📅 Bookings', '🗓 Calendar']" :start="1">
+    // status → [label, pill classes, dot class, bar colour] — matches the booking card
+    $statusMeta = [
+        'confirmed' => ['Confirmed', 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300', 'bg-emerald-500', '#10b981'],
+        'pending' => ['Pending', 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300', 'bg-amber-500', '#f59e0b'],
+        'awaiting_payment' => ['Awaiting payment', 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300', 'bg-sky-500', '#0ea5e9'],
+        'no_show' => ['No-show', 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300', 'bg-orange-500', '#f97316'],
+        'cancelled' => ['Cancelled', 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300', 'bg-rose-500', '#f43f5e'],
+    ];
+    $statusOf = fn ($st) => $statusMeta[$st] ?? [ucfirst(str_replace('_', ' ', (string) $st)), 'bg-gray-100 text-gray-600 dark:bg-white/[0.06] dark:text-gray-300', 'bg-gray-400', '#9ca3af'];
+    // payment state → [label, classes]
+    $payOf = function ($b) {
+        if ($b->total_cents <= 0) {
+            return ['Free', 'text-gray-400 dark:text-gray-500'];
+        }
 
-    {{-- ════ LEFT RAIL: stat tiles ════ --}}
-    <x-carousel.slide class="lg:!w-[280px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
-    {{-- Stat tiles — app-wide tile format (click opens the matching list) --}}
-    @php $t = $this->tiles; @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
-        <x-tile label="new bookings received today" :value="$t['today']" sub="Today" accent="ink"
-                wire:click="openTile('today')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
-        <x-tile label="upcoming bookings" :value="$t['upcoming']" sub="Next 7 days" accent="lime"
-                wire:click="openTile('upcoming')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
-        <x-tile label="awaiting confirmation" :value="$t['pending']" sub="Pending" accent="cocoa"
-                wire:click="openTile('pending')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
-        <x-tile label="upcoming confirmed bookings" :value="$t['month']" sub="Confirmed" accent="lavender"
-                wire:click="openTile('month')" class="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" />
-    </div>
-    </x-carousel.slide>
+        return $b->balanceCents() === 0 ? ['Paid', 'text-emerald-600 dark:text-emerald-400']
+            : ($b->paid_cents > 0 ? ['Deposit paid', 'text-sky-600 dark:text-sky-400'] : ['Unpaid', 'text-amber-600 dark:text-amber-400']);
+    };
+    // when-line: slot → time range · stay → nights · trip → route
+    $whenOf = function ($b) {
+        $p = (array) ($b->params ?? []);
+        $kind = $b->service?->kind ?? 'slot';
+        if ($kind === 'stay') {
+            $in = $b->starts_at?->format('M j');
+            $out = $b->ends_at?->format('M j');
+            $n = $p['nights'] ?? ($b->starts_at && $b->ends_at ? (int) $b->starts_at->copy()->startOfDay()->diffInDays($b->ends_at->copy()->startOfDay()) : null);
 
-    {{-- ════ MAIN: bookings · services · availability ════ --}}
-    <x-carousel.slide class="lg:flex-1 lg:min-w-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:overflow-y-visible no-scrollbar">
-    <div class="max-w-[50rem] mx-auto">
+            return trim($in.' → '.$out.($n ? ' · '.$n.' '.Str::plural('night', (int) $n) : ''));
+        }
+        if ($kind === 'trip') {
+            return trim(($p['origin'] ?? '').' → '.($p['destination'] ?? '').' · '.$b->starts_at?->format('g:i A'));
+        }
 
+        return $b->starts_at?->format('g:i A').($b->ends_at && $b->ends_at->gt($b->starts_at) ? ' – '.$b->ends_at->format('g:i A') : '');
+    };
+    $initialsOf = fn ($name) => collect(preg_split('/\s+/', trim((string) $name)))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('') ?: '?';
+    $hueOf = fn ($name) => ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899'][abs(crc32((string) $name)) % 5];
 
-    {{-- Header --}}
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div>
-            <h1 class="text-lg font-extrabold tracking-tight text-gray-900 dark:text-white">Bookings</h1>
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-300">One engine, three kinds — appointments (slot), stays (rooms/houses) and trips (transport).</p>
-        </div>
-        <div class="flex items-center gap-2">
-            <button type="button" wire:click="startCreate"
-                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
-                ＋ Create
-            </button>
-            <a href="{{ route('public.book', ['siteName' => $site->name]) }}" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-gray-900 text-white dark:bg-white dark:text-gray-900">
+    $filterCounts = [
+        'all' => $s['total'], 'upcoming' => $s['upcoming'], 'today' => $s['today'], 'pending' => $s['pending'],
+        'confirmed' => $s['confirmed'], 'past' => $s['past'], 'cancelled' => $s['cancelled'], 'no_show' => $s['no_show'],
+        'unpaid' => $s['unpaid'],
+    ];
+    $tileFx = 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all';
+    $tileOn = 'ring-2 ring-offset-2 ring-gray-900 dark:ring-white dark:ring-offset-[#16171f]';
+    $att = $this->attention;
+@endphp
+<x-tri-layout title="Bookings" subtitle="Appointments, stays and trips — confirm, track payments and manage what customers can book." :site-name="$site->name"
+    :labels="['📊 Stats', '📅 Bookings', '⚡ Summary']">
+
+    <x-slot:header>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" wire:click="startCreate" class="{{ $btnSolid }} text-[13px] px-3.5 py-2.5">＋ New service</button>
+            <a href="{{ $bookPage }}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90">
                 Open booking page ↗
             </a>
         </div>
+    </x-slot:header>
+
+    {{-- ══ LEFT rail: actionable stat tiles (click filters the list) ══ --}}
+    <x-slot:rail>
+    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <x-tile accent="ink" wide :value="$s['today']" label="Today's bookings"
+                :sub="$att['next'] ? 'Next '.$att['next']->starts_at->format('g:i A') : ($s['today'] ? 'all done for today' : 'nothing booked')"
+                icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                wire:click="openTile('today')" class="{{ $tileFx }} {{ $tab === 'bookings' && $filter === 'today' ? $tileOn : '' }}" />
+        <x-tile accent="lime" :value="$s['next7']" label="Next 7 days" sub="upcoming"
+                icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                wire:click="openTile('upcoming')" class="{{ $tileFx }} {{ $tab === 'bookings' && $filter === 'upcoming' ? $tileOn : '' }}" />
+        <x-tile :accent="$s['pending'] ? 'rose' : 'sky'" :value="$s['pending']" label="Awaiting confirmation"
+                :sub="$s['pending'] ? 'confirm to notify' : 'all confirmed'"
+                icon="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"
+                wire:click="openTile('pending')" class="{{ $tileFx }} {{ $tab === 'bookings' && $filter === 'pending' ? $tileOn : '' }}" />
+        <x-tile accent="lavender" :value="$money($s['collected_month'])" label="Collected this month"
+                :sub="$s['month_count'].' '.Str::plural('booking', $s['month_count']).' in '.now()->format('M')"
+                icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                :href="route('site.payments', $site->name)" wire:navigate />
+        <x-tile accent="cocoa" :value="$s['noshow_month']" label="No-shows this month"
+                :sub="$s['no_show'] ? $s['no_show'].' all time' : 'none yet'"
+                icon="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"
+                wire:click="openTile('noshow')" class="{{ $tileFx }} {{ $tab === 'bookings' && $filter === 'no_show' ? $tileOn : '' }}" />
+        <x-tile accent="sky" :value="$s['busiest']['name'] ?? '—'" label="Busiest service"
+                :sub="$s['busiest'] ? $s['busiest']['count'].' '.Str::plural('booking', $s['busiest']['count']).' ±30 days' : 'no bookings yet'"
+                icon="M3 13.5L9 7.5l4 4L21 3.5M21 3.5h-5m5 0v5M4 20h16"
+                wire:click="openTile('busiest')" class="{{ $s['busiest'] ? $tileFx : '' }}" />
+    </div>
+    </x-slot:rail>
+
+    <div class="space-y-5">
+
+    {{-- ── Pill tabs: Bookings · Calendar · Services ── --}}
+    <div class="flex gap-2 overflow-x-auto no-scrollbar">
+        @foreach (['bookings' => ['Bookings', $s['total']], 'calendar' => ['Calendar', $s['month_count']], 'services' => ['Services', $this->services->count()]] as $key => [$label, $n])
+            <button type="button" wire:click="setTab('{{ $key }}')"
+                class="shrink-0 px-4 py-2 rounded-full text-[13px] font-bold border transition-colors
+                    {{ $tab === $key
+                        ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white'
+                        : 'bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/[0.1] hover:bg-gray-50 dark:hover:bg-white/[0.06]' }}">
+                {{ $label }} <span class="opacity-60">{{ $n }}</span>
+            </button>
+        @endforeach
     </div>
 
     {{-- ════════ CREATION WIZARD: one guided flow for every booking type ════════ --}}
@@ -274,48 +343,247 @@
     </div>
     @endif
 
-<div class="min-w-0">
-
-            {{-- ── ALL BOOKINGS ── --}}
-            <div class="flex items-center gap-2 mb-3">
-                <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-600 dark:text-gray-300">All bookings</p>
-                <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d9f068;color:#2b3110">{{ $this->bookings->total() }}</span>
-                <div class="flex-1 border-t border-gray-100 dark:border-white/[0.06]"></div>
+    {{-- ════════ BOOKINGS TAB ════════ --}}
+    @if ($tab === 'bookings')
+    {{-- Toolbar: search · filter · sort · layout · new booking --}}
+    <div class="{{ $panelCls }} !rounded-2xl p-3 space-y-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="relative flex-1 min-w-[12rem]">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <x-field.text wire:model.live.debounce.300ms="search" placeholder="Search customer, reference or service…" class="w-full" style="padding-left:2.25rem" />
             </div>
-            <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-100 dark:border-white/[0.06]">
-                    <h2 class="text-sm font-bold">All bookings</h2>
-                </div>
-                {{-- Minimal rows: service · date · slot. Everything else
-                     (customer, price, status, actions) lives in the detail
-                     lightbox — click a row to review it. --}}
-                @forelse($this->bookings as $b)
-                @php $p = (array) ($b->params ?? []); $bkind = $b->service?->kind ?? 'slot'; @endphp
-                <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-50 dark:border-white/[0.04] last:border-0 cursor-pointer hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors"
-                     wire:click="viewBooking('{{ $b->id }}')" title="View details">
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white flex-1 min-w-0 truncate">
-                        {{ $b->service?->typeIcon() }} {{ $b->service?->name ?? 'Service' }}
-                    </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 shrink-0 tabular-nums">
-                        @if($bkind === 'stay')
-                            {{ $p['check_in'] ?? '?' }} <span class="text-gray-300 dark:text-gray-600">→</span> {{ $p['check_out'] ?? '?' }}
-                        @else
-                            <span class="hidden sm:inline">{{ $b->starts_at?->format('D, ') }}</span>{{ $b->starts_at?->format('M j') }}<span class="hidden sm:inline">{{ $b->starts_at?->format(', Y') }}</span> <span class="text-gray-300 dark:text-gray-600">·</span> {{ $b->starts_at?->format('g:i A') }}
-                        @endif
-                    </p>
-                    <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                </div>
-                @empty
-                <div class="px-4 py-12 text-center text-sm text-gray-400">No bookings yet.</div>
-                @endforelse
-                @if($this->bookings->hasPages())
-                    <div class="px-4 py-3 border-t border-gray-100 dark:border-white/[0.06]">{{ $this->bookings->links() }}</div>
+            <select wire:model.live="sort" class="bkf-input !w-auto text-[13px]" title="Order">
+                @foreach (\App\Livewire\BookingsPage::SORTS as $key => $label)
+                    <option value="{{ $key }}">{{ $label }}</option>
+                @endforeach
+            </select>
+            <x-layout-switcher :modes="$layoutModes" :current="$viewMode" />
+            <a href="{{ $bookPage }}" target="_blank" rel="noopener" title="Book on a customer's behalf through your booking page"
+               class="inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                New booking
+            </a>
+        </div>
+        <div class="flex gap-2 overflow-x-auto no-scrollbar">
+            @foreach (\App\Livewire\BookingsPage::FILTERS as $key => $label)
+                @continue($key === 'unpaid' && ! $s['unpaid'] && $filter !== 'unpaid')
+                <button type="button" wire:click="setFilter('{{ $key }}')"
+                    class="shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold border transition-colors
+                        {{ $filter === $key
+                            ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white'
+                            : 'bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/[0.1] hover:bg-gray-50 dark:hover:bg-white/[0.06]' }}">
+                    {{ $label }} <span class="opacity-60">{{ $filterCounts[$key] ?? 0 }}</span>
+                </button>
+            @endforeach
+        </div>
+    </div>
+
+    @php $list = $this->bookings; @endphp
+    @if ($list->isEmpty())
+        <div class="{{ $panelCls }} px-6 py-16 text-center">
+            <span class="mx-auto mb-3 w-14 h-14 rounded-2xl grid place-items-center bg-gray-100 dark:bg-white/[0.06]">
+                <svg class="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </span>
+            @if ($s['total'] === 0)
+                <p class="text-[15px] font-bold text-gray-900 dark:text-white">No bookings yet</p>
+                @if ($this->services->isEmpty())
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">Create the first thing customers can book — an appointment, a room or a trip — then share your booking page.</p>
+                    <button type="button" wire:click="startCreate" class="inline-flex mt-4 text-sm font-bold px-4 py-2.5 rounded-xl" style="background:var(--primary);color:var(--on-primary)">＋ Create your first service</button>
+                @else
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">Share your booking page — new bookings land here, ready to confirm.</p>
+                    <a href="{{ $bookPage }}" target="_blank" rel="noopener" class="inline-flex mt-4 text-sm font-bold px-4 py-2.5 rounded-xl" style="background:var(--primary);color:var(--on-primary)">Open booking page ↗</a>
                 @endif
+            @else
+                <p class="text-[15px] font-bold text-gray-900 dark:text-white">Nothing matches</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    No {{ $filter === 'all' ? '' : strtolower(\App\Livewire\BookingsPage::FILTERS[$filter]).' ' }}bookings{{ trim($search) !== '' ? ' for “'.$search.'”' : '' }}.
+                </p>
+                <button type="button" wire:click="clearFilters" class="{{ $btnSolid }} mt-4 text-sm px-4 py-2">Show all bookings</button>
+            @endif
+        </div>
+    @elseif ($viewMode === 'grid')
+        {{-- ── Cards ── --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            @foreach ($list as $b)
+                @php
+                    [$stLabel, $stCls, $stDot] = $statusOf($b->status);
+                    [$payLabel, $payCls] = $payOf($b);
+                    $past = $b->starts_at?->isPast() && ! $b->starts_at?->isToday();
+                    $dimmed = in_array($b->status, ['cancelled', 'no_show'], true);
+                @endphp
+                <button type="button" wire:click="viewBooking('{{ $b->id }}')" wire:key="bk-card-{{ $b->id }}"
+                        class="group text-left flex flex-col {{ $panelCls }} !rounded-2xl hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden {{ $dimmed ? 'opacity-70' : '' }}">
+                    <span class="p-4 flex items-start gap-3.5 w-full">
+                        {{-- date tile --}}
+                        <span class="shrink-0 w-14 rounded-xl overflow-hidden text-center border {{ $past ? 'border-gray-200 dark:border-white/[0.08]' : 'border-transparent' }}">
+                            <span class="block text-[10px] font-bold uppercase tracking-wider py-0.5 {{ $past ? 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400' : '' }}"
+                                  @unless($past) style="background:var(--primary);color:var(--on-primary)" @endunless>{{ $b->starts_at?->format('M') }}</span>
+                            <span class="block py-1 bg-gray-50 dark:bg-white/[0.04]">
+                                <span class="block text-xl font-extrabold leading-none tabular-nums {{ $past ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white' }}">{{ $b->starts_at?->format('j') }}</span>
+                                <span class="block text-[10px] font-semibold text-gray-400 mt-0.5">{{ $b->starts_at?->isToday() ? 'Today' : $b->starts_at?->format('D') }}</span>
+                            </span>
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-[15px] font-bold text-gray-900 dark:text-white truncate group-hover:underline">{{ $b->service?->typeIcon() }} {{ $b->service?->name ?? 'Service' }}</span>
+                            <span class="block text-[12.5px] font-semibold text-gray-600 dark:text-gray-300 mt-0.5 tabular-nums truncate">{{ $whenOf($b) }}</span>
+                            <span class="mt-2 flex items-center gap-2 min-w-0">
+                                <span class="shrink-0 w-6 h-6 rounded-full grid place-items-center text-white text-[9px] font-bold" style="background:{{ $hueOf($b->customer_name) }}">{{ $initialsOf($b->customer_name) }}</span>
+                                <span class="text-[13px] text-gray-700 dark:text-gray-200 truncate">{{ $b->customer_name }}</span>
+                            </span>
+                            @if ($b->resource || ($b->params['resource'] ?? false))
+                                <span class="block mt-1 text-[11.5px] text-gray-400 truncate">with {{ $b->resource?->name ?? $b->params['resource'] }}</span>
+                            @endif
+                        </span>
+                    </span>
+                    <span class="mt-auto w-full flex items-center justify-between gap-2 px-4 py-2.5 border-t border-gray-100 dark:border-white/[0.05]">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold {{ $stCls }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ $stDot }}"></span>{{ $stLabel }}
+                        </span>
+                        <span class="text-[12px] font-semibold tabular-nums truncate">
+                            <span class="{{ $payCls }}">{{ $payLabel }}</span>
+                            @if ($b->total_cents > 0)<span class="text-gray-400"> · {{ $b->formattedTotal() }}</span>@endif
+                        </span>
+                    </span>
+                </button>
+            @endforeach
+        </div>
+    @else
+        {{-- ── List & Compact (table) ── --}}
+        @php $compact = $viewMode === 'compact'; $pad = $compact ? 'px-4 py-2' : 'px-4 py-3'; @endphp
+        <div class="{{ $panelCls }} !rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-100 dark:border-white/[0.05] text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <th class="px-4 py-3">When</th>
+                            <th class="px-4 py-3">Customer</th>
+                            <th class="px-4 py-3">Service</th>
+                            @unless ($compact)<th class="px-4 py-3">Staff</th>@endunless
+                            <th class="px-4 py-3">Status</th>
+                            @unless ($compact)<th class="px-4 py-3">Payment</th>@endunless
+                            <th class="px-4 py-3 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-white/[0.04]">
+                        @foreach ($list as $b)
+                            @php [$stLabel, $stCls, $stDot] = $statusOf($b->status); [$payLabel, $payCls] = $payOf($b); @endphp
+                            <tr class="cursor-pointer hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors" wire:click="viewBooking('{{ $b->id }}')" wire:key="bk-row-{{ $b->id }}" title="View details">
+                                <td class="{{ $pad }} whitespace-nowrap">
+                                    <span class="block font-semibold text-gray-900 dark:text-white tabular-nums">{{ $b->starts_at?->isToday() ? 'Today' : $b->starts_at?->format('D, M j') }}</span>
+                                    @unless ($compact)<span class="block text-[11.5px] text-gray-400 tabular-nums">{{ $whenOf($b) }}</span>@else<span class="text-[11.5px] text-gray-400 tabular-nums"> {{ $b->starts_at?->format('g:i A') }}</span>@endunless
+                                </td>
+                                <td class="{{ $pad }}">
+                                    <span class="block font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[12rem]">{{ $b->customer_name }}</span>
+                                    @unless ($compact)<span class="block text-[11px] text-gray-400 font-mono">{{ $b->reference }}</span>@endunless
+                                </td>
+                                <td class="{{ $pad }} text-gray-700 dark:text-gray-200"><span class="block truncate max-w-[12rem]">{{ $b->service?->typeIcon() }} {{ $b->service?->name ?? '—' }}</span></td>
+                                @unless ($compact)<td class="{{ $pad }} text-[12.5px] text-gray-500 dark:text-gray-400">{{ $b->resource?->name ?? ($b->params['resource'] ?? '—') }}</td>@endunless
+                                <td class="{{ $pad }}">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap {{ $stCls }}"><span class="w-1.5 h-1.5 rounded-full {{ $stDot }}"></span>{{ $stLabel }}</span>
+                                </td>
+                                @unless ($compact)<td class="{{ $pad }} text-[12.5px] font-semibold whitespace-nowrap {{ $payCls }}">{{ $payLabel }}</td>@endunless
+                                <td class="{{ $pad }} text-right font-bold tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ $b->formattedTotal() }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
+        </div>
+    @endif
+    @if ($list->hasPages())
+        <div>{{ $list->links() }}</div>
+    @endif
+    @endif
 
+    {{-- ════════ CALENDAR TAB: month grid + the selected day's agenda ════════ --}}
+    @if ($tab === 'calendar')
+    @php $chips = $this->calendarChips; $selDay = \Carbon\Carbon::parse($calDate); @endphp
+    <div class="{{ $panelCls }} !rounded-2xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+                <button type="button" wire:click="calShift(-1)" class="{{ $btnSolid }} w-9 h-9" aria-label="Previous month">‹</button>
+                <h2 class="text-[15px] font-extrabold text-gray-900 dark:text-white min-w-[9rem] text-center">{{ \Carbon\Carbon::parse($calMonth.'-01')->format('F Y') }}</h2>
+                <button type="button" wire:click="calShift(1)" class="{{ $btnSolid }} w-9 h-9" aria-label="Next month">›</button>
+            </div>
+            <button type="button" wire:click="openDay('{{ now()->format('Y-m-d') }}')" class="{{ $btnSolid }} text-[13px] px-3.5 py-2">Today</button>
+        </div>
+        <div class="grid grid-cols-7 gap-1 mb-1">
+            @foreach (['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $dow)
+                <span class="text-center text-[11px] font-bold text-gray-400">{{ $dow }}</span>
+            @endforeach
+        </div>
+        <div class="grid grid-cols-7 gap-1">
+            @foreach ($this->calendarDays as $cell)
+                @php $dayChips = $chips[$cell['date']] ?? ['items' => [], 'more' => 0]; $sel = $calDate === $cell['date']; @endphp
+                <button type="button" wire:click="pickDate('{{ $cell['date'] }}')" wire:key="cal-{{ $cell['date'] }}"
+                        class="text-left min-h-[3.25rem] sm:min-h-[5.75rem] rounded-xl p-1.5 border transition-colors
+                            {{ $sel ? 'border-gray-900 dark:border-white bg-gray-50 dark:bg-white/[0.06]' : 'border-gray-100 dark:border-white/[0.05] hover:bg-gray-50 dark:hover:bg-white/[0.04]' }}
+                            {{ $cell['inMonth'] ? '' : 'opacity-40' }}">
+                    <span class="flex items-center justify-between">
+                        <span class="text-[12px] font-bold tabular-nums w-6 h-6 rounded-full grid place-items-center {{ $cell['isToday'] ? '' : 'text-gray-700 dark:text-gray-200' }}"
+                              @if($cell['isToday']) style="background:var(--primary);color:var(--on-primary)" @endif>{{ $cell['day'] }}</span>
+                        @if ($cell['count'] > 0)
+                            <span class="sm:hidden w-1.5 h-1.5 rounded-full" style="background:var(--primary)"></span>
+                            <span class="hidden sm:inline text-[10px] font-bold text-gray-400">{{ $cell['count'] }}</span>
+                        @endif
+                    </span>
+                    <span class="hidden sm:block mt-1 space-y-0.5">
+                        @foreach ($dayChips['items'] as $chip)
+                            <span class="block truncate rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold
+                                {{ $chip['status'] === 'pending' ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300' : ($chip['status'] === 'no_show' ? 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300') }}">
+                                {{ $chip['time'] }} {{ $chip['name'] }}
+                            </span>
+                        @endforeach
+                        @if ($dayChips['more'] > 0)
+                            <span class="block text-[10px] font-semibold text-gray-400 px-1">+{{ $dayChips['more'] }} more</span>
+                        @endif
+                    </span>
+                </button>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Day agenda --}}
+    <div class="{{ $panelCls }} !rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-gray-100 dark:border-white/[0.06] flex items-baseline justify-between">
+            <h2 class="text-[15px] font-extrabold text-gray-900 dark:text-white">{{ $selDay->isToday() ? 'Today' : $selDay->format('l, F j') }}</h2>
+            <span class="text-[12px] text-gray-400">{{ $this->dayBookings->count() }} {{ Str::plural('booking', $this->dayBookings->count()) }}</span>
+        </div>
+        @forelse ($this->dayBookings as $b)
+            @php [$stLabel, $stCls, $stDot] = $statusOf($b->status); $bkind = $b->service?->kind ?? 'slot'; @endphp
+            <button type="button" wire:click="viewBooking('{{ $b->id }}')" wire:key="agenda-{{ $b->id }}"
+                    class="w-full text-left flex items-center gap-3 px-5 py-3 border-b border-gray-50 dark:border-white/[0.04] last:border-0 hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                <span class="shrink-0 w-16 text-[13px] font-bold tabular-nums text-gray-900 dark:text-white">{{ $bkind === 'stay' ? 'Stay' : $b->starts_at?->format('g:i A') }}</span>
+                <span class="shrink-0 w-8 h-8 rounded-full grid place-items-center text-white text-[10px] font-bold" style="background:{{ $hueOf($b->customer_name) }}">{{ $initialsOf($b->customer_name) }}</span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-[13.5px] font-bold text-gray-900 dark:text-white truncate">{{ $b->customer_name }}</span>
+                    <span class="block text-[12px] text-gray-500 dark:text-gray-400 truncate">{{ $b->service?->name }} · {{ $whenOf($b) }}</span>
+                </span>
+                <span class="shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold {{ $stCls }}"><span class="w-1.5 h-1.5 rounded-full {{ $stDot }}"></span>{{ $stLabel }}</span>
+            </button>
+        @empty
+            <div class="px-5 py-12 text-center">
+                <p class="text-[14px] font-bold text-gray-900 dark:text-white">Nothing booked on this day</p>
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400 mt-1">Pick another day, or close it for bookings in <button type="button" wire:click="openException('{{ $calDate }}')" class="font-semibold underline">day &amp; slot exceptions</button>.</p>
+            </div>
+        @endforelse
+    </div>
+    @endif
+
+    {{-- ════════ SERVICES TAB: services · resources · availability ════════ --}}
+    @if ($tab === 'services')
+    <div class="{{ $panelCls }} !rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white">What customers can book</p>
+            <p class="text-[12.5px] text-gray-500 dark:text-gray-400">Appointments (slot), stays (rooms/houses) and trips (transport) — one engine, three kinds.</p>
+        </div>
+        <button type="button" wire:click="startCreate"
+                class="inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm" style="background:var(--primary);color:var(--on-primary)">＋ Guided setup</button>
+    </div>
+    <div>
             {{-- ── SERVICES — list only; add/edit opens the right-side panel ── --}}
             @php $activeServices = $this->services->where('is_active', true)->count(); @endphp
-            <div class="flex items-center gap-2 mt-8 mb-3">
+            <div class="flex items-center gap-2 mb-3">
                 <p class="text-[11px] font-bold uppercase tracking-[.12em] text-gray-600 dark:text-gray-300">Services</p>
                 <span class="text-[10px] font-bold min-w-[1.15rem] text-center px-1.5 py-0.5 rounded-full" style="background:#d7c3f5;color:#33245c">{{ $this->services->count() }}</span>
                 <div class="flex-1 border-t border-gray-100 dark:border-white/[0.06]"></div>
@@ -472,107 +740,10 @@
                     </div>
                 @endif
             </div>
-        </div>
-    </div>{{-- /centered 50rem column --}}
-    </x-carousel.slide>
+    </div>
+    @endif
 
-    {{-- ════ RIGHT RAIL: calendar + selected day ════ --}}
-    <x-carousel.slide class="lg:!w-[340px] lg:shrink-0 pb-24 lg:pb-6 max-h-full overflow-y-auto lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-9rem)] lg:overflow-y-auto no-scrollbar">
-        <div class="space-y-4">
-        {{-- calendar + selected day's bookings below ══════════ --}}
-        <div class="space-y-4">
-            {{-- Calendar — colored from the SITE THEME accent so it matches the
-                 owner's brand and contrasts the white workspace tiles. --}}
-            @php
-                $accent = $site->theme['accent'] ?? '#4f46e5';
-                // HSL shade helpers: deep (darker, punchy) and vivid (max
-                // saturation, brighter) versions of the theme accent.
-                $shade = function (string $hex, float $dSat, float $dLig): string {
-                    [$r, $g, $b] = array_map(fn ($i) => hexdec(substr($hex, $i, 2)) / 255, [1, 3, 5]);
-                    $max = max($r, $g, $b); $min = min($r, $g, $b); $l = ($max + $min) / 2; $d = $max - $min;
-                    $s = $d == 0 ? 0 : $d / (1 - abs(2 * $l - 1));
-                    $h = $d == 0 ? 0 : ($max === $r ? fmod(($g - $b) / $d, 6) : ($max === $g ? ($b - $r) / $d + 2 : ($r - $g) / $d + 4)) * 60;
-                    if ($h < 0) $h += 360;
-                    $s = max(0, min(1, $s + $dSat)); $l = max(0, min(1, $l + $dLig));
-                    $c = (1 - abs(2 * $l - 1)) * $s; $x = $c * (1 - abs(fmod($h / 60, 2) - 1)); $m = $l - $c / 2;
-                    [$r, $g, $b] = match (true) {
-                        $h < 60 => [$c, $x, 0], $h < 120 => [$x, $c, 0], $h < 180 => [0, $c, $x],
-                        $h < 240 => [0, $x, $c], $h < 300 => [$x, 0, $c], default => [$c, 0, $x],
-                    };
-                    return sprintf('#%02x%02x%02x', (int) round(($r + $m) * 255), (int) round(($g + $m) * 255), (int) round(($b + $m) * 255));
-                };
-                $ok = strlen($accent) === 7;
-                $deep  = $ok ? $shade($accent, +0.10, -0.10) : $accent; // dark, saturated
-                $vivid = $ok ? $shade($accent, +0.18, +0.03) : $accent; // bright, punchy
-            @endphp
-            <style>
-                #bk-cal { --bk-cal-bg:{{ $deep }}; --bk-cal-bg2:{{ $vivid }}; --bk-cal-day:{{ $accent }};
-                          background:linear-gradient(135deg, var(--bk-cal-bg) 0%, var(--bk-cal-bg) 45%, var(--bk-cal-bg2) 100%);
-                          color:#fff; box-shadow:0 10px 25px -5px {{ $deep }}66; }
-                #bk-cal .bkcal-booked { background:var(--bk-cal-day); }
-                #bk-cal .bkcal-sel    { color:var(--bk-cal-bg); }
-                #bk-cal .bkcal-badge  { color:var(--bk-cal-bg); }
-            </style>
-            <div id="bk-cal" class="rounded-2xl p-4 text-white shadow-lg">
-                <div class="flex items-center justify-between mb-3">
-                    <button wire:click="calShift(-1)" class="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm transition-colors" aria-label="Previous month">‹</button>
-                    <h2 class="text-sm font-bold">{{ \Carbon\Carbon::parse($calMonth.'-01')->format('F Y') }}</h2>
-                    <button wire:click="calShift(1)" class="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm transition-colors" aria-label="Next month">›</button>
-                </div>
-                <div class="grid grid-cols-7 gap-1 mb-1">
-                    @foreach(['Su','Mo','Tu','We','Th','Fr','Sa'] as $dow)
-                        <span class="text-center text-[10px] font-bold text-white/50">{{ $dow }}</span>
-                    @endforeach
-                </div>
-                <div class="grid grid-cols-7 gap-1">
-                    @foreach($this->calendarDays as $cell)
-                        <button wire:click="pickDate('{{ $cell['date'] }}')"
-                                class="relative aspect-square rounded-lg text-xs transition-colors
-                                    {{ ! $cell['inMonth'] ? 'opacity-40' : '' }}
-                                    {{ $calDate === $cell['date'] ? 'bg-white bkcal-sel font-bold shadow-md' : ($cell['count'] > 0 ? 'bkcal-booked text-white font-bold ring-1 ring-white/60 shadow-md' : ($cell['isToday'] ? 'ring-1 ring-white/70 text-white font-bold hover:bg-white/15' : 'text-white/85 hover:bg-white/15')) }}">
-                                {{ $cell['day'] }}
-                                @if($cell['count'] > 0)
-                                    <span class="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-bold leading-[15px] bg-white shadow bkcal-badge">{{ $cell['count'] }}</span>
-                                @endif
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-
-            {{-- Selected date's bookings — below the calendar --}}
-            <div class="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-100 dark:border-white/[0.06] flex items-baseline justify-between">
-                    <h2 class="text-sm font-bold">{{ \Carbon\Carbon::parse($calDate)->isToday() ? 'Today' : \Carbon\Carbon::parse($calDate)->format('D, M j') }}</h2>
-                    <span class="text-[11px] text-gray-400">{{ $this->dayBookings->count() }} booking(s)</span>
-                </div>
-                <div class="max-h-[360px] overflow-y-auto">
-                    @forelse($this->dayBookings as $b)
-                        @php $p = (array) ($b->params ?? []); $bkind = $b->service?->kind ?? 'slot';
-                             $hue = ['#6366f1','#0ea5e9','#f59e0b','#10b981','#ec4899'][abs(crc32($b->customer_name)) % 5]; @endphp
-                        <div class="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 dark:border-white/[0.04] last:border-0 cursor-pointer hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors" wire:click="viewBooking('{{ $b->id }}')" title="View details">
-                            <span class="shrink-0 w-8 h-8 rounded-full grid place-items-center text-white text-[10px] font-bold" style="background:{{ $hue }}">
-                                {{ strtoupper(\Illuminate\Support\Str::of($b->customer_name)->substr(0, 2)) }}</span>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-xs font-bold truncate">{{ $b->customer_name }}
-                                    @if($b->status === 'pending')<span class="text-amber-500 font-semibold">· pending</span>@endif</p>
-                                <p class="text-[10px] text-gray-400 truncate">
-                                    {{ $b->service?->name }}{{ ($p['resource'] ?? false) ? ' · '.$p['resource'] : '' }}
-                                    @if($bkind === 'stay') · {{ $p['nights'] ?? '?' }} night(s)
-                                    @elseif($bkind === 'trip') · {{ $p['origin'] ?? '' }} → {{ $p['destination'] ?? '' }} @endif
-                                </p>
-                            </div>
-                            <span class="shrink-0 text-[11px] font-bold tabular-nums text-gray-600 dark:text-gray-300">
-                                {{ $bkind === 'stay' ? 'stay' : $b->starts_at?->format('g:i A') }}</span>
-                        </div>
-                    @empty
-                        <p class="px-4 py-10 text-center text-xs text-gray-400">Nothing booked on this day.</p>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-        </div>
-    </x-carousel.slide>
-    </x-carousel>
+    </div>{{-- /space-y-5 --}}
 
     {{-- ══════════ SIDE PANELS — every editor opens on the right over a grey overlay ══════════ --}}
     @if($panel === 'service')
@@ -1165,42 +1336,255 @@
              x-data @keydown.escape.window="$wire.closeBooking()">
             <div class="lightbox-backdrop absolute inset-0 bg-gray-900/40" wire:click="closeBooking"></div>
 
-            <div class="lightbox-drawer relative h-full w-full max-w-lg bg-white dark:bg-[#1d1e2a] border-l border-gray-100 dark:border-white/[0.06] shadow-2xl flex flex-col overflow-hidden">
-                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-white/[0.06] shrink-0">
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">Booking {{ $vb->reference }}</p>
+            <div class="lightbox-drawer relative h-full w-full max-w-lg bg-gray-50 dark:bg-[#16171f] border-l border-gray-100 dark:border-white/[0.06] shadow-2xl flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between gap-3 px-5 py-3.5 bg-white dark:bg-[#1d1e2a] border-b border-gray-100 dark:border-white/[0.06] shrink-0">
+                    <div class="min-w-0">
+                        <p class="text-[15px] font-extrabold text-gray-900 dark:text-white truncate">Booking details</p>
+                        <p class="text-[12px] text-gray-500 dark:text-gray-400 truncate">Booked {{ $vb->created_at->format('j M Y · g:i A') }}</p>
+                    </div>
                     <button type="button" wire:click="closeBooking" title="Close (Esc)" aria-label="Close"
-                            class="w-8 h-8 rounded-full grid place-items-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
+                            class="w-9 h-9 rounded-full grid place-items-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-100 dark:bg-white/[0.06] hover:bg-gray-200 dark:hover:bg-white/[0.1] transition-colors">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
+
                 <div class="p-5 overflow-y-auto grow">
-                <x-booking-card :booking="$vb" :accent="$vAccent">
-                    @if(! in_array($vb->status, ["confirmed", "awaiting_payment", "cancelled"], true))
-                        <button type="button" wire:click="setStatus('{{ $vb->id }}', 'confirmed')"
-                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white hover:opacity-90"
-                                style="background:{{ $vAccent }}">Confirm booking</button>
+                    <x-booking-card :booking="$vb" :accent="$vAccent" />
+                </div>
+
+                {{-- Pinned actions: the next step first, destructive ones last --}}
+                @php $btn = 'inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl text-[13.5px] font-bold transition-colors'; @endphp
+                <div class="shrink-0 px-5 py-4 bg-white dark:bg-[#1d1e2a] border-t border-gray-100 dark:border-white/[0.06] space-y-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        @if(! in_array($vb->status, ["confirmed", "awaiting_payment", "cancelled", "no_show"], true))
+                            <button type="button" wire:click="setStatus('{{ $vb->id }}', 'confirmed')"
+                                    class="{{ $btn }} text-white shadow-sm hover:opacity-90" style="background:{{ $vAccent }}">✓ Confirm booking</button>
+                        @endif
+                        @if($vb->balanceCents() > 0 && $vb->status !== "cancelled")
+                            <button type="button" wire:click="markFullyPaid" data-confirm="Record the {{ $vb->formattedBalance() }} balance as collected?"
+                                    class="{{ $btn }} {{ in_array($vb->status, ['confirmed', 'awaiting_payment'], true) ? 'text-white shadow-sm hover:opacity-90' : 'bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/[0.06]' }}"
+                                    @if(in_array($vb->status, ['confirmed', 'awaiting_payment'], true)) style="background:{{ $vAccent }}" @endif>Record {{ $vb->formattedBalance() }} paid</button>
+                        @endif
+                        <a href="mailto:{{ $vb->customer_email }}?subject={{ rawurlencode('Your booking '.$vb->reference) }}"
+                           class="{{ $btn }} bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/[0.06]">✉ Email customer</a>
+                        @if($vb->customer_phone)
+                            <a href="tel:{{ preg_replace('/[^0-9+]/', '', $vb->customer_phone) }}"
+                               class="{{ $btn }} bg-white dark:bg-[#1d1e2a] border border-gray-200 dark:border-white/[0.1] text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-white/[0.06]">☎ Call</a>
+                        @endif
+                    </div>
+                    @if($vb->status !== "cancelled" || ($vb->starts_at?->isPast() && in_array($vb->status, ["confirmed", "pending"], true)))
+                        <div class="flex items-center justify-center gap-4 pt-1 text-[12.5px] font-semibold">
+                            @if($vb->starts_at?->isPast() && in_array($vb->status, ["confirmed", "pending"], true))
+                                <button type="button" wire:click="setStatus('{{ $vb->id }}', 'no_show')" data-confirm="Mark this booking as a no-show? The customer is NOT emailed."
+                                        class="text-orange-600 dark:text-orange-400 hover:underline">Mark no-show</button>
+                            @endif
+                            @if($vb->status !== "cancelled")
+                                <button type="button" wire:click="setStatus('{{ $vb->id }}', 'cancelled')" data-confirm="Cancel this booking? The customer is emailed about the cancellation."
+                                        class="text-rose-600 dark:text-rose-400 hover:underline">Cancel booking</button>
+                            @endif
+                        </div>
                     @endif
-                    @if($vb->balanceCents() > 0 && $vb->status !== "cancelled")
-                        <button type="button" wire:click="markFullyPaid" data-confirm="Record the {{ $vb->formattedBalance() }} balance as collected?"
-                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-[#211d15] border shadow-sm hover:bg-gray-50"
-                                style="border-color:rgba(51,44,31,.14)">Record balance</button>
-                    @endif
-                    @if($vb->status !== "cancelled")
-                        <button type="button" wire:click="setStatus('{{ $vb->id }}', 'cancelled')" data-confirm="Cancel this booking? The customer is emailed about the cancellation."
-                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-rose-600 border shadow-sm hover:bg-rose-50"
-                                style="border-color:rgba(51,44,31,.14)">Cancel</button>
-                    @endif
-                    @if($vb->starts_at?->isPast() && in_array($vb->status, ["confirmed", "pending"], true))
-                        <button type="button" wire:click="setStatus('{{ $vb->id }}', 'no_show')" data-confirm="Mark this booking as a no-show? The customer is NOT emailed."
-                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-amber-600 border shadow-sm hover:bg-amber-50"
-                                style="border-color:rgba(51,44,31,.14)">Mark no-show</button>
-                    @endif
-                    <a href="mailto:{{ $vb->customer_email }}"
-                       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-white text-[#211d15] border shadow-sm hover:bg-gray-50"
-                       style="border-color:rgba(51,44,31,.14)">Email customer</a>
-                </x-booking-card>
-                </div>{{-- /scrolling body --}}
+                </div>
             </div>{{-- /drawer --}}
         </div>
     @endif
-</div>
+
+    {{-- ══ RIGHT rail: summary · needs attention · calendar · setup · related ══ --}}
+    <x-slot:quick>
+        {{-- Summary: status breakdown + this week's money --}}
+        <div class="{{ $panelCls }} p-5">
+            <p class="text-[11px] font-bold uppercase tracking-[.14em] mb-1" style="color:var(--primary)">Bookings summary</p>
+            <p class="text-[13px] text-gray-600 dark:text-gray-300 mb-3">
+                <b class="text-gray-900 dark:text-white">{{ $s['total'] }}</b> {{ Str::plural('booking', $s['total']) }} ·
+                <b class="text-gray-900 dark:text-white">{{ $s['upcoming'] }}</b> upcoming
+            </p>
+            @if ($s['total'])
+                <div class="flex h-2.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/[0.06]">
+                    @foreach ($statusMeta as $st => [$label, , , $color])
+                        @if ($s[$st] ?? 0)
+                            <span style="width:{{ round($s[$st] / $s['total'] * 100, 2) }}%;background:{{ $color }}" title="{{ $label }} · {{ $s[$st] }}"></span>
+                        @endif
+                    @endforeach
+                </div>
+                <div class="mt-3 space-y-1">
+                    @foreach ($statusMeta as $st => [$label, , , $color])
+                        @if ($s[$st] ?? 0)
+                            @php $fk = $st === 'awaiting_payment' ? null : $st; @endphp
+                            <button type="button" @if($fk) wire:click="openTile('{{ $fk }}')" @endif
+                                    class="w-full flex items-center gap-2 text-[12.5px] rounded-lg px-1 py-0.5 {{ $fk ? 'hover:bg-gray-50 dark:hover:bg-white/[0.04]' : 'cursor-default' }}">
+                                <span class="w-2.5 h-2.5 rounded-full" style="background:{{ $color }}"></span>
+                                <span class="text-gray-600 dark:text-gray-300">{{ $label }}</span>
+                                <span class="ml-auto font-bold text-gray-900 dark:text-white tabular-nums">{{ $s[$st] }}</span>
+                            </button>
+                        @endif
+                    @endforeach
+                </div>
+            @endif
+            <div class="mt-4 pt-3 border-t border-gray-100 dark:border-white/[0.06]">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">This week</p>
+                <div class="mt-1.5 grid grid-cols-2 gap-2">
+                    <div>
+                        <p class="text-[17px] font-extrabold text-gray-900 dark:text-white tabular-nums">{{ $money($s['week_value']) }}</p>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400">booked · {{ $s['week_count'] }} {{ Str::plural('booking', $s['week_count']) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[17px] font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">{{ $money($s['week_paid']) }}</p>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400">collected</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Needs attention --}}
+        <div class="{{ $panelCls }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Needs attention</p>
+            @if ($att['pending']->isEmpty() && ! $s['unpaid'] && ! $att['next'])
+                <p class="text-[12.5px] text-gray-500 dark:text-gray-400">All caught up — nothing pending, no unpaid balances, nothing else today.</p>
+            @endif
+            <div class="space-y-2.5">
+                @if ($att['next'])
+                    @php $nx = $att['next']; @endphp
+                    <button type="button" wire:click="viewBooking('{{ $nx->id }}')" class="w-full text-left rounded-2xl px-3.5 py-3 bg-indigo-50 dark:bg-indigo-500/10 hover:ring-2 hover:ring-indigo-200 dark:hover:ring-indigo-500/30">
+                        <p class="text-[13px] font-bold text-indigo-900 dark:text-indigo-200">Next today · {{ $nx->starts_at->format('g:i A') }}</p>
+                        <p class="text-[12px] text-indigo-800/80 dark:text-indigo-200/70 truncate">{{ $nx->customer_name }} — {{ $nx->service?->name }}{{ $nx->resource ? ' with '.$nx->resource->name : '' }} →</p>
+                    </button>
+                @endif
+                @if ($att['pending']->isNotEmpty())
+                    <div class="rounded-2xl px-3.5 py-3 bg-rose-50 dark:bg-rose-500/10">
+                        <p class="text-[13px] font-bold text-rose-800 dark:text-rose-200">{{ $s['pending'] }} to confirm</p>
+                        <div class="mt-1.5 space-y-1">
+                            @foreach ($att['pending'] as $pb)
+                                <button type="button" wire:click="viewBooking('{{ $pb->id }}')" class="w-full text-left flex items-center gap-2 text-[12px] text-rose-800/90 dark:text-rose-200/80 hover:underline">
+                                    <span class="font-semibold tabular-nums shrink-0">{{ $pb->starts_at?->format('M j') }}</span>
+                                    <span class="truncate">{{ $pb->customer_name }} · {{ $pb->service?->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                        @if ($s['pending'] > 3)
+                            <button type="button" wire:click="openTile('pending')" class="mt-1.5 text-[12px] font-bold text-rose-800 dark:text-rose-200 hover:underline">Show all {{ $s['pending'] }} →</button>
+                        @endif
+                    </div>
+                @endif
+                @if ($s['unpaid'])
+                    <button type="button" wire:click="openTile('unpaid')"
+                            class="w-full text-left rounded-2xl px-3.5 py-3 bg-amber-50 dark:bg-amber-500/10 hover:ring-2 hover:ring-amber-200 dark:hover:ring-amber-500/30">
+                        <p class="text-[13px] font-bold text-amber-800 dark:text-amber-200">{{ $money($s['unpaid_cents']) }} unpaid</p>
+                        <p class="text-[12px] text-amber-700/80 dark:text-amber-200/70">on {{ $s['unpaid'] }} past {{ Str::plural('booking', $s['unpaid']) }} — record what was collected →</p>
+                    </button>
+                @endif
+            </div>
+        </div>
+
+        {{-- Mini calendar (the Calendar tab shows the full month) --}}
+        @if ($tab !== 'calendar')
+            @php
+                $accent = $site->theme['accent'] ?? '#4f46e5';
+                $shade = function (string $hex, float $dSat, float $dLig): string {
+                    [$r, $g, $b] = array_map(fn ($i) => hexdec(substr($hex, $i, 2)) / 255, [1, 3, 5]);
+                    $max = max($r, $g, $b); $min = min($r, $g, $b); $l = ($max + $min) / 2; $d = $max - $min;
+                    $sat = $d == 0 ? 0 : $d / (1 - abs(2 * $l - 1));
+                    $h = $d == 0 ? 0 : ($max === $r ? fmod(($g - $b) / $d, 6) : ($max === $g ? ($b - $r) / $d + 2 : ($r - $g) / $d + 4)) * 60;
+                    if ($h < 0) $h += 360;
+                    $sat = max(0, min(1, $sat + $dSat)); $l = max(0, min(1, $l + $dLig));
+                    $c = (1 - abs(2 * $l - 1)) * $sat; $x = $c * (1 - abs(fmod($h / 60, 2) - 1)); $m = $l - $c / 2;
+                    [$r, $g, $b] = match (true) {
+                        $h < 60 => [$c, $x, 0], $h < 120 => [$x, $c, 0], $h < 180 => [0, $c, $x],
+                        $h < 240 => [0, $x, $c], $h < 300 => [$x, 0, $c], default => [$c, 0, $x],
+                    };
+                    return sprintf('#%02x%02x%02x', (int) round(($r + $m) * 255), (int) round(($g + $m) * 255), (int) round(($b + $m) * 255));
+                };
+                $ok = strlen($accent) === 7;
+                $deep = $ok ? $shade($accent, +0.10, -0.10) : $accent;
+                $vivid = $ok ? $shade($accent, +0.18, +0.03) : $accent;
+            @endphp
+            <style>
+                #bk-cal { --bk-cal-bg:{{ $deep }}; --bk-cal-bg2:{{ $vivid }}; --bk-cal-day:{{ $accent }};
+                          background:linear-gradient(135deg, var(--bk-cal-bg) 0%, var(--bk-cal-bg) 45%, var(--bk-cal-bg2) 100%);
+                          color:#fff; box-shadow:0 10px 25px -5px {{ $deep }}66; }
+                #bk-cal .bkcal-booked { background:var(--bk-cal-day); }
+                #bk-cal .bkcal-sel    { color:var(--bk-cal-bg); }
+                #bk-cal .bkcal-badge  { color:var(--bk-cal-bg); }
+            </style>
+            <div id="bk-cal" class="rounded-2xl p-4 text-white shadow-lg">
+                <div class="flex items-center justify-between mb-3">
+                    <button type="button" wire:click="calShift(-1)" class="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm transition-colors" aria-label="Previous month">‹</button>
+                    <h2 class="text-sm font-bold">{{ \Carbon\Carbon::parse($calMonth.'-01')->format('F Y') }}</h2>
+                    <button type="button" wire:click="calShift(1)" class="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm transition-colors" aria-label="Next month">›</button>
+                </div>
+                <div class="grid grid-cols-7 gap-1 mb-1">
+                    @foreach (['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as $dow)
+                        <span class="text-center text-[10px] font-bold text-white/50">{{ $dow }}</span>
+                    @endforeach
+                </div>
+                <div class="grid grid-cols-7 gap-1">
+                    @foreach ($this->calendarDays as $cell)
+                        <button type="button" wire:click="openDay('{{ $cell['date'] }}')" title="Open {{ $cell['date'] }} in the calendar"
+                                class="relative aspect-square rounded-lg text-xs transition-colors
+                                    {{ ! $cell['inMonth'] ? 'opacity-40' : '' }}
+                                    {{ $calDate === $cell['date'] ? 'bg-white bkcal-sel font-bold shadow-md' : ($cell['count'] > 0 ? 'bkcal-booked text-white font-bold ring-1 ring-white/60 shadow-md' : ($cell['isToday'] ? 'ring-1 ring-white/70 text-white font-bold hover:bg-white/15' : 'text-white/85 hover:bg-white/15')) }}">
+                            {{ $cell['day'] }}
+                            @if ($cell['count'] > 0)
+                                <span class="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 rounded-full text-[8px] font-bold leading-[15px] bg-white shadow bkcal-badge">{{ $cell['count'] }}</span>
+                            @endif
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        {{-- Setup at a glance: services, staff, hours --}}
+        @php $liveHours = app(\App\Services\BookingService::class)->settings($site); @endphp
+        <div class="{{ $panelCls }} p-5">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[15px] font-extrabold text-gray-900 dark:text-white">Services &amp; hours</p>
+                <button type="button" wire:click="setTab('services')" class="text-[12px] font-bold hover:underline" style="color:var(--primary)">Manage →</button>
+            </div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">{{ $this->services->where('is_active', true)->count() }} active {{ Str::plural('service', $this->services->where('is_active', true)->count()) }}</p>
+            <div class="flex flex-wrap gap-1 mb-3">
+                @forelse ($this->services->take(8) as $svc)
+                    <button type="button" wire:click="editService('{{ $svc->id }}')"
+                            class="px-2 py-0.5 rounded-full text-[11.5px] font-semibold {{ $svc->is_active ? 'bg-gray-100 text-gray-700 dark:bg-white/[0.06] dark:text-gray-200' : 'bg-gray-50 text-gray-400 line-through dark:bg-white/[0.03]' }} hover:ring-1 hover:ring-gray-300">{{ $svc->name }}</button>
+                @empty
+                    <span class="text-[12px] text-gray-400">No services yet.</span>
+                @endforelse
+                @if ($this->services->count() > 8)<span class="text-[11.5px] text-gray-400 px-1">+{{ $this->services->count() - 8 }} more</span>@endif
+            </div>
+            @if ($this->siteResources->isNotEmpty())
+                <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Staff &amp; resources</p>
+                <div class="flex flex-wrap gap-1 mb-3">
+                    @foreach ($this->siteResources->take(8) as $r)
+                        <button type="button" wire:click="editSiteResource('{{ $r->id }}')"
+                                class="px-2 py-0.5 rounded-full text-[11.5px] font-semibold {{ $r->is_active ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300' : 'bg-gray-50 text-gray-400 line-through dark:bg-white/[0.03]' }}">{{ $r->name }}</button>
+                    @endforeach
+                </div>
+            @endif
+            <p class="text-[12px] text-gray-500 dark:text-gray-400 mb-3">
+                <span class="font-semibold text-gray-700 dark:text-gray-200">{{ strtoupper(implode(' · ', $liveHours['days'])) ?: 'No open days' }}</span><br>
+                {{ $liveHours['open'] }}–{{ $liveHours['close'] }} · every {{ $liveHours['slot'] }} min
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" wire:click="newService" class="{{ $btnSolid }} text-[12px] px-2.5 py-2">＋ Add service</button>
+                <button type="button" wire:click="openPanel('schedule')" class="{{ $btnSolid }} text-[12px] px-2.5 py-2">✎ Edit schedule</button>
+            </div>
+        </div>
+
+        {{-- Related --}}
+        <div class="{{ $panelCls }} p-5">
+            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mb-3">Related</p>
+            <div class="grid grid-cols-2 gap-2">
+                @foreach (array_filter([
+                    ['Contacts', 'Your customers', route('site.contacts', $site->name), false],
+                    ['Payments', 'Deposits & payouts', route('site.payments', $site->name), false],
+                    $site->hasFeature('invoices') ? ['Invoices', 'Bill a customer', route('site.invoices', $site->name), false] : null,
+                    ['Booking page', 'What customers see ↗', $bookPage, true],
+                ]) as [$label, $hint, $href, $external])
+                    <a href="{{ $href }}" @if($external) target="_blank" rel="noopener" @else wire:navigate @endif
+                       class="rounded-2xl px-3 py-2.5 bg-gray-50 dark:bg-white/[0.04] hover:ring-2 hover:ring-[color-mix(in_srgb,var(--primary)_30%,transparent)]">
+                        <span class="block text-[12.5px] font-bold text-gray-900 dark:text-white">{{ $label }} {{ $external ? '' : '→' }}</span>
+                        <span class="block text-[11px] text-gray-500 dark:text-gray-400">{{ $hint }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </x-slot:quick>
+</x-tri-layout>

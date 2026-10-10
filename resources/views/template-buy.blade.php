@@ -7,6 +7,7 @@
     </head>
     <body class="pub-theme antialiased">
         <livewire:template-buy-page :template-key="$key" />
+        <x-legal-footer />
         @fluxScripts
     </body>
 </html>

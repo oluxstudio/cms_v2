@@ -24,6 +24,17 @@ class SitePaymentFulfilment
         $completed = $event->kind === WebhookEventKind::Completed;
         $m = $event->metadata;
 
+        // Module payments (event tickets, memberships…): config/payments.php
+        // 'fulfilment' maps a checkout metadata key → a handler class with
+        // handle(Site $site, WebhookEvent $event, bool $completed): void.
+        foreach ((array) config('payments.fulfilment', []) as $metaKey => $handler) {
+            if (! empty($m[$metaKey]) && class_exists($handler)) {
+                app($handler)->handle($site, $event, $completed);
+
+                return;
+            }
+        }
+
         if ($id = $m['order_id'] ?? null) {
             $order = $site->orders()->find($id);
             if ($order && $completed) {

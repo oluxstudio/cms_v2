@@ -129,4 +129,80 @@ return [
         'settings' => [],
     ],
 
+
+    // ── Audience & engagement modules (Oct 2026) ─────────────────────────
+    'newsletter' => [
+        'key' => 'newsletter',
+        'tier' => 'basic',
+        'intents' => ['newsletter', 'mailing list', 'email list', 'subscribe', 'subscribers', 'campaign', 'email marketing', 'updates'],
+        'frontend_block' => null,
+        'name' => 'Newsletter',
+        'description' => 'Grow an email list from your site and send campaigns to your subscribers — with unsubscribe links and open/click stats.',
+        'icon' => 'envelope',
+        'needs_payments' => false,
+        'nav' => [
+            ['label' => 'Newsletter', 'seg' => 'newsletter'],
+        ],
+        'settings' => [
+            'from_name' => ['type' => 'text', 'label' => 'From name', 'default' => ''],
+            'reply_to' => ['type' => 'text', 'label' => 'Reply-to email', 'default' => ''],
+            'double_opt_in' => ['type' => 'toggle', 'label' => 'Confirm new subscribers by email (double opt-in)', 'default' => true],
+            'signup_headline' => ['type' => 'text', 'label' => 'Signup box headline', 'default' => 'Get our news in your inbox'],
+        ],
+    ],
+
+    'events' => [
+        'key' => 'events',
+        'tier' => 'basic',
+        'intents' => ['event', 'events', 'tickets', 'ticketing', 'rsvp', 'workshop', 'conference', 'concert', 'class', 'register'],
+        'frontend_block' => null,
+        'name' => 'Events & Tickets',
+        'description' => 'Publish events with free RSVPs or paid tickets, capacity limits, attendee lists, ticket emails and door check-in.',
+        'icon' => 'calendar',
+        'needs_payments' => false, // free RSVP works without Stripe; paid tickets need it
+        'nav' => [
+            ['label' => 'Events', 'seg' => 'events'],
+        ],
+        'settings' => [
+            'currency' => ['type' => 'select', 'label' => 'Ticket currency', 'options' => ['gbp', 'usd', 'eur', 'cad', 'aud'], 'default' => 'gbp'],
+            'reminder_hours' => ['type' => 'number', 'label' => 'Send attendees a reminder this many hours before (0 = off)', 'default' => 24],
+        ],
+    ],
+
+    'memberships' => [
+        'key' => 'memberships',
+        'tier' => 'basic',
+        'intents' => ['membership', 'memberships', 'members', 'member area', 'subscription', 'subscriptions', 'join', 'club', 'patron', 'supporter'],
+        'frontend_block' => null,
+        'name' => 'Memberships',
+        'description' => 'Membership tiers — free or paid monthly / yearly through your Stripe — with members-only content and a member list.',
+        'icon' => 'team',
+        'needs_payments' => false, // free tiers work without Stripe; paid tiers need it
+        'nav' => [
+            ['label' => 'Members', 'seg' => 'memberships'],
+        ],
+        'settings' => [
+            'currency' => ['type' => 'select', 'label' => 'Currency', 'options' => ['gbp', 'usd', 'eur', 'cad', 'aud'], 'default' => 'gbp'],
+            'welcome_message' => ['type' => 'textarea', 'label' => 'Welcome email message', 'default' => 'Welcome — thanks for joining!'],
+        ],
+    ],
+
+    'reviews' => [
+        'key' => 'reviews',
+        'tier' => 'basic',
+        'intents' => ['review', 'reviews', 'testimonial', 'testimonials', 'rating', 'ratings', 'feedback', 'stars'],
+        'frontend_block' => null,
+        'name' => 'Reviews & Testimonials',
+        'description' => 'Collect star reviews from customers by link or on your site, approve them, and show them with Google-friendly review markup.',
+        'icon' => 'star',
+        'needs_payments' => false,
+        'nav' => [
+            ['label' => 'Reviews', 'seg' => 'reviews'],
+        ],
+        'settings' => [
+            'auto_publish_min_stars' => ['type' => 'select', 'label' => 'Publish automatically at or above', 'options' => ['never', '5', '4', '3'], 'default' => 'never'],
+            'request_message' => ['type' => 'textarea', 'label' => 'Review request email message', 'default' => 'Thanks for choosing us — would you leave a quick review?'],
+        ],
+    ],
+
 ];

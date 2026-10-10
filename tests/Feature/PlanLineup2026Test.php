@@ -45,14 +45,20 @@ function lineupSite(string $plan, array $site = []): array
 test('the 2026 line-up: prices, annual prices and limits', function () {
     $t = config('plans.tiers');
     expect([$t['free']['price_cents'], $t['starter']['price_cents'], $t['growth']['price_cents'], $t['pro']['price_cents'], $t['enterprise']['price_cents']])
-        ->toBe([0, 1900, 3900, 6900, 14900])
+        ->toBe([0, 1900, 4500, 7900, 14900])
         ->and($t['starter']['annual_price_cents'])->toBe(19000)
         ->and($t['enterprise']['price_prefix'])->toBe('From')
         ->and($t['growth']['highlight'])->toBeTrue()
         ->and([$t['starter']['limits']['mailboxes'], $t['growth']['limits']['mailboxes'], $t['pro']['limits']['mailboxes']])->toBe([0, 5, 10])
-        ->and([$t['free']['limits']['storage_mb'], $t['starter']['limits']['storage_mb'], $t['growth']['limits']['storage_mb'], $t['pro']['limits']['storage_mb']])->toBe([1024, 10240, 25600, 51200])
+        ->and([$t['free']['limits']['storage_mb'], $t['starter']['limits']['storage_mb'], $t['growth']['limits']['storage_mb'], $t['pro']['limits']['storage_mb']])->toBe([1024, 5120, 20480, 51200])
         ->and($t['free']['limits']['custom_domain'])->toBeFalse()
-        ->and(config('plans.compare.Booking.growth'))->toBe('Up to 3 staff calendars, deposits');
+        ->and(config('plans.compare.Bookings.growth'))->toBe('Up to 3 staff calendars, deposits')
+        // October 2026 table: Growth 3 sites, Pro up to 10 staff, storage per mailbox.
+        ->and([$t['trial']['limits']['sites'], $t['starter']['limits']['sites'], $t['growth']['limits']['sites'], $t['pro']['limits']['sites'], $t['enterprise']['limits']['sites']])->toBe([1, 1, 3, 10, null])
+        ->and($t['trial']['limits']['storage_mb'])->toBe(1024)
+        ->and([$t['growth']['limits']['mailbox_storage_gb'], $t['pro']['limits']['mailbox_storage_gb']])->toBe([10, 25])
+        ->and($t['pro']['limits']['staff_calendars'])->toBe(10)
+        ->and($t['pro']['annual_price_cents'])->toBe(79000);
 
     [$owner] = lineupSite('starter');
     expect($owner->currentSubscription()->paymentFeePct())->toBe(1.0);
@@ -240,10 +246,11 @@ test('the subscription page shows the new prices, annual prices and the comparis
     [$owner] = lineupSite('starter');
 
     Livewire::actingAs($owner)->test(SubscriptionPage::class)
-        ->assertSee('£39.00')
-        ->assertSee('or £390/year')
-        ->assertSee('Compare plans')
-        ->assertSee('Online payment fee (on top of Stripe)')
+        ->assertSee('£45.00')
+        ->assertSee('or £450/year')
+        ->assertSee('Compare every spec')
+        ->assertSee('Storage per mailbox')
+        ->assertSee('Olux fee on online payments')
         ->assertSee('Up to 3 staff calendars, deposits')
         ->assertSee('From');
 });

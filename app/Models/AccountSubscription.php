@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PlanCatalog;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,10 +39,27 @@ class AccountSubscription extends Model
         return $this->belongsTo(User::class);
     }
 
-    /** @return array<string,mixed> the tier definition (falls back to trial). */
+    /**
+     * The tier whose RULES apply right now (falls back to trial). An ended
+     * trial or a cancelled/expired paid plan gets the Free plan's limits —
+     * own domain, bookings, invoices, mailboxes… — until a plan is chosen.
+     * Nothing is deleted; new usage is simply held to Free.
+     *
+     * @return array<string,mixed>
+     */
     public function tier(): array
     {
+        if ($this->lapsed() && ($free = PlanCatalog::lapsedTier())) {
+            return $free;
+        }
+
         return config("plans.tiers.{$this->plan}") ?? config('plans.tiers.trial');
+    }
+
+    /** Trial over, or the paid plan was cancelled / expired — no plan is paying. */
+    public function lapsed(): bool
+    {
+        return $this->trialExpired() || in_array($this->status, ['expired', 'cancelled'], true);
     }
 
     /* ── Plan gate: limits from config/plans.php ───────────────────────── */

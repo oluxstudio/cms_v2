@@ -58,10 +58,11 @@
     </x-slot:rail>
 
     {{-- ══ CENTER: the plans ══ --}}
-    <div class="@container max-w-[52rem] mx-auto">
+    <div class="@container">
         @if($sub->trialExpired())
             <div class="mb-4 rounded-2xl px-5 py-3.5 text-sm font-semibold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-500/20">
-                Your free trial has ended — pick a plan to unlock your sites again. Nothing you built has been deleted.
+                Your free trial has ended, so your account now follows the Free plan: no own domain, {{ config('plans.tiers.free.limits.bookings_month', 20) }} bookings a month and no invoices.
+                Pick a plan to unlock everything again — nothing you built has been deleted.
             </div>
         @endif
 
@@ -71,128 +72,143 @@
             </div>
         @endif
 
-        {{-- Current + Popular use the dark "ink" hero style to contrast from the tinted base cards. --}}
-        <div class="grid @xl:grid-cols-2 @4xl:grid-cols-3 gap-5">
+        {{-- Plans — the same line-up, order and wording as the public site's Pricing section --}}
+        <div class="mb-5">
+            <p class="text-[11px] font-bold uppercase tracking-[.16em]" style="color:var(--primary)">Pricing</p>
+            <h2 class="text-2xl sm:text-[28px] font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight mt-1">Start free, grow when you do</h2>
+            <p class="text-[13.5px] text-gray-500 dark:text-gray-400 mt-1.5 max-w-2xl">
+                Every plan starts with a {{ config('plans.trial_days') }}-day free trial with everything unlocked — no card required.
+                Paid plans are billed monthly and you pay right here on this page; switch or cancel any time.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-3 gap-4 pt-3">
         @foreach($tiers as $key => $t)
         @php
             $isCurrent = $sub->plan === $key;
             $isUpgrade = ($order[$key] ?? 0) > $currentRank;
             $hl = $t['highlight'] ?? false;
             $effective = $sub->priceFor($key);
-            $a = $accentOf($t);
-            $contrast = $isCurrent || $hl;                    // stands out from base cards
         @endphp
-        <div class="relative w-full flex flex-col rounded-[26px] p-7 shadow-sm overflow-hidden
-                    transition-all duration-200 hover:-translate-y-1 hover:shadow-lg
-                    {{ $contrast ? 'text-white shadow-lg' : 'text-gray-900 dark:text-white' }}"
-             style="{{ $contrast ? 'background:#332433' : 'background:'.$a['base'].';' }} @if(!$contrast) --tw-bg: {{ $a['base'] }} @endif">
+        <div wire:key="plan-{{ $key }}"
+             class="relative flex flex-col rounded-[22px] p-6 bg-white dark:bg-[#1d1e2a] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg
+                    {{ $hl || $isCurrent ? 'shadow-lg' : 'shadow-sm border border-gray-100 dark:border-white/[0.07]' }}"
+             @if ($hl || $isCurrent) style="box-shadow: 0 0 0 2px var(--primary), 0 12px 30px -12px color-mix(in srgb, var(--primary) 45%, transparent)" @endif>
 
-            {{-- accent glow / strip --}}
-            @if($contrast)
-                <span class="absolute -top-12 -right-12 w-44 h-44 rounded-full blur-3xl pointer-events-none" style="background:{{ $a['solid'] }}33"></span>
-            @else
-                <span class="absolute top-0 inset-x-0 h-1.5" style="background:{{ $a['solid'] }}"></span>
+            @if ($isCurrent)
+                <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full text-[11.5px] font-bold whitespace-nowrap shadow-sm bg-gray-900 text-white dark:bg-white dark:text-gray-900">Your plan</span>
+            @elseif ($hl)
+                <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full text-[11.5px] font-bold whitespace-nowrap shadow-sm" style="background:var(--primary);color:var(--on-primary)">Most popular</span>
             @endif
 
-            {{-- badges --}}
-            @if($isCurrent)
-                <span class="absolute top-5 right-5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider" style="background:{{ $a['solid'] }};color:{{ $a['ink'] }}">Current</span>
-            @elseif($hl)
-                <span class="absolute top-5 right-5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider" style="background:{{ $a['solid'] }};color:{{ $a['ink'] }}">Popular</span>
+            <h3 class="text-[22px] font-extrabold leading-tight" style="color:var(--primary)">{{ $t['name'] }}</h3>
+            <p class="text-[13px] text-gray-600 dark:text-gray-300 mt-1 min-h-[2.4rem]">{{ $t['tagline'] }}</p>
+
+            <div class="mt-3 flex items-baseline gap-1.5 flex-wrap">
+                @if ($key === 'trial' || $effective === 0)
+                    <span class="text-[30px] font-extrabold tracking-tight text-gray-900 dark:text-white">Free</span>
+                    @if ($key === 'trial')<span class="text-[12px] text-gray-500 dark:text-gray-400">for {{ config('plans.trial_days') }} days</span>@endif
+                @else
+                    @if (! empty($t['price_prefix']))<span class="text-[13px] font-bold text-gray-500 dark:text-gray-400">{{ $t['price_prefix'] }}</span>@endif
+                    <span class="text-[30px] font-extrabold tracking-tight text-gray-900 dark:text-white">{{ Money::format($effective, 'gbp') }}</span>
+                    <span class="text-[12px] text-gray-500 dark:text-gray-400">/month</span>
+                @endif
+            </div>
+            @if ($sub->hasOverride($key))
+                <p class="text-[11.5px] font-bold text-emerald-600 dark:text-emerald-400">Your agreed price</p>
+            @elseif (! empty($t['annual_price_cents']) && $key !== 'trial')
+                <p class="text-[11.5px] text-gray-500 dark:text-gray-400">or £{{ number_format($t['annual_price_cents'] / 100) }}/year — two months free</p>
             @endif
 
-            <h3 class="text-2xl font-extrabold">{{ $t['name'] }}</h3>
-            <p class="text-[12px] mt-1 min-h-[2.25rem] {{ $contrast ? 'text-white/70' : 'text-gray-500 dark:text-gray-400' }}">{{ $t['tagline'] }}</p>
-
-            <ul class="space-y-2.5 text-[13px] mt-5 flex-1 {{ $contrast ? 'text-white/90' : 'text-gray-700 dark:text-gray-200' }}">
-                @foreach($t['features'] as $f)
-                    <li class="flex gap-2.5">
-                        <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:{{ $contrast ? $a['solid'] : $a['ink'] }}"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        <span>{{ $f }}</span>
-                    </li>
+            <ul class="mt-4 space-y-2 text-[13px] text-gray-700 dark:text-gray-200 flex-1">
+                @foreach ($t['features'] as $f)
+                    <li class="flex gap-2"><span class="font-bold shrink-0" style="color:var(--primary)">✓</span><span>{{ $f }}</span></li>
                 @endforeach
             </ul>
 
-            {{-- details link --}}
-            <button wire:click="viewPlan('{{ $key }}')"
-                    class="mt-4 self-start text-[11px] font-bold underline underline-offset-2 {{ $contrast ? 'text-white/70 hover:text-white' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white' }}">
-                View full details →
-            </button>
-
-            {{-- Price + CTA --}}
-            <div class="mt-5 flex items-end justify-between gap-3">
-                <div class="leading-none">
-                    @if($key === 'trial')
-                        <span class="text-3xl font-extrabold">Free</span>
-                        <span class="block text-[11px] mt-1 {{ $contrast ? 'text-white/70' : 'text-gray-400' }}">{{ config('plans.trial_days') }} days</span>
-                    @else
-                        @if(! empty($t['price_prefix']) && $effective > 0)<span class="block text-[11px] font-bold mb-1 {{ $contrast ? 'text-white/70' : 'text-gray-500' }}">{{ $t['price_prefix'] }}</span>@endif
-                        <span class="text-3xl font-extrabold">{{ $effective === 0 ? 'Free' : Money::format($effective, 'gbp') }}</span>
-                        <span class="block text-[11px] mt-1 {{ $contrast ? 'text-white/70' : 'text-gray-400' }}">
-                            per month @if($sub->hasOverride($key)) · <b class="text-emerald-500 dark:text-emerald-300">your price</b> @endif
-                        </span>
-                        @if(! empty($t['annual_price_cents']) && ! $sub->hasOverride($key))
-                            <span class="block text-[11px] mt-1 font-semibold {{ $contrast ? 'text-white/80' : 'text-gray-500 dark:text-gray-400' }}">or £{{ number_format($t['annual_price_cents'] / 100) }}/year · 2 months free</span>
-                        @endif
-                    @endif
-                </div>
-
-                @if($isCurrent)
-                    <span class="px-4 py-2 rounded-xl text-xs font-bold" style="background:{{ $a['solid'] }}22;color:{{ $contrast ? '#fff' : $a['ink'] }}">{{ $sub->onTrial() ? 'Active' : 'Current' }}</span>
-                @elseif($key === 'trial')
-                    <span class="px-4 py-2 rounded-xl text-xs font-bold {{ $contrast ? 'bg-white/10 text-white/60' : 'bg-black/5 text-gray-400' }}">Auto</span>
+            <div class="mt-5 space-y-2">
+                @if ($isCurrent)
+                    <span class="flex items-center justify-center w-full min-h-[46px] rounded-xl text-[14px] font-bold bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300">
+                        {{ $sub->onTrial() ? 'Active · '.$sub->trialDaysLeft().' '.Str::plural('day', $sub->trialDaysLeft()).' left' : 'Current plan' }}
+                    </span>
+                @elseif ($key === 'trial')
+                    <span class="flex items-center justify-center w-full min-h-[46px] rounded-xl text-[13px] font-semibold border border-gray-200 dark:border-white/[0.1] text-gray-400">Starts automatically</span>
                 @else
-                    {{-- Upgrade CTA — high contrast: accent swatch on the ink cards, ink on the tinted cards --}}
-                    <button wire:click="choose('{{ $key }}')" wire:loading.attr="disabled"
-                            class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-transform hover:scale-[1.03]"
-                            style="{{ $contrast ? 'background:'.$a['solid'].';color:'.$a['ink'] : 'background:#332433;color:#fff' }}">
-                        {{ $isUpgrade ? 'Upgrade' : 'Switch' }}
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    <button type="button" wire:click="viewPlan('{{ $key }}')"
+                            class="flex items-center justify-center w-full min-h-[46px] rounded-xl text-[14px] font-bold transition-transform hover:scale-[1.01]
+                                   {{ $hl ? 'shadow-sm' : 'border-2 border-gray-900 dark:border-white/80 bg-white dark:bg-[#1d1e2a] text-gray-900 dark:text-white' }}"
+                            @if ($hl) style="background:var(--primary);color:var(--on-primary)" @endif>
+                        {{ $sub->onTrial() || $sub->trialExpired() ? 'Get started' : ($isUpgrade ? 'Upgrade' : 'Switch') }}
                     </button>
                 @endif
+                <button type="button" wire:click="viewPlan('{{ $key }}', 'specs')"
+                        class="block w-full text-center text-[12px] font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white underline-offset-2 hover:underline">
+                    View all specs for {{ $t['name'] }}
+                </button>
             </div>
         </div>
         @endforeach
         </div>
 
-        {{-- Compare plans: the full line-up side by side (config plans.compare) --}}
+        {{-- Compare plans: every spec, side by side — built from the limits the app enforces (App\Support\PlanSpecs) --}}
         @php
-            $compare = (array) config('plans.compare');
-            $cols = collect($tiers)->keys()->filter(fn ($k) => collect($compare)->contains(fn ($row) => array_key_exists($k, $row)))->values();
+            $cols = collect($tiers)->keys()->values();
+            $specCols = $cols->mapWithKeys(fn ($k) => [$k => \App\Support\PlanSpecs::flat($k, $tiers[$k])]);
+            $specSections = [];
+            foreach ($specCols as $k => $sections) {
+                foreach ($sections as $section => $rows) {
+                    foreach (array_keys($rows) as $label) { $specSections[$section][$label] = true; }
+                }
+            }
         @endphp
-        @if($compare)
-            <section class="mt-8" aria-labelledby="compare-plans">
-                <h2 id="compare-plans" class="text-lg font-extrabold text-gray-900 dark:text-white mb-3">Compare plans</h2>
-                <div class="{{ $panel }} overflow-x-auto">
-                    <table class="w-full min-w-[46rem] text-[12.5px] text-left">
-                        <thead>
-                            <tr class="border-b border-gray-100 dark:border-white/[0.06]">
-                                <th scope="col" class="sticky left-0 z-10 bg-white dark:bg-[#1d1e2a] p-3.5 font-bold text-gray-400 w-[9.5rem]"><span class="sr-only">Feature</span></th>
-                                @foreach($cols as $k)
-                                    <th scope="col" class="p-3.5 align-bottom">
-                                        <span class="block text-[14px] font-extrabold text-gray-900 dark:text-white">{{ $tiers[$k]['name'] }}</span>
-                                        <span class="block text-[11.5px] font-semibold text-gray-500 dark:text-gray-400">
-                                            {{ ! empty($tiers[$k]['price_prefix']) ? $tiers[$k]['price_prefix'].' ' : '' }}{{ ($tiers[$k]['price_cents'] ?? 0) === 0 ? 'Free' : Money::format($sub->priceFor($k), 'gbp').'/mo' }}
-                                        </span>
-                                        @if($sub->plan === $k)<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider" style="background:var(--primary);color:var(--on-primary)">Current</span>@endif
-                                    </th>
-                                @endforeach
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($compare as $label => $row)
-                                <tr class="border-b last:border-0 border-gray-100 dark:border-white/[0.05]">
+        <section id="compare-plans" class="mt-8 scroll-mt-24" aria-labelledby="compare-plans-title">
+            <div class="flex flex-wrap items-end justify-between gap-2 mb-3">
+                <h2 id="compare-plans-title" class="text-lg font-extrabold text-gray-900 dark:text-white">Compare every spec</h2>
+                <p class="text-[12px] text-gray-500 dark:text-gray-400">✓ included · ✕ not included</p>
+            </div>
+            <div class="{{ $panel }} overflow-x-auto">
+                <table class="w-full min-w-[52rem] text-[12.5px] text-left">
+                    <thead>
+                        <tr class="border-b-2 border-gray-100 dark:border-white/[0.08]">
+                            <th scope="col" class="sticky left-0 z-10 bg-white dark:bg-[#1d1e2a] p-3.5 w-[11rem]"><span class="sr-only">Spec</span></th>
+                            @foreach($cols as $k)
+                                <th scope="col" class="p-3.5 align-bottom {{ $sub->plan === $k ? 'bg-[color-mix(in_srgb,var(--primary)_7%,transparent)]' : '' }}">
+                                    <span class="block text-[14px] font-extrabold text-gray-900 dark:text-white">{{ $tiers[$k]['name'] }}</span>
+                                    <span class="block text-[11.5px] font-semibold text-gray-500 dark:text-gray-400">
+                                        {{ ! empty($tiers[$k]['price_prefix']) ? $tiers[$k]['price_prefix'].' ' : '' }}{{ $sub->priceFor($k) === 0 ? 'Free' : Money::format($sub->priceFor($k), 'gbp').'/mo' }}
+                                    </span>
+                                    @if($sub->plan === $k)<span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9.5px] font-extrabold uppercase tracking-wider" style="background:var(--primary);color:var(--on-primary)">Current</span>@endif
+                                </th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($specSections as $section => $labels)
+                            <tr><th colspan="{{ $cols->count() + 1 }}" scope="colgroup" class="sticky left-0 px-3.5 pt-4 pb-1.5 text-[10.5px] font-extrabold uppercase tracking-[.14em] text-left" style="color:var(--primary)">{{ $section }}</th></tr>
+                            @foreach(array_keys($labels) as $label)
+                                <tr class="border-b border-gray-100 dark:border-white/[0.05]">
                                     <th scope="row" class="sticky left-0 z-10 p-3.5 font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1d1e2a] shadow-[1px_0_0_rgba(0,0,0,0.05)]">{{ $label }}</th>
                                     @foreach($cols as $k)
-                                        <td class="p-3.5 text-gray-600 dark:text-gray-300 {{ $sub->plan === $k ? 'font-semibold text-gray-900 dark:text-white' : '' }}">{{ $row[$k] ?? '—' }}</td>
+                                        @php $cell = $specCols[$k][$section][$label] ?? null; @endphp
+                                        <td class="p-3.5 text-gray-600 dark:text-gray-300 {{ $sub->plan === $k ? 'bg-[color-mix(in_srgb,var(--primary)_7%,transparent)] font-semibold text-gray-900 dark:text-white' : '' }}">
+                                            @if (! $cell)
+                                                <span class="text-gray-300 dark:text-gray-600">—</span>
+                                            @elseif ($cell['ok'] === true)
+                                                <span class="font-bold text-emerald-600 dark:text-emerald-400">✓</span> {{ $cell['value'] !== 'Included' ? $cell['value'] : '' }}
+                                            @elseif ($cell['ok'] === false)
+                                                <span class="font-bold text-rose-500">✕</span> <span class="text-gray-400 dark:text-gray-500">{{ $cell['value'] !== 'Not included' ? $cell['value'] : '' }}</span>
+                                            @else
+                                                {{ $cell['value'] }}
+                                            @endif
+                                        </td>
                                     @endforeach
                                 </tr>
                             @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        @endif
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
         <p class="text-center text-[11px] text-gray-400 dark:text-gray-500 mt-6">
             Plans switch instantly. Billing is handled on your account — you can change or cancel at any time.
@@ -242,7 +258,8 @@
         <div class="rounded-[1.75rem] p-5 shadow-sm" style="background:var(--foreground);color:var(--background)">
             <h3 class="font-display text-[16px] font-bold">How billing works</h3>
             <ul class="mt-2 space-y-1.5 text-[12.5px] opacity-85 leading-relaxed list-disc pl-4">
-                <li>Upgrades start straight away; you're taken to a secure card checkout.</li>
+                <li>Pay by card right here on the page — your plan starts the moment it goes through.</li>
+                <li>Already paying? Switching plans is prorated on your next monthly invoice.</li>
                 <li>Switch or cancel any time — nothing you built is deleted.</li>
                 <li>Questions? Write to <b>{{ config('mail.from.address') }}</b>.</li>
             </ul>
@@ -268,79 +285,185 @@
     </x-slot:quick>
 </x-tri-layout>
 
-    {{-- ═══ PLAN DETAIL — selected package one side, full description the other ═══ --}}
+    {{-- ═══ PLAN DETAIL — the package on one side; its details, the card form, or the welcome on the other ═══ --}}
     @if($viewingPlan && ($vt = config("plans.tiers.{$viewingPlan}")))
     @php
-        $va = $accentOf($vt);
         $vEffective = $sub->priceFor($viewingPlan);
-        $vIsCurrent = $sub->plan === $viewingPlan;
+        $vIsCurrent = $sub->plan === $viewingPlan && ! $paidPlan;
         $vIsUpgrade = ($order[$viewingPlan] ?? 0) > $currentRank;
         $vLimit = $vt['limits']['sites'] ?? null;
+        $paying = $payPlan === $viewingPlan && $paySecret;
+        $vl = $vt['limits'] ?? [];
+        $vBoxes = array_key_exists('mailboxes', $vl) ? ($vl['mailboxes'] === null ? 'Custom' : ($vl['mailboxes'] ?: 'None')) : '—';
+        $vCal = array_key_exists('staff_calendars', $vl) ? ($vl['staff_calendars'] ?? 'Unlimited') : '—';
+        $vFee = array_key_exists('payment_fee_pct', $vl) && $vl['payment_fee_pct'] !== null ? rtrim(rtrim(number_format((float) $vl['payment_fee_pct'], 1), '0'), '.').'%' : '—';
     @endphp
-    <x-lightbox close="closePlan" max-width="max-w-3xl" :title="$vt['name'].' plan'">
-        <div class="grid md:grid-cols-2 -mx-6 -my-5">
-            {{-- Left: the selected package --}}
-            <div class="p-7 text-white flex flex-col" style="background:#332433">
-                <h3 class="text-2xl font-extrabold">{{ $vt['name'] }}</h3>
-                <p class="text-[12px] text-white/70 mt-1">{{ $vt['tagline'] }}</p>
-                <div class="mt-5">
-                    @if(! empty($vt['price_prefix']) && $vEffective > 0)<span class="block text-xs font-bold text-white/70 mb-1">{{ $vt['price_prefix'] }}</span>@endif
-                    <span class="text-4xl font-extrabold">{{ $viewingPlan === 'trial' ? 'Free' : ($vEffective === 0 ? 'Free' : Money::format($vEffective, 'gbp')) }}</span>
-                    <span class="text-xs text-white/60">{{ $viewingPlan === 'trial' ? '/ '.config('plans.trial_days').' days' : '/ month' }}</span>
+    <x-lightbox close="closePlan" max-width="max-w-4xl" :title="$vt['name'].' plan'" :subtitle="$vt['tagline']">
+        <div class="grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] -mx-6 -my-5">
+            {{-- Left: the package, as on the public Pricing section --}}
+            <div class="p-7 flex flex-col bg-gray-50 dark:bg-white/[0.03] md:border-r border-gray-100 dark:border-white/[0.06]">
+                <h3 class="text-[26px] font-extrabold leading-tight" style="color:var(--primary)">{{ $vt['name'] }}</h3>
+                <p class="text-[13px] text-gray-600 dark:text-gray-300 mt-1">{{ $vt['tagline'] }}</p>
+                <div class="mt-4 flex items-baseline gap-1.5 flex-wrap">
+                    @if ($viewingPlan === 'trial' || $vEffective === 0)
+                        <span class="text-4xl font-extrabold text-gray-900 dark:text-white">Free</span>
+                        @if ($viewingPlan === 'trial')<span class="text-[13px] text-gray-500">for {{ config('plans.trial_days') }} days</span>@endif
+                    @else
+                        @if (! empty($vt['price_prefix']))<span class="text-sm font-bold text-gray-500">{{ $vt['price_prefix'] }}</span>@endif
+                        <span class="text-4xl font-extrabold text-gray-900 dark:text-white">{{ Money::format($vEffective, 'gbp') }}</span>
+                        <span class="text-[13px] text-gray-500">/month</span>
+                    @endif
                 </div>
-                <ul class="space-y-2.5 text-[13px] text-white/90 mt-6 flex-1">
+                @if (! empty($vt['annual_price_cents']) && $viewingPlan !== 'trial' && ! $sub->hasOverride($viewingPlan))
+                    <p class="text-[12px] text-gray-500 dark:text-gray-400">or £{{ number_format($vt['annual_price_cents'] / 100) }}/year — two months free</p>
+                @endif
+                <ul class="mt-5 space-y-2.5 text-[13.5px] text-gray-700 dark:text-gray-200 flex-1">
                     @foreach($vt['features'] as $f)
-                        <li class="flex gap-2.5">
-                            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:{{ $va['solid'] }}"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                            <span>{{ $f }}</span>
-                        </li>
+                        <li class="flex gap-2"><span class="font-bold shrink-0" style="color:var(--primary)">✓</span><span>{{ $f }}</span></li>
                     @endforeach
                 </ul>
-                @if($vIsCurrent)
-                    <span class="mt-6 px-4 py-2.5 rounded-xl text-sm font-bold text-center" style="background:{{ $va['solid'] }};color:{{ $va['ink'] }}">Your current plan</span>
-                @elseif($viewingPlan !== 'trial')
-                    <button wire:click="choose('{{ $viewingPlan }}')" wire:loading.attr="disabled"
-                            class="mt-6 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-transform hover:scale-[1.02]"
-                            style="background:{{ $va['solid'] }};color:{{ $va['ink'] }}">
-                        {{ $vIsUpgrade ? 'Upgrade' : 'Switch' }} to {{ $vt['name'] }}
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                    </button>
-                @endif
-            </div>
-
-            {{-- Right: the full description --}}
-            <div class="p-7 flex flex-col">
-                <p class="text-[11px] font-bold uppercase tracking-[.14em]" style="color:{{ $va['ink'] }}">About this plan</p>
-                <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mt-3">{{ $vt['description'] }}</p>
-
-                @php
-                    $vl = $vt['limits'] ?? [];
-                    $vBoxes = array_key_exists('mailboxes', $vl) ? ($vl['mailboxes'] === null ? 'Custom' : ($vl['mailboxes'] ?: 'None')) : '—';
-                    $vCal = array_key_exists('staff_calendars', $vl) ? ($vl['staff_calendars'] ?? '∞') : '—';
-                    $vFee = array_key_exists('payment_fee_pct', $vl) && $vl['payment_fee_pct'] !== null ? rtrim(rtrim(number_format((float) $vl['payment_fee_pct'], 1), '0'), '.').'%' : '—';
-                @endphp
-                <div class="grid grid-cols-2 gap-3 mt-6">
+                <div class="grid grid-cols-3 gap-2 mt-6">
                     @foreach ([
-                        ['Sites', $vLimit === null ? '∞' : $vLimit],
+                        ['Sites', $vLimit === null ? 'Unlimited' : $vLimit],
                         ['Storage', $mb($vl['storage_mb'] ?? null)],
                         ['Mailboxes', $vBoxes],
-                        ['Staff calendars', $vCal],
+                        ['Calendars', $vCal],
                         ['Payment fee', $vFee],
-                        ['Free domain', ($vl['free_domain'] ?? null) ? (($vl['free_domain'] === 'any') ? 'Any, year 1' : '.'.$vl['free_domain'].', year 1') : 'No'],
+                        ['Free domain', ($vl['free_domain'] ?? null) ? (($vl['free_domain'] === 'any') ? 'Any, yr 1' : '.'.$vl['free_domain'].', yr 1') : 'No'],
                     ] as [$vLabel, $vValue])
-                        <div class="rounded-2xl p-4" style="background:{{ $va['base'] }}">
-                            <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{{ $vLabel }}</p>
-                            <p class="text-xl font-extrabold text-gray-900 mt-1">{{ $vValue }}</p>
+                        <div class="rounded-xl bg-white dark:bg-[#1d1e2a] border border-gray-100 dark:border-white/[0.06] px-3 py-2.5">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{{ $vLabel }}</p>
+                            <p class="text-[15px] font-extrabold text-gray-900 dark:text-white mt-0.5 truncate">{{ $vValue }}</p>
                         </div>
                     @endforeach
                 </div>
-                @if(! empty($vt['annual_price_cents']))
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">Annual: <span class="font-semibold text-gray-700 dark:text-gray-200">{{ Money::format((int) $vt['annual_price_cents'], 'gbp') }}/year</span> — two months free.</p>
-                @endif
+            </div>
 
-                <p class="text-xs text-gray-400 mt-5">Best for: <span class="font-semibold text-gray-600 dark:text-gray-300">{{ $vt['tagline'] }}</span></p>
+            {{-- Right: details → card form → welcome --}}
+            <div class="p-7 flex flex-col">
+                @if ($paidPlan === $viewingPlan)
+                    <div class="flex-1 flex flex-col items-center justify-center text-center py-8">
+                        <span class="w-14 h-14 rounded-2xl grid place-items-center bg-emerald-500 text-white text-2xl">✓</span>
+                        <h3 class="mt-4 text-xl font-extrabold text-gray-900 dark:text-white">You're on {{ $vt['name'] }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xs">Everything in the plan is unlocked now. A receipt is on its way to {{ auth()->user()->email }}.</p>
+                        <div class="mt-6 flex flex-wrap justify-center gap-2">
+                            <a href="{{ route('home') }}" class="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-bold" style="background:var(--primary);color:var(--on-primary)">Go to your sites</a>
+                            <button type="button" wire:click="closePlan" class="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-bold border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#1d1e2a] text-gray-700 dark:text-gray-200">Close</button>
+                        </div>
+                    </div>
+                @elseif ($paying)
+                    <p class="text-[11px] font-bold uppercase tracking-[.14em]" style="color:var(--primary)">Payment</p>
+                    <div class="mt-2 rounded-xl bg-gray-50 dark:bg-white/[0.04] px-4 py-3 flex items-center justify-between gap-3">
+                        <span class="text-[13px] text-gray-600 dark:text-gray-300">{{ $vt['name'] }} · first month<br><span class="text-[11.5px] text-gray-400">then {{ Money::format($vEffective, 'gbp') }} every month — cancel any time</span></span>
+                        <span class="text-xl font-extrabold text-gray-900 dark:text-white">{{ Money::format($payAmount ?: $vEffective, 'gbp') }}</span>
+                    </div>
+                    <div class="mt-4" x-data="planPay(@js(['key' => $stripeKey, 'secret' => $paySecret, 'returnUrl' => route('account.subscription')]))" wire:key="plan-pay-{{ $paySubscription }}">
+                        <div wire:ignore>
+                            <div x-ref="element" class="min-h-[140px]"></div>
+                            <p x-show="loading" class="text-[13px] text-gray-400" aria-live="polite">Loading secure payment form…</p>
+                        </div>
+                        <p x-show="error" x-text="error" x-cloak role="alert" class="mt-3 px-4 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-[13px] font-semibold text-rose-600 dark:text-rose-400"></p>
+                        @if ($payError)
+                            <p role="alert" class="mt-3 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-[13px] font-semibold text-amber-700 dark:text-amber-300">{{ $payError }}</p>
+                        @endif
+                        <button type="button" x-on:click="pay()" :disabled="loading || busy"
+                                class="mt-4 w-full min-h-[50px] rounded-xl text-[15px] font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                style="background:var(--primary);color:var(--on-primary)">
+                            <span x-show="! busy">Pay {{ Money::format($payAmount ?: $vEffective, 'gbp') }} and start {{ $vt['name'] }}</span>
+                            <span x-show="busy" x-cloak>Processing payment…</span>
+                        </button>
+                        <div class="mt-2.5 flex items-center justify-between gap-2 text-[11.5px] text-gray-500 dark:text-gray-400">
+                            <button type="button" wire:click="cancelPay" class="font-semibold hover:underline">← Back to the plan</button>
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                Secured by Stripe
+                            </span>
+                        </div>
+                    </div>
+                @else
+                    <div class="flex gap-1.5 p-1 rounded-full bg-gray-100 dark:bg-white/[0.06] self-start" role="tablist">
+                        @foreach (['about' => 'Plan details', 'specs' => 'All specs'] as $tabKey => $tabLabel)
+                            <button type="button" role="tab" wire:click="$set('planTab', '{{ $tabKey }}')" aria-selected="{{ $planTab === $tabKey ? 'true' : 'false' }}"
+                                    class="px-4 py-1.5 rounded-full text-[12.5px] font-bold transition-colors {{ $planTab === $tabKey ? 'bg-white dark:bg-[#1d1e2a] shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white' }}">{{ $tabLabel }}</button>
+                        @endforeach
+                    </div>
+                    @if ($planTab === 'specs')
+                        <div class="mt-4 space-y-4">
+                            @foreach (\App\Support\PlanSpecs::for($viewingPlan, $vt) as $section => $rows)
+                                <div>
+                                    <p class="text-[10.5px] font-extrabold uppercase tracking-[.14em] mb-1.5" style="color:var(--primary)">{{ $section }}</p>
+                                    <dl class="rounded-2xl border border-gray-100 dark:border-white/[0.06] divide-y divide-gray-100 dark:divide-white/[0.06]">
+                                        @foreach ($rows as $r)
+                                            <div class="flex items-start justify-between gap-3 px-3.5 py-2">
+                                                <dt class="text-[12.5px] text-gray-600 dark:text-gray-300">{{ $r['label'] }}</dt>
+                                                <dd class="text-[12.5px] font-bold text-right {{ $r['ok'] === false ? 'text-gray-400' : 'text-gray-900 dark:text-white' }}">
+                                                    @if ($r['ok'] === true)<span class="text-emerald-600 dark:text-emerald-400">✓</span>@elseif ($r['ok'] === false)<span class="text-rose-500">✕</span>@endif
+                                                    {{ $r['value'] }}
+                                                </dd>
+                                            </div>
+                                        @endforeach
+                                    </dl>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                    <p class="mt-4 text-[11px] font-bold uppercase tracking-[.14em]" style="color:var(--primary)">About this plan</p>
+                    <p class="text-[14px] text-gray-600 dark:text-gray-300 leading-relaxed mt-3">{{ $vt['description'] }}</p>
+                    <div class="mt-5 rounded-2xl bg-gray-50 dark:bg-white/[0.04] p-4 text-[13px] text-gray-600 dark:text-gray-300 space-y-1.5">
+                        <p><b class="text-gray-900 dark:text-white">Billed monthly</b> — pay by card on this page; nothing to install.</p>
+                        <p><b class="text-gray-900 dark:text-white">Switch or cancel any time</b> — nothing you built is ever deleted.</p>
+                        @if ($sub->onTrial())<p><b class="text-gray-900 dark:text-white">Your trial</b> — {{ $sub->trialDaysLeft() }} {{ Str::plural('day', $sub->trialDaysLeft()) }} left; upgrading now keeps everything you've made.</p>@endif
+                    </div>
+                    @endif
+                    <div class="flex-1"></div>
+                    @if ($vIsCurrent)
+                        <span class="mt-6 flex items-center justify-center min-h-[50px] rounded-xl text-sm font-bold bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-300">Your current plan</span>
+                    @elseif ($viewingPlan !== 'trial')
+                        <button wire:click="choose('{{ $viewingPlan }}')" wire:loading.attr="disabled" wire:target="choose"
+                                class="mt-6 flex items-center justify-center gap-1.5 min-h-[50px] rounded-xl text-[15px] font-bold shadow-sm transition-transform hover:scale-[1.01] disabled:opacity-60"
+                                style="background:var(--primary);color:var(--on-primary)">
+                            <span wire:loading.remove wire:target="choose">{{ $sub->onTrial() || $sub->trialExpired() ? 'Get started with' : ($vIsUpgrade ? 'Upgrade to' : 'Switch to') }} {{ $vt['name'] }} — {{ $vEffective === 0 ? 'Free' : Money::format($vEffective, 'gbp').'/month' }}</span>
+                            <span wire:loading wire:target="choose">Preparing secure payment…</span>
+                        </button>
+                    @endif
+                @endif
             </div>
         </div>
     </x-lightbox>
     @endif
+
+@script
+<script>
+    // Stripe Payment Element for the plan's first monthly payment.
+    window.planPay = (cfg) => ({
+        loading: true, busy: false, error: '', stripe: null, elements: null,
+        async init() {
+            if (! cfg.key || ! cfg.secret) { this.loading = false; this.error = 'Payments are not set up yet — contact support.'; return; }
+            try {
+                if (! window.Stripe) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://js.stripe.com/v3/'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+                this.stripe = window.Stripe(cfg.key);
+                const css = getComputedStyle(document.documentElement);
+                const dark = document.documentElement.classList.contains('dark');
+                this.elements = this.stripe.elements({ clientSecret: cfg.secret, appearance: { theme: dark ? 'night' : 'stripe',
+                    variables: { colorPrimary: css.getPropertyValue('--primary').trim() || '#f97316', borderRadius: '12px', fontFamily: getComputedStyle(document.body).fontFamily } } });
+                const el = this.elements.create('payment', { layout: { type: 'tabs' } });
+                el.on('ready', () => { this.loading = false; });
+                el.on('loaderror', (e) => { this.loading = false; this.error = e?.error?.message || 'The payment form could not load.'; });
+                el.mount(this.$refs.element);
+            } catch (e) {
+                this.loading = false;
+                this.error = 'The payment form could not load. Check your connection and try again.';
+            }
+        },
+        async pay() {
+            if (! this.elements || this.busy) return;
+            this.busy = true; this.error = '';
+            const { error } = await this.stripe.confirmPayment({ elements: this.elements, confirmParams: { return_url: cfg.returnUrl }, redirect: 'if_required' });
+            if (error) { this.error = error.message || 'The payment didn\'t go through.'; this.busy = false; return; }
+            await $wire.paymentConfirmed();
+            this.busy = false;
+        },
+    });
+</script>
+@endscript
 </div>

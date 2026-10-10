@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithLayoutMode;
 use App\Mail\BookingCancelled;
 use App\Mail\BookingConfirmed;
 use App\Models\BookingBlock;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -26,12 +28,47 @@ use Livewire\WithPagination;
  */
 class BookingsPage extends Component
 {
+    use WithLayoutMode;
     use WithPagination;
 
     public Site $site;
 
-    /** bookings | services | availability (calendar is a permanent right rail) */
+    /** Centre pill tabs: bookings | calendar | services (availability lives in services). */
+    #[Url(except: 'bookings')]
     public string $tab = 'bookings';
+
+    public const TABS = ['bookings', 'calendar', 'services'];
+
+    /** Bookings list filter — see FILTERS. */
+    #[Url(except: 'all')]
+    public string $filter = 'all';
+
+    public const FILTERS = [
+        'all' => 'All',
+        'upcoming' => 'Upcoming',
+        'today' => 'Today',
+        'pending' => 'Pending',
+        'confirmed' => 'Confirmed',
+        'past' => 'Past',
+        'cancelled' => 'Cancelled',
+        'no_show' => 'No-show',
+        'unpaid' => 'Unpaid',
+    ];
+
+    /** Bookings list order: when (smart by filter) | newest | customer | value. */
+    #[Url(except: 'when')]
+    public string $sort = 'when';
+
+    public const SORTS = [
+        'when' => 'By date',
+        'newest' => 'Recently booked',
+        'customer' => 'Customer A–Z',
+        'value' => 'Highest value',
+    ];
+
+    /** Free-text search over customer, email, reference and service. */
+    #[Url(as: 'q', except: '')]
+    public string $search = '';
 
     /** Right-side panel currently open: service | resource | schedule | exceptions (null = none). */
     public ?string $panel = null;
@@ -251,6 +288,14 @@ class BookingsPage extends Component
         $this->calDate = now()->format('Y-m-d');
         $this->blockDate = now()->addDay()->format('Y-m-d');
         $this->loadAvailability();
+        $this->initLayout('bookings', 'grid');
+        $this->setTab($this->tab === 'availability' ? 'services' : $this->tab);
+        if (! array_key_exists($this->filter, self::FILTERS)) {
+            $this->filter = 'all';
+        }
+        if (! array_key_exists($this->sort, self::SORTS)) {
+            $this->sort = 'when';
+        }
     }
 
     private function loadAvailability(): void
@@ -275,6 +320,7 @@ class BookingsPage extends Component
         $this->depositValue = '';
         $this->wizStep = 1;
         $this->wizOpen = true;
+        $this->tab = 'services';
     }
 
     public function closeWizard(): void
@@ -448,7 +494,7 @@ class BookingsPage extends Component
             return true;
         }
         $this->dispatch('upgrade-required',
-            reason: 'Your plan includes '.$cap.' booking '.Str::plural('calendar', (int) $cap).'. Upgrade for more staff calendars (Growth: 3, Pro: unlimited).',
+            reason: 'Your plan includes '.$cap.' booking '.Str::plural('calendar', (int) $cap).'. Upgrade for more staff calendars (Growth: '.(config('plans.tiers.growth.limits.staff_calendars') ?? 'unlimited').', Pro: '.(config('plans.tiers.pro.limits.staff_calendars') ?? 'unlimited').').',
             cta: 'See plans');
 
         return false;
@@ -680,7 +726,7 @@ class BookingsPage extends Component
         $this->formFields = array_values($this->formFields);
     }
 
-    /** Stat-tile click → jump to the matching view. */
+    /** Stat-tile click → filter the bookings list (or jump to the matching view). */
     public function openTile(string $tile): void
     {
         if ($tile === 'today') {
@@ -688,14 +734,71 @@ class BookingsPage extends Component
             $this->calMonth = now()->format('Y-m');
             unset($this->calendarDays);
         }
+        if ($tile === 'busiest') {
+            $this->search = (string) ($this->stats['busiest']['name'] ?? '');
+            $this->filter = 'all';
+            $this->resetPage();
+        } else {
+            $this->setFilter(match ($tile) {
+                'today' => 'today',
+                'upcoming' => 'upcoming',
+                'pending' => 'pending',
+                'noshow', 'no_show' => 'no_show',
+                'month', 'confirmed' => 'confirmed',
+                'cancelled' => 'cancelled',
+                'past' => 'past',
+                'unpaid' => 'unpaid',
+                default => $this->filter,
+            });
+        }
         $this->setTab('bookings');
     }
 
     public function setTab(string $tab): void
     {
-        if (in_array($tab, ['calendar', 'bookings', 'services', 'availability'], true)) {
-            $this->tab = $tab;
+        if ($tab === 'availability') {
+            $tab = 'services';
         }
+        $this->tab = in_array($tab, self::TABS, true) ? $tab : 'bookings';
+    }
+
+    public function setFilter(string $filter): void
+    {
+        $this->filter = array_key_exists($filter, self::FILTERS) ? $filter : 'all';
+        $this->resetPage();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSort(): void
+    {
+        if (! array_key_exists($this->sort, self::SORTS)) {
+            $this->sort = 'when';
+        }
+        $this->resetPage();
+    }
+
+    public function clearFilters(): void
+    {
+        $this->search = '';
+        $this->filter = 'all';
+        $this->sort = 'when';
+        $this->resetPage();
+    }
+
+    /** Mini-calendar day → the Calendar tab, focused on that day. */
+    public function openDay(string $date): void
+    {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return;
+        }
+        $this->pickDate($date);
+        $this->calMonth = substr($date, 0, 7);
+        unset($this->calendarDays, $this->calendarChips);
+        $this->tab = 'calendar';
     }
 
     // ── Calendar ──────────────────────────────────────────────────────────
@@ -703,7 +806,7 @@ class BookingsPage extends Component
     public function calShift(int $months): void
     {
         $this->calMonth = Carbon::parse($this->calMonth.'-01')->addMonths($months)->format('Y-m');
-        unset($this->calendarDays);
+        unset($this->calendarDays, $this->calendarChips);
     }
 
     public function pickDate(string $date): void
@@ -769,6 +872,36 @@ class BookingsPage extends Component
             ->where('ends_at', '>=', $day->copy()->startOfDay())
             ->orderBy('starts_at')
             ->get();
+    }
+
+    /**
+     * Big month grid chips: the first bookings STARTING on each grid day
+     * (one query for the 42-day window, grouped in PHP).
+     *
+     * @return array<string,array{items:array<int,array{id:string,time:string,name:string,status:string}>,more:int}>
+     */
+    #[Computed]
+    public function calendarChips(): array
+    {
+        $first = Carbon::parse($this->calMonth.'-01');
+        $start = $first->copy()->subDays($first->dayOfWeek)->startOfDay();
+        $end = $start->copy()->addDays(41)->endOfDay();
+
+        return $this->site->bookings()
+            ->where('status', '!=', 'cancelled')
+            ->whereBetween('starts_at', [$start, $end])
+            ->orderBy('starts_at')
+            ->get(['id', 'starts_at', 'customer_name', 'status'])
+            ->groupBy(fn ($b) => $b->starts_at->format('Y-m-d'))
+            ->map(fn ($day) => [
+                'items' => $day->take(2)->map(fn ($b) => [
+                    'id' => (string) $b->id,
+                    'time' => $b->starts_at->format('g:ia'),
+                    'name' => (string) $b->customer_name,
+                    'status' => (string) $b->status,
+                ])->values()->all(),
+                'more' => max(0, $day->count() - 2),
+            ])->all();
     }
 
     // ── Availability (site-wide slot settings) ───────────────────────────
@@ -1092,23 +1225,101 @@ class BookingsPage extends Component
         unset($this->blockDaySlots, $this->blockDayOff, $this->blockedDates, $this->planMonths);
     }
 
-    /** Headline tiles: today · next 7 days · pending · confirmed this month. */
+    /**
+     * Every headline number on the page (tiles, filter pills, summary,
+     * needs-attention) from ONE conditional-aggregate query, plus one grouped
+     * query for the busiest service.
+     */
+    #[Computed]
+    public function stats(): array
+    {
+        $fmt = fn (Carbon $d) => $d->format('Y-m-d H:i:s');
+        $now = now();
+        $b = [
+            'now' => $fmt($now),
+            'dayStart' => $fmt($now->copy()->startOfDay()),
+            'dayEnd' => $fmt($now->copy()->endOfDay()),
+            'week7' => $fmt($now->copy()->addDays(7)),
+            'monthStart' => $fmt($now->copy()->startOfMonth()),
+            'monthEnd' => $fmt($now->copy()->endOfMonth()),
+            'weekStart' => $fmt($now->copy()->startOfWeek()),
+            'weekEnd' => $fmt($now->copy()->endOfWeek()),
+        ];
+        $active = "status NOT IN ('cancelled','no_show')";
+
+        $row = $this->site->bookings()->toBase()->selectRaw(implode(",\n", [
+            'COUNT(*) as total',
+            "SUM(CASE WHEN $active AND starts_at >= ? THEN 1 ELSE 0 END) as upcoming",
+            "SUM(CASE WHEN $active AND starts_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as today",
+            "SUM(CASE WHEN $active AND starts_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as next7",
+            "SUM(CASE WHEN $active AND starts_at < ? THEN 1 ELSE 0 END) as past",
+            "SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending",
+            "SUM(CASE WHEN status = 'awaiting_payment' THEN 1 ELSE 0 END) as awaiting_payment",
+            "SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed",
+            "SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled",
+            "SUM(CASE WHEN status = 'no_show' THEN 1 ELSE 0 END) as no_show",
+            "SUM(CASE WHEN status = 'no_show' AND starts_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as noshow_month",
+            "SUM(CASE WHEN status <> 'cancelled' AND created_at BETWEEN ? AND ? THEN paid_cents ELSE 0 END) as collected_month",
+            "SUM(CASE WHEN $active AND starts_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as month_count",
+            "SUM(CASE WHEN $active AND starts_at BETWEEN ? AND ? THEN total_cents ELSE 0 END) as week_value",
+            "SUM(CASE WHEN $active AND starts_at BETWEEN ? AND ? THEN paid_cents ELSE 0 END) as week_paid",
+            "SUM(CASE WHEN $active AND starts_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as week_count",
+            "SUM(CASE WHEN $active AND starts_at < ? AND total_cents > paid_cents THEN 1 ELSE 0 END) as unpaid",
+            "SUM(CASE WHEN $active AND starts_at < ? AND total_cents > paid_cents THEN total_cents - paid_cents ELSE 0 END) as unpaid_cents",
+        ]), [
+            $b['now'],
+            $b['dayStart'], $b['dayEnd'],
+            $b['now'], $b['week7'],
+            $b['now'],
+            $b['monthStart'], $b['monthEnd'],
+            $b['monthStart'], $b['monthEnd'],
+            $b['monthStart'], $b['monthEnd'],
+            $b['weekStart'], $b['weekEnd'],
+            $b['weekStart'], $b['weekEnd'],
+            $b['weekStart'], $b['weekEnd'],
+            $b['now'],
+            $b['now'],
+        ])->first();
+
+        $n = collect((array) $row)->map(fn ($v) => (int) $v)->all();
+
+        // Busiest service over the last 30 days + next 30 (grouped, one query).
+        $top = $this->site->bookings()->toBase()
+            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->whereBetween('starts_at', [now()->subDays(30), now()->addDays(30)])
+            ->whereNotNull('service_id')
+            ->selectRaw('service_id, COUNT(*) as n')
+            ->groupBy('service_id')->orderByDesc('n')->first();
+        $busiest = $top ? [
+            'name' => (string) ($this->services->firstWhere('id', $top->service_id)?->name ?? 'Service'),
+            'count' => (int) $top->n,
+        ] : null;
+
+        return $n + ['busiest' => $busiest];
+    }
+
+    /** Back-compat alias for the older tile names. */
     #[Computed]
     public function tiles(): array
     {
-        $active = fn () => $this->site->bookings()->where('status', '!=', 'cancelled');
+        $s = $this->stats;
 
+        return ['today' => $s['today'], 'upcoming' => $s['next7'], 'pending' => $s['pending'], 'month' => $s['confirmed']];
+    }
+
+    /** Right-rail “Needs attention”: pending to confirm + today's next booking. */
+    #[Computed]
+    public function attention(): array
+    {
         return [
-            // Bookings RECEIVED today (any status — owners think in "how many
-            // came in today", not "what's on today's calendar" — the calendar
-            // rail answers the latter).
-            'today' => $this->site->bookings()->whereDate('created_at', now()->toDateString())->count(),
-            'upcoming' => $active()->whereBetween('starts_at', [now(), now()->addDays(7)])->count(),
-            'pending' => $this->site->bookings()->where('status', 'pending')->count(),
-            // Confirmed bookings still ahead (not bound to the calendar month —
-            // "0" on the 31st with a full first-of-month reads as broken).
-            'month' => $this->site->bookings()->where('status', 'confirmed')
-                ->where('ends_at', '>=', now())->count(),
+            'pending' => $this->site->bookings()->with('service')
+                ->where('status', 'pending')
+                ->orderByRaw('CASE WHEN starts_at >= ? THEN 0 ELSE 1 END', [now()->format('Y-m-d H:i:s')])
+                ->orderBy('starts_at')->limit(3)->get(),
+            'next' => $this->site->bookings()->with(['service', 'resource'])
+                ->active()
+                ->whereBetween('starts_at', [now(), now()->endOfDay()])
+                ->orderBy('starts_at')->first(),
         ];
     }
 
@@ -1121,7 +1332,40 @@ class BookingsPage extends Component
     #[Computed]
     public function bookings()
     {
-        return $this->site->bookings()->with(['service', 'departure'])->orderByDesc('starts_at')->paginate(10);
+        $now = now();
+        $q = $this->site->bookings()->with(['service', 'departure', 'resource']);
+
+        match ($this->filter) {
+            'upcoming' => $q->active()->where('starts_at', '>=', $now),
+            'today' => $q->active()->whereBetween('starts_at', [$now->copy()->startOfDay(), $now->copy()->endOfDay()]),
+            'pending' => $q->where('status', 'pending'),
+            'confirmed' => $q->where('status', 'confirmed'),
+            'past' => $q->active()->where('starts_at', '<', $now),
+            'cancelled' => $q->where('status', 'cancelled'),
+            'no_show' => $q->where('status', 'no_show'),
+            'unpaid' => $q->active()->where('starts_at', '<', $now)->whereColumn('total_cents', '>', 'paid_cents'),
+            default => null,
+        };
+
+        $needle = trim($this->search);
+        if ($needle !== '') {
+            $like = '%'.$needle.'%';
+            $q->where(fn ($w) => $w->where('customer_name', 'like', $like)
+                ->orWhere('customer_email', 'like', $like)
+                ->orWhere('reference', 'like', $like)
+                ->orWhereHas('service', fn ($s) => $s->where('name', 'like', $like)));
+        }
+
+        // "By date" reads forwards for what's ahead, backwards for history.
+        $ascending = in_array($this->filter, ['upcoming', 'today', 'pending'], true);
+        match ($this->sort) {
+            'newest' => $q->orderByDesc('created_at'),
+            'customer' => $q->orderBy('customer_name')->orderBy('starts_at'),
+            'value' => $q->orderByDesc('total_cents')->orderByDesc('starts_at'),
+            default => $ascending ? $q->orderBy('starts_at') : $q->orderByDesc('starts_at'),
+        };
+
+        return $q->paginate($this->viewMode === 'grid' ? 12 : 15);
     }
 
     #[Computed]
@@ -1506,7 +1750,7 @@ class BookingsPage extends Component
         $b = $this->viewedBooking;
         if ($b && $b->balanceCents() > 0) {
             $b->update(['paid_cents' => $b->total_cents]);
-            unset($this->viewedBooking, $this->bookings, $this->dayBookings);
+            unset($this->viewedBooking, $this->bookings, $this->dayBookings, $this->stats, $this->attention);
             $this->dispatch('toast', level: 'success', title: 'Balance settled', message: "{$b->reference} is fully paid.");
         }
     }
@@ -1552,7 +1796,7 @@ class BookingsPage extends Component
                 report($e);
             }
         }
-        unset($this->bookings, $this->dayBookings, $this->calendarDays, $this->tiles, $this->viewedBooking);
+        unset($this->bookings, $this->dayBookings, $this->calendarDays, $this->calendarChips, $this->tiles, $this->stats, $this->attention, $this->viewedBooking);
     }
 
     public function resetForm(): void

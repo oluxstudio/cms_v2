@@ -31,6 +31,11 @@ class ScheduleTracker
         'signup:nudge' => ['30 9 * * *', 'Nudge people who started signing up'],
         'domains:renewal-sweep' => ['30 8 * * *', 'Warn site teams before domains expire'],
         'email:purge-suspended' => ['15 4 * * *', 'Delete business email whose export window has ended'],
+        'events:remind' => ['5 * * * *', 'Events add-on: attendee reminders + release expired ticket holds'],
+        'reviews:remind' => ['15 10 * * *', 'Reviews add-on: one reminder 5 days after a review request'],
+        'network:expire' => ['20 2 * * *', 'Referral Network: expire unanswered consents and lapsed conversion windows'],
+        'network:bill-due' => ['0 6 * * *', 'Referral Network: bill converted referrals after the dispute window'],
+        'network:payouts-retry' => ['30 6 * * *', 'Referral Network: retry ready/failed referrer payouts'],
     ];
 
     public static function register(Schedule $schedule): void

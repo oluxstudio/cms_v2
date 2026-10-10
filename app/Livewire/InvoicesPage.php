@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithLayoutMode;
 use App\Mail\InvoiceSent;
 use App\Models\Booking;
 use App\Models\Donation;
@@ -14,17 +15,19 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * Invoices & Payments — create/send invoices with a hosted pay link, track
- * their status (draft → sent → paid / overdue / cancelled), and see the
- * money picture: stat tiles, a monthly revenue chart, and a unified feed of
- * everything the site got paid for (invoices, bookings, orders, donations).
+ * Invoices — create/send invoices with a hosted pay link and track their
+ * status (draft → sent → paid / overdue / cancelled). House 3-rail layout:
+ * actionable stat tiles (left), a filterable grid/list of invoices (centre),
+ * receivables summary, needs-attention, top customers and related links (right).
  */
 class InvoicesPage extends Component
 {
+    use WithLayoutMode;
     use WithPagination;
 
     public Site $site;
@@ -49,11 +52,23 @@ class InvoicesPage extends Component
     /** @var array<int,array{description:string,qty:int|string,price:string}> */
     public array $items = [['description' => '', 'qty' => 1, 'price' => '']];
 
+    /** List filter: all | draft | sent | overdue | paid | recurring | void (+ tile-only: outstanding, month) */
+    #[Url(as: 'status', except: 'all')]
     public string $statusFilter = 'all';
 
+    #[Url(as: 'client', except: 'all')]
     public string $clientFilter = 'all';
 
+    #[Url(as: 'q', except: '')]
     public string $search = '';
+
+    /** List order: newest | due | amount */
+    #[Url(except: 'newest')]
+    public string $sort = 'newest';
+
+    public const FILTERS = ['all', 'draft', 'sent', 'overdue', 'paid', 'recurring', 'void', 'outstanding', 'month'];
+
+    public const SORTS = ['newest', 'due', 'amount'];
 
     // AI-ish quick generator: free-text prompt → draft invoice
     public string $genPrompt = '';
@@ -75,24 +90,50 @@ class InvoicesPage extends Component
     public function mount(Site $site): void
     {
         $this->site = $site;
+        $this->initLayout('invoices', 'grid');
         Invoice::sweep($site); // lazy: overdue refresh + recurring + reminders
         $cfg = $site->feature('invoices');
         $this->dueDate = now()->addDays((int) ($cfg['due_days'] ?? 14))->format('Y-m-d');
         $this->taxPercent = (string) ($cfg['tax_percent'] ?? 0);
+        if (! in_array($this->statusFilter, self::FILTERS, true)) {
+            $this->statusFilter = $this->statusFilter === 'cancelled' ? 'void' : 'all';
+        }
+        if (! in_array($this->sort, self::SORTS, true)) {
+            $this->sort = 'newest';
+        }
     }
 
     #[Computed]
     public function invoices()
     {
-        return Invoice::where('site_id', $this->site->id)
-            ->when($this->statusFilter !== 'all', fn ($q) => $q->where('status', $this->statusFilter))
+        $needle = trim($this->search);
+        $page = Invoice::where('site_id', $this->site->id)
+            ->with('parent:id,number')
+            ->tap(fn ($q) => match ($this->statusFilter) {
+                'draft', 'sent', 'overdue', 'paid' => $q->where('status', $this->statusFilter),
+                'void' => $q->where('status', 'cancelled'),
+                'recurring' => $q->whereIn('recur_interval', Invoice::RECUR_INTERVALS),
+                'outstanding' => $q->collectible(),
+                'month' => $q->where('created_at', '>=', now()->startOfMonth()),
+                default => $q,
+            })
             ->when($this->clientFilter !== 'all', fn ($q) => $q->where('customer_email', $this->clientFilter))
-            ->when(trim($this->search) !== '', fn ($q) => $q->where(fn ($w) => $w
-                ->where('number', 'like', '%'.trim($this->search).'%')
-                ->orWhere('customer_name', 'like', '%'.trim($this->search).'%')
-                ->orWhere('customer_email', 'like', '%'.trim($this->search).'%')))
-            ->latest()
-            ->paginate(10);
+            ->when($needle !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('number', 'like', '%'.$needle.'%')
+                ->orWhere('customer_name', 'like', '%'.$needle.'%')
+                ->orWhere('customer_email', 'like', '%'.$needle.'%')))
+            ->tap(fn ($q) => match ($this->sort) {
+                'due' => $q->orderByRaw('due_date IS NULL')->orderBy('due_date'),
+                'amount' => $q->orderByDesc('total_cents'),
+                default => $q->orderByDesc('created_at'),
+            })
+            ->orderByDesc('id')
+            ->paginate(12);
+
+        // payUrl() reads the site name — hand every row the loaded site (no N+1).
+        $page->getCollection()->each->setRelation('site', $this->site);
+
+        return $page;
     }
 
     public function updatedStatusFilter(): void
@@ -110,28 +151,114 @@ class InvoicesPage extends Component
         $this->resetPage();
     }
 
-    /** Hero metrics for the dashboard tiles (this month vs last). */
-    #[Computed]
-    public function hero(): array
+    public function updatedSort(): void
     {
-        $monthStart = now()->startOfMonth();
-        $prevStart = now()->subMonthNoOverflow()->startOfMonth();
-        $prevEnd = $monthStart->copy()->subSecond();
-        $pct = fn ($now, $prev) => $prev > 0 ? (int) round(($now - $prev) / $prev * 100) : null;
+        if (! in_array($this->sort, self::SORTS, true)) {
+            $this->sort = 'newest';
+        }
+        $this->resetPage();
+    }
 
-        $q = fn () => Invoice::where('site_id', $this->site->id);
-        $nInv = $q()->where('created_at', '>=', $monthStart)->count();
-        $pInv = $q()->whereBetween('created_at', [$prevStart, $prevEnd])->count();
-        $nCli = $q()->where('created_at', '>=', $monthStart)->distinct('customer_email')->count('customer_email');
-        $pCli = $q()->whereBetween('created_at', [$prevStart, $prevEnd])->distinct('customer_email')->count('customer_email');
+    public function filterClient(string $email): void
+    {
+        $this->clientFilter = $this->clientFilter === $email ? 'all' : $email;
+        $this->resetPage();
+        unset($this->invoices);
+    }
+
+    public function resetFilters(): void
+    {
+        $this->reset(['search', 'statusFilter', 'clientFilter']);
+        $this->resetPage();
+        unset($this->invoices);
+    }
+
+    /**
+     * Everything the rails need, from ONE lightweight query over the site's
+     * invoices: tiles, filter counts, aged receivables, needs-attention lists,
+     * top customers and the plan's monthly allowance.
+     */
+    #[Computed]
+    public function overview(): array
+    {
+        $all = Invoice::where('site_id', $this->site->id)->get([
+            'id', 'number', 'customer_name', 'customer_email', 'status', 'total_cents', 'currency',
+            'due_date', 'created_at', 'sent_at', 'paid_at', 'recur_interval', 'stripe_session_id',
+            'reminders_sent', 'parent_invoice_id',
+        ]);
+        $currency = $this->site->currency ?: ($all->first()->currency ?? 'gbp');
+        $fmt = fn (int $cents) => Money::format($cents, $currency);
+        $today = now()->startOfDay();
+        $monthStart = now()->startOfMonth();
+
+        $open = $all->whereIn('status', ['sent', 'overdue']);
+        $overdue = $all->where('status', 'overdue');
+        $paid = $all->where('status', 'paid');
+        $drafts = $all->where('status', 'draft');
+        $paidMonth = $paid->filter(fn ($i) => $i->paid_at && $i->paid_at->gte($monthStart));
+
+        $daysToPay = $paid->filter(fn ($i) => $i->paid_at)
+            ->map(fn ($i) => abs(($i->sent_at ?? $i->created_at)->diffInDays($i->paid_at)));
+        $avgDays = $daysToPay->isNotEmpty() ? round($daysToPay->avg(), 1) : null;
+
+        // Aged receivables: how late each open invoice is (by due date).
+        $daysLate = fn ($i) => $i->due_date && $i->due_date->lt($today) ? (int) $i->due_date->diffInDays($today) : 0;
+        $aging = ['current' => 0, '1-30' => 0, '31-60' => 0, '60+' => 0];
+        foreach ($open as $i) {
+            $d = $daysLate($i);
+            $aging[$d === 0 ? 'current' : ($d <= 30 ? '1-30' : ($d <= 60 ? '31-60' : '60+'))] += (int) $i->total_cents;
+        }
+
+        $outstanding = (int) $open->sum('total_cents');
+        $collected = (int) $paid->sum('total_cents');
+
+        $topCustomers = $all->whereNotIn('status', ['draft', 'cancelled'])
+            ->groupBy(fn ($i) => strtolower($i->customer_email))
+            ->map(fn ($g) => [
+                'name' => $g->first()->customer_name ?: $g->first()->customer_email,
+                'email' => $g->first()->customer_email,
+                'cents' => (int) $g->sum('total_cents'),
+                'count' => $g->count(),
+                'open' => (int) $g->whereIn('status', ['sent', 'overdue'])->sum('total_cents'),
+            ])
+            ->sortByDesc('cents')->take(5)->values();
+
+        $sub = $this->site->user?->currentSubscription();
+        $cap = $sub?->limit('invoices_month');
 
         return [
-            'invoices' => $nInv,  'invDelta' => $pct($nInv, $pInv),
-            'clients' => $nCli,  'cliDelta' => $pct($nCli, $pCli),
-            'allClients' => $q()->distinct('customer_email')->count('customer_email'),
-            'awaiting' => $q()->whereIn('status', ['sent', 'overdue'])->count(),
-            'overdueN' => $q()->where('status', 'overdue')->count(),
-            'allCount' => $q()->count(),
+            'currency' => $currency,
+            'fmt' => $fmt,
+            'total' => $all->count(),
+            'counts' => [
+                'all' => $all->count(),
+                'draft' => $drafts->count(),
+                'sent' => $all->where('status', 'sent')->count(),
+                'overdue' => $overdue->count(),
+                'paid' => $paid->count(),
+                'recurring' => $all->filter(fn ($i) => in_array($i->recur_interval, Invoice::RECUR_INTERVALS, true))->count(),
+                'void' => $all->where('status', 'cancelled')->count(),
+                'outstanding' => $open->count(),
+                'month' => $all->filter(fn ($i) => $i->created_at && $i->created_at->gte($monthStart))->count(),
+            ],
+            'outstanding' => $outstanding,
+            'overdueCents' => (int) $overdue->sum('total_cents'),
+            'collected' => $collected,
+            'paidMonth' => (int) $paidMonth->sum('total_cents'),
+            'paidMonthN' => $paidMonth->count(),
+            'avgDays' => $avgDays,
+            'paidN' => $daysToPay->count(),
+            'oldestDraftDays' => $drafts->isNotEmpty() ? (int) $drafts->min('created_at')->diffInDays(now()) : null,
+            'aging' => $aging,
+            'chase' => $overdue->sortByDesc($daysLate)->take(4)->map(fn ($i) => $i->setAttribute('days_late', $daysLate($i)))->values(),
+            'unsent' => $drafts->sortBy('created_at')->take(3)->values(),
+            'failed' => $open->filter(fn ($i) => filled($i->stripe_session_id))->take(3)->values(),
+            'topCustomers' => $topCustomers,
+            'plan' => [
+                'used' => $sub ? $sub->invoicesThisMonth() : $all->filter(fn ($i) => ! $i->parent_invoice_id && $i->created_at?->gte($monthStart))->count(),
+                'cap' => $cap === null ? null : (int) $cap,
+                'recurring' => $sub ? $sub->allowsRecurringInvoices() : true,
+            ],
         ];
     }
 
@@ -154,17 +281,6 @@ class InvoicesPage extends Component
             'share' => round($r[1] / $total * 100, 1),
             'money' => Money::format($r[1], $this->site->currency),
         ])->values()->all();
-    }
-
-    /** Drafts — created but never sent. */
-    #[Computed]
-    public function drafts()
-    {
-        return Invoice::where('site_id', $this->site->id)
-            ->where('status', 'draft')
-            ->latest()
-            ->limit(20)
-            ->get();
     }
 
     /** Distinct clients for the table filter. */
@@ -260,23 +376,6 @@ class InvoicesPage extends Component
         }
         $this->saveInvoice();
         $this->genPrompt = '';
-    }
-
-    /** Headline money numbers (stat tiles). */
-    #[Computed]
-    public function stats(): array
-    {
-        $all = Invoice::where('site_id', $this->site->id)->get(['status', 'total_cents', 'currency']);
-        $currency = $all->first()->currency ?? $this->site->currency ?? 'gbp';
-        $fmt = fn (int $cents) => Money::format($cents, $currency);
-
-        return [
-            'invoiced' => $fmt($all->whereNotIn('status', ['draft', 'cancelled'])->sum('total_cents')),
-            'collected' => $fmt($all->where('status', 'paid')->sum('total_cents')),
-            'outstanding' => $fmt($all->whereIn('status', ['sent', 'overdue'])->sum('total_cents')),
-            'overdueN' => $all->where('status', 'overdue')->count(),
-            'overdue' => $fmt($all->where('status', 'overdue')->sum('total_cents')),
-        ];
     }
 
     /**
@@ -425,7 +524,7 @@ class InvoicesPage extends Component
 
         $this->resetForm();
         $this->formOpen = false;
-        unset($this->viewedInvoice, $this->invoices, $this->stats);
+        unset($this->viewedInvoice, $this->invoices, $this->overview);
         $this->dispatch('toast', level: 'success', title: 'Saved', message: "Invoice {$invoice->number} saved.");
     }
 
@@ -440,6 +539,7 @@ class InvoicesPage extends Component
         $this->invNotes = (string) $i->notes;
         $this->recurInterval = (string) ($i->recur_interval ?? '');
         $this->invCurrency = (string) $i->currency;
+        $this->viewingId = null; // edit from the detail drawer → swap to the form
         $this->formOpen = true;
         $this->items = collect($i->items)->map(fn ($it) => [
             'description' => $it['description'],
@@ -471,7 +571,7 @@ class InvoicesPage extends Component
         } catch (\Throwable $e) {
             report($e);
         }
-        unset($this->viewedInvoice, $this->invoices, $this->stats);
+        unset($this->viewedInvoice, $this->invoices, $this->overview);
         $this->dispatch('toast', level: 'success', title: 'Invoice sent', message: "{$invoice->number} emailed to {$invoice->customer_email}.");
     }
 
@@ -479,14 +579,14 @@ class InvoicesPage extends Component
     {
         $invoice = Invoice::where('site_id', $this->site->id)->findOrFail($id);
         $invoice->markPaid();
-        unset($this->viewedInvoice, $this->invoices, $this->stats, $this->monthly, $this->payments);
+        unset($this->viewedInvoice, $this->invoices, $this->overview, $this->monthly, $this->payments);
         $this->dispatch('toast', level: 'success', title: 'Paid', message: "{$invoice->number} marked as paid.");
     }
 
     public function cancelInvoice(string $id): void
     {
         Invoice::where('site_id', $this->site->id)->whereKey($id)->update(['status' => 'cancelled']);
-        unset($this->viewedInvoice, $this->invoices, $this->stats);
+        unset($this->viewedInvoice, $this->invoices, $this->overview);
     }
 
     public function deleteInvoice(string $id): void
@@ -495,7 +595,7 @@ class InvoicesPage extends Component
         if ($this->editingId === $id) {
             $this->resetForm();
         }
-        unset($this->viewedInvoice, $this->invoices, $this->stats, $this->monthly, $this->payments);
+        unset($this->viewedInvoice, $this->invoices, $this->overview, $this->monthly, $this->payments);
     }
 
     // ── Invoice detail (lightbox) ─────────────────────────────────────────
@@ -522,7 +622,10 @@ class InvoicesPage extends Component
 
     public function setFilter(string $status): void
     {
-        $this->statusFilter = $status;
+        $status = $status === 'cancelled' ? 'void' : $status;
+        // Clicking the active tile/pill again clears it.
+        $this->statusFilter = in_array($status, self::FILTERS, true) && $status !== $this->statusFilter ? $status : 'all';
+        $this->resetPage();
         unset($this->viewedInvoice, $this->invoices);
     }
 

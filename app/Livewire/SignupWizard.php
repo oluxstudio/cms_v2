@@ -263,12 +263,6 @@ class SignupWizard extends Component
         ]);
     }
 
-    /** Social providers with credentials configured — shown as one-click signup. */
-    public function socialProviders(): array
-    {
-        return array_values(array_filter(['google', 'facebook'], fn ($p) => filled(config("services.{$p}.client_id"))));
-    }
-
     public function todosUrl(): ?string
     {
         $site = $this->site();
